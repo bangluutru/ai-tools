@@ -1,6 +1,6 @@
 import React from 'react';
-import ExcelMappingView from '../../components/ExcelMappingView';
-import { uiTranslations } from '../../utils/translations';
+import ExcelMappingView from '@ai-tools/core/components/ExcelMappingView';
+import { uiTranslations } from '@ai-tools/core/utils/translations';
 
 export default function ExcelMappingTool({ displayLang }) {
   const langKey = displayLang === 'vi' ? 'vn' : displayLang;

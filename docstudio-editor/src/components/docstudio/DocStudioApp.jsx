@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { LayoutTemplate, Layers, User, PlusCircle, Search, MoreVertical, FileText, Download, Printer, Upload, Sparkles, ArrowLeft, FileUp } from 'lucide-react';
-import { getLangVal } from '../../utils/lang';
+import { getLangVal } from '@ai-tools/core/utils/lang';
 import { parseMarkdownToSchema, applyFormatSuggestions } from '../../lib/docstudio/parsers';
 import { validateSchema } from '../../lib/docstudio/validationEngine';
 import { exportDocx } from '../../lib/docstudio/export';

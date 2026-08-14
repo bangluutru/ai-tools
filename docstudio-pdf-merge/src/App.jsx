@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import PdfMergerView from './components/PdfMergerView';
+import PdfMergerView from '@ai-tools/core/components/PdfMergerView';
 import { Combine, Globe } from 'lucide-react';
 
 export default function App() {

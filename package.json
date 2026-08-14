@@ -2,6 +2,7 @@
   "name": "ai-tools-monorepo",
   "private": true,
   "workspaces": [
+    "packages/*",
     "hub",
     "image-convert",
     "invoice-webapp",
@@ -10,6 +11,8 @@
   "scripts": {
     "dev": "npm run dev --workspace=hub",
     "dev:hub": "npm run dev --workspace=hub",
+    "dev:backend": "cd packages/agent-backend && uvicorn src.server:app --reload --port 8000",
+    "dev:full": "concurrently \"npm run dev:hub\" \"npm run dev:backend\"",
     "build:hub": "npm run build --workspace=hub",
     "dev:image-convert": "npm run dev --workspace=image-convert",
     "dev:invoice": "npm run dev --workspace=invoice-webapp",
@@ -22,5 +25,8 @@
     "dev:excel": "npm run dev --workspace=docstudio-excel-mapping",
     "dev:editor": "npm run dev --workspace=docstudio-editor",
     "build:all": "npm run build --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4"
   }
 }

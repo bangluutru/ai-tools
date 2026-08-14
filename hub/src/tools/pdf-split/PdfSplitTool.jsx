@@ -1,5 +1,5 @@
 import React from 'react';
-import PdfSplitterView from '../../components/PdfSplitterView';
+import PdfSplitterView from '@ai-tools/core/components/PdfSplitterView';
 
 export default function PdfSplitTool({ displayLang }) {
   return (

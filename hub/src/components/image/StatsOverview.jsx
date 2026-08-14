@@ -1,6 +1,6 @@
 import React from 'react';
 import { Download, Trash2, TrendingDown, CheckCircle2 } from 'lucide-react';
-import { formatBytes, calculateSavedPercent } from '../../utils/image/formatters.js';
+import { formatBytes, calculateSavedPercent } from '@ai-tools/core/utils/image/formatters.js';
 
 export default function StatsOverview({ items, onDownloadZip, onClearAll, isProcessing }) {
   if (!items || items.length === 0) return null;

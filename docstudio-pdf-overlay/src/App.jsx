@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import TemplateOverlayView from './components/TemplateOverlayView';
+import TemplateOverlayView from '@ai-tools/core/components/TemplateOverlayView';
 import { Printer, Globe } from 'lucide-react';
 
 export default function App() {

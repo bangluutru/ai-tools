@@ -1,0 +1,16 @@
+[project]
+name = "ai-tools-agent-backend"
+version = "1.0.0"
+description = "Antigravity Agent Backend for AI Tools"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "python-multipart>=0.0.20",
+    "google-antigravity>=1.0.0",
+    "pydantic>=2.0",
+    "python-dotenv>=1.0.0",
+    "openpyxl>=3.1.0",
+    "pdfplumber>=0.11.0",
+]

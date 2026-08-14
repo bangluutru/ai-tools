@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, SlidersHorizontal } from 'lucide-react';
-import { formatBytes } from '../../utils/image/formatters.js';
+import { formatBytes } from '@ai-tools/core/utils/image/formatters.js';
 
 export default function CompareModal({ item, onClose }) {
   const [sliderPosition, setSliderPosition] = useState(50); // 0 to 100%

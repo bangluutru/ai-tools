@@ -5,16 +5,16 @@ import {
   ChevronDown, ChevronUp, SlidersHorizontal, Settings2,
   FileSpreadsheet
 } from 'lucide-react';
-import CertificatePage from '../../components/CertificatePage';
-import DocToolbar from '../../components/DocToolbar';
-import PageNavigator from '../../components/PageNavigator';
-import PageCard from '../../components/PageCard';
-import GoogleFontPicker from '../../components/GoogleFontPicker';
-import UndoToast from '../../components/UndoToast';
-import PromptHelper from '../../components/PromptHelper';
-import { CERT_PROMPT_TEXT, CERT_NOTEBOOKLM_PROMPT } from '../../utils/prompts';
-import { uiTranslations } from '../../utils/translations';
-import { getLangVal } from '../../utils/lang';
+import CertificatePage from '@ai-tools/core/components/CertificatePage';
+import DocToolbar from '@ai-tools/core/components/DocToolbar';
+import PageNavigator from '@ai-tools/core/components/PageNavigator';
+import PageCard from '@ai-tools/core/components/PageCard';
+import GoogleFontPicker from '@ai-tools/core/components/GoogleFontPicker';
+import UndoToast from '@ai-tools/core/components/UndoToast';
+import PromptHelper from '@ai-tools/core/components/PromptHelper';
+import { CERT_PROMPT_TEXT, CERT_NOTEBOOKLM_PROMPT } from '@ai-tools/core/utils/prompts';
+import { uiTranslations } from '@ai-tools/core/utils/translations';
+import { getLangVal } from '@ai-tools/core/utils/lang';
 
 export default function CertificateStudioTool({ displayLang }) {
   const [data, setData] = useState([]);

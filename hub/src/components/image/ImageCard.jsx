@@ -1,6 +1,6 @@
 import React from 'react';
 import { Download, Eye, Trash2, Check, AlertTriangle, Loader2 } from 'lucide-react';
-import { formatBytes } from '../../utils/image/formatters.js';
+import { formatBytes } from '@ai-tools/core/utils/image/formatters.js';
 
 export default function ImageCard({ item, onDownloadSingle, onCompare, onDelete }) {
   const isCompleted = item.status === 'completed';
