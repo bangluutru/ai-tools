@@ -25,6 +25,7 @@ const InvoiceTool = lazy(() => import('./tools/invoice-webapp/InvoiceTool'));
 const ContractAuditorTool = lazy(() => import('./tools/contract-auditor/ContractAuditorTool'));
 const AutoBiTool = lazy(() => import('./tools/auto-bi/AutoBiTool'));
 const PolicyAssistantTool = lazy(() => import('./tools/policy-assistant/PolicyAssistantTool'));
+const AccountingReconcileTool = lazy(() => import('./tools/accounting-reconcile/AccountingReconcileTool'));
 
 const toolComponentMap = {
   'image-convert': ImageConvertTool,
@@ -39,7 +40,8 @@ const toolComponentMap = {
   'invoice-webapp': InvoiceTool,
   'contract-auditor': ContractAuditorTool,
   'auto-bi': AutoBiTool,
-  'policy-assistant': PolicyAssistantTool
+  'policy-assistant': PolicyAssistantTool,
+  'accounting-reconcile': AccountingReconcileTool
 };
 
 export default function App() {

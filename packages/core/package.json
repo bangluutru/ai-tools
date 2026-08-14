@@ -10,8 +10,9 @@
     "./services/*": "./src/services/*"
   },
   "dependencies": {
+    "localforage": "^1.10.0",
     "lucide-react": "^0.575.0",
-    "localforage": "^1.10.0"
+    "xlsx": "^0.18.5"
   },
   "peerDependencies": {
     "react": ">=18.0.0",

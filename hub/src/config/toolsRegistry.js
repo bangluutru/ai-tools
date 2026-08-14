@@ -213,6 +213,21 @@ export const tools = [
     color: '#a855f7',
     badge: 'POLICY AI',
     popular: true,
-    tags: ['policy', 'quy chế', 'công tác phí', 'biểu mẫu', 'định mức', 'tạm ứng']
+  },
+  {
+    id: 'accounting-reconcile',
+    name_vn: 'Đối Chiếu Kế Toán',
+    name_en: 'Accounting Reconciliation',
+    name_ja: '経理照合ツール',
+    desc_vn: 'Tự động đối chiếu chênh lệch doanh thu và thuế GTGT giữa sổ kế toán nội bộ (511, 33311) và bảng kê thuế (BR).',
+    desc_en: 'Automatically reconcile revenue and VAT discrepancies between internal ledgers (511, 33311) and tax invoices (BR).',
+    desc_ja: '内部元帳（511、33311）と税金請求書（BR）の間の収益とVATの差異を自動的に照合します。',
+    category: 'office',
+    icon: 'Calculator',
+    gradient: 'from-blue-600 to-indigo-700',
+    color: '#4f46e5',
+    badge: 'NEW',
+    popular: true,
+    tags: ['accounting', 'reconcile', 'đối chiếu', 'kế toán', 'thuế', 'doanh thu', '511', '33311', 'br', 'excel']
   }
 ];
