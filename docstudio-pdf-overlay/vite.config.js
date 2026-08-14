@@ -9,7 +9,19 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    // Ensure assets use relative paths (important for Cloudflare Pages)
     assetsDir: 'assets',
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('pdfjs-dist')) return 'vendor-pdf';
+            if (id.includes('docx') || id.includes('exceljs') || id.includes('xlsx')) return 'vendor-office';
+            if (id.includes('react')) return 'vendor-react';
+            return 'vendor';
+          }
+        }
+      }
+    }
   },
 })

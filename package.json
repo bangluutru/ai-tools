@@ -6,7 +6,11 @@
     "hub",
     "image-convert",
     "invoice-webapp",
-    "docstudio-*"
+    "docstudio-*",
+    "contract-auditor",
+    "auto-bi",
+    "policy-assistant",
+    "accounting-reconcile"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=hub",
