@@ -1,0 +1,83 @@
+import React, { useState, useRef } from 'react';
+import { UploadCloud, FileImage, Sparkles } from 'lucide-react';
+
+export default function DropZone({ onFilesSelected, isProcessing }) {
+  const [isDragActive, setIsDragActive] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragActive) setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      filterAndEmitFiles(Array.from(e.dataTransfer.files));
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      filterAndEmitFiles(Array.from(e.target.files));
+    }
+  };
+
+  const filterAndEmitFiles = (files) => {
+    const validImages = files.filter(file => 
+      file.type.startsWith('image/') || 
+      /\.(png|jpe?g|gif|bmp|svg|webp|avif|tiff)$/i.test(file.name)
+    );
+    if (validImages.length > 0) {
+      onFilesSelected(validImages);
+    }
+  };
+
+  const handleClick = () => {
+    if (!isProcessing && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  return (
+    <div
+      className={`dropzone ${isDragActive ? 'active' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onClick={handleClick}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/*,.png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.avif,.tiff"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
+      <div className="dropzone-content">
+        <div className="upload-icon-wrapper">
+          <UploadCloud size={36} />
+        </div>
+        <div>
+          <div className="dropzone-heading">Kéo & Thả tập tin ảnh vào đây</div>
+          <div className="dropzone-subtext">hoặc nhấn để chọn ảnh từ máy tính của bạn</div>
+        </div>
+        <div className="supported-badge">
+          <Sparkles size={14} style={{ color: 'var(--accent-primary)' }} />
+          <span>Hỗ trợ: PNG, JPG, JPEG, GIF, BMP, SVG, WEBP, AVIF, TIFF</span>
+        </div>
+      </div>
+    </div>
+  );
+}

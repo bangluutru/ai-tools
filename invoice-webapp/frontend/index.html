@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Auto-Generator</title>
+    <!-- Font: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="container">
+        <header class="hero">
+            <h1>Tạo Đề Nghị Thanh Toán</h1>
+            <p>Kéo thả các hoá đơn điện tử (PDF/XML) hoặc file ZIP vào bên dưới để tự động trích xuất và xuất file Excel ĐNTT ngay lập tức.</p>
+        </header>
+
+        <section class="dropzone-container" id="dropzone">
+            <input type="file" id="file-input" multiple accept=".xml,.pdf,.zip" hidden>
+            
+            <div class="dropzone-content">
+                <!-- SVG Icon (Heroicons: Document Arrow Up) -->
+                <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+                <h2>Kéo thả file vào đây</h2>
+                <p>Hoặc <button type="button" id="browse-btn" class="text-button">duyệt qua máy tính</button></p>
+                <div class="file-badges">Hỗ trợ .PDF, .XML, .ZIP</div>
+            </div>
+        </section>
+
+        <section class="file-list-section" id="file-list-section" style="display: none;">
+            <h3>Đã chọn <span id="file-count">0</span> file</h3>
+            <div id="file-list" class="file-list"></div>
+            
+            <div class="actions">
+                <button type="button" id="reset-btn" class="btn btn-secondary">Huỷ</button>
+                <button type="button" id="submit-btn" class="btn btn-primary">
+                    <span id="btn-text">Tạo Đề Nghị Thanh Toán</span>
+                    <span id="btn-spinner" class="spinner" style="display: none;"></span>
+                </button>
+            </div>
+            <div id="error-message" class="error-message" style="display: none;"></div>
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>

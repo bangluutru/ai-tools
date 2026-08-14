@@ -1,0 +1,279 @@
+{
+    "meta": {
+        "schema_version": "1.1.0",
+        "awf_version": "4.0.0",
+        "last_updated": "2026-03-05T17:20:00+09:00"
+    },
+    "project": {
+        "name": "DocStudio",
+        "type": "web-app",
+        "status": "active",
+        "description": "Bộ công cụ xử lý tài liệu đa ngôn ngữ (VN/EN/JP): tạo chứng chỉ, dịch văn bản pháp lý, dịch văn bản dài (EJV), xử lý PDF, template overlay, Excel mapping, user guide",
+        "repo": "https://github.com/bangluutru/docstudio.git",
+        "deploy": "Cloudflare Pages"
+    },
+    "tech_stack": {
+        "frontend": {
+            "framework": "React 19",
+            "bundler": "Vite 7.3",
+            "styling": "Tailwind CSS 3 + Vanilla CSS + Inline styles",
+            "icons": "lucide-react"
+        },
+        "libraries": {
+            "excel": [
+                "exceljs (read/write xlsx, merge cells, formulas)",
+                "xlsx (SheetJS - parsing)"
+            ],
+            "pdf": [
+                "pdf-lib (create/edit/merge/split PDF)",
+                "pdfjs-dist (render PDF previews)"
+            ],
+            "docx": [
+                "docx (create DOCX documents from DOM/JSON)",
+                "file-saver (trigger browser downloads)"
+            ],
+            "markdown": [
+                "react-markdown (legal doc rendering)",
+                "remark-gfm (GitHub Flavored Markdown)"
+            ],
+            "drag_drop": [
+                "@dnd-kit/core",
+                "@dnd-kit/sortable"
+            ],
+            "other": [
+                "react-dom",
+                "react-colorful"
+            ]
+        },
+        "deployment": {
+            "hosting": "Cloudflare Pages",
+            "ci_cd": "GitHub → Cloudflare auto-deploy on push to main"
+        }
+    },
+    "architecture": {
+        "tabs": [
+            {
+                "id": 1,
+                "name": "Certificate Pages",
+                "key": "certificate",
+                "icon": "Award + 🏅",
+                "color": "indigo",
+                "file": "src/App.jsx (inline)",
+                "components": [
+                    "PageCard.jsx",
+                    "CertificatePage.jsx",
+                    "PageNavigator.jsx",
+                    "ContentLines.jsx",
+                    "OverflowWarning.jsx",
+                    "DeletePageBtn.jsx",
+                    "UndoToast.jsx"
+                ],
+                "description": "Tạo phiếu chứng chỉ/kiểm nghiệm từ JSON, đa ngôn ngữ, SVG stamps, multi-page",
+                "toolbar": "DocToolbar (indigo) — Lang/Font/Edit/Zoom/DOCX/PDF",
+                "status": "stable"
+            },
+            {
+                "id": 2,
+                "name": "Legal Documents",
+                "key": "legal",
+                "icon": "Scale + ⚖️",
+                "color": "emerald",
+                "file": "src/components/LegalDocumentView.jsx",
+                "description": "Dịch thuật và hiển thị văn bản pháp lý, Markdown rendering, citation stripping",
+                "toolbar": "DocToolbar (emerald) — Lang/Font/Edit/Zoom/DOCX/PDF",
+                "status": "stable"
+            },
+            {
+                "id": 3,
+                "name": "EJV Translator",
+                "key": "ejv-translator",
+                "icon": "Globe + 🌐",
+                "color": "teal",
+                "file": "src/components/LongDocTranslatorView.jsx",
+                "description": "Dịch văn bản dài với batching, A4 pagination, page numbers, format styles (official/academic), block-based rendering",
+                "toolbar": "DocToolbar (teal) — Lang/Font/Edit/Zoom/DOCX/PDF",
+                "status": "stable"
+            },
+            {
+                "id": 4,
+                "name": "Template Overlay",
+                "key": "pdf-overlay",
+                "icon": "Printer + 🖨️",
+                "color": "fuchsia",
+                "file": "src/components/TemplateOverlayView.jsx",
+                "description": "HTML template + JSON data → render preview → in PDF. Redesigned layout.",
+                "toolbar": "DocToolbar (fuchsia) — Lang/Font/Edit/Zoom/DOCX/PDF",
+                "status": "stable"
+            },
+            {
+                "id": 5,
+                "name": "PDF Splitter",
+                "key": "pdf-split",
+                "icon": "Scissors + ✂️",
+                "color": "rose",
+                "file": "src/components/PdfSplitterView.jsx",
+                "description": "Tách trang PDF, chọn trang, tải riêng/ghép",
+                "status": "stable"
+            },
+            {
+                "id": 6,
+                "name": "PDF Merger",
+                "key": "pdf-merge",
+                "icon": "Combine + 📂",
+                "color": "violet",
+                "file": "src/components/PdfMergerView.jsx",
+                "description": "Ghép nhiều file PDF thành 1 file, drag & drop reorder",
+                "status": "stable"
+            },
+            {
+                "id": 7,
+                "name": "Excel Mapping",
+                "key": "excelMapping",
+                "icon": "FileSpreadsheet + 📊",
+                "color": "blue",
+                "file": "src/components/ExcelMappingView.jsx",
+                "description": "Map đơn hàng khách ↔ mẫu NCC, auto-map, 3-zone edit, formula edit, profile, export",
+                "status": "stable"
+            },
+            {
+                "id": 8,
+                "name": "User Guide",
+                "key": "guide",
+                "icon": "BookOpen + 📖",
+                "color": "slate",
+                "file": "src/components/UserGuideView.jsx",
+                "description": "Hướng dẫn sử dụng đa ngôn ngữ cho các tab, accordion UI",
+                "status": "stable"
+            }
+        ],
+        "shared_components": {
+            "DocToolbar": "src/components/DocToolbar.jsx — Unified toolbar for tabs 1-4: Lang selector, Google Font Picker, Edit toggle, Zoom, DOCX/PDF export. Accent color per tab.",
+            "GoogleFontPicker": "src/components/GoogleFontPicker.jsx — Searchable Google Fonts dropdown with lazy loading, 30+ curated fonts, CJK support.",
+            "PromptHelper": "src/components/PromptHelper.jsx — Copy-to-clipboard system prompt panel",
+            "ZoneEditor": "src/components/ZoneEditor.jsx — Editable zone for Excel header/footer"
+        },
+        "key_files": {
+            "app_entry": "src/App.jsx",
+            "excel_utils": "src/utils/excel.js",
+            "translations": "src/utils/translations.js",
+            "lang_helper": "src/utils/lang.js",
+            "system_prompts": "src/utils/prompts.js",
+            "styles": "src/index.css",
+            "print_styles": "src/print.css"
+        }
+    },
+    "features": {
+        "tab1_certificate": {
+            "description": "Tạo phiếu chứng chỉ/kiểm nghiệm từ JSON data",
+            "capabilities": [
+                "Multi-page with navigator",
+                "SVG stamp positioning",
+                "Undo delete",
+                "Overflow warning",
+                "Edit/Preview toggle",
+                "i18n VN/EN/JP",
+                "Auto-save localStorage",
+                "PromptHelper",
+                "Google Font Picker",
+                "DOCX export (DOM walking)",
+                "PDF print"
+            ]
+        },
+        "tab2_legal": {
+            "description": "Dịch thuật và hiển thị văn bản pháp lý",
+            "capabilities": [
+                "Markdown rendering (GFM)",
+                "Citation stripping",
+                "Edit in-place",
+                "Print/PDF",
+                "Batch mode",
+                "PromptHelper",
+                "Google Font Picker",
+                "DOCX export"
+            ]
+        },
+        "tab3_ejv_translator": {
+            "description": "Dịch văn bản dài từ Gemini JSON với batch append",
+            "capabilities": [
+                "Batch JSON append (nối nhiều batch)",
+                "A4 pagination with page numbers",
+                "Format styles: official / academic",
+                "Block-based rendering (heading/paragraph/list/table/blockquote/signature)",
+                "Language toggle VN/EN/JP",
+                "Auto-save localStorage",
+                "PromptHelper (LONG_DOC_TRANS_PROMPT)",
+                "Google Font Picker",
+                "Inline text editing (prompt-based)",
+                "DOCX export",
+                "PDF print"
+            ]
+        },
+        "tab4_template_overlay": {
+            "description": "HTML template + JSON → render preview → PDF",
+            "capabilities": [
+                "Dynamic {{key}} interpolation",
+                "Rescue tools (font, spacing)",
+                "Click-to-edit preview",
+                "PromptHelper",
+                "Redesigned layout",
+                "Google Font Picker",
+                "DOCX export (DOM walking)",
+                "PDF print"
+            ]
+        },
+        "tab7_excel_mapping": {
+            "description": "Upload đơn hàng khách + mẫu NCC → auto-map → xuất Excel",
+            "capabilities": [
+                "Auto-map (keyword matching)",
+                "Merge-aware column mapping",
+                "Formula display/edit",
+                "Row numbers",
+                "Profile save/load",
+                "Single-sheet export"
+            ]
+        },
+        "unified_toolbar": {
+            "description": "DocToolbar shared component for tabs 1-4",
+            "layout": "[Lang: VN/EN/JA] [Font Picker] [Edit ✏️] ... [Zoom -/100%/+] [DOCX] [PDF]",
+            "features": [
+                "Consistent layout across all 4 tabs",
+                "Accent color per tab (indigo/emerald/teal/fuchsia)",
+                "Google Font Picker with search, lazy loading",
+                "CSS custom property --custom-font for font override",
+                "!important override to cascade through Tailwind classes"
+            ]
+        }
+    },
+    "knowledge_items": {
+        "patterns": [
+            "ExcelJS merge: unmerge TRƯỚC spliceRows, re-merge SAU write data",
+            "ExcelJS cell.value → extractCellDisplayValue handles all object types",
+            "PromptHelper: shared component for system prompt copy-to-clipboard",
+            "Trilingual guide: same data structure for VN/EN/JP with accordion UI",
+            "A4 pagination: PAGE_CONTENT_HEIGHT_MM = 247mm (297-25-25), PX_PER_MM = 3.7795",
+            "Block-based document rendering: heading/paragraph/list/table/blockquote/signature",
+            "DocToolbar: reusable toolbar with configurable accent color and optional features",
+            "GoogleFontPicker: lazy-load Google Fonts via API, 30+ curated fonts with CJK support",
+            "CSS custom property font override: .custom-font-active * { font-family: var(--custom-font) !important } — overrides Tailwind font-sans/font-serif",
+            "DOCX export via DOM walking: walkNode recursion → TextRun/Paragraph/Table/Heading"
+        ],
+        "gotchas": [
+            "xlsx-template KHÔNG chạy trong browser",
+            "String(formulaObject) = '[object Object]' → extract .formula",
+            "Saved profiles cache old zone data → sanitize on load",
+            "Formula auto-adjustment too fragile → give user manual control",
+            "Tailwind font-sans/font-serif classes override container-level fontFamily → use CSS !important with custom property",
+            "useRef declared but not attached to DOM (ref={refName} missing) → ref.current always null → silent failures",
+            "DOCX export empty when printAreaRef.current is null — always verify ref is attached to DOM element"
+        ],
+        "conventions": [
+            "System prompts in src/utils/prompts.js as exported constants (CERT_PROMPT_TEXT, LEGAL_PROMPT_TEXT, LONG_DOC_TRANS_PROMPT)",
+            "Shared components: DocToolbar, GoogleFontPicker, PromptHelper, ZoneEditor",
+            "Tab views are self-contained with own translations",
+            "Tab icons: Lucide icon + emoji fallback when collapsed",
+            "Tab order: Certificate, Legal, EJV, Overlay, PDF Split, PDF Merge, Excel, Guide",
+            "Toolbar layout: [Lang][Font][Edit] (left) ... [Zoom][DOCX][PDF] (right)",
+            "Custom font state: const [customFont, setCustomFont] = useState(null) in each tab"
+        ]
+    }
+}

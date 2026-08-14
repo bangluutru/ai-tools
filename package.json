@@ -1,0 +1,26 @@
+{
+  "name": "ai-tools-monorepo",
+  "private": true,
+  "workspaces": [
+    "hub",
+    "image-convert",
+    "invoice-webapp",
+    "docstudio-*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=hub",
+    "dev:hub": "npm run dev --workspace=hub",
+    "build:hub": "npm run build --workspace=hub",
+    "dev:image-convert": "npm run dev --workspace=image-convert",
+    "dev:invoice": "npm run dev --workspace=invoice-webapp",
+    "dev:certificate": "npm run dev --workspace=docstudio-certificate",
+    "dev:legal": "npm run dev --workspace=docstudio-legal",
+    "dev:translator": "npm run dev --workspace=docstudio-translator",
+    "dev:overlay": "npm run dev --workspace=docstudio-pdf-overlay",
+    "dev:split": "npm run dev --workspace=docstudio-pdf-split",
+    "dev:merge": "npm run dev --workspace=docstudio-pdf-merge",
+    "dev:excel": "npm run dev --workspace=docstudio-excel-mapping",
+    "dev:editor": "npm run dev --workspace=docstudio-editor",
+    "build:all": "npm run build --workspaces --if-present"
+  }
+}
