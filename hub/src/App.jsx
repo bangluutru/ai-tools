@@ -22,6 +22,9 @@ const LongTranslatorTool = lazy(() => import('./tools/long-translator/LongTransl
 const CertificateStudioTool = lazy(() => import('./tools/certificate-studio/CertificateStudioTool'));
 const EditorStudioTool = lazy(() => import('./tools/editor-studio/EditorStudioTool'));
 const InvoiceTool = lazy(() => import('./tools/invoice-webapp/InvoiceTool'));
+const ContractAuditorTool = lazy(() => import('./tools/contract-auditor/ContractAuditorTool'));
+const AutoBiTool = lazy(() => import('./tools/auto-bi/AutoBiTool'));
+const PolicyAssistantTool = lazy(() => import('./tools/policy-assistant/PolicyAssistantTool'));
 
 const toolComponentMap = {
   'image-convert': ImageConvertTool,
@@ -33,7 +36,10 @@ const toolComponentMap = {
   'long-translator': LongTranslatorTool,
   'certificate-studio': CertificateStudioTool,
   'editor-studio': EditorStudioTool,
-  'invoice-webapp': InvoiceTool
+  'invoice-webapp': InvoiceTool,
+  'contract-auditor': ContractAuditorTool,
+  'auto-bi': AutoBiTool,
+  'policy-assistant': PolicyAssistantTool
 };
 
 export default function App() {

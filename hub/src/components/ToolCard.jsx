@@ -1,7 +1,8 @@
 import React from 'react';
 import {
   Image, Scissors, Combine, Printer, Scale, Globe,
-  Award, FileSpreadsheet, LayoutTemplate, Receipt, ArrowRight, Sparkles
+  Award, FileSpreadsheet, LayoutTemplate, Receipt, ArrowRight, Sparkles,
+  BarChart3, HelpCircle
 } from 'lucide-react';
 
 const iconMap = {
@@ -14,7 +15,9 @@ const iconMap = {
   Award,
   FileSpreadsheet,
   LayoutTemplate,
-  Receipt
+  Receipt,
+  BarChart3,
+  HelpCircle
 };
 
 export default function ToolCard({ tool, onSelectTool, displayLang }) {

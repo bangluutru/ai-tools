@@ -166,5 +166,53 @@ export const tools = [
     badge: 'INVOICE AI',
     popular: true,
     tags: ['invoice', 'hóa đơn', 'thanh toán', 'xml', 'pdf', 'excel']
+  },
+  {
+    id: 'contract-auditor',
+    name_vn: 'Đối Soát Hợp Đồng & Thanh Quyết Toán',
+    name_en: 'Contract & Payment Auditor',
+    name_ja: '契約書・支払突合監査',
+    desc_vn: 'Đối chiếu chéo 3 chiều (Hợp đồng ↔ Biên bản nghiệm thu ↔ Hóa đơn) và phát hiện sai lệch.',
+    desc_en: '3-way matching cross-audit between Contracts, Acceptance Records, and Invoices.',
+    desc_ja: '契約書、検収書、請求書の3者間突合を行い、差異や上限超過を検出します。',
+    category: 'office',
+    icon: 'Scale',
+    gradient: 'from-emerald-500 to-teal-600',
+    color: '#10b981',
+    badge: '3-WAY AUDIT',
+    popular: true,
+    tags: ['contract', 'hợp đồng', 'đối soát', 'nghiệm thu', 'audit', 'matching']
+  },
+  {
+    id: 'auto-bi',
+    name_vn: 'Phân Tích Dữ Liệu & Báo Cáo BI',
+    name_en: 'Auto-BI Smart Analytics',
+    name_ja: '自動BIデータ分析',
+    desc_vn: 'Nạp file Excel/CSV thô, tự động nhận diện chỉ số, vẽ biểu đồ tương tác và sinh nhận xét điều hành.',
+    desc_en: 'Upload raw Excel/CSV, auto-detect metrics, render interactive charts and executive insights.',
+    desc_ja: 'Excel/CSVデータを読み込み、指標を自動集計してグラフと要約レポートを生成します。',
+    category: 'office',
+    icon: 'BarChart3',
+    gradient: 'from-cyan-500 to-blue-600',
+    color: '#06b6d4',
+    badge: 'SMART BI',
+    popular: true,
+    tags: ['bi', 'chart', 'analytics', 'báo cáo', 'phân tích', 'excel', 'csv']
+  },
+  {
+    id: 'policy-assistant',
+    name_vn: 'Trợ Lý Quy Chế & Soạn Biểu Mẫu',
+    name_en: 'Policy & Expense Assistant',
+    name_ja: '規程・旅費申請アシスタント',
+    desc_vn: 'Tra cứu định mức công tác phí theo vùng, tự động tính toán dự toán và xuất biểu mẫu đề xuất.',
+    desc_en: 'Look up per-diem policy rates by region, auto-calculate travel budget and generate forms.',
+    desc_ja: '地域別の旅費日当基準を参照し、出張予算を自動計算して申請書を作成します。',
+    category: 'ai',
+    icon: 'HelpCircle',
+    gradient: 'from-purple-500 to-indigo-600',
+    color: '#a855f7',
+    badge: 'POLICY AI',
+    popular: true,
+    tags: ['policy', 'quy chế', 'công tác phí', 'biểu mẫu', 'định mức', 'tạm ứng']
   }
 ];

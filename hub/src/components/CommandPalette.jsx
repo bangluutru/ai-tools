@@ -88,7 +88,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectTool, displayL
         {/* Footer info */}
         <div className="px-4 py-2 bg-slate-950/60 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 font-mono">
           <span>Nhấn ESC để đóng</span>
-          <span>10 Công Cụ Sẵn Sàng</span>
+          <span>{tools.length} Công Cụ Sẵn Sàng</span>
         </div>
       </div>
     </div>
