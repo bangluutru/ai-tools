@@ -610,7 +610,7 @@ export default function InvoiceTool({ displayLang }) {
       ['BẢNG KÊ ĐỀ NGHỊ THANH TOÁN'],
       [`Ngày lập: ${new Date().toLocaleDateString('vi-VN')}`],
       [''],
-      ['STT', 'Ngày tháng', 'Nội dung', 'Số tiền (VNĐ)', 'Số hóa đơn', 'Ghi chú']
+      ['STT', 'Ngày tháng', 'Nội dung', 'Trước thuế', 'Tiền thuế', 'Tổng sau thuế', 'Số hóa đơn', 'Ghi chú']
     ];
 
     validInvoices.forEach((inv, idx) => {
@@ -618,6 +618,8 @@ export default function InvoiceTool({ displayLang }) {
         idx + 1,
         inv.date,
         inv.seller,
+        inv.amountBeforeTax,
+        inv.vatAmount,
         inv.totalAmount,
         inv.invoiceNo,
         inv.rawFileName || ''
@@ -629,6 +631,8 @@ export default function InvoiceTool({ displayLang }) {
       'Tổng cộng',
       '',
       '',
+      validInvoices.reduce((sum, i) => sum + (i.amountBeforeTax || 0), 0),
+      validInvoices.reduce((sum, i) => sum + (i.vatAmount || 0), 0),
       totalAmount,
       '',
       ''
@@ -636,8 +640,8 @@ export default function InvoiceTool({ displayLang }) {
     rows.push(['']);
     rows.push([`Số tiền bằng chữ: ${wordsVN}`]);
     rows.push(['']);
-    rows.push(['Người đề nghị thanh toán', '', '', '', 'Kế toán trưởng / Phê duyệt', '']);
-    rows.push(['(Ký, ghi rõ họ tên)', '', '', '', '(Ký, ghi rõ họ tên)', '']);
+    rows.push(['Người đề nghị thanh toán', '', '', '', '', '', 'Kế toán trưởng / Phê duyệt', '']);
+    rows.push(['(Ký, ghi rõ họ tên)', '', '', '', '', '', '(Ký, ghi rõ họ tên)', '']);
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
 
@@ -646,7 +650,9 @@ export default function InvoiceTool({ displayLang }) {
       { wch: 6 },   // STT
       { wch: 14 },  // Ngày tháng
       { wch: 55 },  // Nội dung
-      { wch: 22 },  // Số tiền
+      { wch: 18 },  // Trước thuế
+      { wch: 15 },  // Tiền thuế
+      { wch: 22 },  // Tổng sau thuế
       { wch: 18 },  // Số hóa đơn
       { wch: 30 }   // Ghi chú
     ];
@@ -777,7 +783,9 @@ export default function InvoiceTool({ displayLang }) {
                   <th className="py-3 px-4 w-12 text-center">STT</th>
                   <th className="py-3 px-4 w-28">Ngày tháng</th>
                   <th className="py-3 px-4">Nội dung chi tiết</th>
-                  <th className="py-3 px-4 w-36 text-right">Số tiền (VNĐ)</th>
+                  <th className="py-3 px-4 w-28 text-right">Trước thuế</th>
+                  <th className="py-3 px-4 w-24 text-right">Tiền thuế</th>
+                  <th className="py-3 px-4 w-32 text-right">Sau thuế</th>
                   <th className="py-3 px-4 w-32">Số hóa đơn</th>
                   <th className="py-3 px-4 w-24 text-center">Loại</th>
                 </tr>
@@ -792,6 +800,12 @@ export default function InvoiceTool({ displayLang }) {
                       {inv.rawFileName && (
                         <div className="text-[10px] text-slate-500 font-mono mt-0.5">{inv.rawFileName}</div>
                       )}
+                    </td>
+                    <td className="py-3 px-4 text-right font-medium text-slate-300 whitespace-nowrap">
+                      {inv.amountBeforeTax.toLocaleString('vi-VN')}
+                    </td>
+                    <td className="py-3 px-4 text-right font-medium text-slate-400 whitespace-nowrap">
+                      {inv.vatAmount.toLocaleString('vi-VN')}
                     </td>
                     <td className="py-3 px-4 text-right font-bold text-amber-400 whitespace-nowrap">
                       {inv.totalAmount.toLocaleString('vi-VN')}
