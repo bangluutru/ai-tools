@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import LongDocTranslatorView from '@ai-tools/core/components/LongDocTranslatorView';
+import LongDocTranslatorView from '@ai-tools/core/components/LongDocTranslatorView.jsx';
 import { Globe } from 'lucide-react';
 
 export default function App() {

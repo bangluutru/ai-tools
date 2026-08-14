@@ -1,5 +1,5 @@
 import React from 'react';
-import PdfMergerView from '@ai-tools/core/components/PdfMergerView';
+import PdfMergerView from '@ai-tools/core/components/PdfMergerView.jsx';
 
 export default function PdfMergeTool({ displayLang }) {
   return (

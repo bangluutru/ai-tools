@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import LegalDocumentView from '@ai-tools/core/components/LegalDocumentView';
+import LegalDocumentView from '@ai-tools/core/components/LegalDocumentView.jsx';
 
 export default function LegalStudioTool({ displayLang: initialLang }) {
   const [displayLang, setDisplayLang] = useState(initialLang || 'vi');

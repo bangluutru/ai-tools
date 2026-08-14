@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import PdfSplitterView from '@ai-tools/core/components/PdfSplitterView';
+import PdfSplitterView from '@ai-tools/core/components/PdfSplitterView.jsx';
 import { Scissors, Globe } from 'lucide-react';
 
 export default function App() {

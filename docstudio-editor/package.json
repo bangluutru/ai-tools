@@ -24,7 +24,8 @@
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "@ai-tools/core": "*"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -40,5 +41,5 @@
     "tailwindcss": "^3.4.19",
     "vite": "^7.3.1"
   },
-  "description": "DocStudio Interactive Editor - Bộ Soạn Thảo Form & Template"
+  "description": "DocStudio Interactive Editor - B\u1ed9 So\u1ea1n Th\u1ea3o Form & Template"
 }

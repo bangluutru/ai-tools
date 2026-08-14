@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import LegalDocumentView from '@ai-tools/core/components/LegalDocumentView';
+import LegalDocumentView from '@ai-tools/core/components/LegalDocumentView.jsx';
 import { Scale, Globe } from 'lucide-react';
 
 export default function App() {

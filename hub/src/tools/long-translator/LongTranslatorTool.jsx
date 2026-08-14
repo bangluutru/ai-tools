@@ -1,5 +1,5 @@
 import React from 'react';
-import LongDocTranslatorView from '@ai-tools/core/components/LongDocTranslatorView';
+import LongDocTranslatorView from '@ai-tools/core/components/LongDocTranslatorView.jsx';
 
 export default function LongTranslatorTool({ displayLang }) {
   return (

@@ -24,7 +24,8 @@
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "@ai-tools/core": "*"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -40,5 +41,5 @@
     "tailwindcss": "^3.4.19",
     "vite": "^7.3.1"
   },
-  "description": "DocStudio Translator - Dịch Tài Liệu Dài & EJV"
+  "description": "DocStudio Translator - D\u1ecbch T\u00e0i Li\u1ec7u D\u00e0i & EJV"
 }

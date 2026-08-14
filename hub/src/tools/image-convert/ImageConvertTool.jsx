@@ -5,8 +5,8 @@ import SettingsBar from '../../components/image/SettingsBar';
 import StatsOverview from '../../components/image/StatsOverview';
 import ImageGrid from '../../components/image/ImageGrid';
 import CompareModal from '../../components/image/CompareModal';
-import { convertImageToWebP } from '@ai-tools/core/utils/image/converter';
-import { downloadAllAsZip } from '@ai-tools/core/utils/image/zipExporter';
+import { convertImageToWebP } from '@ai-tools/core/utils/image/converter.js';
+import { downloadAllAsZip } from '@ai-tools/core/utils/image/zipExporter.js';
 
 export default function ImageConvertTool({ displayLang }) {
   const [settings, setSettings] = useState({
