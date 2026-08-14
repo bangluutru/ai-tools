@@ -321,11 +321,103 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       'NBan MST', 'Seller MST', 'Seller TaxCode', 'MST', 'MaSoThue', 'TaxCode', 'NBan > MST'
     ]) || '';
 
-    // 4. Trích xuất tên hàng hóa/dịch vụ từ thẻ chi tiết XML
-    const itemName = getText(['THHDVu', 'TenHHDVu', 'HHDVu > THHDVu', 'HHDVu > Ten']);
-    if (itemName && itemName.length > 2 && !seller.toLowerCase().includes(itemName.toLowerCase())) {
-      const shortItem = itemName.length > 50 ? `${itemName.slice(0, 50)}...` : itemName;
-      seller = `${seller} (${shortItem})`;
+    // 4. Trích xuất nâng cao: Taxi, Vé máy bay, và tên hàng hóa dịch vụ
+    const thhdvuTexts = Array.from(xmlDoc.querySelectorAll('THHDVu, TenHHDVu, HHDVu > THHDVu, HHDVu > Ten'))
+      .map(node => node.textContent.trim())
+      .filter(txt => txt.length > 0);
+
+    const ttinData = {};
+    const ttinNodes = xmlDoc.querySelectorAll('TTin');
+    ttinNodes.forEach(node => {
+      const truong = node.querySelector('TTruong');
+      const lieu = node.querySelector('DLieu');
+      if (truong && truong.textContent && lieu && lieu.textContent) {
+        ttinData[truong.textContent.trim()] = lieu.textContent.trim();
+      }
+    });
+
+    const sellerUpper = seller.toUpperCase();
+    const isAirline = sellerUpper.includes('VIETJET') || sellerUpper.includes('VIETNAM AIRLINES');
+    const isTaxi = ['GSM', 'XANH', 'DI CHUYỂN XANH', 'GREEN CAR', 'PHÚ HOÀNG', 'SACO', 'ĐẠI THÀNH', 'TỴ MÙI'].some(k => sellerUpper.includes(k));
+
+    if (isAirline) {
+      let pnr = '';
+      const routes = [];
+      for (const txt of thhdvuTexts) {
+        if (/^[A-Z0-9]{5,7}$/.test(txt)) {
+          pnr = txt;
+          break;
+        }
+      }
+      for (const val of Object.values(ttinData)) {
+        if (/^[A-Z]{3}-[A-Z]{3}$/.test(val) && !routes.includes(val)) {
+          routes.push(val);
+        }
+      }
+      const airline = sellerUpper.includes('VIETJET') ? 'Vietjet Air' : 'Vietnam Airlines';
+      if (pnr && routes.length > 0) {
+        seller = `${airline} [PNR: ${pnr} | ${routes.join(', ')}]`;
+      } else if (pnr) {
+        seller = `${airline} [PNR: ${pnr}]`;
+      } else if (routes.length > 0) {
+        seller = `${airline} [${routes.join(', ')}]`;
+      } else {
+        seller = airline;
+      }
+    } else if (isTaxi) {
+      let pickup = ttinData['PICK_UP_ADDRESS'] || ttinData['SENDER_NAME'] || ttinData['CustomField2'] || '';
+      let dropoff = ttinData['DROP_OFF_ADDRESS'] || ttinData['SHIPPING_ADDRESS'] || ttinData['CustomField3'] || '';
+
+      if (!pickup && !dropoff) {
+        for (const txt of thhdvuTexts) {
+          let m = txt.match(/Điểm đón:\s*(.*?)\s*[-–]\s*Điểm trả:\s*(.*)/i);
+          if (m) { pickup = m[1].replace(/[ \.]+$/, ''); dropoff = m[2].replace(/[ \.]+$/, ''); break; }
+          
+          m = txt.match(/Điểm đón:\s*(.*?)\s*[.]\s*Điểm đến:\s*(.*)/i);
+          if (m) { pickup = m[1].replace(/[ \.]+$/, ''); dropoff = m[2].replace(/[ \.]+$/, ''); break; }
+          
+          m = txt.match(/(?:taxi|xe|Cước)\s+.*?(?:BSX.*?)?[-–]?\s*Điểm đón:\s*(.*?)[-–]\s*Điểm.*?:\s*(.*)/i);
+          if (m) { pickup = m[1].replace(/[ \.]+$/, ''); dropoff = m[2].replace(/[ \.]+$/, ''); break; }
+          
+          m = txt.match(/từ\s+(.*?)\s+đến\s+(.*)/i);
+          if (m) { pickup = m[1].replace(/[ \.,]+$/, ''); dropoff = m[2].replace(/[ \.,]+$/, ''); break; }
+        }
+      }
+
+      const cleanAddr = (addr) => {
+        if (!addr) return '';
+        return addr.split(',')[0].trim();
+      };
+
+      const taxiMap = {
+        'GSM': 'Xanh SM', 'XANH': 'Xanh SM', 'DI CHUYỂN XANH': 'Xanh SM',
+        'GREEN CAR': 'Green Car', 'PHÚ HOÀNG': 'Phú Hoàng',
+        'SACO': 'Saco', 'ĐẠI THÀNH': 'Đại Thành Công', 'TỴ MÙI': 'Tỵ Mùi'
+      };
+
+      let shortName = seller;
+      for (const [key, name] of Object.entries(taxiMap)) {
+        if (sellerUpper.includes(key)) {
+          shortName = name;
+          break;
+        }
+      }
+
+      if (pickup || dropoff) {
+        let routeStr = ` (${cleanAddr(pickup)} -> ${cleanAddr(dropoff)})`;
+        if (routeStr.length > 80) routeStr = routeStr.substring(0, 77) + '...)';
+        seller = shortName + routeStr;
+      } else {
+        seller = shortName;
+      }
+    } else {
+      // Các hóa đơn khác
+      const itemName = thhdvuTexts.length > 0 ? thhdvuTexts[0] : '';
+      if (itemName && itemName.length > 2 && !seller.toLowerCase().includes(itemName.toLowerCase())) {
+        let shortItem = itemName.length > 55 ? `${itemName.slice(0, 55)}...` : itemName;
+        shortItem = shortItem.replace(/^\d+[\.\s]+/, '').trim();
+        seller = `${seller} (${shortItem})`;
+      }
     }
 
     // 5. Các loại tiền (Ưu tiên số tiền sau thuế chuẩn)
