@@ -68,7 +68,7 @@ const sanitizeHtml = (html) => {
     // Auto-compact: reduce large spacing to tighter values
     // Map: p-8→p-3, p-10→p-3, p-12→p-4, mb-8→mb-2, mb-6→mb-2, gap-6→gap-2, py-8→py-2, etc.
     const spacingScale = ['0','0.5','1','1.5','2','2.5','3','3.5','4','5','6','7','8','9','10','11','12','14','16','20','24','28','32','36','40','44','48','52','56','60','64','72','80','96'];
-    clean = clean.replace(/\b([mp][tbyxlr]?-|gap-)(\d+|1\.5|2\.5|3\.5)(?![a-zA-Z0-9_\[.-])/g, (match, prefix, val) => {
+    clean = clean.replace(/\b([mp][tbyxlr]?-|gap-)(\d+|1\.5|2\.5|3\.5)(?![a-zA-Z0-9_[.-])/g, (match, prefix, val) => {
         const idx = spacingScale.indexOf(val);
         // Compact values >= index 8 (which is '5') down by ~half
         if (idx >= 8) {
@@ -588,7 +588,7 @@ const TemplateOverlayView = ({ displayLang: globalDisplayLang }) => {
                             jsonStart = i;
                             break;
                         }
-                    } catch (_) { /* keep searching */ }
+                    } catch { /* keep searching */ }
                 }
             }
 
@@ -620,7 +620,7 @@ const TemplateOverlayView = ({ displayLang: globalDisplayLang }) => {
                             showSuccess(appendMode ? '\u2705 \u0110\u00e3 n\u1ed1i th\u00eam trang!' : undefined);
                             return;
                         }
-                    } catch (_) { /* not valid JSON, fall through */ }
+                    } catch { /* not valid JSON, fall through */ }
                 }
             }
         }
@@ -633,26 +633,6 @@ const TemplateOverlayView = ({ displayLang: globalDisplayLang }) => {
             return;
         }
         // Otherwise: default textarea paste
-    };
-
-    // -----------------------------------------------------------------
-    // APPEND PAGE: add new page content to existing document
-    // -----------------------------------------------------------------
-    const handleAppendPage = (newHtml, newJson) => {
-        if (!newHtml && !newJson) return;
-        const newPage = { html: newHtml || '', json: newJson || '' };
-        const currentPages = pages;
-        let updated;
-        if (currentPages.length === 0 && htmlInput.trim()) {
-            updated = [{ html: htmlInput.trim(), json: jsonInput.trim() }, newPage];
-        } else {
-            updated = [...currentPages, newPage];
-        }
-        savePages(updated);
-        setHtmlInput('');
-        setJsonInput('');
-        setSmartPasteMsg('\u2705 \u0110\u00e3 n\u1ed1i th\u00eam trang m\u1edbi!');
-        setTimeout(() => setSmartPasteMsg(''), 3000);
     };
 
     // -----------------------------------------------------------------
@@ -727,7 +707,7 @@ const TemplateOverlayView = ({ displayLang: globalDisplayLang }) => {
 <html><head>
 <meta charset="utf-8">
 <title>DocStudio - Print</title>
-<script src="https://cdn.tailwindcss.com"><\/script>
+<script src="https://cdn.tailwindcss.com"></script>
 <style>
   @page { size: A4; margin: 0; }
   body { margin: 0; padding: 0; background: white; }
@@ -739,7 +719,7 @@ ${pagesHtml}
 <script>
   // Wait for Tailwind to process, then print
   setTimeout(() => { window.print(); window.close(); }, 800);
-<\/script>
+</script>
 </body></html>`);
         printWindow.document.close();
     };
@@ -992,7 +972,7 @@ ${pagesHtml}
         const el = e.target;
         if (el && typeof el.className === 'string' && el.className.trim() !== '') {
             const oldClasses = el.className;
-            const newClasses = oldClasses.replace(/\b([mp][tbyxlr]?-|gap-|h-|min-h-)[a-zA-Z0-9.\[\]-]+\b/g, '').replace(/\s{2,}/g, ' ').trim();
+            const newClasses = oldClasses.replace(/\b([mp][tbyxlr]?-|gap-|h-|min-h-)[a-zA-Z0-9.[\]-]+\b/g, '').replace(/\s{2,}/g, ' ').trim();
             if (oldClasses !== newClasses) {
                 const oldBg = el.style.backgroundColor;
                 el.style.backgroundColor = '#fecaca';

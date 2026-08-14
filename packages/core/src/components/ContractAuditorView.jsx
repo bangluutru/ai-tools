@@ -11,8 +11,7 @@ import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
-export default function ContractAuditorView({ displayLang }) {
-  const [contractFile, setContractFile] = useState(null);
+export default function ContractAuditorView() {
   const [acceptanceFile, setAcceptanceFile] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [contractInfo, setContractInfo] = useState({
@@ -83,7 +82,7 @@ export default function ContractAuditorView({ displayLang }) {
           }
 
           // Quét số tiền
-          const nums = (fullText.match(/\b\d{1,3}(?:[\.,]\d{3})+\b/g) || [])
+          const nums = (fullText.match(/\b\d{1,3}(?:[.,]\d{3})+\b/g) || [])
             .map((s) => parseInt(s.replace(/[^\d]/g, ''), 10))
             .filter((n) => n >= 10000 && n <= 500000000);
           const amount = nums.length > 0 ? Math.max(...nums) : 2500000;
@@ -231,7 +230,7 @@ export default function ContractAuditorView({ displayLang }) {
     const ws = XLSX.utils.aoa_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Báo Cáo Đối Soát');
-    XLSX.writeFile(wb, `Bao_Cao_Doi_Soat_Hop_Dong_${contractInfo.contractNo.replace(/[\/\\]/g, '_')}.xlsx`);
+    XLSX.writeFile(wb, `Bao_Cao_Doi_Soat_Hop_Dong_${contractInfo.contractNo.replace(/[/\\]/g, '_')}.xlsx`);
   };
 
   return (

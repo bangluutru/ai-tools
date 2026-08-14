@@ -87,7 +87,7 @@ export default function CompareModal({ item, onClose }) {
               alt="Original"
               className="compare-img"
               style={{
-                width: containerRef.current ? `${containerRef.current.clientWidth}px` : '100%',
+                width: '100%',
                 maxWidth: 'none',
               }}
             />

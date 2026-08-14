@@ -3,7 +3,7 @@ import React from 'react';
 // Renders individual blocks based on the schema type
 const BlockRenderer = ({ block }) => {
     switch (block.type) {
-        case 'heading':
+        case 'heading': {
             const Tag = `h${block.level}`;
             const sizeClasses = {
                 1: 'text-2xl font-black mt-6 mb-4 text-slate-800',
@@ -14,6 +14,7 @@ const BlockRenderer = ({ block }) => {
                 6: 'text-sm font-semibold mt-2 mb-1 text-slate-600',
             };
             return <Tag className={sizeClasses[block.level]}>{block.text}</Tag>;
+        }
 
         case 'paragraph':
             return <p className="mb-3 leading-inherit text-slate-800 text-justify">{block.text}</p>;

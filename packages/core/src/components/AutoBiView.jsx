@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-export default function AutoBiView({ displayLang }) {
+export default function AutoBiView() {
   const [fileData, setFileData] = useState(null);
   const [fileName, setFileName] = useState('');
   const [columns, setColumns] = useState([]);

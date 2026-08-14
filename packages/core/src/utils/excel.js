@@ -152,7 +152,7 @@ export const readExcelFile = async (file, isSource = true) => {
                         // Result-only objects
                         if (v.result !== undefined) return String(v.result);
                         // Fallback: try to get something readable
-                        try { return JSON.stringify(v); } catch (e) { return ''; }
+                        try { return JSON.stringify(v); } catch { return ''; }
                     };
 
                     const headerZone = [];
@@ -348,7 +348,7 @@ export const exportMappedExcel = async ({
     const baseStyles = {};
     for (let c = 1; c <= maxCol; c++) {
         try { baseStyles[c] = JSON.parse(JSON.stringify(ws.getRow(dataStartRow).getCell(c).style || {})); }
-        catch (e) { baseStyles[c] = {}; }
+        catch { baseStyles[c] = {}; }
     }
 
     // 3. Save merges in data/footer zones
@@ -361,7 +361,7 @@ export const exportMappedExcel = async ({
 
     // 4. Unmerge all
     saved.forEach(m => {
-        try { ws.unMergeCells(makeMergeRef(m.top, m.left, m.bottom, m.right)); } catch (e) { }
+        try { ws.unMergeCells(makeMergeRef(m.top, m.left, m.bottom, m.right)); } catch { }
     });
 
     // 5. Splice
@@ -373,7 +373,7 @@ export const exportMappedExcel = async ({
         const row = ws.getRow(dataStartRow + i);
         for (let c = 1; c <= maxCol; c++) {
             row.getCell(c).value = null;
-            try { row.getCell(c).style = baseStyles[c]; } catch (e) { }
+            try { row.getCell(c).style = baseStyles[c]; } catch { }
         }
     }
 
@@ -397,13 +397,13 @@ export const exportMappedExcel = async ({
 
     for (let i = 0; i < neededRows; i++) {
         const r = dataStartRow + i;
-        patterns.forEach(p => { try { ws.mergeCells(makeMergeRef(r, p.left, r, p.right)); } catch (e) { } });
+        patterns.forEach(p => { try { ws.mergeCells(makeMergeRef(r, p.left, r, p.right)); } catch { } });
     }
 
     // 8b. Footer merges shifted by diff
     saved.filter(m => m.zone === 'footer').forEach(m => {
         const t = m.top + diff, b = m.bottom + diff;
-        if (t > 0 && b > 0) { try { ws.mergeCells(makeMergeRef(t, m.left, b, m.right)); } catch (e) { } }
+        if (t > 0 && b > 0) { try { ws.mergeCells(makeMergeRef(t, m.left, b, m.right)); } catch { } }
     });
 
     // 9. Header zone edits

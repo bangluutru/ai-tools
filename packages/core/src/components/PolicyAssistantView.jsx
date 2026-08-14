@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-export default function PolicyAssistantView({ displayLang }) {
+export default function PolicyAssistantView() {
   // Trạng thái cho Máy tính công tác phí
   const [region, setRegion] = useState('vung1');
   const [days, setDays] = useState(3);
@@ -15,7 +15,7 @@ export default function PolicyAssistantView({ displayLang }) {
   const [hasFlight, setHasFlight] = useState(true);
 
   // Trạng thái cho Biểu mẫu đề xuất
-  const [formData, setFormData] = useState({
+  const [formData] = useState({
     requesterName: 'Nguyễn Văn A',
     department: 'Phòng Phát triển Dự án',
     purpose: 'Khảo sát thị trường & Làm việc với đối tác tại địa phương',

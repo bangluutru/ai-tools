@@ -38,4 +38,5 @@ Thumbs.db
 
 # Scratch & Temporary
 scratch/
+fixtures/generated/
 populate_part1.mjs

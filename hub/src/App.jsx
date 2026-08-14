@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import Navbar from './components/Navbar';
 import HeroBanner from './components/HeroBanner';
 import CategoryTabs from './components/CategoryTabs';
@@ -6,7 +6,10 @@ import ToolCard from './components/ToolCard';
 import ToolContainer from './components/ToolContainer';
 import ToolErrorBoundary from './components/ToolErrorBoundary';
 import CommandPalette from './components/CommandPalette';
+import DataPolicyModal from './components/DataPolicyModal';
 import { tools } from './config/toolsRegistry';
+import { buildVersion } from './config/buildInfo';
+import { resolveToolId, toolUrl } from './utils/toolRoute';
 import { Loader2 } from 'lucide-react';
 
 // =========================================================================
@@ -48,8 +51,11 @@ export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('hub_theme') || 'dark');
   const [displayLang, setDisplayLang] = useState(() => localStorage.getItem('hub_lang') || 'vi');
   const [activeCategory, setActiveCategory] = useState('all');
-  const [activeToolId, setActiveToolId] = useState(null);
+  const [activeToolId, setActiveToolId] = useState(() =>
+    resolveToolId(window.location.hash, tools)
+  );
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isPolicyOpen, setIsPolicyOpen] = useState(false);
 
   // Sync theme attribute
   useEffect(() => {
@@ -61,6 +67,19 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('hub_lang', displayLang);
   }, [displayLang]);
+
+  // Hash routes work on static hosting and preserve the selected miniapp on refresh/share.
+  useEffect(() => {
+    const syncToolFromUrl = () => {
+      setActiveToolId(resolveToolId(window.location.hash, tools));
+    };
+    window.addEventListener('hashchange', syncToolFromUrl);
+    window.addEventListener('popstate', syncToolFromUrl);
+    return () => {
+      window.removeEventListener('hashchange', syncToolFromUrl);
+      window.removeEventListener('popstate', syncToolFromUrl);
+    };
+  }, []);
 
   // Cmd + K Shortcut
   useEffect(() => {
@@ -78,6 +97,18 @@ export default function App() {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  const selectTool = useCallback((toolId) => {
+    const tool = tools.find((candidate) => candidate.id === toolId);
+    if (!tool || tool.readiness === 'disabled') return;
+    window.history.pushState({ toolId }, '', toolUrl(window.location, toolId));
+    setActiveToolId(toolId);
+  }, []);
+
+  const backToHub = useCallback(() => {
+    window.history.pushState({ toolId: null }, '', toolUrl(window.location, null));
+    setActiveToolId(null);
+  }, []);
+
   const currentTool = tools.find((t) => t.id === activeToolId);
   const ActiveComponent = activeToolId ? toolComponentMap[activeToolId] : null;
 
@@ -92,13 +123,13 @@ export default function App() {
       {activeToolId && currentTool && ActiveComponent ? (
         <ToolContainer
           currentTool={currentTool}
-          onBackToHub={() => setActiveToolId(null)}
-          onSelectTool={setActiveToolId}
+          onBackToHub={backToHub}
+          onSelectTool={selectTool}
           displayLang={displayLang}
         >
           <ToolErrorBoundary
             toolName={currentTool.name_vn}
-            onBackToHub={() => setActiveToolId(null)}
+            onBackToHub={backToHub}
           >
             <Suspense
               fallback={
@@ -138,7 +169,7 @@ export default function App() {
                 <ToolCard
                   key={tool.id}
                   tool={tool}
-                  onSelectTool={setActiveToolId}
+                  onSelectTool={selectTool}
                   displayLang={displayLang}
                 />
               ))}
@@ -151,8 +182,11 @@ export default function App() {
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-400">AI-Tools Master Hub</span>
                 <span>• Beta có kiểm soát</span>
+                <span>• Build {buildVersion}</span>
               </div>
-              <div>Nơi xử lý, mục đích đầu ra và trạng thái được công bố theo từng công cụ</div>
+              <button onClick={() => setIsPolicyOpen(true)} className="underline decoration-slate-700 underline-offset-4 hover:text-slate-300">
+                Chính sách xử lý dữ liệu
+              </button>
             </div>
           </footer>
         </>
@@ -162,9 +196,10 @@ export default function App() {
       <CommandPalette
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        onSelectTool={setActiveToolId}
+        onSelectTool={selectTool}
         displayLang={displayLang}
       />
+      <DataPolicyModal isOpen={isPolicyOpen} onClose={() => setIsPolicyOpen(false)} />
     </div>
   );
 }

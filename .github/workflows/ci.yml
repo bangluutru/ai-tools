@@ -14,7 +14,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run lint:critical
+      - run: npm run lint
       - run: npm test
       - run: npm run build:all
       - run: npm audit --omit=dev --audit-level=high

@@ -24,7 +24,7 @@ const toISO = (val) => {
             const day = String(d.getDate()).padStart(2, '0');
             return `${y}-${m}-${day}`;
         }
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
     return '';
 };
 

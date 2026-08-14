@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import DocStudioApp from './components/docstudio/DocStudioApp';
+import DocStudioApp from '@ai-tools/core/components/docstudio/DocStudioApp.jsx';
 import { LayoutTemplate, Globe } from 'lucide-react';
 
 export default function App() {

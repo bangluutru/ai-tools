@@ -47,7 +47,7 @@ const toolGovernance = {
   'editor-studio': { readiness: 'experimental', processing: 'browser', outputPurpose: 'reference' },
   'invoice-webapp': {
     readiness: 'beta',
-    processing: 'hybrid',
+    processing: 'browser',
     priority: 2,
     outputPurpose: 'reference'
   },
@@ -78,16 +78,16 @@ const toolDefinitions = [
     name_vn: 'WebP Master & Nén Ảnh',
     name_en: 'WebP Image Converter',
     name_ja: 'WebP 画像変換',
-    desc_vn: 'Chuyển đổi hàng loạt PNG, JPG, GIF, SVG sang WebP, nén dung lượng và so sánh chất lượng trực quan.',
-    desc_en: 'Batch convert PNG, JPG, GIF, SVG to high-quality WebP, compress and visual compare.',
-    desc_ja: 'PNG、JPG、GIF、SVGを一括でWebPに変換し、圧縮して画質を比較します。',
+    desc_vn: 'Chuyển đổi hàng loạt PNG, JPG, GIF và WebP, nén dung lượng và so sánh chất lượng trực quan.',
+    desc_en: 'Batch convert PNG, JPG, GIF and WebP images, compress and visually compare output.',
+    desc_ja: 'PNG、JPG、GIF、WebPを一括変換し、圧縮して画質を比較します。',
     category: 'image',
     icon: 'Image',
     gradient: 'from-emerald-500 to-teal-600',
     color: '#10b981',
     badge: 'POPULAR',
     popular: true,
-    tags: ['image', 'webp', 'convert', 'png', 'jpg', 'compress', 'ảnh']
+    tags: ['image', 'webp', 'convert', 'png', 'jpg', 'gif', 'compress', 'ảnh']
   },
   {
     id: 'pdf-split',

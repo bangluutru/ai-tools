@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FileText, GripVertical, BookOpen, Layers } from 'lucide-react';
 import {
     DndContext,

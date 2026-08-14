@@ -38,7 +38,7 @@ async def antigravity_unavailable_handler(
 ):
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        content={"detail": str(exc), "retryable": True},
+        content={"detail": str(exc), "retryable": exc.retryable},
     )
 
 app.include_router(agents.router, prefix="/api/agents")
@@ -50,5 +50,6 @@ async def health_check():
     return {
         "status": "ok",
         "ai_runtime": "antigravity",
+        "ai_runtime_enabled": settings.antigravity_enabled,
         "model_override": settings.antigravity_model,
     }

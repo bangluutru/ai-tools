@@ -14,17 +14,14 @@ import UndoToast from '@ai-tools/core/components/UndoToast.jsx';
 import PromptHelper from '@ai-tools/core/components/PromptHelper.jsx';
 import { CERT_PROMPT_TEXT, CERT_NOTEBOOKLM_PROMPT } from '@ai-tools/core/utils/prompts.js';
 import { uiTranslations } from '@ai-tools/core/utils/translations.js';
-import { getLangVal } from '@ai-tools/core/utils/lang.js';
 
 export default function CertificateStudioTool({ displayLang }) {
   const [data, setData] = useState([]);
   const [jsonText, setJsonText] = useState('');
   const [parseError, setParseError] = useState(null);
-  const [saveStatus, setSaveStatus] = useState('saved');
+  const [, setSaveStatus] = useState('saved');
   const [promptSource, setPromptSource] = useState('gemini');
-  const [activePageIndex, setActivePageIndex] = useState(0);
   const [customFont, setCustomFont] = useState('Inter');
-  const [undoItem, setUndoItem] = useState(null);
 
   const langKey = displayLang === 'vi' ? 'vn' : displayLang;
   const t = uiTranslations[langKey] || uiTranslations.vn;
@@ -37,7 +34,9 @@ export default function CertificateStudioTool({ displayLang }) {
         const parsed = JSON.parse(cached);
         setData(parsed);
         setJsonText(JSON.stringify(parsed, null, 2));
-      } catch (e) {}
+      } catch {
+        localStorage.removeItem('docstudio_cert_data');
+      }
     } else {
       const defaultData = [
         {

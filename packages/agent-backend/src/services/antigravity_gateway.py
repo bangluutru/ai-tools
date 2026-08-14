@@ -4,6 +4,7 @@ import asyncio
 from typing import Any, TypeVar
 
 from google.antigravity import Agent, CapabilitiesConfig, LocalAgentConfig
+from google.antigravity.types import AntigravityValidationError
 from pydantic import BaseModel
 
 from ..config import settings
@@ -14,6 +15,10 @@ SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
 class AntigravityUnavailableError(RuntimeError):
     """Raised when the configured Antigravity runtime cannot finish a request."""
+
+    def __init__(self, message: str, *, retryable: bool = True) -> None:
+        super().__init__(message)
+        self.retryable = retryable
 
 
 class AntigravityGateway:
@@ -29,9 +34,18 @@ class AntigravityGateway:
         *,
         model: str | None = None,
         timeout_seconds: int | None = None,
+        enabled: bool | None = None,
     ) -> None:
         self.model = model if model is not None else settings.antigravity_model
         self.timeout_seconds = timeout_seconds or settings.antigravity_timeout_seconds
+        self.enabled = settings.antigravity_enabled if enabled is None else enabled
+
+    def _require_enabled(self) -> None:
+        if not self.enabled:
+            raise AntigravityUnavailableError(
+                "Antigravity inference is disabled until an approved runtime credential strategy is configured",
+                retryable=False,
+            )
 
     def _config(
         self,
@@ -56,6 +70,7 @@ class AntigravityGateway:
         system_instructions: str,
         response_schema: type[SchemaT],
     ) -> SchemaT:
+        self._require_enabled()
         try:
             async with Agent(
                 self._config(
@@ -67,6 +82,11 @@ class AntigravityGateway:
                 payload = await asyncio.wait_for(
                     response.structured_output(), timeout=self.timeout_seconds
                 )
+        except AntigravityValidationError as exc:
+            raise AntigravityUnavailableError(
+                "Antigravity runtime credentials are not configured",
+                retryable=False,
+            ) from exc
         except (TimeoutError, OSError, RuntimeError) as exc:
             raise AntigravityUnavailableError(
                 "Antigravity runtime is unavailable or timed out"
@@ -79,6 +99,7 @@ class AntigravityGateway:
         return response_schema.model_validate(payload)
 
     async def text(self, *, prompt: Any, system_instructions: str) -> str:
+        self._require_enabled()
         try:
             async with Agent(
                 self._config(system_instructions=system_instructions)
@@ -87,6 +108,11 @@ class AntigravityGateway:
                 text = await asyncio.wait_for(
                     response.text(), timeout=self.timeout_seconds
                 )
+        except AntigravityValidationError as exc:
+            raise AntigravityUnavailableError(
+                "Antigravity runtime credentials are not configured",
+                retryable=False,
+            ) from exc
         except (TimeoutError, OSError, RuntimeError) as exc:
             raise AntigravityUnavailableError(
                 "Antigravity runtime is unavailable or timed out"

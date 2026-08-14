@@ -14,6 +14,18 @@ def _positive_int(name: str, default: int) -> int:
     return value
 
 
+def _boolean(name: str, default: bool) -> bool:
+    raw_value = os.getenv(name)
+    if raw_value is None:
+        return default
+    normalized = raw_value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be a boolean")
+
+
 def _origins() -> tuple[str, ...]:
     raw_value = os.getenv(
         "AI_TOOLS_ALLOWED_ORIGINS",
@@ -33,6 +45,7 @@ class Settings:
     max_request_bytes: int
     antigravity_timeout_seconds: int
     antigravity_model: str | None
+    antigravity_enabled: bool
 
 
 def load_settings() -> Settings:
@@ -50,6 +63,7 @@ def load_settings() -> Settings:
             "AI_TOOLS_ANTIGRAVITY_TIMEOUT_SECONDS", 120
         ),
         antigravity_model=os.getenv("AI_TOOLS_ANTIGRAVITY_MODEL") or None,
+        antigravity_enabled=_boolean("AI_TOOLS_ANTIGRAVITY_ENABLED", False),
     )
 
 

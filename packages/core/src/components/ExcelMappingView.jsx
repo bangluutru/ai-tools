@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     FileSpreadsheet, Upload, Download, Sparkles, Plus,
     Trash2, ChevronDown, ChevronUp, AlertCircle, Save, Loader2
@@ -7,7 +7,7 @@ import { readExcelFile, autoMapFields, exportMappedExcel } from '../utils/excel'
 import ZoneEditor from './ZoneEditor';
 import { useAntigravityAgent } from '../hooks/useAntigravityAgent';
 
-export default function ExcelMappingView({ t: tProp, displayLang }) {
+export default function ExcelMappingView({ t: tProp }) {
     const t = tProp || {};
 
     // --- STATE ---
@@ -30,21 +30,20 @@ export default function ExcelMappingView({ t: tProp, displayLang }) {
 
     // Mapping & Profiles
     const [mappingRules, setMappingRules] = useState([]);
-    const [profiles, setProfiles] = useState({});
+    const [profiles, setProfiles] = useState(() => {
+        try {
+            const saved = localStorage.getItem('docstudio_mapping_profiles');
+            return saved ? JSON.parse(saved) : {};
+        } catch {
+            return {};
+        }
+    });
     const [currentProfileName, setCurrentProfileName] = useState('New Profile');
     const [showBottomPanel, setShowBottomPanel] = useState(true);
 
     // Status
     const [error, setError] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
-
-    // Load profiles from local storage
-    useEffect(() => {
-        const saved = localStorage.getItem('docstudio_mapping_profiles');
-        if (saved) {
-            try { setProfiles(JSON.parse(saved)); } catch (e) { }
-        }
-    }, []);
 
     const { execute: executeAutoMap, isLoading: isMappingLoading } = useAntigravityAgent('/map-fields');
 
@@ -208,7 +207,7 @@ export default function ExcelMappingView({ t: tProp, displayLang }) {
         setCurrentProfileName(name);
         try {
             localStorage.setItem('docstudio_mapping_profiles', JSON.stringify(newProfiles));
-        } catch (e) {
+        } catch {
             // If localStorage is full (buffer too large), save without buffer
             const lite = { ...profileData, targetBuffer: null };
             const liteProfiles = { ...profiles, [name]: lite };
