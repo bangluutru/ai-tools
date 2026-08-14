@@ -71,7 +71,37 @@ async function extractTextFromPDFBuffer(arrayBuffer) {
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items.map((item) => item.str).join(' ');
+      
+      let pageText = '';
+      let lastY = null;
+      
+      // Sort items by Y (descending) and then X (ascending)
+      const items = textContent.items.map(item => ({
+        str: item.str,
+        x: item.transform[4],
+        y: item.transform[5],
+        height: item.transform[3]
+      }));
+
+      items.sort((a, b) => {
+        if (Math.abs(a.y - b.y) > 5) {
+          return b.y - a.y; // Descending Y (top to bottom)
+        }
+        return a.x - b.x; // Ascending X (left to right)
+      });
+
+      for (const item of items) {
+        if (lastY !== null && Math.abs(item.y - lastY) > 5) {
+          pageText += '\n';
+        } else if (lastY !== null) {
+          pageText += ' ';
+        }
+        pageText += item.str.trim();
+        lastY = item.y;
+      }
+      
+      // Cleanup multiple spaces
+      pageText = pageText.replace(/ {2,}/g, ' ');
       fullText += pageText + '\n';
     }
     return fullText;
@@ -104,20 +134,34 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       invoiceNo = invMatch[1].trim();
     }
 
-    // 3. Quét số tiền (Lấy MAX để đảm bảo luôn là số tiền sau thuế / tổng thanh toán)
-    const amountMatches = text.match(/(?:VNĐ|VND|\₫)?\s*(\d{1,3}(?:[\.,]\d{3})+(?:[\.,]\d{2})?|\d{4,9})\s*(?:VNĐ|VND|\₫)?/g);
-    if (amountMatches) {
-      const parsedNums = [];
-      for (const m of amountMatches) {
-        // Làm sạch số tiền
-        const cleaned = m.replace(/[^\d]/g, '');
-        const num = parseInt(cleaned, 10);
-        if (num >= 5000 && num <= 500000000) { // Giới hạn hợp lệ của hóa đơn thông thường
-          parsedNums.push(num);
-        }
+    // 3. Quét số tiền (Sử dụng regex như bản Python để tìm các dòng chứa "tổng cộng", "thành tiền", "total")
+    const amountRegex = /(?:tổng cộng tiền thanh toán|tổng tiền thanh toán|tổng cộng|total payment|total amount|tổng tiền|thành tiền).*?(\d{1,3}(?:[\.,]\d{3})+(?:[\.,]\d{2})?|\d{4,9})/gi;
+    let match;
+    const parsedNums = [];
+    while ((match = amountRegex.exec(text)) !== null) {
+      const cleaned = match[1].replace(/[^\d]/g, '');
+      const num = parseInt(cleaned, 10);
+      if (num >= 5000 && num <= 500000000) {
+        parsedNums.push(num);
       }
-      if (parsedNums.length > 0) {
-        totalAmount = Math.max(...parsedNums);
+    }
+    
+    // Nếu không tìm thấy, fallback tìm MAX của TẤT CẢ các số hợp lệ
+    if (parsedNums.length > 0) {
+      totalAmount = Math.max(...parsedNums);
+    } else {
+      const allAmountMatches = text.match(/(?:VNĐ|VND|\₫)?\s*(\d{1,3}(?:[\.,]\d{3})+(?:[\.,]\d{2})?|\d{4,9})\s*(?:VNĐ|VND|\₫)?/g);
+      if (allAmountMatches) {
+        for (const m of allAmountMatches) {
+          const cleaned = m.replace(/[^\d]/g, '');
+          const num = parseInt(cleaned, 10);
+          if (num >= 5000 && num <= 500000000) {
+            parsedNums.push(num);
+          }
+        }
+        if (parsedNums.length > 0) {
+          totalAmount = Math.max(...parsedNums);
+        }
       }
     }
 
@@ -167,7 +211,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       }
 
       // Trích xuất tên hàng hoá dịch vụ với bộ lọc thông minh
-      const itemMatch = text.match(/(?:Tên hàng hóa|Diễn giải|Tên dịch vụ|Nội dung|Hàng hoá, dịch vụ).*?\n((?:.*?\n){1,5})/i);
+      const itemMatch = text.match(/(?:Tên hàng hóa|Diễn giải|Tên dịch vụ|Nội dung|Hàng hoá, dịch vụ|Description).*?\n((?:.*?\n){1,8})/i);
       let desc = '';
       if (itemMatch) {
         const lines = itemMatch[1].split('\n');
@@ -175,15 +219,18 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
           d = d.trim();
           if (!d || d.length < 4) continue;
           const dLower = d.toLowerCase();
-          // Bỏ qua tiêu đề bảng song ngữ
+          
+          // Bỏ qua tiêu đề bảng song ngữ, từ khóa header
           if (/^(?:stt|số thứ tự|tên|đơn vị tính|số lượng|đơn giá|mã|\(|\[)/i.test(dLower)) continue;
-          if (dLower.includes('name of goods') || dLower.includes('description') || dLower.includes('hàng(seller)')) continue;
+          if (dLower.includes('name of goods') || dLower.includes('description') || dLower.includes('seller') || dLower.includes('unit') || dLower.includes('quantity')) continue;
+          if (dLower.includes('(no)') || dLower.includes('hàng(seller)')) continue;
+          
           // Bỏ qua dòng đánh số thứ tự cột toán học (1 2 3 4 5 6 = 4 x 5)
           if (/^[\d\s=xX\.\,\+\-]+$/.test(d)) continue;
 
           // Bỏ số thứ tự đầu dòng nếu có (ví dụ "1 Dịch vụ lưu trú" -> "Dịch vụ lưu trú")
           const cleanD = d.replace(/^\d+[\.\s]+/, '').trim();
-          desc = cleanD.length > 55 ? ` (${cleanD.slice(0, 55)}...)` : ` (${cleanD})`;
+          desc = cleanD.length > 60 ? ` (${cleanD.slice(0, 60)}...)` : ` (${cleanD})`;
           break;
         }
       }
