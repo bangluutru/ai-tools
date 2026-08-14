@@ -6,7 +6,73 @@ export const categories = [
   { id: 'ai', label_vn: 'Dịch thuật & AI', label_en: 'AI & Translation', label_ja: 'AI・翻訳', icon: 'Globe' }
 ];
 
-export const tools = [
+const toolGovernance = {
+  'image-convert': {
+    readiness: 'beta',
+    processing: 'browser',
+    priority: 3,
+    outputPurpose: 'utility'
+  },
+  'pdf-split': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
+  'pdf-merge': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
+  'pdf-overlay': {
+    readiness: 'disabled',
+    processing: 'browser',
+    outputPurpose: 'reference',
+    unavailableReason: 'Tạm khóa để thay luồng HTML không an toàn và làm đúng chức năng overlay PDF.'
+  },
+  'legal-studio': {
+    readiness: 'disabled',
+    processing: 'backend-antigravity',
+    outputPurpose: 'reference',
+    unavailableReason: 'Tạm khóa đến khi contract Antigravity và kiểm thử đầu ra pháp lý hoàn tất.'
+  },
+  'long-translator': {
+    readiness: 'disabled',
+    processing: 'backend-antigravity',
+    outputPurpose: 'reference',
+    unavailableReason: 'Chưa có pipeline upload, chia đoạn và phục hồi cho tài liệu dài.'
+  },
+  'certificate-studio': {
+    readiness: 'disabled',
+    processing: 'manual',
+    outputPurpose: 'reference',
+    unavailableReason: 'Tạm khóa để bổ sung kiểm tra và làm sạch SVG/HTML đầu vào.'
+  },
+  'excel-mapping': {
+    readiness: 'experimental',
+    processing: 'hybrid',
+    outputPurpose: 'reference'
+  },
+  'editor-studio': { readiness: 'experimental', processing: 'browser', outputPurpose: 'reference' },
+  'invoice-webapp': {
+    readiness: 'beta',
+    processing: 'hybrid',
+    priority: 2,
+    outputPurpose: 'reference'
+  },
+  'contract-auditor': {
+    readiness: 'disabled',
+    processing: 'browser',
+    outputPurpose: 'reference',
+    unavailableReason: 'Tạm khóa vì luồng hiện tại chưa đọc đủ ba bộ chứng từ và có fallback dữ liệu mẫu.'
+  },
+  'auto-bi': { readiness: 'experimental', processing: 'browser', outputPurpose: 'reference' },
+  'policy-assistant': {
+    readiness: 'disabled',
+    processing: 'browser',
+    outputPurpose: 'reference',
+    unavailableReason: 'Tạm khóa đến khi dữ liệu chính sách có nguồn, phiên bản và ngày hiệu lực.'
+  },
+  'accounting-reconcile': {
+    readiness: 'beta',
+    processing: 'browser',
+    priority: 1,
+    outputPurpose: 'reference'
+  }
+};
+
+const toolDefinitions = [
   {
     id: 'image-convert',
     name_vn: 'WebP Master & Nén Ảnh',
@@ -213,6 +279,7 @@ export const tools = [
     color: '#a855f7',
     badge: 'POLICY AI',
     popular: true,
+    tags: ['policy', 'quy chế', 'công tác phí', 'expense', 'dự toán'],
   },
   {
     id: 'accounting-reconcile',
@@ -231,3 +298,11 @@ export const tools = [
     tags: ['accounting', 'reconcile', 'đối chiếu', 'kế toán', 'thuế', 'doanh thu', '511', '33311', 'br', 'excel']
   }
 ];
+
+export const tools = toolDefinitions.map((tool) => ({
+  readiness: 'experimental',
+  processing: 'browser',
+  outputPurpose: 'reference',
+  ...tool,
+  ...toolGovernance[tool.id]
+}));

@@ -101,7 +101,7 @@ const LEGAL_STORAGE_KEY = 'docstudio_legal_doc_v1';
 // =====================================================================
 const LegalDocumentView = ({ displayLang, onLangChange }) => {
     const [jsonInput, setJsonInput] = useState('');
-    const { value: docData, setValue: setDocData, remove: removeDocData, isLoading: isStorageLoading } = useLocalStorage(LEGAL_STORAGE_KEY, null);
+    const [docData, setDocData, removeDocData] = useLocalStorage(LEGAL_STORAGE_KEY, null);
     const { execute: executeTranslate, isLoading: isTranslating } = useAntigravityAgent('/translate-legal');
     
     const [error, setError] = useState('');
@@ -134,7 +134,7 @@ const LegalDocumentView = ({ displayLang, onLangChange }) => {
             const payload = new FormData();
             payload.append('text', raw);
             
-            const parsed = await executeTranslate(payload);
+            const parsed = await executeTranslate(payload, true);
             
             // Validate: must have type and at least content_vn
             if (!parsed || !parsed.content_vn) {

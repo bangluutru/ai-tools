@@ -150,9 +150,9 @@ export default function App() {
             <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-400">AI-Tools Master Hub</span>
-                <span>• 100% Client-Side Safe</span>
+                <span>• Beta có kiểm soát</span>
               </div>
-              <div>Bảo mật tuyệt đối — Không lưu trữ dữ liệu người dùng trên máy chủ</div>
+              <div>Nơi xử lý, mục đích đầu ra và trạng thái được công bố theo từng công cụ</div>
             </div>
           </footer>
         </>

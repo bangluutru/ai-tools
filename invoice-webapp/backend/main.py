@@ -1,12 +1,13 @@
 import os
 import shutil
 import tempfile
+import uuid
+from pathlib import Path
 from typing import List
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import BackgroundTasks, FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-import zipfile
 
 # Import core processor
 from backend.invoice_processor import process_invoices
@@ -16,11 +17,15 @@ app = FastAPI(title="Invoice Generator API")
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=False,
+    allow_methods=["POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
+
+MAX_UPLOAD_FILES = 50
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+ALLOWED_EXTENSIONS = {".xml", ".pdf", ".zip"}
 
 # Project paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -32,24 +37,37 @@ if not os.path.exists(TEMPLATE_PATH):
     print(f"WARNING: Template file not found at {TEMPLATE_PATH}")
 
 @app.post("/api/generate-invoice")
-async def generate_invoice(files: List[UploadFile] = File(...)):
+async def generate_invoice(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+):
     if not files or len(files) == 0:
         raise HTTPException(status_code=400, detail="Không có file nào được tải lên")
 
-    # Create a temporary directory for processing
-    temp_dir = tempfile.mkdtemp()
+    if len(files) > MAX_UPLOAD_FILES:
+        raise HTTPException(status_code=413, detail=f"Tối đa {MAX_UPLOAD_FILES} file")
+
+    temp_dir = tempfile.mkdtemp(prefix="ai-tools-invoice-")
     
     try:
         # Save all uploaded files to temp_dir
         for file in files:
-            file_path = os.path.join(temp_dir, file.filename)
+            original_name = Path(file.filename or "upload").name
+            extension = Path(original_name).suffix.lower()
+            if extension not in ALLOWED_EXTENSIONS:
+                raise HTTPException(status_code=415, detail=f"Không hỗ trợ: {original_name}")
+            file_path = os.path.join(temp_dir, f"{uuid.uuid4().hex}{extension}")
+            total_size = 0
             with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-                
-            # If it's a zip file, extract it right away so process_invoices can find everything
-            if file.filename.lower().endswith('.zip'):
-                with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                    zip_ref.extractall(temp_dir)
+                while chunk := await file.read(1024 * 1024):
+                    total_size += len(chunk)
+                    if total_size > MAX_UPLOAD_BYTES:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"{original_name} vượt giới hạn {MAX_UPLOAD_BYTES} byte",
+                        )
+                    buffer.write(chunk)
+            await file.close()
 
         # Output Excel file path
         output_filename = "ĐNTT_auto_generated.xlsx"
@@ -66,9 +84,7 @@ async def generate_invoice(files: List[UploadFile] = File(...)):
         if not os.path.exists(output_path):
             raise HTTPException(status_code=500, detail="Lỗi không xác định: Không tạo được file ĐNTT")
 
-        # Return the generated file
-        # Note: We can't immediately delete temp_dir because FileResponse needs to read the file.
-        # Temp dir will be cleaned up by OS eventually, or we could use BackgroundTasks for immediate cleanup.
+        background_tasks.add_task(shutil.rmtree, temp_dir, ignore_errors=True)
         return FileResponse(
             path=output_path, 
             filename=output_filename,
@@ -76,8 +92,10 @@ async def generate_invoice(files: List[UploadFile] = File(...)):
         )
 
     except HTTPException:
+        shutil.rmtree(temp_dir, ignore_errors=True)
         raise
     except Exception as e:
+        shutil.rmtree(temp_dir, ignore_errors=True)
         raise HTTPException(status_code=500, detail=f"Lỗi hệ thống: {str(e)}")
 
 # Mount frontend static files last so API routes take precedence

@@ -6,8 +6,8 @@ import SettingsBar from './components/SettingsBar.jsx';
 import StatsOverview from './components/StatsOverview.jsx';
 import ImageGrid from './components/ImageGrid.jsx';
 import CompareModal from './components/CompareModal.jsx';
-import { convertImageToWebP } from './utils/converter.js';
-import { downloadAllAsZip } from './utils/zipExporter.js';
+import { convertImageToWebP } from '@ai-tools/core/utils/image/converter.js';
+import { downloadAllAsZip } from '@ai-tools/core/utils/image/zipExporter.js';
 
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('webp_theme') || 'dark');
@@ -56,7 +56,7 @@ export default function App() {
       try {
         const result = await convertImageToWebP(item.originalFile, currentSettings);
         setImages(prev =>
-          prev.map(img => (img.id === item.id ? { ...result, id: item.id } : img))
+          prev.map(img => (img.id === item.id ? { ...img, ...result, id: item.id } : img))
         );
         successCount++;
       } catch (err) {

@@ -1,27 +1,18 @@
-import os
-from google.antigravity import Agent, LocalAgentConfig
-from google.antigravity.types import Document, Image
+from google.antigravity import Document, Image
 from ..schemas.document import ExtractedDocument
+from ..services.antigravity_gateway import AntigravityGateway, gateway
 
 async def extract_document(file_path: str, model: str = None):
-    if model is None:
-        model = os.getenv("DEFAULT_MODEL", "gemini-3.7-flash")
-    
-    config = LocalAgentConfig(
-        model=model,
+    active_gateway = AntigravityGateway(model=model) if model else gateway
+    if file_path.lower().endswith(".pdf"):
+        media = Document.from_file(file_path)
+    else:
+        media = Image.from_file(file_path)
+    return await active_gateway.structured(
+        prompt=["Trích xuất toàn bộ nội dung nhìn thấy trong tài liệu.", media],
         system_instructions="""Bạn là chuyên gia phân tích tài liệu.
-Nhận file PDF/ảnh và trích xuất TOÀN BỘ nội dung thành JSON chuẩn.
-Phải nhận diện: tiêu đề, bảng biểu, dấu mộc đỏ (mô tả vị trí SVG),
-chữ ký, ngày tháng. Hỗ trợ 3 ngôn ngữ: Việt, Anh, Nhật.""",
+Chỉ trích xuất nội dung có bằng chứng trong file và trả JSON đúng schema.
+Nhận diện tiêu đề, bảng, chữ ký, ngày tháng và mô tả dấu mộc nếu nhìn thấy.
+Không tự bổ sung nội dung bị thiếu và không tạo SVG/chữ ký mới.""",
         response_schema=ExtractedDocument,
     )
-    async with Agent(config) as agent:
-        if file_path.lower().endswith(".pdf"):
-            doc = Document.from_file(file_path)
-            inputs = ["Trích xuất toàn bộ nội dung tài liệu này", doc]
-        else:
-            img = Image.from_file(file_path)
-            inputs = ["Trích xuất toàn bộ nội dung tài liệu này", img]
-            
-        response = await agent.chat(inputs)
-        return await response.structured_output()

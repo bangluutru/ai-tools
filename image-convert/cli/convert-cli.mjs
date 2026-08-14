@@ -60,6 +60,11 @@ Ví dụ:
   let outputPath = args[1] ? path.resolve(args[1]) : path.join(path.dirname(inputPath), 'webp_output');
   const quality = args[2] ? parseInt(args[2], 10) : 80;
 
+  if (!Number.isInteger(quality) || quality < 1 || quality > 100) {
+    console.error('❌ Quality phải là số nguyên từ 1 đến 100.');
+    process.exit(1);
+  }
+
   if (!fs.existsSync(inputPath)) {
     console.error(`❌ Path không tồn tại: ${inputPath}`);
     process.exit(1);
@@ -69,7 +74,9 @@ Ví dụ:
 
   if (stat.isFile()) {
     if (!outputPath.endsWith('.webp')) {
-      const dir = fs.statSync(outputPath).isDirectory() ? outputPath : path.dirname(outputPath);
+      const dir = fs.existsSync(outputPath) && fs.statSync(outputPath).isDirectory()
+        ? outputPath
+        : path.dirname(outputPath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
       const name = path.basename(inputPath, path.extname(inputPath)) + '.webp';
       outputPath = path.join(dir, name);

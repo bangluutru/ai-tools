@@ -5,4 +5,4 @@ router = APIRouter()
 # Placeholder for async job management
 @router.get("/")
 async def list_jobs():
-    return []
+    return {"status": "not_implemented", "jobs": []}

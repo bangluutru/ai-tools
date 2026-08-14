@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 import React, { useState } from 'react';
 import {
   FileSpreadsheet, UploadCloud, Download, FileText, CheckCircle2,
@@ -8,9 +9,18 @@ import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { parseLocalizedNumber } from '@ai-tools/core/utils/accounting/reconcile.js';
+import {
+  deriveInvoiceAmounts,
+  INVOICE_LIMITS,
+  isKnownInvoiceNumber,
+  isUnsafeZipPath,
+} from '@ai-tools/core/utils/invoice/validation.js';
 
 // Cấu hình Worker cho PDF.js trong môi trường Vite
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+
+const makeId = () => crypto.randomUUID();
 
 // Tiện ích đọc số thành chữ tiếng Việt
 function numberToWordsVN(num) {
@@ -154,8 +164,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
     while ((match = amountRegex.exec(text)) !== null) {
       const cleaned = match[1].replace(/[^\d]/g, '');
       const num = parseInt(cleaned, 10);
-      // Giới hạn hợp lý cho hoá đơn cá nhân: 5,000 - 50,000,000 VND
-      if (num >= 5000 && num <= 50000000) {
+      if (num > 0 && num <= 1_000_000_000_000) {
         parsedNums.push(num);
       }
     }
@@ -170,7 +179,6 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
     const beforeTaxMatch = text.match(/(?:cộng tiền hàng|tiền chưa thuế|amount before)[^\d]*(\d{1,3}(?:[.,]\d{3})+|\d{4,})/gi);
     if (beforeTaxMatch) {
       for (const m of beforeTaxMatch) {
-        const numStr = m.replace(/[^\d]/g, '').replace(/^.*?(?=\d)/, '');
         const cleaned = m.match(/(\d{1,3}(?:[.,]\d{3})+|\d{4,})/);
         if (cleaned) {
           const num = parseInt(cleaned[1].replace(/[^\d]/g, ''), 10);
@@ -195,16 +203,12 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       }
     }
 
-    // Fallback tính toán nếu thiếu
-    if (totalAmount > 0 && amountBeforeTax === 0 && vatAmount === 0) {
-      // Giả định thuế suất phổ biến 8% (hàng hoá dịch vụ)
-      amountBeforeTax = Math.round(totalAmount / 1.08);
-      vatAmount = totalAmount - amountBeforeTax;
-    } else if (amountBeforeTax > 0 && vatAmount > 0 && totalAmount === 0) {
-      totalAmount = amountBeforeTax + vatAmount;
-    } else if (amountBeforeTax > 0 && totalAmount > 0 && vatAmount === 0) {
-      vatAmount = totalAmount - amountBeforeTax;
-    }
+    // Chỉ cộng/trừ các field đọc được; tuyệt đối không giả định thuế suất.
+    ({ totalAmount, amountBeforeTax, vatAmount } = deriveInvoiceAmounts({
+      totalAmount,
+      amountBeforeTax,
+      vatAmount,
+    }));
 
     const textLower = text.toLowerCase();
 
@@ -327,8 +331,14 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       }
     }
 
+    const missingFields = [];
+    if (!isKnownInvoiceNumber(invoiceNo)) missingFields.push('invoiceNo');
+    if (dateStr === 'N/A') missingFields.push('date');
+    if (!totalAmount) missingFields.push('totalAmount');
+    if (!amountBeforeTax && !vatAmount) missingFields.push('taxBreakdown');
+
     return {
-      id: Math.random().toString(36).substring(2, 9),
+      id: makeId(),
       fileName: zipName ? `${zipName} ➔ ${fileName}` : fileName,
       rawFileName: fileName,
       zipName: zipName || null,
@@ -339,12 +349,15 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       amountBeforeTax,
       vatAmount,
       totalAmount,
-      status: totalAmount > 0 ? 'Hợp lệ' : 'Cần kiểm tra',
-      rawType: 'PDF'
+      status: missingFields.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
+      rawType: 'PDF',
+      missingFields,
+      needsReview: missingFields.length > 0,
+      isConfirmed: false,
     };
   } catch (err) {
     return {
-      id: Math.random().toString(36).substring(2, 9),
+      id: makeId(),
       fileName: zipName ? `${zipName} ➔ ${fileName}` : fileName,
       rawFileName: fileName,
       invoiceNo: 'N/A',
@@ -356,7 +369,10 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       totalAmount: 0,
       status: 'Lỗi parse',
       errorMessage: err.message,
-      rawType: 'PDF'
+      rawType: 'PDF',
+      missingFields: ['parseError'],
+      needsReview: true,
+      isConfirmed: false,
     };
   }
 }
@@ -395,9 +411,8 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
         const [y, m, d] = dateStr.split('-');
         dateStr = `${d}/${m}/${y}`;
       }
-    } else {
-      dateStr = new Date().toLocaleDateString('vi-VN');
     }
+    if (!dateStr) dateStr = 'Chưa rõ ngày';
 
     // 3. Người bán & Mã số thuế
     let seller = getText([
@@ -511,9 +526,8 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
     const parseAmount = (selectors) => {
       const valStr = getText(selectors);
       if (valStr) {
-        const clean = valStr.replace(/,/g, '').trim();
-        const num = parseFloat(clean);
-        if (!isNaN(num) && num >= 0) return num;
+        const num = parseLocalizedNumber(valStr);
+        if (num !== null && num >= 0) return num;
       }
       return 0;
     };
@@ -530,17 +544,22 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       'TgTThue', 'VATAmount', 'TongTienThue', 'TienThue', 'TaxAmount'
     ]);
 
-    // Tự động tính toán nếu thiếu
-    if (totalAmount > 0 && amountBeforeTax === 0 && vatAmount === 0) {
-      amountBeforeTax = Math.round(totalAmount / 1.1);
-      vatAmount = totalAmount - amountBeforeTax;
-    } else if (amountBeforeTax > 0 && totalAmount === 0) {
-      if (vatAmount > 0) totalAmount = amountBeforeTax + vatAmount;
-      else totalAmount = Math.round(amountBeforeTax * 1.1);
-    }
+    // Chỉ suy ra phép cộng trực tiếp khi cả trước thuế và thuế đều có bằng chứng.
+    ({ totalAmount, amountBeforeTax, vatAmount } = deriveInvoiceAmounts({
+      totalAmount,
+      amountBeforeTax,
+      vatAmount,
+    }));
+
+    const missingFields = [];
+    if (!isKnownInvoiceNumber(invoiceNo)) missingFields.push('invoiceNo');
+    if (dateStr === 'Chưa rõ ngày') missingFields.push('date');
+    if (!sellerTax) missingFields.push('sellerTax');
+    if (!totalAmount) missingFields.push('totalAmount');
+    if (!amountBeforeTax && !vatAmount) missingFields.push('taxBreakdown');
 
     return {
-      id: Math.random().toString(36).substring(2, 9),
+      id: makeId(),
       fileName: zipName ? `${zipName} ➔ ${fileName}` : fileName,
       rawFileName: fileName,
       zipName: zipName || null,
@@ -551,12 +570,15 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       amountBeforeTax,
       vatAmount,
       totalAmount,
-      status: 'Hợp lệ',
-      rawType: 'XML'
+      status: missingFields.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
+      rawType: 'XML',
+      missingFields,
+      needsReview: missingFields.length > 0,
+      isConfirmed: false,
     };
   } catch (err) {
     return {
-      id: Math.random().toString(36).substring(2, 9),
+      id: makeId(),
       fileName: zipName ? `${zipName} ➔ ${fileName}` : fileName,
       rawFileName: fileName,
       invoiceNo: 'Lỗi đọc',
@@ -568,26 +590,46 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       totalAmount: 0,
       status: 'Lỗi parse',
       errorMessage: err.message,
-      rawType: 'XML'
+      rawType: 'XML',
+      missingFields: ['parseError'],
+      needsReview: true,
+      isConfirmed: false,
     };
   }
 }
 
-export default function InvoiceTool({ displayLang }) {
+export default function InvoiceTool() {
   const [invoices, setInvoices] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processedFileCount, setProcessedFileCount] = useState(0);
+  const [notice, setNotice] = useState('');
 
   // Xử lý nạp các tệp tải lên (XML, PDF, ZIP)
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
+    const rejected = [];
+    const accepted = files.slice(0, INVOICE_LIMITS.maxFiles).filter((file) => {
+      if (file.size <= 0 || file.size > INVOICE_LIMITS.maxFileBytes) {
+        rejected.push(`${file.name}: file rỗng hoặc vượt ${Math.round(INVOICE_LIMITS.maxFileBytes / 1024 / 1024)} MiB`);
+        return false;
+      }
+      if (!/\.(xml|pdf|zip)$/i.test(file.name)) {
+        rejected.push(`${file.name}: định dạng không hỗ trợ`);
+        return false;
+      }
+      return true;
+    });
+    if (files.length > INVOICE_LIMITS.maxFiles) {
+      rejected.push(`Chỉ xử lý ${INVOICE_LIMITS.maxFiles} file đầu tiên`);
+    }
+    setNotice(rejected.join(' • '));
+    if (accepted.length === 0) return;
+
     setIsProcessing(true);
     const parsedList = [];
-    let fileCounter = 0;
 
-    for (const file of files) {
+    for (const file of accepted) {
       const lowerName = file.name.toLowerCase();
 
       // 1. TRƯỜNG HỢP: TẬP TIN ZIP (.zip)
@@ -595,6 +637,19 @@ export default function InvoiceTool({ displayLang }) {
         try {
           const zip = await JSZip.loadAsync(file);
           const zipEntries = Object.keys(zip.files);
+          if (zipEntries.length > INVOICE_LIMITS.maxZipEntries) {
+            throw new Error(`ZIP vượt ${INVOICE_LIMITS.maxZipEntries} entries`);
+          }
+          if (zipEntries.some(isUnsafeZipPath)) {
+            throw new Error('ZIP chứa đường dẫn không an toàn');
+          }
+          const uncompressedBytes = zipEntries.reduce(
+            (sum, entryName) => sum + (zip.files[entryName]._data?.uncompressedSize || 0),
+            0,
+          );
+          if (uncompressedBytes > INVOICE_LIMITS.maxZipUncompressedBytes) {
+            throw new Error(`ZIP vượt ${Math.round(INVOICE_LIMITS.maxZipUncompressedBytes / 1024 / 1024)} MiB sau giải nén`);
+          }
 
           // Phase 1: Thu thập danh sách base name các file XML trong ZIP
           const xmlBaseNames = new Set();
@@ -621,7 +676,6 @@ export default function InvoiceTool({ displayLang }) {
               const xmlContent = await zipEntry.async('text');
               const parsed = parseXMLInvoice(xmlContent, baseName, file.name);
               parsedList.push(parsed);
-              fileCounter++;
             }
             else if (entryLower.endsWith('.pdf')) {
               // Skip PDF nếu có XML cùng base name (ưu tiên XML chính xác hơn)
@@ -637,13 +691,12 @@ export default function InvoiceTool({ displayLang }) {
               const pdfText = await extractTextFromPDFBuffer(pdfBuffer);
               const parsed = parsePDFInvoiceText(pdfText, baseName, file.name);
               parsedList.push(parsed);
-              fileCounter++;
             }
           }
         } catch (err) {
           console.error('Lỗi khi giải nén ZIP:', err);
           parsedList.push({
-            id: Math.random().toString(36).substring(2, 9),
+            id: makeId(),
             fileName: file.name,
             invoiceNo: 'Lỗi file ZIP',
             date: '-',
@@ -654,7 +707,10 @@ export default function InvoiceTool({ displayLang }) {
             totalAmount: 0,
             status: 'Lỗi giải nén',
             errorMessage: err.message,
-            rawType: 'ZIP'
+            rawType: 'ZIP',
+            missingFields: ['zipError'],
+            needsReview: true,
+            isConfirmed: false,
           });
         }
       }
@@ -664,7 +720,6 @@ export default function InvoiceTool({ displayLang }) {
           const xmlContent = await file.text();
           const parsed = parseXMLInvoice(xmlContent, file.name);
           parsedList.push(parsed);
-          fileCounter++;
         } catch (err) {
           console.error('Lỗi đọc XML:', err);
         }
@@ -680,7 +735,6 @@ export default function InvoiceTool({ displayLang }) {
           const pdfText = await extractTextFromPDFBuffer(arrayBuffer);
           const parsed = parsePDFInvoiceText(pdfText, file.name);
           parsedList.push(parsed);
-          fileCounter++;
         } catch (err) {
           console.error('Lỗi đọc PDF:', err);
         }
@@ -691,19 +745,19 @@ export default function InvoiceTool({ displayLang }) {
     setInvoices((prev) => {
       const combined = [...prev, ...parsedList];
 
-      // Bước 1: Thu thập các cặp (amount, date) từ XML
-      const xmlAmountDate = new Set();
+      // Bước 1: Chỉ dedupe PDF/XML khi có cùng số hóa đơn đáng tin cậy.
+      const xmlInvoiceNumbers = new Set();
       for (const inv of combined) {
-        if (inv.rawType === 'XML') {
-          xmlAmountDate.add(`${inv.totalAmount}_${inv.date}`);
+        if (inv.rawType === 'XML' && isKnownInvoiceNumber(inv.invoiceNo)) {
+          xmlInvoiceNumbers.add(String(inv.invoiceNo).trim().toUpperCase());
         }
       }
 
       // Bước 2: Loại bỏ PDF trùng với XML (cùng amount + date)
       const afterXmlDedup = combined.filter((item) => {
         if (item.rawType === 'PDF') {
-          const key = `${item.totalAmount}_${item.date}`;
-          if (xmlAmountDate.has(key)) return false;
+          const invoiceNo = String(item.invoiceNo || '').trim().toUpperCase();
+          if (isKnownInvoiceNumber(item.invoiceNo) && xmlInvoiceNumbers.has(invoiceNo)) return false;
         }
         return true;
       });
@@ -721,15 +775,21 @@ export default function InvoiceTool({ displayLang }) {
       });
     });
 
-    setProcessedFileCount((prev) => prev + fileCounter);
     setIsProcessing(false);
   };
 
-  // Xuất file Excel Đề nghị thanh toán theo format chuẩn
+  const toggleConfirmed = (id) => {
+    setInvoices((current) => current.map((invoice) => (
+      invoice.id === id ? { ...invoice, isConfirmed: !invoice.isConfirmed } : invoice
+    )));
+  };
+
+  // Xuất bản nháp bảng kê. Việc điền template chuẩn cần file template đã được phê duyệt.
   const handleExportExcel = () => {
     if (invoices.length === 0) return;
 
-    const validInvoices = invoices.filter((i) => i.status === 'Hợp lệ');
+    const validInvoices = invoices.filter((i) => i.isConfirmed);
+    if (validInvoices.length === 0) return;
     const totalAmount = validInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
     const wordsVN = numberToWordsVN(totalAmount);
 
@@ -738,6 +798,7 @@ export default function InvoiceTool({ displayLang }) {
       ['Độc lập - Tự do - Hạnh phúc'],
       ['-----------------------'],
       ['BẢNG KÊ ĐỀ NGHỊ THANH TOÁN'],
+      ['BẢN NHÁP THAM KHẢO — CHƯA PHÊ DUYỆT'],
       [`Ngày lập: ${new Date().toLocaleDateString('vi-VN')}`],
       [''],
       ['STT', 'Ngày tháng', 'Nội dung', 'Trước thuế', 'Tiền thuế', 'Tổng sau thuế', 'Số hóa đơn', 'Ghi chú']
@@ -788,16 +849,16 @@ export default function InvoiceTool({ displayLang }) {
     ];
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Đề Nghị Thanh Toán');
-    XLSX.writeFile(wb, `De_Nghi_Thanh_Toan_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, 'Bản nháp ĐNTT');
+    XLSX.writeFile(wb, `Ban_Nhap_De_Nghi_Thanh_Toan_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   const handleClearAll = () => {
     setInvoices([]);
-    setProcessedFileCount(0);
+    setNotice('');
   };
 
-  const validInvoices = invoices.filter((i) => i.status === 'Hợp lệ');
+  const validInvoices = invoices.filter((i) => i.isConfirmed);
   const totalAmount = validInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
 
   return (
@@ -810,14 +871,14 @@ export default function InvoiceTool({ displayLang }) {
             Xử Lý Hóa Đơn & Tạo Đề Nghị Thanh Toán
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Tự động bóc tách hóa đơn XML & PDF thực tế (Vé máy bay, Taxi Xanh SM, Khách sạn, v.v.), luôn lấy giá trị sau thuế.
+            Trích xuất XML/PDF bằng quy tắc cục bộ, sau đó yêu cầu người dùng xác nhận từng chứng từ trước khi xuất bản nháp.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
             <ShieldCheck size={14} />
-            100% Client-Side Safe
+            Parser cục bộ • Bản nháp tham khảo
           </div>
           {invoices.length > 0 && (
             <button
@@ -830,6 +891,16 @@ export default function InvoiceTool({ displayLang }) {
           )}
         </div>
       </div>
+
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
+        Công cụ không tự giả định thuế suất, ngày hoặc số tiền. Hãy kiểm tra chứng từ gốc và chỉ đánh dấu xác nhận khi dữ liệu đã đúng; file xuất ra chưa phải phê duyệt thanh toán.
+      </div>
+
+      {notice && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
+          {notice}
+        </div>
+      )}
 
       {/* Upload Zone */}
       <div className="relative border-2 border-dashed border-slate-700 hover:border-amber-500/60 bg-slate-900/40 hover:bg-slate-900/80 transition rounded-2xl p-8 text-center cursor-pointer group">
@@ -853,7 +924,7 @@ export default function InvoiceTool({ displayLang }) {
               Kéo thả thư mục nén <span className="text-amber-400 font-bold">.ZIP</span> hoặc các tệp <span className="text-amber-400 font-bold">.XML, .PDF</span> vào đây
             </p>
             <p className="text-xs text-slate-400 mt-1">
-              Hỗ trợ xử lý hàng loạt không giới hạn số lượng • Bóc tách tự động chỉ trong vài giây
+              Tối đa {INVOICE_LIMITS.maxFiles} file, {Math.round(INVOICE_LIMITS.maxFileBytes / 1024 / 1024)} MiB/file; ZIP tối đa {INVOICE_LIMITS.maxZipEntries} entries
             </p>
           </div>
         </div>
@@ -867,7 +938,7 @@ export default function InvoiceTool({ displayLang }) {
               <FileCheck size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-400 font-medium">Hóa đơn hợp lệ</p>
+              <p className="text-xs text-slate-400 font-medium">Đã kiểm tra và xác nhận</p>
               <p className="text-lg font-bold text-slate-100">{validInvoices.length} <span className="text-xs text-slate-500 font-normal">/ {invoices.length} tệp</span></p>
             </div>
           </div>
@@ -885,10 +956,11 @@ export default function InvoiceTool({ displayLang }) {
           <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center justify-end">
             <button
               onClick={handleExportExcel}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold shadow-lg shadow-amber-500/20 transition transform active:scale-95 text-xs"
+              disabled={validInvoices.length === 0}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-950 font-bold shadow-lg shadow-amber-500/20 transition transform active:scale-95 text-xs"
             >
               <Download size={16} />
-              Tải File Excel ĐNTT Chuẩn
+              Xuất bản nháp ({validInvoices.length})
             </button>
           </div>
         </div>
@@ -902,7 +974,7 @@ export default function InvoiceTool({ displayLang }) {
               Danh sách hóa đơn đã bóc tách ({invoices.length})
             </h3>
             <span className="text-xs text-amber-400 italic">
-              * Luôn lấy giá trị thanh toán thực chi (sau thuế)
+              * Chỉ các dòng đã được người dùng xác nhận mới được xuất
             </span>
           </div>
 
@@ -911,6 +983,7 @@ export default function InvoiceTool({ displayLang }) {
               <thead className="bg-slate-950/70 text-slate-400 font-semibold border-b border-slate-800 sticky top-0 backdrop-blur z-10">
                 <tr>
                   <th className="py-3 px-4 w-12 text-center">STT</th>
+                  <th className="py-3 px-4 w-20 text-center">Xác nhận</th>
                   <th className="py-3 px-4 w-28">Ngày tháng</th>
                   <th className="py-3 px-4">Nội dung chi tiết</th>
                   <th className="py-3 px-4 w-28 text-right">Trước thuế</th>
@@ -918,17 +991,32 @@ export default function InvoiceTool({ displayLang }) {
                   <th className="py-3 px-4 w-32 text-right">Sau thuế</th>
                   <th className="py-3 px-4 w-32">Số hóa đơn</th>
                   <th className="py-3 px-4 w-24 text-center">Loại</th>
+                  <th className="py-3 px-4 w-32 text-center">Trạng thái</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
                 {invoices.map((inv, idx) => (
                   <tr key={inv.id} className="hover:bg-slate-800/40 transition">
                     <td className="py-3 px-4 text-center font-medium text-slate-500">{idx + 1}</td>
+                    <td className="py-3 px-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={inv.isConfirmed}
+                        onChange={() => toggleConfirmed(inv.id)}
+                        aria-label={`Xác nhận dữ liệu ${inv.rawFileName || inv.fileName}`}
+                        className="h-4 w-4 accent-emerald-500"
+                      />
+                    </td>
                     <td className="py-3 px-4 text-slate-300 whitespace-nowrap">{inv.date}</td>
                     <td className="py-3 px-4 font-medium text-slate-200">
                       <div>{inv.seller}</div>
                       {inv.rawFileName && (
                         <div className="text-[10px] text-slate-500 font-mono mt-0.5">{inv.rawFileName}</div>
+                      )}
+                      {inv.missingFields?.length > 0 && (
+                        <div className="mt-1 text-[10px] text-amber-300">
+                          Thiếu/cần kiểm tra: {inv.missingFields.join(', ')}
+                        </div>
                       )}
                     </td>
                     <td className="py-3 px-4 text-right font-medium text-slate-300 whitespace-nowrap">
@@ -946,6 +1034,15 @@ export default function InvoiceTool({ displayLang }) {
                         inv.rawType === 'XML' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                       }`}>
                         {inv.rawType}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
+                        inv.needsReview
+                          ? 'border border-amber-500/20 bg-amber-500/10 text-amber-300'
+                          : 'border border-cyan-500/20 bg-cyan-500/10 text-cyan-300'
+                      }`}>
+                        {inv.status}
                       </span>
                     </td>
                   </tr>

@@ -21,7 +21,7 @@ export default function Navbar({ theme, onToggleTheme, displayLang, onLangChange
                 HUB
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">Trung tâm Công cụ Trực tuyến 100% Client-side</p>
+            <p className="text-[11px] text-slate-400 hidden sm:block">Miniapp Hub · minh bạch nơi xử lý dữ liệu</p>
           </div>
         </div>
 

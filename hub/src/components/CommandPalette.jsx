@@ -58,11 +58,16 @@ export default function CommandPalette({ isOpen, onClose, onSelectTool, displayL
             filteredTools.map((tool) => (
               <button
                 key={tool.id}
+                disabled={tool.readiness === 'disabled'}
                 onClick={() => {
                   onSelectTool(tool.id);
                   onClose();
                 }}
-                className="w-full p-3 rounded-xl hover:bg-slate-800/80 text-left flex items-center justify-between group transition-colors"
+                className={`w-full p-3 rounded-xl text-left flex items-center justify-between group transition-colors ${
+                  tool.readiness === 'disabled'
+                    ? 'cursor-not-allowed opacity-50'
+                    : 'hover:bg-slate-800/80'
+                }`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${tool.gradient} flex items-center justify-center text-white text-xs`}>
@@ -73,6 +78,9 @@ export default function CommandPalette({ isOpen, onClose, onSelectTool, displayL
                       {getToolName(tool)}
                     </div>
                     <div className="text-[11px] text-slate-400 line-clamp-1">{tool.desc_vn}</div>
+                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                      {tool.readiness === 'disabled' ? 'Tạm khóa' : tool.readiness}
+                    </div>
                   </div>
                 </div>
                 <ArrowRight size={14} className="text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
@@ -88,7 +96,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectTool, displayL
         {/* Footer info */}
         <div className="px-4 py-2 bg-slate-950/60 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 font-mono">
           <span>Nhấn ESC để đóng</span>
-          <span>{tools.length} Công Cụ Sẵn Sàng</span>
+          <span>{tools.filter((tool) => tool.readiness !== 'disabled').length}/{tools.length} công cụ khả dụng</span>
         </div>
       </div>
     </div>

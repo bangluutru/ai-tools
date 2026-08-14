@@ -12,6 +12,13 @@ export default function ToolContainer({ currentTool, onBackToHub, onSelectTool, 
     return t.name_vn;
   };
 
+  const processingLabel = {
+    browser: 'Xử lý trên trình duyệt',
+    hybrid: 'Có thể tải lên backend',
+    'backend-antigravity': 'Backend + Antigravity',
+    manual: 'Quy trình thủ công'
+  }[currentTool.processing] || 'Chưa xác định';
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
       {/* Top Tool Navigation Bar */}
@@ -46,7 +53,7 @@ export default function ToolContainer({ currentTool, onBackToHub, onSelectTool, 
                     Chuyển nhanh công cụ
                   </div>
                   <div className="max-h-80 overflow-y-auto py-1 space-y-0.5">
-                    {tools.map((t) => (
+                    {tools.filter((t) => t.readiness !== 'disabled').map((t) => (
                       <button
                         key={t.id}
                         onClick={() => {
@@ -71,15 +78,22 @@ export default function ToolContainer({ currentTool, onBackToHub, onSelectTool, 
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-medium text-emerald-400">
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-[11px] font-medium text-cyan-300">
             <ShieldCheck size={13} />
-            <span>100% Client-side Isolated</span>
+            <span>{processingLabel}</span>
           </div>
         </div>
       </header>
 
       {/* Main Tool Content */}
-      <main className="flex-1 w-full">{children}</main>
+      <main className="flex-1 w-full">
+        {currentTool.outputPurpose === 'reference' && (
+          <div className="no-print border-b border-amber-500/20 bg-amber-500/10 px-4 py-2 text-center text-xs font-medium text-amber-200">
+            Đầu ra chỉ mang tính tham khảo và cần người có thẩm quyền kiểm tra trước khi sử dụng.
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
     ClipboardPaste,
     PlusCircle,
@@ -127,10 +127,25 @@ const FORMAT_STYLES = {
     },
 };
 
+const BACKEND_BLOCK_TYPE_MAP = {
+    heading: 'h2',
+    paragraph: 'p',
+    table: 'p',
+    list: 'ul',
+    signature: 'p',
+};
+
+const normalizeTranslationBlock = (block) => ({
+    ...block,
+    type: block.type || BACKEND_BLOCK_TYPE_MAP[block.block_type] || 'p',
+    vn: block.vn ?? block.vi ?? '',
+    jp: block.jp ?? block.ja ?? '',
+});
+
 // =====================================================================
 // Block renderer
 // =====================================================================
-const BlockRenderer = ({ block, lang, style, effectiveStyle, isEditing, onEdit }) => {
+const BlockRenderer = ({ block, lang, style, effectiveStyle }) => {
     const fs = effectiveStyle || FORMAT_STYLES[style];
     const val = block[lang] || block.vn || block.en || block.ja || '';
 
@@ -313,11 +328,11 @@ const BlockRenderer = ({ block, lang, style, effectiveStyle, isEditing, onEdit }
 // =====================================================================
 const LongDocTranslatorView = ({ displayLang: globalDisplayLang }) => {
     // --- State ---
-    const [blocks, saveBlocks, removeBlocks, isLoaded] = useLocalStorage(STORAGE_KEY, [], 'translator');
+    const [blocks, saveBlocks] = useLocalStorage(STORAGE_KEY, [], 'translator');
     const [jsonInput, setJsonInput] = useState('');
     const [error, setError] = useState('');
     const [displayLang, setDisplayLang] = useState(globalDisplayLang || 'vn');
-    const [formatStyle, setFormatStyle] = useState('standard');
+    const [formatStyle] = useState('standard');
     const [saveStatus, setSaveStatus] = useState('idle');
     const [zoomLevel, setZoomLevel] = useState(100);
     const [isEditing, setIsEditing] = useState(false);
@@ -339,7 +354,7 @@ const LongDocTranslatorView = ({ displayLang: globalDisplayLang }) => {
 
             const result = await execute(formData, true);
             if (result && result.blocks) {
-                saveBlocks([...blocks, ...result.blocks]);
+                saveBlocks([...blocks, ...result.blocks.map(normalizeTranslationBlock)]);
                 setJsonInput('');
                 setSaveStatus('saved');
                 setTimeout(() => setSaveStatus('idle'), 1500);
@@ -491,20 +506,6 @@ const LongDocTranslatorView = ({ displayLang: globalDisplayLang }) => {
         const langLabel = displayLang === 'ja' ? 'JP' : displayLang.toUpperCase();
         saveAs(blob, `EJV_Document_${langLabel}.docx`);
     };
-
-    // --- Language button style helper ---
-    const langBtnClass = (lang) =>
-        `px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${displayLang === lang
-            ? 'bg-teal-600 text-white shadow-md'
-            : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
-        }`;
-
-    // --- Format button style helper ---
-    const fmtBtnClass = (fmt) =>
-        `flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${formatStyle === fmt
-            ? 'bg-indigo-600 text-white shadow-md'
-            : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
-        }`;
 
     // Compute effective FORMAT_STYLES with custom font override
     const effectiveFormatStyle = useMemo(() => {

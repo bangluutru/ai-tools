@@ -1,4 +1,5 @@
 import { calculateSavedPercent } from './formatters.js';
+import { IMAGE_LIMITS } from './limits.js';
 
 /**
  * Converts an Image File to WebP format using Browser HTML5 Canvas API
@@ -20,20 +21,35 @@ export async function convertImageToWebP(file, options = {}) {
     fillColor = null
   } = options;
 
+  if (!file || file.size <= 0) {
+    throw new Error('File ảnh rỗng hoặc không hợp lệ');
+  }
+  if (file.size > IMAGE_LIMITS.maxFileBytes) {
+    throw new Error(`Ảnh vượt giới hạn ${Math.round(IMAGE_LIMITS.maxFileBytes / 1024 / 1024)} MiB`);
+  }
+
+  const normalizedQuality = Math.min(1, Math.max(0.01, Number(quality) || 0.8));
+
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onerror = () => reject(new Error('Lỗi khi đọc file ảnh'));
-
-    reader.onload = (e) => {
+    const sourceUrl = URL.createObjectURL(file);
+    const cleanupAndReject = (error) => {
+      URL.revokeObjectURL(sourceUrl);
+      reject(error);
+    };
       const img = new Image();
 
-      img.onerror = () => reject(new Error('Định dạng ảnh không được hỗ trợ hoặc file bị hỏng'));
+      img.onerror = () => cleanupAndReject(new Error('Định dạng ảnh không được hỗ trợ hoặc file bị hỏng'));
 
       img.onload = () => {
         try {
-          let origWidth = img.naturalWidth || img.width;
-          let origHeight = img.naturalHeight || img.height;
+          const origWidth = img.naturalWidth || img.width;
+          const origHeight = img.naturalHeight || img.height;
+          if (!origWidth || !origHeight) {
+            throw new Error('Không đọc được kích thước ảnh');
+          }
+          if (origWidth * origHeight > IMAGE_LIMITS.maxPixels) {
+            throw new Error(`Ảnh vượt giới hạn ${IMAGE_LIMITS.maxPixels.toLocaleString('vi-VN')} pixel`);
+          }
 
           let targetWidth = origWidth;
           let targetHeight = origHeight;
@@ -60,6 +76,7 @@ export async function convertImageToWebP(file, options = {}) {
           canvas.height = targetHeight;
 
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (!ctx) throw new Error('Trình duyệt không tạo được canvas 2D');
 
           // Fill background if specified
           if (fillColor) {
@@ -78,9 +95,11 @@ export async function convertImageToWebP(file, options = {}) {
           canvas.toBlob(
             (blob) => {
               if (!blob) {
-                reject(new Error('Không thể tạo file WebP từ canvas'));
+                cleanupAndReject(new Error('Không thể tạo file WebP từ canvas'));
                 return;
               }
+
+              URL.revokeObjectURL(sourceUrl);
 
               const webpUrl = URL.createObjectURL(blob);
               const originalSize = file.size;
@@ -99,7 +118,6 @@ export async function convertImageToWebP(file, options = {}) {
                 originalName: file.name,
                 originalSize,
                 originalType: file.type || 'image',
-                originalUrl: e.target.result,
                 originalDimensions: { width: origWidth, height: origHeight },
                 webpBlob: blob,
                 webpUrl,
@@ -113,16 +131,13 @@ export async function convertImageToWebP(file, options = {}) {
               });
             },
             'image/webp',
-            quality
+            normalizedQuality
           );
         } catch (err) {
-          reject(err);
+          cleanupAndReject(err);
         }
       };
 
-      img.src = e.target.result;
-    };
-
-    reader.readAsDataURL(file);
+      img.src = sourceUrl;
   });
 }

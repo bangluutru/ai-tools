@@ -1,12 +1,12 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Download, FileX, Calculator, ArrowRight, RefreshCw } from 'lucide-react';
+import React, { useState, useRef, useMemo } from 'react';
+import { Upload, FileSpreadsheet, AlertCircle, Download, FileX, Calculator } from 'lucide-react';
 import * as XLSX from 'xlsx';
-
-// Utility to normalize invoice numbers (strip leading zeros)
-const normalizeInvoice = (inv) => {
-  if (!inv) return '';
-  return String(inv).replace(/^0+/, '').trim();
-};
+import {
+  ACCOUNTING_RULE_VERSION,
+  normalizeInvoiceNumber,
+  parseLocalizedNumber,
+  reconcileAccountingData,
+} from '../utils/accounting/reconcile.js';
 
 export default function AccountingReconcileView({ displayLang = 'vi' }) {
   const [files, setFiles] = useState({ 511: null, 33311: null, br: null });
@@ -83,12 +83,16 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
               const valueRaw = row[7];
               const descRaw = row[4] || '';
               
-              if (invoiceRaw && valueRaw !== undefined) {
+              const parsedValue = parseLocalizedNumber(valueRaw);
+              if (invoiceRaw && parsedValue !== null) {
                 extractedData.push({
-                  invoice: normalizeInvoice(invoiceRaw),
+                  invoice: normalizeInvoiceNumber(invoiceRaw),
                   originalInvoice: invoiceRaw,
-                  value: parseFloat(valueRaw) || 0,
-                  desc: String(descRaw)
+                  value: parsedValue,
+                  desc: String(descRaw),
+                  sourceFile: file.name,
+                  sourceSheet: firstSheetName,
+                  sourceRow: i + 1,
                 });
               }
             }
@@ -106,14 +110,17 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
               // D(3) = Hóa đơn, K(10) = Chưa thuế, L(11) = Thuế
               if (!row || !row[3]) continue;
               
-              const invoice = normalizeInvoice(row[3]);
+              const invoice = normalizeInvoiceNumber(row[3]);
               if (invoice && invoice !== 'undefined') {
                 brData.push({
                   invoice,
                   originalInvoice: row[3],
                   type: 'GTGT',
-                  chuaThue: parseFloat(row[10]) || 0,
-                  thue: parseFloat(row[11]) || 0
+                  chuaThue: parseLocalizedNumber(row[10]) ?? 0,
+                  thue: parseLocalizedNumber(row[11]) ?? 0,
+                  sourceFile: file.name,
+                  sourceSheet: wb.SheetNames[0],
+                  sourceRow: i + 1,
                 });
               }
             }
@@ -127,14 +134,17 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
                 // D(3) = Hóa đơn, L(11) = Chưa thuế, M(12) = Thuế
                 if (!row || !row[3]) continue;
                 
-                const invoice = normalizeInvoice(row[3]);
+                const invoice = normalizeInvoiceNumber(row[3]);
                 if (invoice && invoice !== 'undefined') {
                   brData.push({
                     invoice,
                     originalInvoice: row[3],
                     type: 'MTT',
-                    chuaThue: parseFloat(row[11]) || 0,
-                    thue: parseFloat(row[12]) || 0
+                    chuaThue: parseLocalizedNumber(row[11]) ?? 0,
+                    thue: parseLocalizedNumber(row[12]) ?? 0,
+                    sourceFile: file.name,
+                    sourceSheet: wb.SheetNames[1],
+                    sourceRow: i + 1,
                   });
                 }
               }
@@ -165,91 +175,23 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
   // --- Reconciliation Logic ---
   const results = useMemo(() => {
     if (!data['511'].length && !data['33311'].length && !data.br.length) return null;
-
-    const allInvoices = new Set([
-      ...data['511'].map(item => item.invoice),
-      ...data['33311'].map(item => item.invoice),
-      ...data.br.map(item => item.invoice)
-    ]);
-
-    const report511 = [];
-    const report33311 = [];
-    let summary = {
-      total: allInvoices.size,
-      matched511: 0,
-      unmatched511: 0,
-      matched33311: 0,
-      unmatched33311: 0,
-      missingInBR: 0,
-      missingInLedger: 0
-    };
-
-    allInvoices.forEach(inv => {
-      // Find in BR (should be 1)
-      const brMatch = data.br.find(item => item.invoice === inv);
-      
-      // Find in 511 (should be 1)
-      const matches511 = data['511'].filter(item => item.invoice === inv);
-      const val511 = matches511.reduce((sum, item) => sum + item.value, 0);
-      
-      // Find in 33311 (can be multiple)
-      const matches33311 = data['33311'].filter(item => item.invoice === inv);
-      const val33311 = matches33311.reduce((sum, item) => sum + item.value, 0);
-      
-      // Check for missing
-      const inLedger = matches511.length > 0 || matches33311.length > 0;
-      if (inLedger && !brMatch) summary.missingInBR++;
-      if (brMatch && !inLedger) summary.missingInLedger++;
-
-      // 511 Reconciliation
-      if (matches511.length > 0 || brMatch) {
-        const brVal = brMatch ? brMatch.chuaThue : 0;
-        const diff = val511 - brVal;
-        
-        if (diff === 0) summary.matched511++;
-        else summary.unmatched511++;
-
-        report511.push({
-          invoice: inv,
-          val511,
-          valBR: brVal,
-          diff,
-          status: diff === 0 ? 'MATCH' : (brMatch ? 'DIFF' : 'MISSING_BR')
-        });
-      }
-
-      // 33311 Reconciliation
-      if (matches33311.length > 0 || brMatch) {
-        const brVal = brMatch ? brMatch.thue : 0;
-        const diff = val33311 - brVal;
-        const vatTang = matches33311
-          .filter(item => item.desc.toLowerCase().includes('tặng'))
-          .reduce((sum, item) => sum + item.value, 0);
-
-        if (diff === 0) summary.matched33311++;
-        else summary.unmatched33311++;
-
-        report33311.push({
-          invoice: inv,
-          val33311,
-          vatTang,
-          valBR: brVal,
-          diff,
-          status: diff === 0 ? 'MATCH' : (brMatch ? 'DIFF' : 'MISSING_BR')
-        });
-      }
-    });
-
-    return {
-      report511: report511.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff)), // Diff first
-      report33311: report33311.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff)),
-      summary
-    };
+    return reconcileAccountingData(data);
   }, [data]);
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
   };
+
+  const statusLabel = (status) => ({
+    MATCH: 'Khớp',
+    DIFF: 'Lệch',
+    MISSING_BR: 'Thiếu trên BR',
+    MISSING_LEDGER: 'Thiếu trên sổ',
+  }[status] || status);
+
+  const evidenceLabel = (records) => records
+    .map((record) => `${record.sourceFile || '?'} | ${record.sourceSheet || '?'} | dòng ${record.sourceRow || '?'}`)
+    .join('; ');
 
   const exportExcel = () => {
     if (!results) return;
@@ -259,6 +201,10 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
     // Summary Sheet
     const summaryData = [
       ['BÁO CÁO ĐỐI CHIẾU KẾ TOÁN'],
+      ['KẾT QUẢ THAM KHẢO — CẦN KẾ TOÁN KIỂM TRA/PHÊ DUYỆT'],
+      ['Ngày tạo', new Date().toLocaleString('vi-VN')],
+      ['Phiên bản quy tắc', results.ruleVersion || ACCOUNTING_RULE_VERSION],
+      ['Sai số cho phép', results.tolerance],
       [],
       ['Tổng số hoá đơn', results.summary.total],
       [],
@@ -272,7 +218,8 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
       [],
       ['CẢNH BÁO THIẾU SÓT'],
       ['Có trên sổ, thiếu trên BR', results.summary.missingInBR],
-      ['Có trên BR, thiếu trên sổ', results.summary.missingInLedger]
+      ['Có trên BR, thiếu trên sổ', results.summary.missingInLedger],
+      ['Số hóa đơn cần xác nhận do trùng bản ghi BR', results.summary.needsReview],
     ];
     const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(wb, wsSummary, "Tổng hợp");
@@ -283,7 +230,10 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
       'Sổ 511 (Phát sinh Có)': r.val511,
       'Bảng kê BR (Chưa thuế)': r.valBR,
       'Chênh lệch': r.diff,
-      'Trạng thái': r.status === 'MATCH' ? 'Khớp' : (r.status === 'DIFF' ? 'Lệch' : 'Thiếu trên BR')
+      'Trạng thái': statusLabel(r.status),
+      'Cần xác nhận': r.needsReview ? 'Có' : 'Không',
+      'Nguồn sổ': evidenceLabel(r.ledgerEvidence),
+      'Nguồn BR': evidenceLabel(r.brEvidence),
     })));
     XLSX.utils.book_append_sheet(wb, ws511, "Đối chiếu 511");
 
@@ -294,9 +244,39 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
       'Trong đó VAT hàng tặng': r.vatTang,
       'Bảng kê BR (Thuế)': r.valBR,
       'Chênh lệch': r.diff,
-      'Trạng thái': r.status === 'MATCH' ? 'Khớp' : (r.status === 'DIFF' ? 'Lệch' : 'Thiếu trên BR')
+      'Trạng thái': statusLabel(r.status),
+      'Cần xác nhận': r.needsReview ? 'Có' : 'Không',
+      'Nguồn sổ': evidenceLabel(r.ledgerEvidence),
+      'Nguồn BR': evidenceLabel(r.brEvidence),
     })));
     XLSX.utils.book_append_sheet(wb, ws333, "Đối chiếu 33311");
+
+    const workflowRows = [
+      ...results.report511.map((row) => ({ account: '511', ...row })),
+      ...results.report33311.map((row) => ({ account: '33311', ...row })),
+    ];
+    const toWorkflowRow = (row) => ({
+      'Tài khoản': row.account,
+      'Số HĐ': row.invoice,
+      'Giá trị trên sổ': row.ledgerValue,
+      'Giá trị trên BR': row.brValue,
+      'Chênh lệch': row.diff,
+      'Trạng thái': statusLabel(row.status),
+      'Cần xác nhận': row.needsReview ? 'Có' : 'Không',
+      'Nguồn sổ': evidenceLabel(row.ledgerEvidence),
+      'Nguồn BR': evidenceLabel(row.brEvidence),
+    });
+    const appendWorkflowSheet = (name, rows) => {
+      const payload = rows.length > 0
+        ? rows.map(toWorkflowRow)
+        : [{ 'Thông tin': 'Không có dữ liệu' }];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(payload), name);
+    };
+
+    appendWorkflowSheet('Đã khớp', workflowRows.filter((row) => row.status === 'MATCH' && !row.needsReview));
+    appendWorkflowSheet('Chênh lệch', workflowRows.filter((row) => row.status === 'DIFF'));
+    appendWorkflowSheet('Không tìm thấy', workflowRows.filter((row) => row.status.startsWith('MISSING_')));
+    appendWorkflowSheet('Cần xác nhận', workflowRows.filter((row) => row.needsReview));
 
     XLSX.writeFile(wb, "Ket_qua_doi_chieu.xlsx");
   };
@@ -365,6 +345,8 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
                   {row.status === 'MATCH' && <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-900/50 text-green-400">Khớp</span>}
                   {row.status === 'DIFF' && <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-900/50 text-red-400">Lệch</span>}
                   {row.status === 'MISSING_BR' && <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-900/50 text-orange-400">Thiếu BR</span>}
+                  {row.status === 'MISSING_LEDGER' && <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-900/50 text-orange-400">Thiếu sổ</span>}
+                  {row.needsReview && <span className="ml-1 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-900/50 text-amber-300">Cần xác nhận</span>}
                 </td>
               </tr>
             ))}
@@ -381,6 +363,9 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
 
   return (
     <div className="w-full max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        Kết quả chỉ mang tính tham khảo. Dữ liệu được xử lý trên trình duyệt và cần kế toán kiểm tra trước khi sử dụng.
+      </div>
       
       {/* Upload Section */}
       <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
@@ -498,7 +483,7 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
                   </div>
                 </div>
 
-                {(results.summary.missingInBR > 0 || results.summary.missingInLedger > 0) && (
+                {(results.summary.missingInBR > 0 || results.summary.missingInLedger > 0 || results.summary.needsReview > 0) && (
                   <div className="bg-orange-950/30 border border-orange-900/50 rounded-xl p-5 flex items-start gap-4">
                     <AlertCircle className="text-orange-500 mt-0.5" size={24} />
                     <div>
@@ -509,6 +494,9 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
                         )}
                         {results.summary.missingInLedger > 0 && (
                           <li>• Có <strong>{results.summary.missingInLedger}</strong> hóa đơn trên bảng kê BR nhưng chưa được hạch toán (hoặc hạch toán sai số HĐ).</li>
+                        )}
+                        {results.summary.needsReview > 0 && (
+                          <li>• Có <strong>{results.summary.needsReview}</strong> số hóa đơn có nhiều bản ghi BR và cần xác nhận trước khi kết luận.</li>
                         )}
                       </ul>
                     </div>

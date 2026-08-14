@@ -1,21 +1,16 @@
-import os
-from google.antigravity import Agent, LocalAgentConfig
 from ..schemas.mapping import MappingResult
+from ..services.antigravity_gateway import gateway
 
 async def map_fields(source_headers: list[str], target_headers: list[str], sample_rows: list[list[str]]):
-    model = os.getenv("DEFAULT_MODEL", "gemini-3.7-flash")
-    config = LocalAgentConfig(
-        model=model,
-        system_instructions="""Bạn là chuyên gia mapping dữ liệu.
-Nhận danh sách header nguồn và header đích.
-Map chúng theo ngữ nghĩa (VD: "DOB" -> "Ngày sinh", "Qty" -> "Số lượng").
-Nếu cần chuyển đổi format, ghi rõ transformation.""",
-        response_schema=MappingResult,
-    )
-    async with Agent(config) as agent:
-        prompt = f"""Source headers: {source_headers}
+    prompt = f"""Source headers: {source_headers}
 Target headers: {target_headers}
 Sample data (2 rows): {sample_rows}
 Hãy mapping từng cặp source->target."""
-        response = await agent.chat(prompt)
-        return await response.structured_output()
+    return await gateway.structured(
+        prompt=prompt,
+        system_instructions="""Bạn là chuyên gia mapping dữ liệu.
+Chỉ đề xuất mapping theo ngữ nghĩa của header và sample được cung cấp.
+Không tự tạo cột. Nếu không đủ bằng chứng, để mapping ở trạng thái không chắc chắn.
+Ghi rõ transformation khi thực sự cần đổi format.""",
+        response_schema=MappingResult,
+    )

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "node --test tests/**/*.test.js",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -20,13 +21,13 @@
     "lucide-react": "^0.575.0",
     "mammoth": "^1.11.0",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^5.4.624",
+    "pdfjs-dist": "6.2.108",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "sharp": "^0.33.5",
-    "xlsx": "^0.18.5",
+    "sharp": "0.35.3",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "@ai-tools/core": "*"
   },
   "devDependencies": {

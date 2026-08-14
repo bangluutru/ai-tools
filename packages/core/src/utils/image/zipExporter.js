@@ -10,12 +10,22 @@ export async function downloadAllAsZip(items, zipFilename = 'webp-images.zip') {
 
   const zip = new JSZip();
   const folder = zip.folder('webp-images');
+  const usedNames = new Set();
 
   // Add each blob to zip
   items.forEach((item, index) => {
     if (item.webpBlob && item.status === 'completed') {
       // Ensure unique filename if duplicates exist
       let name = item.webpFilename || `image_${index + 1}.webp`;
+      const dotIndex = name.lastIndexOf('.');
+      const baseName = dotIndex > 0 ? name.slice(0, dotIndex) : name;
+      const extension = dotIndex > 0 ? name.slice(dotIndex) : '.webp';
+      let suffix = 2;
+      while (usedNames.has(name.toLowerCase())) {
+        name = `${baseName}_${suffix}${extension}`;
+        suffix += 1;
+      }
+      usedNames.add(name.toLowerCase());
       folder.file(name, item.webpBlob);
     }
   });

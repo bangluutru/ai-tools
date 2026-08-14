@@ -1,8 +1,7 @@
-import os
 from pydantic import BaseModel
 from typing import Literal
-from google.antigravity import Agent, LocalAgentConfig
-from google.antigravity.types import Document, Image
+from google.antigravity import Document, Image
+from ..services.antigravity_gateway import gateway
 
 class ClassificationResult(BaseModel):
     document_type: Literal["certificate", "legal", "invoice", "unknown"]
@@ -10,18 +9,14 @@ class ClassificationResult(BaseModel):
     suggested_tool: str
 
 async def classify_document(file_path: str):
-    model = os.getenv("DEFAULT_MODEL", "gemini-3.7-flash")
-    config = LocalAgentConfig(
-        model=model,
+    if file_path.lower().endswith(".pdf"):
+        media = Document.from_file(file_path)
+    else:
+        media = Image.from_file(file_path)
+    return await gateway.structured(
+        prompt=["Phân loại tài liệu này.", media],
+        system_instructions=(
+            "Chỉ phân loại tài liệu theo schema. Không suy đoán ngoài nội dung file."
+        ),
         response_schema=ClassificationResult,
     )
-    async with Agent(config) as agent:
-        if file_path.lower().endswith(".pdf"):
-            doc = Document.from_file(file_path)
-            inputs = ["Phân loại loại tài liệu này", doc]
-        else:
-            img = Image.from_file(file_path)
-            inputs = ["Phân loại loại tài liệu này", img]
-            
-        response = await agent.chat(inputs)
-        return await response.structured_output()

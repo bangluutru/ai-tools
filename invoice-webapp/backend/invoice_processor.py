@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 import re
 import pdfplumber
 import copy
+import shutil
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 
@@ -350,13 +351,22 @@ def process_invoices(input_dir: str, template_path: str, output_path: str):
             zip_path = os.path.join(root_dir, file)
             try:
                 with zipfile.ZipFile(zip_path, 'r') as zf:
-                    for member in zf.namelist():
+                    members = zf.infolist()
+                    if len(members) > 100:
+                        raise ValueError("ZIP exceeds 100 entries")
+                    if sum(member.file_size for member in members) > 100 * 1024 * 1024:
+                        raise ValueError("ZIP exceeds 100 MiB after extraction")
+                    for member_info in members:
+                        member = member_info.filename
                         member_lower = member.lower()
                         if member_lower.endswith('.xml') or member_lower.endswith('.pdf'):
-                            target = os.path.join(root_dir, os.path.basename(member))
+                            safe_name = os.path.basename(member)
+                            if not safe_name or member_info.file_size > 20 * 1024 * 1024:
+                                continue
+                            target = os.path.join(root_dir, safe_name)
                             if not os.path.exists(target):
-                                with zf.open(member) as src, open(target, 'wb') as dst:
-                                    dst.write(src.read())
+                                with zf.open(member_info) as src, open(target, 'wb') as dst:
+                                    shutil.copyfileobj(src, dst, length=1024 * 1024)
             except Exception as e:
                 print(f"Warning: Could not extract {zip_path}: {e}")
 
@@ -601,4 +611,3 @@ def process_invoices(input_dir: str, template_path: str, output_path: str):
     wb.save(output_path)
     print(f"Successfully saved to {output_path}")
     return output_path
-

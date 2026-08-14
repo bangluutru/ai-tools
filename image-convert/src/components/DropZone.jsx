@@ -34,10 +34,7 @@ export default function DropZone({ onFilesSelected, isProcessing }) {
   };
 
   const filterAndEmitFiles = (files) => {
-    const validImages = files.filter(file => 
-      file.type.startsWith('image/') || 
-      /\.(png|jpe?g|gif|bmp|svg|webp|avif|tiff)$/i.test(file.name)
-    );
+    const validImages = files.filter(file => /\.(png|jpe?g|gif|webp)$/i.test(file.name));
     if (validImages.length > 0) {
       onFilesSelected(validImages);
     }
@@ -61,7 +58,7 @@ export default function DropZone({ onFilesSelected, isProcessing }) {
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/*,.png,.jpg,.jpeg,.gif,.bmp,.svg,.webp,.avif,.tiff"
+        accept=".png,.jpg,.jpeg,.gif,.webp"
         onChange={handleFileChange}
         style={{ display: 'none' }}
       />
@@ -75,7 +72,7 @@ export default function DropZone({ onFilesSelected, isProcessing }) {
         </div>
         <div className="supported-badge">
           <Sparkles size={14} style={{ color: 'var(--accent-primary)' }} />
-          <span>Hỗ trợ: PNG, JPG, JPEG, GIF, BMP, SVG, WEBP, AVIF, TIFF</span>
+          <span>Đã kiểm thử: PNG, JPG, JPEG, GIF (frame đầu), WEBP</span>
         </div>
       </div>
     </div>

@@ -5,7 +5,6 @@
     "packages/*",
     "hub",
     "image-convert",
-    "invoice-webapp",
     "docstudio-*",
     "contract-auditor",
     "auto-bi",
@@ -19,7 +18,7 @@
     "dev:full": "concurrently \"npm run dev:hub\" \"npm run dev:backend\"",
     "build:hub": "npm run build --workspace=hub",
     "dev:image-convert": "npm run dev --workspace=image-convert",
-    "dev:invoice": "npm run dev --workspace=invoice-webapp",
+    "dev:invoice-legacy": "cd invoice-webapp && python3 -m uvicorn backend.main:app --reload --port 8001",
     "dev:certificate": "npm run dev --workspace=docstudio-certificate",
     "dev:legal": "npm run dev --workspace=docstudio-legal",
     "dev:translator": "npm run dev --workspace=docstudio-translator",
@@ -28,9 +27,16 @@
     "dev:merge": "npm run dev --workspace=docstudio-pdf-merge",
     "dev:excel": "npm run dev --workspace=docstudio-excel-mapping",
     "dev:editor": "npm run dev --workspace=docstudio-editor",
-    "build:all": "npm run build --workspaces --if-present"
+    "build:all": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "lint:critical": "eslint --config accounting-reconcile/eslint.config.js hub/src/App.jsx hub/src/components/CommandPalette.jsx hub/src/components/HeroBanner.jsx hub/src/components/ToolCard.jsx hub/src/components/ToolContainer.jsx hub/src/components/image/DropZone.jsx hub/src/config/toolsRegistry.js hub/src/tools/image-convert/ImageConvertTool.jsx hub/src/tools/invoice-webapp/InvoiceTool.jsx packages/core/src/hooks/useAntigravityAgent.js packages/core/src/utils/accounting/reconcile.js packages/core/src/utils/image/converter.js packages/core/src/utils/image/limits.js packages/core/src/utils/image/zipExporter.js packages/core/src/components/AccountingReconcileView.jsx packages/core/src/components/LegalDocumentView.jsx packages/core/src/components/LongDocTranslatorView.jsx",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "concurrently": "^10.0.4"
+  },
+  "overrides": {
+    "pdfjs-dist": "6.2.108",
+    "sharp": "0.35.3"
   }
 }
