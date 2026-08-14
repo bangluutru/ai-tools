@@ -114,19 +114,32 @@ async function extractTextFromPDFBuffer(arrayBuffer) {
 // Bóc tách dữ liệu từ văn bản PDF theo các mẫu hóa đơn phổ biến
 function parsePDFInvoiceText(text, fileName, zipName = null) {
   try {
-    let dateStr = new Date().toLocaleDateString('vi-VN');
+    let dateStr = '';
     let invoiceNo = 'N/A';
     let provider = 'Hóa đơn/Biên lai (PDF)';
     let totalAmount = 0;
+    let amountBeforeTax = 0;
+    let vatAmount = 0;
 
-    // 1. Quét ngày tháng
-    const dateMatch = text.match(/(?:ngày|date|ngay)?\s*[:\s]*(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/i);
-    if (dateMatch) {
-      const d = dateMatch[1].padStart(2, '0');
-      const m = dateMatch[2].padStart(2, '0');
-      const y = dateMatch[3];
-      dateStr = `${d}/${m}/${y}`;
+    // 1. Quét ngày tháng (nhiều pattern)
+    // Pattern 1: DD/MM/YYYY hoặc DD-MM-YYYY
+    const dateMatch1 = text.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+    // Pattern 2: "Ngày DD Tháng MM Năm YYYY" (Vietnamese)
+    const dateMatch2 = text.match(/(\d{1,2})\s*[Tt]háng.*?(\d{1,2})\s*[Nn]ăm.*?(\d{4})/);
+    // Pattern 3: From filename (e.g., 20260118 - Receipt...)
+    const dateMatch3 = fileName.match(/(\d{4})(\d{2})(\d{2})/);
+
+    if (dateMatch1) {
+      dateStr = `${dateMatch1[1]}/${dateMatch1[2]}/${dateMatch1[3]}`;
+    } else if (dateMatch2) {
+      const d = dateMatch2[1].padStart(2, '0');
+      const m = dateMatch2[2].padStart(2, '0');
+      dateStr = `${d}/${m}/${dateMatch2[3]}`;
+    } else if (dateMatch3) {
+      dateStr = `${dateMatch3[3]}/${dateMatch3[2]}/${dateMatch3[1]}`;
     }
+    // Không dùng ngày hiện tại làm fallback → giữ trống nếu không tìm được
+    if (!dateStr) dateStr = 'N/A';
 
     // 2. Quét số hóa đơn
     const invMatch = text.match(/(?:Số HĐ|Số hóa đơn|Số|Invoice No|No\.)[:\s]*([A-Z0-9\-\/]+)/i);
@@ -134,72 +147,145 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       invoiceNo = invMatch[1].trim();
     }
 
-    // 3. Quét số tiền (Sử dụng regex như bản Python để tìm các dòng chứa "tổng cộng", "thành tiền", "total")
-    const amountRegex = /(?:tổng cộng tiền thanh toán|tổng tiền thanh toán|tổng cộng|total payment|total amount|tổng tiền|thành tiền).*?(\d{1,3}(?:[\.,]\d{3})+(?:[\.,]\d{2})?|\d{4,9})/gi;
+    // 3. Quét số tiền — Ưu tiên tìm đúng dòng "tổng cộng tiền thanh toán" (giống Python)
+    const amountRegex = /(?:tổng cộng tiền thanh toán|tổng tiền thanh toán|tổng cộng|total payment|total amount|tổng tiền|thành tiền)[^\d]*(\d{1,3}(?:[.,]\d{3})+|\d{4,})/gi;
     let match;
     const parsedNums = [];
     while ((match = amountRegex.exec(text)) !== null) {
       const cleaned = match[1].replace(/[^\d]/g, '');
       const num = parseInt(cleaned, 10);
-      if (num >= 5000 && num <= 500000000) {
+      // Giới hạn hợp lý cho hoá đơn cá nhân: 5,000 - 50,000,000 VND
+      if (num >= 5000 && num <= 50000000) {
         parsedNums.push(num);
       }
     }
-    
-    // Nếu không tìm thấy, fallback tìm MAX của TẤT CẢ các số hợp lệ
+
     if (parsedNums.length > 0) {
+      // Giá trị sau thuế luôn là giá trị lớn nhất trong các dòng tổng cộng
       totalAmount = Math.max(...parsedNums);
-    } else {
-      const allAmountMatches = text.match(/(?:VNĐ|VND|\₫)?\s*(\d{1,3}(?:[\.,]\d{3})+(?:[\.,]\d{2})?|\d{4,9})\s*(?:VNĐ|VND|\₫)?/g);
-      if (allAmountMatches) {
-        for (const m of allAmountMatches) {
-          const cleaned = m.replace(/[^\d]/g, '');
-          const num = parseInt(cleaned, 10);
-          if (num >= 5000 && num <= 500000000) {
-            parsedNums.push(num);
+    }
+    // KHÔNG fallback tìm MAX mọi số — đây là nguyên nhân gây lỗi 190 triệu
+
+    // 3b. Thử tìm tiền trước thuế và tiền thuế riêng
+    const beforeTaxMatch = text.match(/(?:cộng tiền hàng|tiền chưa thuế|amount before)[^\d]*(\d{1,3}(?:[.,]\d{3})+|\d{4,})/gi);
+    if (beforeTaxMatch) {
+      for (const m of beforeTaxMatch) {
+        const numStr = m.replace(/[^\d]/g, '').replace(/^.*?(?=\d)/, '');
+        const cleaned = m.match(/(\d{1,3}(?:[.,]\d{3})+|\d{4,})/);
+        if (cleaned) {
+          const num = parseInt(cleaned[1].replace(/[^\d]/g, ''), 10);
+          if (num >= 1000 && num < totalAmount) {
+            amountBeforeTax = num;
+            break;
           }
         }
-        if (parsedNums.length > 0) {
-          totalAmount = Math.max(...parsedNums);
+      }
+    }
+    const vatMatch = text.match(/(?:tiền thuế|thuế GTGT|VAT amount|tax amount)[^\d]*(\d{1,3}(?:[.,]\d{3})+|\d{4,})/gi);
+    if (vatMatch) {
+      for (const m of vatMatch) {
+        const cleaned = m.match(/(\d{1,3}(?:[.,]\d{3})+|\d{4,})/);
+        if (cleaned) {
+          const num = parseInt(cleaned[1].replace(/[^\d]/g, ''), 10);
+          if (num >= 100 && num < totalAmount) {
+            vatAmount = num;
+            break;
+          }
         }
       }
+    }
+
+    // Fallback tính toán nếu thiếu
+    if (totalAmount > 0 && amountBeforeTax === 0 && vatAmount === 0) {
+      // Giả định thuế suất phổ biến 8% (hàng hoá dịch vụ)
+      amountBeforeTax = Math.round(totalAmount / 1.08);
+      vatAmount = totalAmount - amountBeforeTax;
+    } else if (amountBeforeTax > 0 && vatAmount > 0 && totalAmount === 0) {
+      totalAmount = amountBeforeTax + vatAmount;
+    } else if (amountBeforeTax > 0 && totalAmount > 0 && vatAmount === 0) {
+      vatAmount = totalAmount - amountBeforeTax;
     }
 
     const textLower = text.toLowerCase();
 
-    // 4. Nhận diện trường hợp: Vé máy bay Vietjet
-    if (textLower.includes('vietjet') || textLower.includes('vé máy bay') || textLower.includes('electronic ticket')) {
-      let pnr = 'N/A';
-      const pnrMatch = text.match(/(?:Mã đặt chỗ|PNR|Reservation Code)[:\s]*([A-Z0-9]{6,8})/i);
-      if (pnrMatch) pnr = pnrMatch[1];
+    // 4. Nhận diện nhà cung cấp + rút gọn tên
+    // --- VÉ MÁY BAY ---
+    if (textLower.includes('vietjet') || textLower.includes('vé máy bay') || textLower.includes('electronic ticket') || textLower.includes('e-ticket')) {
+      const isVietnam = textLower.includes('vietnam airlines') || textLower.includes('hàng không việt nam');
+      const airline = isVietnam ? 'Vietnam Airlines' : 'Vietjet Air';
 
-      let flightRoute = '';
-      const routeMatch = text.match(/\b([A-Z]{3})\s*[-–]\s*([A-Z]{3})\b/);
-      if (routeMatch) {
-        flightRoute = ` | ${routeMatch[1]}-${routeMatch[2]}`;
+      let pnr = '';
+      const pnrMatch = text.match(/(?:Mã đặt chỗ|PNR|Reservation Code|Booking Ref)[:\s]*([A-Z0-9]{5,8})/i);
+      if (pnrMatch) pnr = pnrMatch[1];
+      // Fallback: extract PNR from filename
+      if (!pnr) {
+        const fnamePnr = fileName.match(/[_-]([A-Z0-9]{5,8})\./i);
+        if (fnamePnr && !/^\d+$/.test(fnamePnr[1])) pnr = fnamePnr[1].toUpperCase();
       }
-      provider = `Vietjet Air [PNR: ${pnr}${flightRoute}]`;
+
+      const routes = [];
+      const routeMatches = text.matchAll(/\b([A-Z]{3})\s*[-–]\s*([A-Z]{3})\b/g);
+      for (const rm of routeMatches) {
+        const route = `${rm[1]}-${rm[2]}`;
+        if (!routes.includes(route)) routes.push(route);
+      }
+      // Fallback: route from filename
+      const fnameRoute = fileName.match(/([A-Z]{3}-[A-Z]{3})/);
+      if (fnameRoute && !routes.includes(fnameRoute[1])) routes.push(fnameRoute[1]);
+
+      if (pnr && routes.length > 0) {
+        provider = `${airline} [PNR: ${pnr} | ${routes.join(', ')}]`;
+      } else if (pnr) {
+        provider = `${airline} [PNR: ${pnr}]`;
+      } else if (routes.length > 0) {
+        provider = `${airline} [${routes.join(', ')}]`;
+      } else {
+        provider = airline;
+      }
     }
-    // 5. Nhận diện trường hợp: Taxi Xanh SM / Grab / Taxi
-    else if (textLower.includes('xanh sm') || textLower.includes('công ty cổ phần di chuyển xanh') || textLower.includes('gsm')) {
+    // --- VIETNAM AIRLINES (PDF riêng, không qua vietjet branch) ---
+    else if (textLower.includes('vietnam airlines') || textLower.includes('hàng không việt nam')) {
+      let pnr = '';
+      const pnrMatch = text.match(/(?:Mã đặt chỗ|PNR|Reservation Code|Booking Ref)[:\s]*([A-Z0-9]{5,8})/i);
+      if (pnrMatch) pnr = pnrMatch[1];
+      if (!pnr) {
+        const fnamePnr = fileName.match(/[_-]([A-Z0-9]{5,8})\./i);
+        if (fnamePnr && !/^\d+$/.test(fnamePnr[1])) pnr = fnamePnr[1].toUpperCase();
+      }
+
+      const routes = [];
+      const routeMatches = text.matchAll(/\b([A-Z]{3})\s*[-–]\s*([A-Z]{3})\b/g);
+      for (const rm of routeMatches) {
+        const route = `${rm[1]}-${rm[2]}`;
+        if (!routes.includes(route)) routes.push(route);
+      }
+
+      if (pnr && routes.length > 0) {
+        provider = `Vietnam Airlines [PNR: ${pnr} | ${routes.join(', ')}]`;
+      } else if (routes.length > 0) {
+        provider = `Vietnam Airlines [${routes.join(', ')}]`;
+      } else {
+        provider = 'Vietnam Airlines';
+      }
+    }
+    // --- TAXI ---
+    else if (textLower.includes('xanh sm') || textLower.includes('di chuyển xanh') || textLower.includes('gsm')) {
       let pickup = '';
       let dropoff = '';
 
       const pickupMatch = text.match(/(?:Điểm đón|Đón|Pickup|Từ)[:\s]*(.*?)(?:\n|Điểm đến|Đến|Dropoff|Thời gian|Mã chuyến|$)/i);
-      if (pickupMatch) pickup = pickupMatch[1].trim().slice(0, 45);
+      if (pickupMatch) pickup = pickupMatch[1].trim().split(',')[0].trim();
 
       const dropoffMatch = text.match(/(?:Điểm đến|Đến|Dropoff|Tới)[:\s]*(.*?)(?:\n|Thời gian|Cước phí|Mã chuyến|$)/i);
-      if (dropoffMatch) dropoff = dropoffMatch[1].trim().slice(0, 45);
+      if (dropoffMatch) dropoff = dropoffMatch[1].trim().split(',')[0].trim();
 
       if (pickup && dropoff) {
         provider = `Xanh SM (${pickup} -> ${dropoff})`;
-      } else if (pickup) {
-        provider = `Xanh SM (${pickup})`;
       } else {
         provider = 'Xanh SM (Chi phí di chuyển)';
       }
     }
-    // 6. Nhận diện trường hợp: Khách sạn / Hóa đơn song ngữ / Hóa đơn chung
+    // --- KHÁCH SẠN / HOÁ ĐƠN CHUNG ---
     else {
       let seller = '';
       const sellerMatch = text.match(/(?:Đơn vị bán hàng|Tên người bán|Tên đơn vị bán|Người bán)[^\n:]*:\s*(.*?)(?:\n|Mã số thuế|Địa chỉ|$)/i);
@@ -219,17 +305,18 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
           d = d.trim();
           if (!d || d.length < 4) continue;
           const dLower = d.toLowerCase();
-          
+
           // Bỏ qua tiêu đề bảng song ngữ, từ khóa header
           if (/^(?:stt|số thứ tự|tên|đơn vị tính|số lượng|đơn giá|mã|\(|\[)/i.test(dLower)) continue;
           if (dLower.includes('name of goods') || dLower.includes('description') || dLower.includes('seller') || dLower.includes('unit') || dLower.includes('quantity')) continue;
-          if (dLower.includes('(no)') || dLower.includes('hàng(seller)')) continue;
-          
-          // Bỏ qua dòng đánh số thứ tự cột toán học (1 2 3 4 5 6 = 4 x 5)
-          if (/^[\d\s=xX\.\,\+\-]+$/.test(d)) continue;
+          if (dLower.includes('(no)') || dLower.includes('hàng(seller)') || dLower.includes('tính (%)') || dLower.includes('tính(%)')) continue;
 
-          // Bỏ số thứ tự đầu dòng nếu có (ví dụ "1 Dịch vụ lưu trú" -> "Dịch vụ lưu trú")
+          // Bỏ qua dòng chỉ chứa số, đánh dấu cột
+          if (/^[\d\s=xX\.\,\+\-\%]+$/.test(d)) continue;
+
+          // Bỏ số thứ tự đầu dòng
           const cleanD = d.replace(/^\d+[\.\s]+/, '').trim();
+          if (cleanD.length < 4) continue;
           desc = cleanD.length > 60 ? ` (${cleanD.slice(0, 60)}...)` : ` (${cleanD})`;
           break;
         }
@@ -249,10 +336,10 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       date: dateStr,
       seller: provider,
       sellerTax: 'PDF/E-Ticket',
-      amountBeforeTax: Math.round(totalAmount / 1.08),
-      vatAmount: totalAmount - Math.round(totalAmount / 1.08),
+      amountBeforeTax,
+      vatAmount,
       totalAmount,
-      status: 'Hợp lệ',
+      status: totalAmount > 0 ? 'Hợp lệ' : 'Cần kiểm tra',
       rawType: 'PDF'
     };
   } catch (err) {
@@ -261,7 +348,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       fileName: zipName ? `${zipName} ➔ ${fileName}` : fileName,
       rawFileName: fileName,
       invoiceNo: 'N/A',
-      date: new Date().toLocaleDateString('vi-VN'),
+      date: 'N/A',
       seller: 'Lỗi bóc tách PDF',
       sellerTax: '-',
       amountBeforeTax: 0,
@@ -408,7 +495,7 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
         if (routeStr.length > 80) routeStr = routeStr.substring(0, 77) + '...)';
         seller = shortName + routeStr;
       } else {
-        seller = shortName;
+        seller = shortName + ' (Chi phí di chuyển)';
       }
     } else {
       // Các hóa đơn khác
@@ -509,24 +596,43 @@ export default function InvoiceTool({ displayLang }) {
           const zip = await JSZip.loadAsync(file);
           const zipEntries = Object.keys(zip.files);
 
+          // Phase 1: Thu thập danh sách base name các file XML trong ZIP
+          const xmlBaseNames = new Set();
+          for (const entryName of zipEntries) {
+            const entryLower = entryName.toLowerCase();
+            if (entryLower.endsWith('.xml')) {
+              const baseName = entryName.split('/').pop();
+              // Lưu base name không extension để so sánh với PDF
+              xmlBaseNames.add(baseName.replace(/\.xml$/i, '').toLowerCase());
+            }
+          }
+
+          // Phase 2: Xử lý XML trước, rồi PDF (skip PDF nếu đã có XML cùng base)
           for (const entryName of zipEntries) {
             const zipEntry = zip.files[entryName];
             if (zipEntry.dir || entryName.includes('__MACOSX') || entryName.startsWith('._')) {
-              continue; // Bỏ qua thư mục con và file rác macOS
+              continue;
             }
 
             const entryLower = entryName.toLowerCase();
             const baseName = entryName.split('/').pop();
 
-            // Nếu trong file ZIP có file XML
             if (entryLower.endsWith('.xml')) {
               const xmlContent = await zipEntry.async('text');
               const parsed = parseXMLInvoice(xmlContent, baseName, file.name);
               parsedList.push(parsed);
               fileCounter++;
             }
-            // Nếu trong file ZIP có file PDF (Extract thật 100% bằng pdfjs-dist)
             else if (entryLower.endsWith('.pdf')) {
+              // Skip PDF nếu có XML cùng base name (ưu tiên XML chính xác hơn)
+              const pdfBase = baseName.replace(/\.pdf$/i, '').toLowerCase();
+              if (xmlBaseNames.has(pdfBase)) {
+                continue; // Đã có XML, không cần PDF
+              }
+              // Skip Itinerary/copy PDF (không phải hoá đơn)
+              if (baseName.toLowerCase().includes('itinerary') || baseName.toLowerCase().includes(' copy')) {
+                continue;
+              }
               const pdfBuffer = await zipEntry.async('arraybuffer');
               const pdfText = await extractTextFromPDFBuffer(pdfBuffer);
               const parsed = parsePDFInvoiceText(pdfText, baseName, file.name);
@@ -565,6 +671,10 @@ export default function InvoiceTool({ displayLang }) {
       }
       // 3. TRƯỜNG HỢP: TẬP TIN PDF (.pdf)
       else if (lowerName.endsWith('.pdf')) {
+        // Skip Itinerary/copy PDF
+        if (lowerName.includes('itinerary') || lowerName.includes(' copy')) {
+          continue;
+        }
         try {
           const arrayBuffer = await file.arrayBuffer();
           const pdfText = await extractTextFromPDFBuffer(arrayBuffer);
@@ -577,13 +687,33 @@ export default function InvoiceTool({ displayLang }) {
       }
     }
 
-    // Khử trùng lặp theo Mã số HĐ hoặc Tên file + Số tiền
+    // Khử trùng lặp thông minh: Ưu tiên XML hơn PDF khi cùng amount+date
     setInvoices((prev) => {
       const combined = [...prev, ...parsedList];
+
+      // Bước 1: Thu thập các cặp (amount, date) từ XML
+      const xmlAmountDate = new Set();
+      for (const inv of combined) {
+        if (inv.rawType === 'XML') {
+          xmlAmountDate.add(`${inv.totalAmount}_${inv.date}`);
+        }
+      }
+
+      // Bước 2: Loại bỏ PDF trùng với XML (cùng amount + date)
+      const afterXmlDedup = combined.filter((item) => {
+        if (item.rawType === 'PDF') {
+          const key = `${item.totalAmount}_${item.date}`;
+          if (xmlAmountDate.has(key)) return false;
+        }
+        return true;
+      });
+
+      // Bước 3: Khử trùng còn lại theo invoiceNo + amount
       const seen = new Set();
-      return combined.filter((item) => {
-        const key = item.invoiceNo !== 'N/A' && item.invoiceNo !== 'Chưa rõ số'
-          ? `${item.invoiceNo}_${item.totalAmount}`
+      return afterXmlDedup.filter((item) => {
+        const invNo = item.invoiceNo;
+        const key = invNo && invNo !== 'N/A' && invNo !== 'Chưa rõ số'
+          ? `${invNo}_${item.totalAmount}`
           : `${item.rawFileName}_${item.totalAmount}`;
         if (seen.has(key)) return false;
         seen.add(key);
