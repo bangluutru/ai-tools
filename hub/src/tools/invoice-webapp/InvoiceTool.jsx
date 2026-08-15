@@ -182,6 +182,30 @@ function findFirstLineItem(text) {
  */
 function parsePDFInvoiceText(text, fileName, zipName = null) {
   try {
+    // Hóa đơn điện tử xuất từ phần mềm luôn có lớp text. Gần như không có chữ
+    // nào nghĩa là bản scan hoặc ảnh chụp — nói thẳng thay vì hiện trường trống.
+    if (text.replace(/\s/g, '').length < 20) {
+      return {
+        id: makeId(),
+        fileName: zipName ? `${zipName} ➔ ${fileName}` : fileName,
+        rawFileName: fileName,
+        zipName: zipName || null,
+        invoiceNo: 'Chưa rõ số',
+        date: 'Chưa rõ ngày',
+        seller: 'PDF không có lớp text',
+        sellerTax: '',
+        amountBeforeTax: 0,
+        vatAmount: 0,
+        totalAmount: 0,
+        status: 'Không đọc được',
+        rawType: 'PDF',
+        missingFields: ['noTextLayer'],
+        warnings: ['PDF không chứa lớp text (bản scan hoặc ảnh chụp). Công cụ không có OCR — hãy dùng bản PDF gốc do phần mềm hóa đơn xuất ra, hoặc nhập tay chứng từ này.'],
+        needsReview: true,
+        isConfirmed: false,
+      };
+    }
+
     const fields = extractInvoiceFields(text);
 
     const amounts = deriveInvoiceAmounts({

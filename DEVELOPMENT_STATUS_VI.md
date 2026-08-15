@@ -21,7 +21,7 @@ và không còn nằm trong `npm run build:all`.
 | Miniapp | Readiness | Xử lý | Ghi chú |
 |---|---|---|---|
 | Đối chiếu kế toán | beta | trình duyệt | Ưu tiên 1. Vẫn cần fixture thật + golden result do kế toán duyệt. |
-| Đề nghị thanh toán | beta | trình duyệt | Ưu tiên 2. Đầu ra là bản nháp tham khảo, chưa phải mẫu ĐNTT chính thức. |
+| Đề nghị thanh toán | beta | trình duyệt | Ưu tiên 2. Bóc tách theo TT 91/2026/TT-BTC; mẫu bảng kê hiện tại đã được chủ sở hữu chấp nhận. |
 | Chuyển đổi ảnh WebP | beta | trình duyệt | Ưu tiên 3. |
 | Tách PDF | beta | trình duyệt | Giới hạn 50 MiB, 200 trang. |
 | Gộp PDF | beta | trình duyệt | Giới hạn 20 file, 500 trang. |
@@ -56,9 +56,17 @@ Người dùng có thể bật chúng trong **Cài đặt miniapp** để thấy
 
 ## 5. Cổng còn cần chủ sở hữu quyết định
 
-Không thay đổi so với `P1_IMPLEMENTATION_REPORT_VI.md`:
-
 1. Runtime AI: cho SDK dùng Gemini API key, dùng Vertex/ADC, hay tiếp tục khóa AI. Hiện backend
    **fail closed** với `AI_TOOLS_ANTIGRAVITY_ENABLED=false` và trả 503 thay vì tạo đầu ra giả.
 2. Fixture kế toán đã khử nhạy cảm kèm golden result đã duyệt.
-3. Template Excel Đề nghị thanh toán chính thức và quy tắc mapping/version.
+
+## 6. Cổng đã được chủ sở hữu chốt (15/08/2026)
+
+Hai hạng mục trước đây nêu trong `P1_IMPLEMENTATION_REPORT_VI.md` nay không còn là rào cản:
+
+- **Mẫu Đề nghị thanh toán.** Chủ sở hữu xác nhận dùng mẫu bảng kê hiện tại; không cần tích hợp
+  file template riêng, nên phần mapping/versioning template được gỡ khỏi phạm vi.
+- **OCR cho hóa đơn scan.** Hóa đơn thực tế chủ yếu là PDF do phần mềm hóa đơn xuất ra và luôn có
+  lớp text, nên bóc tách dựa trên lớp text là đủ. Không đưa OCR vào phạm vi. Khi gặp PDF không có
+  lớp text, công cụ báo rõ "PDF không có lớp text" và yêu cầu dùng bản gốc hoặc nhập tay, thay vì
+  hiển thị các trường trống.
