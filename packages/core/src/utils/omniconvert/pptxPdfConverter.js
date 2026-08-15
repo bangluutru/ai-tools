@@ -1,9 +1,10 @@
 import PptxGenJS from 'pptxgenjs';
 import JSZip from 'jszip';
+import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { loadPdfDocument, renderPdfPageToCanvas } from './pdfHelper.js';
 
-export async function convertPdfToPptx(file, _options = {}, onProgress) {
+export async function convertPdfToPptx(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(15);
   const pdfDoc = await loadPdfDocument(file);
   const numPages = pdfDoc.numPages;
@@ -31,7 +32,7 @@ export async function convertPdfToPptx(file, _options = {}, onProgress) {
 
   if (onProgress) onProgress(90);
   const pptxBlob = await pptx.writeFile({ outputType: 'blob' });
-  const baseName = file.name ? file.name.replace(/\.[^/.]+$/, "") : 'presentation';
+  const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'presentation';
   if (onProgress) onProgress(100);
 
   return {
@@ -42,13 +43,13 @@ export async function convertPdfToPptx(file, _options = {}, onProgress) {
   };
 }
 
-export async function convertPptxToPdf(file, _options = {}, onProgress) {
+export async function convertPptxToPdf(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(20);
   const arrayBuffer = await file.arrayBuffer();
   const zip = await JSZip.loadAsync(arrayBuffer);
 
   const slideEntries = [];
-  zip.folder('ppt/slides')?.forEach((relativePath, zipEntry) => {
+  zip.folder('ppt/slides')?.forEach((_relativePath, zipEntry) => {
     if (/slide\d+\.xml$/i.test(zipEntry.name)) {
       slideEntries.push(zipEntry);
     }
@@ -60,7 +61,7 @@ export async function convertPptxToPdf(file, _options = {}, onProgress) {
     return numA - numB;
   });
 
-  if (onProgress) onProgress(45);
+  if (onProgress) onProgress(40);
 
   const pdf = new jsPDF({
     orientation: 'landscape',
@@ -70,53 +71,99 @@ export async function convertPptxToPdf(file, _options = {}, onProgress) {
 
   const totalSlides = Math.max(slideEntries.length, 1);
 
-  for (let sIndex = 0; sIndex < totalSlides; sIndex++) {
-    if (sIndex > 0) {
-      pdf.addPage([960, 540], 'landscape');
-    }
+  // Tạo staging container để render các slide với font chữ Unicode và layout đẹp mắt
+  const staging = document.createElement('div');
+  staging.style.position = 'fixed';
+  staging.style.top = '0';
+  staging.style.left = '0';
+  staging.style.zIndex = '-9999';
+  staging.style.opacity = '0';
+  staging.style.pointerEvents = 'none';
+  staging.style.width = '960px';
+  staging.style.height = '540px';
+  staging.style.fontFamily = '"Plus Jakarta Sans", "Inter", "Roboto", "Arial", sans-serif';
+  document.body.appendChild(staging);
 
-    pdf.setFillColor(248, 250, 252);
-    pdf.rect(0, 0, 960, 540, 'F');
+  try {
+    for (let sIndex = 0; sIndex < totalSlides; sIndex++) {
+      staging.innerHTML = '';
 
-    pdf.setFillColor(14, 140, 233);
-    pdf.rect(0, 0, 960, 8, 'F');
-
-    pdf.setFontSize(22);
-    pdf.setTextColor(15, 23, 42);
-    pdf.text(`Slide ${sIndex + 1}`, 50, 60);
-
-    if (slideEntries[sIndex]) {
-      const slideXml = await slideEntries[sIndex].async('text');
-      const textMatches = slideXml.match(/<a:t>([^<]+)<\/a:t>/g) || [];
-      const slideTexts = textMatches.map(m => m.replace(/<\/?a:t>/g, '').trim()).filter(Boolean);
-
-      pdf.setFontSize(14);
-      pdf.setTextColor(51, 65, 85);
-      let currentY = 110;
-
-      for (const text of slideTexts.slice(0, 15)) {
-        const splitText = pdf.splitTextToSize(text, 860);
-        pdf.text(splitText, 50, currentY);
-        currentY += splitText.length * 20 + 8;
-        if (currentY > 480) break;
+      let slideTexts = [];
+      if (slideEntries[sIndex]) {
+        const slideXml = await slideEntries[sIndex].async('text');
+        const textMatches = slideXml.match(/<a:t>([^<]+)<\/a:t>/g) || [];
+        slideTexts = textMatches.map((m) => m.replace(/<\/?a:t>/g, '').trim()).filter(Boolean);
       }
+
+      const title = slideTexts[0] || `Slide ${sIndex + 1}`;
+      const bodyTexts = slideTexts.slice(1);
+
+      const slideCard = document.createElement('div');
+      slideCard.style.width = '960px';
+      slideCard.style.height = '540px';
+      slideCard.style.backgroundColor = '#ffffff';
+      slideCard.style.padding = '48px 56px';
+      slideCard.style.boxSizing = 'border-box';
+      slideCard.style.display = 'flex';
+      slideCard.style.flexDirection = 'column';
+      slideCard.style.justifyContent = 'flex-start';
+      slideCard.style.borderTop = '8px solid #0284c7';
+      slideCard.style.position = 'relative';
+
+      slideCard.innerHTML = `
+        <div style="font-size: 28px; font-weight: 700; color: #0f172a; margin-bottom: 24px; line-height: 1.3;">
+          ${escapeHtml(title)}
+        </div>
+        <div style="flex: 1; font-size: 16px; color: #334155; line-height: 1.7; overflow: hidden;">
+          ${bodyTexts.map((t) => `<p style="margin-bottom: 12px;">• ${escapeHtml(t)}</p>`).join('')}
+        </div>
+        <div style="position: absolute; bottom: 24px; right: 56px; font-size: 12px; color: #94a3b8;">
+          Slide ${sIndex + 1} / ${totalSlides}
+        </div>
+      `;
+
+      staging.appendChild(slideCard);
+      await new Promise((r) => setTimeout(r, 20));
+
+      const canvas = await html2canvas(slideCard, {
+        scale: 2.0,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false
+      });
+
+      if (sIndex > 0) {
+        pdf.addPage([960, 540], 'landscape');
+      }
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.96);
+      pdf.addImage(imgData, 'JPEG', 0, 0, 960, 540);
+
+      if (onProgress) onProgress(40 + Math.round(((sIndex + 1) / totalSlides) * 50));
     }
 
-    pdf.setFontSize(10);
-    pdf.setTextColor(148, 163, 184);
-    pdf.text(`Slide ${sIndex + 1} / ${totalSlides}`, 860, 515);
+    const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'presentation';
+    const pdfBlob = pdf.output('blob');
+    if (onProgress) onProgress(100);
 
-    if (onProgress) onProgress(45 + Math.round(((sIndex + 1) / totalSlides) * 45));
+    return {
+      blob: pdfBlob,
+      filename: `${baseName}.pdf`,
+      mimeType: 'application/pdf',
+      isZip: false
+    };
+  } finally {
+    if (staging.parentNode) {
+      staging.parentNode.removeChild(staging);
+    }
   }
+}
 
-  const baseName = file.name ? file.name.replace(/\.[^/.]+$/, "") : 'presentation';
-  const pdfBlob = pdf.output('blob');
-  if (onProgress) onProgress(100);
-
-  return {
-    blob: pdfBlob,
-    filename: `${baseName}.pdf`,
-    mimeType: 'application/pdf',
-    isZip: false
-  };
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }

@@ -1,10 +1,10 @@
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 import { loadPdfDocument, extractPdfStructuredText } from './pdfHelper.js';
 
-export async function convertXlsxToPdf(file, _options = {}, onProgress) {
-  if (onProgress) onProgress(20);
+export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {}) {
+  if (onProgress) onProgress(15);
   const arrayBuffer = await file.arrayBuffer();
 
   const workbook = XLSX.read(arrayBuffer, { type: 'array' });
@@ -14,7 +14,7 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress) {
     throw new Error('Tệp Excel không chứa sheet nào.');
   }
 
-  if (onProgress) onProgress(40);
+  if (onProgress) onProgress(30);
 
   const pdf = new jsPDF({
     orientation: 'landscape',
@@ -22,77 +22,109 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress) {
     format: 'a4'
   });
 
-  let isFirstPage = true;
   const totalSheets = sheetNames.length;
+  let hasRenderedAnyPage = false;
 
-  for (let sIndex = 0; sIndex < totalSheets; sIndex++) {
-    const sheetName = sheetNames[sIndex];
-    const worksheet = workbook.Sheets[sheetName];
-    const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+  const staging = document.createElement('div');
+  staging.style.position = 'fixed';
+  staging.style.top = '0';
+  staging.style.left = '0';
+  staging.style.zIndex = '-9999';
+  staging.style.opacity = '0';
+  staging.style.pointerEvents = 'none';
+  staging.style.width = '1120px';
+  staging.style.background = '#ffffff';
+  staging.style.fontFamily = '"Plus Jakarta Sans", "Inter", "Roboto", "Arial", sans-serif';
+  document.body.appendChild(staging);
 
-    if (rawData.length === 0) continue;
+  try {
+    for (let sIndex = 0; sIndex < totalSheets; sIndex++) {
+      const sheetName = sheetNames[sIndex];
+      const worksheet = workbook.Sheets[sheetName];
+      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
-    if (!isFirstPage) {
-      pdf.addPage('a4', 'landscape');
-    }
-    isFirstPage = false;
+      if (rawData.length === 0) continue;
 
-    pdf.setFontSize(14);
-    pdf.setTextColor(15, 23, 42);
-    pdf.text(`Bảng tính: ${sheetName}`, 40, 40);
+      const headers = rawData[0] || [];
+      const rows = rawData.slice(1);
 
-    const headers = rawData[0] || [];
-    const rows = rawData.slice(1);
+      // Render table thành DOM element với styling đẹp và font Unicode chuẩn
+      staging.innerHTML = '';
+      const tableWrapper = document.createElement('div');
+      tableWrapper.style.padding = '32px';
+      tableWrapper.style.backgroundColor = '#ffffff';
+      tableWrapper.style.boxSizing = 'border-box';
 
-    autoTable(pdf, {
-      head: [headers],
-      body: rows,
-      startY: 55,
-      margin: { left: 40, right: 40, top: 40, bottom: 40 },
-      theme: 'grid',
-      styles: {
-        fontSize: 8,
-        cellPadding: 4,
-        overflow: 'linebreak',
-        textColor: [30, 41, 59]
-      },
-      headStyles: {
-        fillColor: [14, 140, 233],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        halign: 'center'
-      },
-      alternateRowStyles: {
-        fillColor: [248, 250, 252]
-      },
-      didDrawPage: (data) => {
-        const pageCount = pdf.internal.getNumberOfPages();
-        pdf.setFontSize(8);
-        pdf.setTextColor(148, 163, 184);
-        pdf.text(
-          `Trang ${data.pageNumber} / ${pageCount}`,
-          pdf.internal.pageSize.getWidth() - 80,
-          pdf.internal.pageSize.getHeight() - 20
-        );
+      tableWrapper.innerHTML = `
+        <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">
+          Bảng tính: ${escapeHtml(sheetName)}
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: inherit;">
+          <thead>
+            <tr style="background-color: #0284c7; color: #ffffff;">
+              ${headers.map((h) => `<th style="border: 1px solid #0369a1; padding: 6px 10px; text-align: left; font-weight: 600;">${escapeHtml(String(h))}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows
+              .slice(0, 100) // Giới hạn tối đa 100 hàng cho 1 sheet
+              .map(
+                (row, rIdx) => `
+              <tr style="background-color: ${rIdx % 2 === 0 ? '#ffffff' : '#f8fafc'}; color: #334155;">
+                ${headers.map((_, cIdx) => `<td style="border: 1px solid #cbd5e1; padding: 5px 10px; word-break: break-word;">${escapeHtml(String(row[cIdx] !== undefined ? row[cIdx] : ''))}</td>`).join('')}
+              </tr>
+            `
+              )
+              .join('')}
+          </tbody>
+        </table>
+      `;
+
+      staging.appendChild(tableWrapper);
+      await new Promise((r) => setTimeout(r, 20));
+
+      const canvas = await html2canvas(tableWrapper, {
+        scale: 2.0,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false
+      });
+
+      if (hasRenderedAnyPage) {
+        pdf.addPage('a4', 'landscape');
       }
-    });
+      hasRenderedAnyPage = true;
 
-    if (onProgress) onProgress(40 + Math.round(((sIndex + 1) / totalSheets) * 50));
+      const pdfWidth = 841.89; // A4 landscape width in pt
+      const pdfHeight = 595.28; // A4 landscape height in pt
+
+      const canvasRatio = canvas.height / canvas.width;
+      const targetHeight = pdfWidth * canvasRatio;
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.96);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, Math.min(targetHeight, pdfHeight));
+
+      if (onProgress) onProgress(30 + Math.round(((sIndex + 1) / totalSheets) * 60));
+    }
+
+    const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'spreadsheet';
+    const pdfBlob = pdf.output('blob');
+    if (onProgress) onProgress(100);
+
+    return {
+      blob: pdfBlob,
+      filename: `${baseName}.pdf`,
+      mimeType: 'application/pdf',
+      isZip: false
+    };
+  } finally {
+    if (staging.parentNode) {
+      staging.parentNode.removeChild(staging);
+    }
   }
-
-  const baseName = file.name ? file.name.replace(/\.[^/.]+$/, "") : 'spreadsheet';
-  const pdfBlob = pdf.output('blob');
-  if (onProgress) onProgress(100);
-
-  return {
-    blob: pdfBlob,
-    filename: `${baseName}.pdf`,
-    mimeType: 'application/pdf',
-    isZip: false
-  };
 }
 
-export async function convertPdfToXlsx(file, _options = {}, onProgress) {
+export async function convertPdfToXlsx(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(20);
   const pdfDoc = await loadPdfDocument(file);
 
@@ -134,7 +166,7 @@ export async function convertPdfToXlsx(file, _options = {}, onProgress) {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   });
 
-  const baseName = file.name ? file.name.replace(/\.[^/.]+$/, "") : 'spreadsheet';
+  const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'spreadsheet';
   if (onProgress) onProgress(100);
 
   return {
@@ -145,7 +177,7 @@ export async function convertPdfToXlsx(file, _options = {}, onProgress) {
   };
 }
 
-export async function convertXlsxToCsv(file, _options = {}, onProgress) {
+export async function convertXlsxToCsv(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(30);
   const arrayBuffer = await file.arrayBuffer();
   const workbook = XLSX.read(arrayBuffer, { type: 'array' });
@@ -156,7 +188,7 @@ export async function convertXlsxToCsv(file, _options = {}, onProgress) {
   const csvData = XLSX.utils.sheet_to_csv(worksheet);
   const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8' });
 
-  const baseName = file.name ? file.name.replace(/\.[^/.]+$/, "") : 'data';
+  const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'data';
   if (onProgress) onProgress(100);
 
   return {
@@ -165,4 +197,13 @@ export async function convertXlsxToCsv(file, _options = {}, onProgress) {
     mimeType: 'text/csv',
     isZip: false
   };
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
