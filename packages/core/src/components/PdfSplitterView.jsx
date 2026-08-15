@@ -101,10 +101,12 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
         setIsLoading(true);
         try {
             const pdfjsLib = await loadPdfJs();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer.slice(0) });
+            const pdf = await loadingTask.promise;
             const count = pdf.numPages;
             if (count > PDF_SPLIT_LIMITS.maxPages) {
-                await pdf.destroy();
+                // Giải phóng worker qua loadingTask: PDFDocumentProxy không có destroy().
+                await loadingTask.destroy();
                 throw new Error(`PDF vượt giới hạn ${PDF_SPLIT_LIMITS.maxPages} trang`);
             }
             setPageCount(count);
@@ -121,7 +123,7 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
                 thumbs.push(canvas.toDataURL('image/jpeg', 0.7));
                 page.cleanup();
             }
-            await pdf.destroy();
+            await loadingTask.destroy();
             setThumbnails(thumbs);
             setSelected(new Set());
         } catch (e) {

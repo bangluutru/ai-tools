@@ -112,7 +112,8 @@ const PdfMergerView = ({ displayLang }) => {
                     const buffer = e.target.result;
                     // Get page count
                     const pdfjsLib = await loadPdfJs();
-                    const pdf = await pdfjsLib.getDocument({ data: buffer.slice(0) }).promise;
+                    const loadingTask = pdfjsLib.getDocument({ data: buffer.slice(0) });
+                    const pdf = await loadingTask.promise;
                     const pageCount = pdf.numPages;
 
                     // Generate first-page thumbnail
@@ -125,7 +126,8 @@ const PdfMergerView = ({ displayLang }) => {
                     await page.render({ canvasContext: ctx, viewport }).promise;
                     const thumbnail = canvas.toDataURL('image/jpeg', 0.6);
                     page.cleanup();
-                    await pdf.destroy();
+                    // Giải phóng worker qua loadingTask: PDFDocumentProxy không có destroy().
+                    await loadingTask.destroy();
 
                     resolve({
                         id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

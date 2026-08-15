@@ -9,6 +9,7 @@ const GENERATED_AT = new Date('2026-08-15T10:00:00');
 const INVOICES = [
   {
     date: '01/07/2026',
+    invoiceSymbol: '1C26TAA',
     invoiceNo: '00012345',
     seller: 'Công ty TNHH Thương mại Dịch vụ Minh Anh',
     sellerTax: '0101234567',
@@ -19,6 +20,7 @@ const INVOICES = [
   },
   {
     date: '05/07/2026',
+    invoiceSymbol: '1C26TAA',
     invoiceNo: '00012346',
     seller: 'Vietjet Air',
     sellerTax: '0102030405',
@@ -59,10 +61,13 @@ test('money columns stay numeric with a thousands format', async () => {
   const firstInvoice = sheet.getRow(10);
 
   assert.equal(firstInvoice.getCell(1).value, 1);
-  assert.equal(firstInvoice.getCell(3).value, '00012345');
-  assert.equal(firstInvoice.getCell(6).value, 10000000);
-  assert.match(firstInvoice.getCell(6).numFmt, /#,##0/);
-  assert.equal(firstInvoice.getCell(8).value, 11000000);
+  // Ký hiệu hóa đơn là tiêu thức bắt buộc nên phải có cột riêng trên bảng kê.
+  assert.equal(firstInvoice.getCell(3).value, '1C26TAA');
+  assert.equal(firstInvoice.getCell(4).value, '00012345');
+  assert.equal(firstInvoice.getCell(6).value, '0101234567');
+  assert.equal(firstInvoice.getCell(7).value, 10000000);
+  assert.match(firstInvoice.getCell(7).numFmt, /#,##0/);
+  assert.equal(firstInvoice.getCell(9).value, 11000000);
 });
 
 
@@ -72,10 +77,10 @@ test('a highlighted total row closes the table', async () => {
   const totalRow = sheet.getRow(12);
 
   assert.equal(totalRow.getCell(1).value, 'Tổng cộng');
-  assert.equal(totalRow.getCell(6).value, 14545455);
-  assert.equal(totalRow.getCell(8).value, 16000000);
-  assert.equal(totalRow.getCell(8).font.bold, true);
-  assert.equal(totalRow.getCell(8).fill.fgColor.argb, 'FFFFF2CC');
+  assert.equal(totalRow.getCell(7).value, 14545455);
+  assert.equal(totalRow.getCell(9).value, 16000000);
+  assert.equal(totalRow.getCell(9).font.bold, true);
+  assert.equal(totalRow.getCell(9).fill.fgColor.argb, 'FFFFF2CC');
 });
 
 

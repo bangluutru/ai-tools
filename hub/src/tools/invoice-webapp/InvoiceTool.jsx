@@ -14,6 +14,12 @@ import {
 } from '@ai-tools/core/utils/invoice/validation.js';
 import { verifyDocumentSignature } from '@ai-tools/core/utils/documentFiles.js';
 import { exportPaymentRequest } from '@ai-tools/core/utils/invoice/paymentRequestExport.js';
+import {
+  extractInvoiceFields,
+  missingInvoiceFields,
+  parseInvoiceSymbol,
+  validateInvoiceFields,
+} from '@ai-tools/core/utils/invoice/vietnamInvoice.js';
 
 let pdfJsPromise;
 const loadPdfJs = () => {
@@ -38,7 +44,8 @@ async function extractTextFromPDFBuffer(arrayBuffer) {
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
     if (pdf.numPages > INVOICE_LIMITS.maxPdfPages) {
-      await pdf.destroy();
+      // Giải phóng worker qua loadingTask: PDFDocumentProxy không có destroy().
+      await loadingTask.destroy();
       throw new Error(`PDF vượt ${INVOICE_LIMITS.maxPdfPages} trang`);
     }
     let fullText = '';
@@ -80,7 +87,7 @@ async function extractTextFromPDFBuffer(arrayBuffer) {
       fullText += pageText + '\n';
       page.cleanup();
     }
-    await pdf.destroy();
+    await loadingTask.destroy();
     return fullText;
   } catch (err) {
     console.error('Lỗi khi extract text PDF:', err);
@@ -88,221 +95,114 @@ async function extractTextFromPDFBuffer(arrayBuffer) {
   }
 }
 
-// Bóc tách dữ liệu từ văn bản PDF theo các mẫu hóa đơn phổ biến
+/**
+ * Nhận diện chứng từ đi lại không phải hóa đơn điện tử theo mẫu (vé máy bay,
+ * biên nhận taxi). Chỉ dùng để đặt tên hiển thị khi hóa đơn không có trường
+ * "Tên người bán" theo quy định.
+ */
+function describeTravelDocument(text, fileName) {
+  const textLower = text.toLowerCase();
+
+  const findPnr = () => {
+    const pnrMatch = text.match(/(?:Mã đặt chỗ|PNR|Reservation Code|Booking Ref)[:\s]*([A-Z0-9]{5,8})/i);
+    if (pnrMatch) return pnrMatch[1];
+    const fnamePnr = fileName.match(/[_-]([A-Z0-9]{5,8})\./i);
+    return fnamePnr && !/^\d+$/.test(fnamePnr[1]) ? fnamePnr[1].toUpperCase() : '';
+  };
+
+  const findRoutes = () => {
+    const routes = [];
+    for (const match of text.matchAll(/\b([A-Z]{3})\s*[-–]\s*([A-Z]{3})\b/g)) {
+      const route = `${match[1]}-${match[2]}`;
+      if (!routes.includes(route)) routes.push(route);
+    }
+    const fromName = fileName.match(/([A-Z]{3}-[A-Z]{3})/);
+    if (fromName && !routes.includes(fromName[1])) routes.push(fromName[1]);
+    return routes;
+  };
+
+  const isAirline = textLower.includes('vietjet')
+    || textLower.includes('vietnam airlines')
+    || textLower.includes('hàng không việt nam')
+    || textLower.includes('vé máy bay')
+    || textLower.includes('electronic ticket')
+    || textLower.includes('e-ticket');
+
+  if (isAirline) {
+    const airline = textLower.includes('vietnam airlines') || textLower.includes('hàng không việt nam')
+      ? 'Vietnam Airlines'
+      : 'Vietjet Air';
+    const pnr = findPnr();
+    const routes = findRoutes();
+    const details = [pnr ? `PNR: ${pnr}` : '', routes.join(', ')].filter(Boolean).join(' | ');
+    return details ? `${airline} [${details}]` : airline;
+  }
+
+  if (textLower.includes('xanh sm') || textLower.includes('di chuyển xanh') || textLower.includes('gsm')) {
+    const pickupMatch = text.match(/(?:Điểm đón|Đón|Pickup|Từ)[:\s]*(.*?)(?:\n|Điểm đến|Đến|Dropoff|Thời gian|Mã chuyến|$)/i);
+    const dropoffMatch = text.match(/(?:Điểm đến|Đến|Dropoff|Tới)[:\s]*(.*?)(?:\n|Thời gian|Cước phí|Mã chuyến|$)/i);
+    const pickup = pickupMatch ? pickupMatch[1].trim().split(',')[0].trim() : '';
+    const dropoff = dropoffMatch ? dropoffMatch[1].trim().split(',')[0].trim() : '';
+    return pickup && dropoff ? `Xanh SM (${pickup} -> ${dropoff})` : 'Xanh SM (Chi phí di chuyển)';
+  }
+
+  return '';
+}
+
+/** Tên hàng hóa, dịch vụ đầu tiên — chỉ để hiển thị kèm tên người bán. */
+function findFirstLineItem(text) {
+  const itemMatch = text.match(/(?:Tên hàng hóa|Diễn giải|Tên dịch vụ|Nội dung|Hàng hoá, dịch vụ|Description).*?\n((?:.*?\n){1,8})/i);
+  if (!itemMatch) return '';
+
+  for (let line of itemMatch[1].split('\n')) {
+    line = line.trim();
+    if (!line || line.length < 4) continue;
+    const lower = line.toLowerCase();
+
+    if (/^(?:stt|số thứ tự|tên|đơn vị tính|số lượng|đơn giá|mã|\(|\[)/i.test(lower)) continue;
+    if (['name of goods', 'description', 'seller', 'unit', 'quantity'].some((token) => lower.includes(token))) continue;
+    if (/^[\d\s=xX.,+\-%]+$/.test(line)) continue;
+
+    // Text PDF gộp cả dòng bảng, nên cắt tại cột số đầu tiên (số lượng/đơn giá)
+    // để chỉ giữ lại tên hàng hóa, dịch vụ.
+    const words = line.replace(/^\d+[.\s]+/, '').trim().split(/\s+/);
+    const firstNumber = words.findIndex((word) => /^\d[\d.,]*%?$/.test(word));
+    const cleaned = (firstNumber > 0 ? words.slice(0, firstNumber) : words).join(' ').trim();
+    if (cleaned.length < 4) continue;
+    return cleaned.length > 60 ? `${cleaned.slice(0, 60)}...` : cleaned;
+  }
+
+  return '';
+}
+
+/**
+ * Bóc tách bản thể hiện PDF theo đúng bộ trường mà Thông tư 91/2026/TT-BTC quy
+ * định, thay vì dò theo vị trí. Không suy diễn giá trị thiếu: trường nào không
+ * đọc được thì đánh dấu để người dùng đối chiếu chứng từ gốc.
+ */
 function parsePDFInvoiceText(text, fileName, zipName = null) {
   try {
-    let dateStr = '';
-    let invoiceNo = 'N/A';
-    let provider = 'Hóa đơn/Biên lai (PDF)';
-    let totalAmount = 0;
-    let amountBeforeTax = 0;
-    let vatAmount = 0;
+    const fields = extractInvoiceFields(text);
 
-    // 1. Quét ngày tháng (nhiều pattern)
-    // Pattern 1: DD/MM/YYYY hoặc DD-MM-YYYY
-    const dateMatch1 = text.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
-    // Pattern 2: "Ngày DD Tháng MM Năm YYYY" (Vietnamese)
-    const dateMatch2 = text.match(/(\d{1,2})\s*[Tt]háng.*?(\d{1,2})\s*[Nn]ăm.*?(\d{4})/);
-    // Pattern 3: From filename (e.g., 20260118 - Receipt...)
-    const dateMatch3 = fileName.match(/(\d{4})(\d{2})(\d{2})/);
+    const amounts = deriveInvoiceAmounts({
+      totalAmount: fields.totalAmount,
+      amountBeforeTax: fields.amountBeforeTax,
+      vatAmount: fields.vatAmount,
+    });
+    const resolved = { ...fields, ...amounts };
 
-    if (dateMatch1) {
-      dateStr = `${dateMatch1[1]}/${dateMatch1[2]}/${dateMatch1[3]}`;
-    } else if (dateMatch2) {
-      const d = dateMatch2[1].padStart(2, '0');
-      const m = dateMatch2[2].padStart(2, '0');
-      dateStr = `${d}/${m}/${dateMatch2[3]}`;
-    } else if (dateMatch3) {
-      dateStr = `${dateMatch3[3]}/${dateMatch3[2]}/${dateMatch3[1]}`;
-    }
-    // Không dùng ngày hiện tại làm fallback → giữ trống nếu không tìm được
-    if (!dateStr) dateStr = 'N/A';
+    const warnings = validateInvoiceFields(resolved);
+    const missingFields = missingInvoiceFields(resolved);
 
-    // 2. Quét số hóa đơn
-    const invMatch = text.match(/(?:Số HĐ|Số hóa đơn|Số|Invoice No|No\.)[:\s]*([A-Z0-9\-\/]+)/i);
-    if (invMatch && invMatch[1].length >= 3 && invMatch[1].length <= 15) {
-      invoiceNo = invMatch[1].trim();
-    }
+    // Tên hiển thị: ưu tiên "Tên người bán" theo quy định, sau đó mới tới nhận
+    // diện vé/biên nhận vốn không phải hóa đơn điện tử theo mẫu.
+    const travelName = describeTravelDocument(text, fileName);
+    const lineItem = findFirstLineItem(text);
+    let seller = fields.seller || travelName || 'Hóa đơn/Biên lai (PDF)';
+    if (fields.seller && lineItem) seller = `${seller} (${lineItem})`;
+    else if (!fields.seller && travelName && lineItem) seller = `${travelName} (${lineItem})`;
 
-    // 3. Quét số tiền — Ưu tiên tìm đúng dòng "tổng cộng tiền thanh toán" (giống Python)
-    const amountRegex = /(?:tổng cộng tiền thanh toán|tổng tiền thanh toán|tổng cộng|total payment|total amount|tổng tiền|thành tiền)[^\d]*(\d{1,3}(?:[.,]\d{3})+|\d{4,})/gi;
-    let match;
-    const parsedNums = [];
-    while ((match = amountRegex.exec(text)) !== null) {
-      const cleaned = match[1].replace(/[^\d]/g, '');
-      const num = parseInt(cleaned, 10);
-      if (num > 0 && num <= 1_000_000_000_000) {
-        parsedNums.push(num);
-      }
-    }
-
-    if (parsedNums.length > 0) {
-      // Giá trị sau thuế luôn là giá trị lớn nhất trong các dòng tổng cộng
-      totalAmount = Math.max(...parsedNums);
-    }
-    // KHÔNG fallback tìm MAX mọi số — đây là nguyên nhân gây lỗi 190 triệu
-
-    // 3b. Thử tìm tiền trước thuế và tiền thuế riêng
-    const beforeTaxMatch = text.match(/(?:cộng tiền hàng|tiền chưa thuế|amount before)[^\d]*(\d{1,3}(?:[.,]\d{3})+|\d{4,})/gi);
-    if (beforeTaxMatch) {
-      for (const m of beforeTaxMatch) {
-        const cleaned = m.match(/(\d{1,3}(?:[.,]\d{3})+|\d{4,})/);
-        if (cleaned) {
-          const num = parseInt(cleaned[1].replace(/[^\d]/g, ''), 10);
-          if (num >= 1000 && num < totalAmount) {
-            amountBeforeTax = num;
-            break;
-          }
-        }
-      }
-    }
-    const vatMatch = text.match(/(?:tiền thuế|thuế GTGT|VAT amount|tax amount)[^\d]*(\d{1,3}(?:[.,]\d{3})+|\d{4,})/gi);
-    if (vatMatch) {
-      for (const m of vatMatch) {
-        const cleaned = m.match(/(\d{1,3}(?:[.,]\d{3})+|\d{4,})/);
-        if (cleaned) {
-          const num = parseInt(cleaned[1].replace(/[^\d]/g, ''), 10);
-          if (num >= 100 && num < totalAmount) {
-            vatAmount = num;
-            break;
-          }
-        }
-      }
-    }
-
-    // Chỉ cộng/trừ các field đọc được; tuyệt đối không giả định thuế suất.
-    ({ totalAmount, amountBeforeTax, vatAmount } = deriveInvoiceAmounts({
-      totalAmount,
-      amountBeforeTax,
-      vatAmount,
-    }));
-
-    const textLower = text.toLowerCase();
-
-    // 4. Nhận diện nhà cung cấp + rút gọn tên
-    // --- VÉ MÁY BAY ---
-    if (textLower.includes('vietjet') || textLower.includes('vé máy bay') || textLower.includes('electronic ticket') || textLower.includes('e-ticket')) {
-      const isVietnam = textLower.includes('vietnam airlines') || textLower.includes('hàng không việt nam');
-      const airline = isVietnam ? 'Vietnam Airlines' : 'Vietjet Air';
-
-      let pnr = '';
-      const pnrMatch = text.match(/(?:Mã đặt chỗ|PNR|Reservation Code|Booking Ref)[:\s]*([A-Z0-9]{5,8})/i);
-      if (pnrMatch) pnr = pnrMatch[1];
-      // Fallback: extract PNR from filename
-      if (!pnr) {
-        const fnamePnr = fileName.match(/[_-]([A-Z0-9]{5,8})\./i);
-        if (fnamePnr && !/^\d+$/.test(fnamePnr[1])) pnr = fnamePnr[1].toUpperCase();
-      }
-
-      const routes = [];
-      const routeMatches = text.matchAll(/\b([A-Z]{3})\s*[-–]\s*([A-Z]{3})\b/g);
-      for (const rm of routeMatches) {
-        const route = `${rm[1]}-${rm[2]}`;
-        if (!routes.includes(route)) routes.push(route);
-      }
-      // Fallback: route from filename
-      const fnameRoute = fileName.match(/([A-Z]{3}-[A-Z]{3})/);
-      if (fnameRoute && !routes.includes(fnameRoute[1])) routes.push(fnameRoute[1]);
-
-      if (pnr && routes.length > 0) {
-        provider = `${airline} [PNR: ${pnr} | ${routes.join(', ')}]`;
-      } else if (pnr) {
-        provider = `${airline} [PNR: ${pnr}]`;
-      } else if (routes.length > 0) {
-        provider = `${airline} [${routes.join(', ')}]`;
-      } else {
-        provider = airline;
-      }
-    }
-    // --- VIETNAM AIRLINES (PDF riêng, không qua vietjet branch) ---
-    else if (textLower.includes('vietnam airlines') || textLower.includes('hàng không việt nam')) {
-      let pnr = '';
-      const pnrMatch = text.match(/(?:Mã đặt chỗ|PNR|Reservation Code|Booking Ref)[:\s]*([A-Z0-9]{5,8})/i);
-      if (pnrMatch) pnr = pnrMatch[1];
-      if (!pnr) {
-        const fnamePnr = fileName.match(/[_-]([A-Z0-9]{5,8})\./i);
-        if (fnamePnr && !/^\d+$/.test(fnamePnr[1])) pnr = fnamePnr[1].toUpperCase();
-      }
-
-      const routes = [];
-      const routeMatches = text.matchAll(/\b([A-Z]{3})\s*[-–]\s*([A-Z]{3})\b/g);
-      for (const rm of routeMatches) {
-        const route = `${rm[1]}-${rm[2]}`;
-        if (!routes.includes(route)) routes.push(route);
-      }
-
-      if (pnr && routes.length > 0) {
-        provider = `Vietnam Airlines [PNR: ${pnr} | ${routes.join(', ')}]`;
-      } else if (routes.length > 0) {
-        provider = `Vietnam Airlines [${routes.join(', ')}]`;
-      } else {
-        provider = 'Vietnam Airlines';
-      }
-    }
-    // --- TAXI ---
-    else if (textLower.includes('xanh sm') || textLower.includes('di chuyển xanh') || textLower.includes('gsm')) {
-      let pickup = '';
-      let dropoff = '';
-
-      const pickupMatch = text.match(/(?:Điểm đón|Đón|Pickup|Từ)[:\s]*(.*?)(?:\n|Điểm đến|Đến|Dropoff|Thời gian|Mã chuyến|$)/i);
-      if (pickupMatch) pickup = pickupMatch[1].trim().split(',')[0].trim();
-
-      const dropoffMatch = text.match(/(?:Điểm đến|Đến|Dropoff|Tới)[:\s]*(.*?)(?:\n|Thời gian|Cước phí|Mã chuyến|$)/i);
-      if (dropoffMatch) dropoff = dropoffMatch[1].trim().split(',')[0].trim();
-
-      if (pickup && dropoff) {
-        provider = `Xanh SM (${pickup} -> ${dropoff})`;
-      } else {
-        provider = 'Xanh SM (Chi phí di chuyển)';
-      }
-    }
-    // --- KHÁCH SẠN / HOÁ ĐƠN CHUNG ---
-    else {
-      let seller = '';
-      const sellerMatch = text.match(/(?:Đơn vị bán hàng|Tên người bán|Tên đơn vị bán|Người bán)[^\n:]*:\s*(.*?)(?:\n|Mã số thuế|Địa chỉ|$)/i);
-      if (sellerMatch) {
-        seller = sellerMatch[1].trim();
-        if (seller && !seller.toLowerCase().startsWith('hàng(seller)')) {
-          provider = seller;
-        }
-      }
-
-      // Trích xuất tên hàng hoá dịch vụ với bộ lọc thông minh
-      const itemMatch = text.match(/(?:Tên hàng hóa|Diễn giải|Tên dịch vụ|Nội dung|Hàng hoá, dịch vụ|Description).*?\n((?:.*?\n){1,8})/i);
-      let desc = '';
-      if (itemMatch) {
-        const lines = itemMatch[1].split('\n');
-        for (let d of lines) {
-          d = d.trim();
-          if (!d || d.length < 4) continue;
-          const dLower = d.toLowerCase();
-
-          // Bỏ qua tiêu đề bảng song ngữ, từ khóa header
-          if (/^(?:stt|số thứ tự|tên|đơn vị tính|số lượng|đơn giá|mã|\(|\[)/i.test(dLower)) continue;
-          if (dLower.includes('name of goods') || dLower.includes('description') || dLower.includes('seller') || dLower.includes('unit') || dLower.includes('quantity')) continue;
-          if (dLower.includes('(no)') || dLower.includes('hàng(seller)') || dLower.includes('tính (%)') || dLower.includes('tính(%)')) continue;
-
-          // Bỏ qua dòng chỉ chứa số, đánh dấu cột
-          if (/^[\d\s=xX\.\,\+\-\%]+$/.test(d)) continue;
-
-          // Bỏ số thứ tự đầu dòng
-          const cleanD = d.replace(/^\d+[\.\s]+/, '').trim();
-          if (cleanD.length < 4) continue;
-          desc = cleanD.length > 60 ? ` (${cleanD.slice(0, 60)}...)` : ` (${cleanD})`;
-          break;
-        }
-      }
-
-      if (desc) {
-        provider = provider + desc;
-      }
-    }
-
-    const missingFields = [];
-    if (!isKnownInvoiceNumber(invoiceNo)) missingFields.push('invoiceNo');
-    if (dateStr === 'N/A') missingFields.push('date');
-    if (!totalAmount) missingFields.push('totalAmount');
-    if (!amountBeforeTax && !vatAmount) missingFields.push('taxBreakdown');
+    const invoiceNo = fields.invoiceNo || 'Chưa rõ số';
 
     return {
       id: makeId(),
@@ -310,16 +210,21 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       rawFileName: fileName,
       zipName: zipName || null,
       invoiceNo,
-      date: dateStr,
-      seller: provider,
-      sellerTax: 'PDF/E-Ticket',
-      amountBeforeTax,
-      vatAmount,
-      totalAmount,
-      status: missingFields.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
+      invoiceSymbol: fields.symbol?.raw || '',
+      invoiceFormName: fields.symbol?.formName || '',
+      date: fields.date || 'Chưa rõ ngày',
+      seller,
+      sellerTax: fields.sellerTax || '',
+      buyerTax: fields.buyerTax || '',
+      amountBeforeTax: resolved.amountBeforeTax,
+      vatAmount: resolved.vatAmount,
+      totalAmount: resolved.totalAmount,
+      amountInWords: fields.amountInWords || '',
+      status: missingFields.length === 0 && warnings.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
       rawType: 'PDF',
       missingFields,
-      needsReview: missingFields.length > 0,
+      warnings,
+      needsReview: missingFields.length > 0 || warnings.length > 0,
       isConfirmed: false,
     };
   } catch (err) {
@@ -330,7 +235,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       invoiceNo: 'N/A',
       date: 'N/A',
       seller: 'Lỗi bóc tách PDF',
-      sellerTax: '-',
+      sellerTax: '',
       amountBeforeTax: 0,
       vatAmount: 0,
       totalAmount: 0,
@@ -338,6 +243,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       errorMessage: err.message,
       rawType: 'PDF',
       missingFields: ['parseError'],
+      warnings: [],
       needsReview: true,
       isConfirmed: false,
     };
@@ -518,12 +424,30 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       vatAmount,
     }));
 
+    // Ký hiệu mẫu số + ký hiệu hóa đơn theo Điều 4 và Phụ lục I TT 91/2026/TT-BTC.
+    const symbol = parseInvoiceSymbol(
+      `${getText(['KHMSHDon', 'KyHieuMauSoHoaDon']) || ''}${getText(['KHHDon', 'KyHieuHoaDon']) || ''}`,
+    );
+
     const missingFields = [];
     if (!isKnownInvoiceNumber(invoiceNo)) missingFields.push('invoiceNo');
     if (dateStr === 'Chưa rõ ngày') missingFields.push('date');
     if (!sellerTax) missingFields.push('sellerTax');
     if (!totalAmount) missingFields.push('totalAmount');
-    if (!amountBeforeTax && !vatAmount) missingFields.push('taxBreakdown');
+    if (symbol?.expectsVat !== false && !amountBeforeTax && !vatAmount) {
+      missingFields.push('taxBreakdown');
+    }
+
+    const warnings = validateInvoiceFields({
+      symbol,
+      date: dateStr === 'Chưa rõ ngày' ? '' : dateStr,
+      amountBeforeTax,
+      vatAmount,
+      totalAmount,
+      sellerTax,
+      amountInWordsValue: null,
+      dateSource: 'label',
+    });
 
     return {
       id: makeId(),
@@ -531,16 +455,19 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       rawFileName: fileName,
       zipName: zipName || null,
       invoiceNo,
+      invoiceSymbol: symbol?.raw || '',
+      invoiceFormName: symbol?.formName || '',
       date: dateStr,
       seller,
       sellerTax,
       amountBeforeTax,
       vatAmount,
       totalAmount,
-      status: missingFields.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
+      status: missingFields.length === 0 && warnings.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
       rawType: 'XML',
       missingFields,
-      needsReview: missingFields.length > 0,
+      warnings,
+      needsReview: missingFields.length > 0 || warnings.length > 0,
       isConfirmed: false,
     };
   } catch (err) {
@@ -929,10 +856,20 @@ export default function InvoiceTool() {
                       {inv.rawFileName && (
                         <div className="text-[10px] text-slate-500 font-mono mt-0.5">{inv.rawFileName}</div>
                       )}
+                      {inv.sellerTax && (
+                        <div className="text-[10px] text-slate-500 mt-0.5">MST: {inv.sellerTax}</div>
+                      )}
                       {inv.missingFields?.length > 0 && (
                         <div className="mt-1 text-[10px] text-amber-300">
                           Thiếu/cần kiểm tra: {inv.missingFields.join(', ')}
                         </div>
+                      )}
+                      {inv.warnings?.length > 0 && (
+                        <ul className="mt-1 space-y-0.5 text-[10px] text-rose-300">
+                          {inv.warnings.map((warning) => (
+                            <li key={warning}>⚠ {warning}</li>
+                          ))}
+                        </ul>
                       )}
                     </td>
                     <td className="py-3 px-4 text-right font-medium text-slate-300 whitespace-nowrap">
@@ -944,7 +881,14 @@ export default function InvoiceTool() {
                     <td className="py-3 px-4 text-right font-bold text-amber-400 whitespace-nowrap">
                       {inv.totalAmount.toLocaleString('vi-VN')}
                     </td>
-                    <td className="py-3 px-4 font-mono text-slate-400">{inv.invoiceNo}</td>
+                    <td className="py-3 px-4 font-mono text-slate-400">
+                      <div>{inv.invoiceNo}</div>
+                      {inv.invoiceSymbol && (
+                        <div className="text-[10px] text-slate-500" title={inv.invoiceFormName}>
+                          {inv.invoiceSymbol}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-3 px-4 text-center">
                       <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
                         inv.rawType === 'XML' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'

@@ -14,16 +14,19 @@ import {
 } from '../excelReport.js';
 import { numberToWordsVN } from './numberToWords.js';
 
+// Cột theo đúng bộ tiêu thức bắt buộc của hóa đơn điện tử (TT 91/2026/TT-BTC,
+// Phụ lục I và Phụ lục V): ký hiệu, số, ngày, người bán, mã số thuế, tiền.
 const COLUMNS = [
   { header: 'STT', width: 6, center: true },
-  { header: 'Ngày hóa đơn', width: 14, center: true },
-  { header: 'Số hóa đơn', width: 16, center: true },
-  { header: 'Đơn vị bán hàng', width: 38 },
+  { header: 'Ngày hóa đơn', width: 13, center: true },
+  { header: 'Ký hiệu', width: 11, center: true },
+  { header: 'Số hóa đơn', width: 13, center: true },
+  { header: 'Đơn vị bán hàng', width: 34 },
   { header: 'Mã số thuế', width: 15, center: true },
-  { header: 'Tiền trước thuế', width: 18, money: true },
-  { header: 'Tiền thuế GTGT', width: 17, money: true },
-  { header: 'Tổng thanh toán', width: 20, money: true },
-  { header: 'Ghi chú', width: 26 },
+  { header: 'Tiền trước thuế', width: 17, money: true },
+  { header: 'Tiền thuế GTGT', width: 16, money: true },
+  { header: 'Tổng thanh toán', width: 19, money: true },
+  { header: 'Ghi chú', width: 24 },
 ];
 
 const MONEY_COLUMNS = COLUMNS
@@ -100,6 +103,7 @@ export async function buildPaymentRequestWorkbook(invoices, options = {}) {
     const row = sheet.addRow([
       index + 1,
       invoice.date || '',
+      invoice.invoiceSymbol || '',
       invoice.invoiceNo || '',
       invoice.seller || '',
       invoice.sellerTax || '',
@@ -116,13 +120,13 @@ export async function buildPaymentRequestWorkbook(invoices, options = {}) {
   });
 
   const totalRow = sheet.addRow([
-    'Tổng cộng', '', '', '', '',
+    'Tổng cộng', '', '', '', '', '',
     totals.amountBeforeTax,
     totals.vatAmount,
     totals.totalAmount,
     '',
   ]);
-  sheet.mergeCells(`A${totalRow.number}:E${totalRow.number}`);
+  sheet.mergeCells(`A${totalRow.number}:F${totalRow.number}`);
   styleTotalRow(totalRow, { moneyColumns: MONEY_COLUMNS });
   totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
