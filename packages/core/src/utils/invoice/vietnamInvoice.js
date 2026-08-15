@@ -113,10 +113,36 @@ export function normalizeTaxCode(value) {
   return match[2] ? `${match[1]}-${match[2]}` : match[1];
 }
 
-/** Bỏ dấu hai chấm và các dấu chấm/gạch dẫn mà biểu mẫu dùng để kẻ dòng. */
-const stripLeader = (value) => String(value ?? '').replace(/^[\s:.\-–—…_]+/, '').trim();
+/**
+ * Bỏ phần dẫn giữa nhãn và giá trị: bản dịch tiếng Anh trong ngoặc theo khoản 2
+ * Điều 5 Thông tư 91/2026/TT-BTC ("Đơn vị bán hàng (Seller):"), dấu hai chấm và
+ * các dấu chấm/gạch mà biểu mẫu dùng để kẻ dòng.
+ */
+const stripLeader = (value) => {
+  let result = String(value ?? '').trim();
+  let previous;
+  do {
+    previous = result;
+    result = result
+      .replace(/^[\s:.\-–—…_]+/, '')
+      .replace(/^\([^)]*\)/, '')
+      .trim();
+  } while (result !== previous);
+  return result;
+};
 
 const isFillerOnly = (value) => !value || /^[.\-–—…_\s:]*$/.test(value);
+
+/** Nhãn dài nhất khớp trên dòng, để "Họ tên người mua hàng" thắng "Tên người mua". */
+function bestLabelOnLine(folded, labels) {
+  let best = null;
+  for (const label of labels) {
+    const at = folded.indexOf(label);
+    if (at < 0) continue;
+    if (!best || label.length > best.label.length) best = { label, at };
+  }
+  return best;
+}
 
 /**
  * Tìm giá trị của một nhãn. Bản thể hiện PDF hay tách nhãn và giá trị thành hai
@@ -130,26 +156,39 @@ export function findLabeledValue(lines, labels, options = {}) {
     const folded = foldText(line);
     if (!folded) continue;
 
-    for (const label of labels) {
-      const at = folded.indexOf(label);
-      if (at < 0) continue;
+    const hit = bestLabelOnLine(folded, labels);
+    if (!hit) continue;
 
-      const value = stripLeader(line.slice(at + label.length));
-      if (!isFillerOnly(value)) return { value, lineIndex: index, label };
+    const value = stripLeader(line.slice(hit.at + hit.label.length));
+    if (!isFillerOnly(value)) return { value, lineIndex: index, label: hit.label };
 
-      if (allowNextLine && index + 1 < lines.length) {
-        const next = tidyLine(lines[index + 1]);
-        if (!isFillerOnly(next)) return { value: next, lineIndex: index + 1, label };
-      }
+    if (allowNextLine && index + 1 < lines.length) {
+      const next = stripLeader(tidyLine(lines[index + 1]));
+      if (!isFillerOnly(next)) return { value: next, lineIndex: index + 1, label: hit.label };
     }
   }
 
   return null;
 }
 
-/** Số tiền đầu tiên xuất hiện sau nhãn, tìm cả trên dòng kế tiếp. */
+const firstAmountIn = (text) => {
+  const numberMatch = String(text ?? '').match(/-?\d[\d.,]*\d|\d/);
+  if (!numberMatch) return null;
+  const amount = parseLocalizedNumber(numberMatch[0]);
+  return amount !== null && Number.isFinite(amount) ? amount : null;
+};
+
+/**
+ * Số tiền đứng sau nhãn, tìm cả trên dòng kế tiếp khi cột số bị tách dòng.
+ *
+ * Nhãn đứng đầu dòng được ưu tiên hơn nhãn nằm giữa dòng: dòng tổng kết luôn
+ * bắt đầu bằng nhãn của nó, còn phần khớp giữa dòng thường chỉ là bản dịch
+ * tiếng Anh trong ngoặc của một chỉ tiêu khác (ví dụ "Cộng tiền hàng (Total
+ * amount)" không phải tổng thanh toán).
+ */
 export function findLabeledAmount(lines, labels, options = {}) {
   const { startIndex = 0 } = options;
+  let fallback = null;
 
   for (const label of labels) {
     for (let index = Math.max(0, startIndex); index < lines.length; index += 1) {
@@ -157,53 +196,81 @@ export function findLabeledAmount(lines, labels, options = {}) {
       const at = foldText(line).indexOf(label);
       if (at < 0) continue;
 
-      const candidates = [line.slice(at + label.length), tidyLine(lines[index + 1] ?? '')];
-      for (const candidate of candidates) {
-        const numberMatch = candidate.match(/-?\d[\d.,]*\d|\d/);
-        if (!numberMatch) continue;
-        const amount = parseLocalizedNumber(numberMatch[0]);
-        if (amount !== null && Number.isFinite(amount)) {
-          return { amount, lineIndex: index, label };
-        }
-      }
+      const amount = firstAmountIn(line.slice(at + label.length))
+        ?? firstAmountIn(tidyLine(lines[index + 1] ?? ''));
+      if (amount === null) continue;
+
+      const hit = { amount, lineIndex: index, label };
+      if (at === 0) return hit;
+      if (!fallback) fallback = hit;
     }
   }
 
-  return null;
+  return fallback;
 }
 
 // Nhãn theo Phụ lục V, kèm biến thể của các phần mềm phát hành và bản song ngữ.
 export const LABELS = Object.freeze({
   symbol: ['ky hieu hoa don', 'ky hieu', 'serial'],
   invoiceNo: ['so hoa don', 'so hd', 'invoice no', 'invoice number'],
-  date: ['ngay lap', 'ngay hoa don', 'invoice date'],
-  seller: ['ten nguoi ban', 'don vi ban hang', 'don vi ban', 'nguoi ban', 'seller'],
-  buyer: ['ten nguoi mua', 'ho ten nguoi mua', 'don vi mua hang', 'nguoi mua', 'buyer'],
+  date: ['ngay lap hoa don', 'ngay lap', 'ngay hoa don', 'invoice date'],
+  seller: [
+    'ten don vi ban hang',
+    'don vi ban hang',
+    'ten nguoi ban',
+    'don vi ban',
+    'nguoi ban',
+    'nha cung cap',
+    'seller',
+  ],
+  buyer: [
+    'ho ten nguoi mua hang',
+    'ten don vi nguoi mua',
+    'don vi mua hang',
+    'ho ten nguoi mua',
+    'ten nguoi mua',
+    'nguoi mua hang',
+    'nguoi mua',
+    'buyer',
+  ],
   taxCode: ['ma so thue', 'mst', 'tax code'],
   totalAmount: [
     'tong cong tien thanh toan',
     'tong tien thanh toan da co thue gtgt',
+    'tong so tien thanh toan',
     'tong tien thanh toan',
-    'tong tien thanh toan bang so',
+    'tong cong thanh toan',
+    'tong thanh toan',
     'total payment',
     'total amount',
   ],
   amountBeforeTax: [
     'tong tien chua co thue gtgt',
     'thanh tien chua co thue gtgt',
+    'cong tien hang chua co thue gtgt',
     'cong tien hang',
     'cong tien ban hang',
+    'tong tien hang',
     'total excluding vat',
+    'amount excluding vat',
   ],
   vatAmount: [
     'tong tien thue gia tri gia tang',
     'tien thue gia tri gia tang',
+    'tong so tien thue gtgt',
     'tong tien thue gtgt',
     'tien thue gtgt',
+    'thue gtgt',
     'vat amount',
   ],
   taxRate: ['thue suat gia tri gia tang', 'thue suat gtgt', 'thue suat'],
-  amountInWords: ['so tien viet bang chu', 'so tien bang chu', 'amount in words'],
+  amountInWords: [
+    'so tien viet bang chu',
+    'so tien bang chu',
+    'bang chu',
+    'amount in words',
+    'in words',
+  ],
 });
 
 function findInvoiceNumber(lines) {
@@ -215,10 +282,12 @@ function findInvoiceNumber(lines) {
   if (!raw) {
     for (let index = 0; index < lines.length; index += 1) {
       const line = tidyLine(lines[index]);
-      if (!/^so\s*[:.]/.test(foldText(line))) continue;
+      // Chấp nhận cả "Số:" lẫn dạng song ngữ "Số (No.):" của các phần mềm phát hành.
+      const bare = /^so\s*(?:\([^)]*\))?\s*[:.]/.exec(foldText(line));
+      if (!bare) continue;
 
-      const inline = stripLeader(line.replace(/^[^:.]*[:.]/, ''));
-      raw = isFillerOnly(inline) ? tidyLine(lines[index + 1] ?? '') : inline;
+      const inline = stripLeader(line.slice(bare[0].length));
+      raw = isFillerOnly(inline) ? stripLeader(tidyLine(lines[index + 1] ?? '')) : inline;
       if (!isFillerOnly(raw)) break;
       raw = '';
     }
@@ -235,8 +304,12 @@ function findInvoiceNumber(lines) {
 function findInvoiceDate(lines) {
   const joined = lines.join('\n');
 
-  // "Ngày 05 tháng 07 năm 2026" theo đúng mẫu hiển thị.
-  const spelled = joined.match(/[Nn]g[àa]y\s*(\d{1,2})\s*th[áa]ng\s*(\d{1,2})\s*n[ăa]m\s*(\d{4})/);
+  // "Ngày 05 tháng 07 năm 2026" theo mẫu hiển thị, chấp nhận bản dịch xen giữa
+  // như "Ngày (Date) 05 tháng (month) 07 năm (year) 2026".
+  const gap = '\\s*(?:\\([^)]*\\))?\\s*';
+  const spelled = joined.match(
+    new RegExp(`[Nn]g[àa]y${gap}(\\d{1,2})${gap}th[áa]ng${gap}(\\d{1,2})${gap}n[ăa]m${gap}(\\d{4})`),
+  );
   if (spelled) {
     return {
       date: `${spelled[1].padStart(2, '0')}/${spelled[2].padStart(2, '0')}/${spelled[3]}`,
@@ -320,6 +393,12 @@ export function extractInvoiceFields(rawText) {
   const amountInWords = wordsHit?.value ?? '';
 
   const rateHit = findLabeledAmount(lines, LABELS.taxRate);
+  const amountInWordsValue = amountInWords ? parseVietnameseAmountWords(amountInWords) : null;
+
+  // "Số tiền viết bằng chữ" là tiêu thức bắt buộc và là bản ghi độc lập của
+  // tổng thanh toán. Khi cột số không đọc được, đọc chữ vẫn là đọc dữ liệu trên
+  // chứng từ chứ không phải suy đoán — nhưng vẫn phải báo để người dùng soát.
+  const totalFromWords = totalHit === null && amountInWordsValue ? amountInWordsValue : null;
 
   return {
     ruleVersion: INVOICE_RULE_VERSION,
@@ -327,16 +406,17 @@ export function extractInvoiceFields(rawText) {
     invoiceNo,
     date,
     dateSource,
+    totalSource: totalHit ? 'label' : (totalFromWords ? 'words' : ''),
     seller: parties.seller,
     sellerTax: parties.sellerTax,
     buyer: parties.buyer,
     buyerTax: parties.buyerTax,
     amountBeforeTax: beforeTaxHit?.amount ?? 0,
     vatAmount: vatHit?.amount ?? 0,
-    totalAmount: totalHit?.amount ?? 0,
+    totalAmount: totalHit?.amount ?? totalFromWords ?? 0,
     taxRate: rateHit?.amount ?? null,
     amountInWords,
-    amountInWordsValue: amountInWords ? parseVietnameseAmountWords(amountInWords) : null,
+    amountInWordsValue,
   };
 }
 
@@ -385,6 +465,10 @@ export function validateInvoiceFields(fields) {
 
   if (fields.dateSource === 'scan') {
     warnings.push('Ngày lập lấy từ chuỗi ngày đầu tiên trong tài liệu, cần đối chiếu lại.');
+  }
+
+  if (fields.totalSource === 'words') {
+    warnings.push('Không đọc được dòng tổng thanh toán; số tiền lấy từ "Số tiền viết bằng chữ".');
   }
 
   return warnings;

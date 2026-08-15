@@ -82,6 +82,82 @@ Số tiền viết bằng chữ: Năm triệu bốn trăm nghìn đồng
 `;
 
 
+// Bản thể hiện song ngữ của các phần mềm phát hành (Viettel, VNPT, MISA...):
+// khoản 2 Điều 5 cho phép đặt tiếng Anh trong ngoặc ngay sau nhãn tiếng Việt.
+const BILINGUAL_INVOICE = `
+HÓA ĐƠN GIÁ TRỊ GIA TĂNG
+(VAT INVOICE)
+Ký hiệu (Serial): 1C26TAA
+Số (No.): 00000123
+Ngày (Date) 05 tháng (month) 07 năm (year) 2026
+Đơn vị bán hàng (Seller): CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ MINH ANH
+Mã số thuế (Tax code): 0101234567
+Địa chỉ (Address): Số 12 phố Lý Thường Kiệt, Hà Nội
+Họ tên người mua hàng (Buyer): Nguyễn Văn A
+Tên đơn vị (Company): CÔNG TY CỔ PHẦN HUMA
+Mã số thuế (Tax code): 0108889999
+Hình thức thanh toán (Payment method): CK
+Cộng tiền hàng (Total amount): 10.000.000
+Thuế suất GTGT (VAT rate): 10% Tiền thuế GTGT (VAT amount): 1.000.000
+Tổng cộng tiền thanh toán (Total payment): 11.000.000
+Số tiền viết bằng chữ (In words): Mười một triệu đồng chẵn
+`;
+
+
+test('reads a bilingual invoice where English labels sit in brackets', () => {
+  const fields = extractInvoiceFields(BILINGUAL_INVOICE);
+
+  // "Số (No.):" và "Ngày (Date) ... tháng (month) ..." từng làm hỏng cả hai trường này.
+  assert.equal(fields.invoiceNo, '00000123');
+  assert.equal(fields.date, '05/07/2026');
+  // Bản dịch trong ngoặc không được dính vào giá trị.
+  assert.equal(fields.seller, 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ MINH ANH');
+  assert.equal(fields.amountInWords, 'Mười một triệu đồng chẵn');
+  assert.equal(fields.sellerTax, '0101234567');
+  assert.equal(fields.buyerTax, '0108889999');
+  assert.deepEqual(missingInvoiceFields(fields), []);
+  assert.deepEqual(validateInvoiceFields(fields), []);
+});
+
+
+test('does not let a bracketed translation hijack the total', () => {
+  const fields = extractInvoiceFields(BILINGUAL_INVOICE);
+
+  // "Cộng tiền hàng (Total amount)" chứa nhãn tiếng Anh của tổng thanh toán,
+  // nhưng dòng tổng thật mới là dòng bắt đầu bằng nhãn của nó.
+  assert.equal(fields.totalAmount, 11000000);
+  assert.equal(fields.amountBeforeTax, 10000000);
+  assert.equal(fields.vatAmount, 1000000);
+});
+
+
+test('picks the longest matching label so buyer name is not truncated', () => {
+  const fields = extractInvoiceFields(BILINGUAL_INVOICE);
+  assert.equal(fields.buyer, 'Nguyễn Văn A');
+});
+
+
+test('falls back to the amount in words when the total line cannot be read', () => {
+  const fields = extractInvoiceFields(`
+HÓA ĐƠN GIÁ TRỊ GIA TĂNG
+Ký hiệu: 1C26TAA
+Số: 00000123
+Ngày 05 tháng 07 năm 2026
+Tên người bán: CÔNG TY ABC
+Mã số thuế: 0101234567
+Số tiền viết bằng chữ: Mười một triệu đồng chẵn
+`);
+
+  assert.equal(fields.totalAmount, 11000000);
+  assert.equal(fields.totalSource, 'words');
+  // Nguồn số liệu bất thường phải được nói rõ chứ không im lặng.
+  assert.equal(
+    validateInvoiceFields(fields).some((warning) => /Số tiền viết bằng chữ/.test(warning)),
+    true,
+  );
+});
+
+
 test('parses the invoice symbol exactly as Phụ lục I defines it', () => {
   const symbol = parseInvoiceSymbol('1C26TAA');
 

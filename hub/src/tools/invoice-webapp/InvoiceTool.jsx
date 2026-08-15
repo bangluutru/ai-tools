@@ -204,6 +204,18 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
 
     const invoiceNo = fields.invoiceNo || 'Chưa rõ số';
 
+    // Khi còn trường chưa đọc được, giữ lại các dòng có khả năng chứa nhãn tiền
+    // để người dùng xem được phần mềm phát hành đã ghi nhãn thế nào.
+    const textSample = missingFields.length === 0 && warnings.length === 0
+      ? ''
+      : text
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line && /\d/.test(line))
+        .slice(0, 25)
+        .join('\n')
+        .slice(0, 1500);
+
     return {
       id: makeId(),
       fileName: zipName ? `${zipName} ➔ ${fileName}` : fileName,
@@ -222,6 +234,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       amountInWords: fields.amountInWords || '',
       status: missingFields.length === 0 && warnings.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
       rawType: 'PDF',
+      textSample,
       missingFields,
       warnings,
       needsReview: missingFields.length > 0 || warnings.length > 0,
@@ -676,6 +689,17 @@ export default function InvoiceTool() {
     setIsProcessing(false);
   };
 
+  const setAllConfirmed = (isConfirmed) => {
+    setInvoices((current) => current.map((invoice) => ({ ...invoice, isConfirmed })));
+  };
+
+  /** Xác nhận nhanh những dòng công cụ đọc đủ trường và không có cảnh báo. */
+  const confirmCleanRows = () => {
+    setInvoices((current) => current.map((invoice) => (
+      invoice.needsReview ? invoice : { ...invoice, isConfirmed: true }
+    )));
+  };
+
   const toggleConfirmed = (id) => {
     setInvoices((current) => current.map((invoice) => (
       invoice.id === id ? { ...invoice, isConfirmed: !invoice.isConfirmed } : invoice
@@ -702,6 +726,8 @@ export default function InvoiceTool() {
   };
 
   const validInvoices = invoices.filter((i) => i.isConfirmed);
+  const allConfirmed = invoices.length > 0 && validInvoices.length === invoices.length;
+  const cleanRowCount = invoices.filter((invoice) => !invoice.needsReview).length;
   const totalAmount = validInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
 
   return (
@@ -812,21 +838,65 @@ export default function InvoiceTool() {
       {/* Invoice Table */}
       {invoices.length > 0 && (
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between">
+          <div className="px-6 py-4 border-b border-slate-800/80 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Danh sách hóa đơn đã bóc tách ({invoices.length})
+              <span className="ml-2 font-normal normal-case text-slate-500">
+                đã xác nhận {validInvoices.length}/{invoices.length}
+              </span>
             </h3>
-            <span className="text-xs text-amber-400 italic">
-              * Chỉ các dòng đã được người dùng xác nhận mới được xuất
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setAllConfirmed(true)}
+                className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-bold text-emerald-300 transition hover:bg-emerald-500/20"
+              >
+                Chọn tất cả
+              </button>
+              {cleanRowCount > 0 && cleanRowCount < invoices.length && (
+                <button
+                  type="button"
+                  onClick={confirmCleanRows}
+                  title="Chỉ chọn các dòng đọc đủ trường và không có cảnh báo"
+                  className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-[11px] font-bold text-cyan-300 transition hover:bg-cyan-500/20"
+                >
+                  Chọn {cleanRowCount} dòng không cần kiểm tra
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setAllConfirmed(false)}
+                className="rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
+              >
+                Bỏ chọn tất cả
+              </button>
+            </div>
           </div>
+          <p className="px-6 pb-3 text-[11px] italic text-amber-400/90">
+            * Chỉ các dòng đã được người dùng xác nhận mới được xuất. Hãy đối chiếu chứng từ gốc trước khi xác nhận.
+          </p>
 
           <div className="overflow-x-auto max-h-[420px]">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-950/70 text-slate-400 font-semibold border-b border-slate-800 sticky top-0 backdrop-blur z-10">
                 <tr>
                   <th className="py-3 px-4 w-12 text-center">STT</th>
-                  <th className="py-3 px-4 w-20 text-center">Xác nhận</th>
+                  <th className="py-3 px-4 w-20 text-center">
+                    <label className="flex flex-col items-center gap-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={allConfirmed}
+                        ref={(node) => {
+                          // Trạng thái "một phần" chỉ đặt được bằng thuộc tính DOM.
+                          if (node) node.indeterminate = !allConfirmed && validInvoices.length > 0;
+                        }}
+                        onChange={(event) => setAllConfirmed(event.target.checked)}
+                        aria-label="Chọn tất cả hóa đơn"
+                        className="h-4 w-4 accent-emerald-500"
+                      />
+                      <span>Xác nhận</span>
+                    </label>
+                  </th>
                   <th className="py-3 px-4 w-28">Ngày tháng</th>
                   <th className="py-3 px-4">Nội dung chi tiết</th>
                   <th className="py-3 px-4 w-28 text-right">Trước thuế</th>
@@ -870,6 +940,16 @@ export default function InvoiceTool() {
                             <li key={warning}>⚠ {warning}</li>
                           ))}
                         </ul>
+                      )}
+                      {inv.textSample && (
+                        <details className="mt-1.5">
+                          <summary className="cursor-pointer text-[10px] font-semibold text-slate-500 hover:text-slate-300">
+                            Xem text công cụ đọc được từ PDF
+                          </summary>
+                          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-950/80 p-2 text-[10px] leading-relaxed text-slate-400">
+                            {inv.textSample}
+                          </pre>
+                        </details>
                       )}
                     </td>
                     <td className="py-3 px-4 text-right font-medium text-slate-300 whitespace-nowrap">
