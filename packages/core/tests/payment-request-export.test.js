@@ -1,0 +1,125 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import { buildPaymentRequestWorkbook } from '../src/utils/invoice/paymentRequestExport.js';
+import { A4_PAPER_SIZE } from '../src/utils/excelReport.js';
+
+const GENERATED_AT = new Date('2026-08-15T10:00:00');
+
+const INVOICES = [
+  {
+    date: '01/07/2026',
+    invoiceNo: '00012345',
+    seller: 'Công ty TNHH Thương mại Dịch vụ Minh Anh',
+    sellerTax: '0101234567',
+    amountBeforeTax: 10000000,
+    vatAmount: 1000000,
+    totalAmount: 11000000,
+    rawFileName: 'HD_12345.xml',
+  },
+  {
+    date: '05/07/2026',
+    invoiceNo: '00012346',
+    seller: 'Vietjet Air',
+    sellerTax: '0102030405',
+    amountBeforeTax: 4545455,
+    vatAmount: 454545,
+    totalAmount: 5000000,
+    rawFileName: 'vietjet.pdf',
+  },
+];
+
+const build = () => buildPaymentRequestWorkbook(INVOICES, { generatedAt: GENERATED_AT });
+
+
+test('totals are summed from the confirmed invoices only', async () => {
+  const { totals } = await build();
+
+  assert.equal(totals.amountBeforeTax, 14545455);
+  assert.equal(totals.vatAmount, 1454545);
+  assert.equal(totals.totalAmount, 16000000);
+});
+
+
+test('the sheet carries the Vietnamese form heading and the draft warning', async () => {
+  const { workbook } = await build();
+  const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
+
+  assert.equal(sheet.getRow(1).getCell(1).value, 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
+  assert.equal(sheet.getRow(5).getCell(1).value, 'BẢNG KÊ ĐỀ NGHỊ THANH TOÁN');
+  // Cảnh báo bản nháp phải nằm trên chính tờ in, không chỉ trên màn hình.
+  assert.equal(sheet.getRow(6).getCell(1).value, 'BẢN NHÁP THAM KHẢO — CHƯA PHÊ DUYỆT');
+  assert.equal(sheet.getRow(6).getCell(1).font.color.argb, 'FFC00000');
+});
+
+
+test('money columns stay numeric with a thousands format', async () => {
+  const { workbook } = await build();
+  const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
+  const firstInvoice = sheet.getRow(10);
+
+  assert.equal(firstInvoice.getCell(1).value, 1);
+  assert.equal(firstInvoice.getCell(3).value, '00012345');
+  assert.equal(firstInvoice.getCell(6).value, 10000000);
+  assert.match(firstInvoice.getCell(6).numFmt, /#,##0/);
+  assert.equal(firstInvoice.getCell(8).value, 11000000);
+});
+
+
+test('a highlighted total row closes the table', async () => {
+  const { workbook } = await build();
+  const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
+  const totalRow = sheet.getRow(12);
+
+  assert.equal(totalRow.getCell(1).value, 'Tổng cộng');
+  assert.equal(totalRow.getCell(6).value, 14545455);
+  assert.equal(totalRow.getCell(8).value, 16000000);
+  assert.equal(totalRow.getCell(8).font.bold, true);
+  assert.equal(totalRow.getCell(8).fill.fgColor.argb, 'FFFFF2CC');
+});
+
+
+test('the amount in words matches the printed total', async () => {
+  const { workbook } = await build();
+  const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
+
+  const wordsRow = sheet.getRow(14);
+  assert.equal(wordsRow.getCell(1).value, 'Số tiền bằng chữ: Mười sáu triệu đồng ./.');
+  assert.equal(sheet.getRow(15).getCell(1).value, 'Số chứng từ kèm theo: 2');
+});
+
+
+test('signature blocks and a signing gap are laid out for printing', async () => {
+  const { workbook } = await build();
+  const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
+
+  assert.equal(sheet.getRow(18).getCell(1).value, 'NGƯỜI ĐỀ NGHỊ');
+  assert.equal(sheet.getRow(18).getCell(6).value, 'KẾ TOÁN TRƯỞNG / NGƯỜI DUYỆT');
+  assert.equal(sheet.getRow(19).getCell(1).value, '(Ký, ghi rõ họ tên)');
+  // Dòng trống cao để ký tay.
+  assert.equal(sheet.getRow(20).height, 60);
+});
+
+
+test('the form is set up to print on one A4 width with repeating headers', async () => {
+  const { workbook } = await build();
+  const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
+
+  assert.equal(sheet.pageSetup.paperSize, A4_PAPER_SIZE);
+  assert.equal(sheet.pageSetup.orientation, 'landscape');
+  assert.equal(sheet.pageSetup.fitToWidth, 1);
+  assert.equal(sheet.pageSetup.fitToHeight, 0);
+  assert.equal(sheet.pageSetup.printTitlesRow, '9:9');
+  assert.match(sheet.headerFooter.oddFooter, /Trang &P\/&N/);
+  assert.equal(sheet.views[0].state, 'frozen');
+});
+
+
+test('an empty invoice list still produces a valid form', async () => {
+  const { workbook, totals } = await buildPaymentRequestWorkbook([], { generatedAt: GENERATED_AT });
+  const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
+
+  assert.equal(totals.totalAmount, 0);
+  assert.equal(sheet.getRow(10).getCell(1).value, 'Tổng cộng');
+  assert.equal(sheet.getRow(12).getCell(1).value, 'Số tiền bằng chữ: Không đồng ./.');
+});

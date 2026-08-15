@@ -13,6 +13,7 @@ import {
   isUnsafeZipPath,
 } from '@ai-tools/core/utils/invoice/validation.js';
 import { verifyDocumentSignature } from '@ai-tools/core/utils/documentFiles.js';
+import { exportPaymentRequest } from '@ai-tools/core/utils/invoice/paymentRequestExport.js';
 
 let pdfJsPromise;
 const loadPdfJs = () => {
@@ -29,55 +30,6 @@ const loadPdfJs = () => {
 };
 
 const makeId = () => crypto.randomUUID();
-
-// Tiện ích đọc số thành chữ tiếng Việt
-function numberToWordsVN(num) {
-  if (!num || num === 0) return 'Không đồng chẵn./.';
-  const units = ['', 'nghìn', 'triệu', 'tỷ', 'nghìn tỷ', 'triệu tỷ'];
-  const digits = ['không', 'một', 'hai', 'ba', 'bốn', 'năm', 'sáu', 'bảy', 'tám', 'chín'];
-
-  function readGroup(group) {
-    const h = Math.floor(group / 100);
-    const t = Math.floor((group % 100) / 10);
-    const u = group % 10;
-    const res = [];
-    if (h > 0 || t > 0 || u > 0) {
-      res.push(digits[h] + ' trăm');
-      if (t === 0 && u > 0) res.push('linh');
-      else if (t === 1) res.push('mười');
-      else if (t > 1) res.push(digits[t] + ' mươi');
-      if (u === 1 && t > 1) res.push('mốt');
-      else if (u === 5 && t > 0) res.push('lăm');
-      else if (u > 0) res.push(digits[u]);
-    }
-    return res.join(' ').trim();
-  }
-
-  let s = Math.floor(Math.abs(num)).toString();
-  const groups = [];
-  while (s.length > 0) {
-    groups.push(parseInt(s.slice(-3), 10));
-    s = s.slice(0, -3);
-  }
-
-  const words = [];
-  for (let i = 0; i < groups.length; i++) {
-    if (groups[i] > 0) {
-      let gWord = readGroup(groups[i]);
-      if (i === groups.length - 1 && groups[i] < 100 && groups.length > 1) {
-        gWord = gWord.replace(' không trăm', '');
-        if (gWord.startsWith('linh ')) gWord = gWord.slice(5);
-      }
-      words.push(gWord + ' ' + units[i]);
-    }
-  }
-
-  let res = words.reverse().join(' ').trim();
-  res = res.charAt(0).toUpperCase() + res.slice(1) + ' đồng chẵn./.';
-  res = res.replace(/\s+/g, ' ');
-  if (res.startsWith('Không trăm ')) res = res.slice(11);
-  return res.charAt(0).toUpperCase() + res.slice(1);
-}
 
 // Hàm trích xuất text từ buffer PDF
 async function extractTextFromPDFBuffer(arrayBuffer) {
@@ -805,72 +757,16 @@ export default function InvoiceTool() {
 
   // Xuất bản nháp bảng kê. Việc điền template chuẩn cần file template đã được phê duyệt.
   const handleExportExcel = async () => {
-    if (invoices.length === 0) return;
+    const confirmedInvoices = invoices.filter((invoice) => invoice.isConfirmed);
+    if (confirmedInvoices.length === 0) return;
 
-    const validInvoices = invoices.filter((i) => i.isConfirmed);
-    if (validInvoices.length === 0) return;
-    const XLSX = await import('xlsx');
-    const totalAmount = validInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
-    const wordsVN = numberToWordsVN(totalAmount);
-
-    const rows = [
-      ['CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM'],
-      ['Độc lập - Tự do - Hạnh phúc'],
-      ['-----------------------'],
-      ['BẢNG KÊ ĐỀ NGHỊ THANH TOÁN'],
-      ['BẢN NHÁP THAM KHẢO — CHƯA PHÊ DUYỆT'],
-      [`Ngày lập: ${new Date().toLocaleDateString('vi-VN')}`],
-      [''],
-      ['STT', 'Ngày tháng', 'Nội dung', 'Trước thuế', 'Tiền thuế', 'Tổng sau thuế', 'Số hóa đơn', 'Ghi chú']
-    ];
-
-    validInvoices.forEach((inv, idx) => {
-      rows.push([
-        idx + 1,
-        inv.date,
-        inv.seller,
-        inv.amountBeforeTax,
-        inv.vatAmount,
-        inv.totalAmount,
-        inv.invoiceNo,
-        inv.rawFileName || ''
-      ]);
-    });
-
-    // Dòng tổng cộng
-    rows.push([
-      'Tổng cộng',
-      '',
-      '',
-      validInvoices.reduce((sum, i) => sum + (i.amountBeforeTax || 0), 0),
-      validInvoices.reduce((sum, i) => sum + (i.vatAmount || 0), 0),
-      totalAmount,
-      '',
-      ''
-    ]);
-    rows.push(['']);
-    rows.push([`Số tiền bằng chữ: ${wordsVN}`]);
-    rows.push(['']);
-    rows.push(['Người đề nghị thanh toán', '', '', '', '', '', 'Kế toán trưởng / Phê duyệt', '']);
-    rows.push(['(Ký, ghi rõ họ tên)', '', '', '', '', '', '(Ký, ghi rõ họ tên)', '']);
-
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-
-    // Định dạng độ rộng cột
-    ws['!cols'] = [
-      { wch: 6 },   // STT
-      { wch: 14 },  // Ngày tháng
-      { wch: 55 },  // Nội dung
-      { wch: 18 },  // Trước thuế
-      { wch: 15 },  // Tiền thuế
-      { wch: 22 },  // Tổng sau thuế
-      { wch: 18 },  // Số hóa đơn
-      { wch: 30 }   // Ghi chú
-    ];
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Bản nháp ĐNTT');
-    XLSX.writeFile(wb, `Ban_Nhap_De_Nghi_Thanh_Toan_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    setNotice('');
+    try {
+      await exportPaymentRequest(confirmedInvoices);
+    } catch (error) {
+      console.error('Lỗi xuất Excel:', error);
+      setNotice(error.message || 'Không xuất được file Excel.');
+    }
   };
 
   const handleClearAll = () => {

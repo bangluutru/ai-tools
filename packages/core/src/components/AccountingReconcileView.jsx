@@ -1,11 +1,12 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, Download, FileX, Calculator } from 'lucide-react';
+import { reconcileAccountingData } from '../utils/accounting/reconcile.js';
 import {
-  ACCOUNTING_RULE_VERSION,
-  normalizeInvoiceNumber,
-  parseLocalizedNumber,
-  reconcileAccountingData,
-} from '../utils/accounting/reconcile.js';
+  detectWorkbookKind,
+  parseBrWorkbook,
+  parseLedgerWorkbook,
+} from '../utils/accounting/workbookParser.js';
+import { exportReconcileWorkbook } from '../utils/accounting/reconcileExport.js';
 import {
   EXCEL_FILE_LIMITS,
   rejectionMessages,
@@ -19,16 +20,25 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState('summary');
   const [fileError, setFileError] = useState('');
-  
+  const [diagnostics, setDiagnostics] = useState([]);
+
   const fileInputRef = useRef(null);
 
-  // Auto-detect file type based on contents
-  const processExcelFile = async (file, XLSX) => {
+  /**
+   * Đọc workbook thành map sheet -> mảng dòng. Giữ nguyên dòng trống
+   * (blankrows mặc định) để chỉ số mảng khớp đúng số dòng thật trong Excel —
+   * bằng chứng "dòng N" phải chỉ đúng dòng người dùng mở ra xem.
+   */
+  const readWorkbookRows = async (file, XLSX) => {
     if (!(await verifyDocumentSignature(file))) {
       throw new Error(`${file.name}: nội dung không khớp định dạng Excel`);
     }
-    const data = new Uint8Array(await file.arrayBuffer());
-    return XLSX.read(data, { type: 'array' });
+    const workbook = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array' });
+    const sheetRows = {};
+    for (const sheetName of workbook.SheetNames) {
+      sheetRows[sheetName] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+    }
+    return { sheetNames: workbook.SheetNames, sheetRows };
   };
 
   const handleFileUpload = async (event) => {
@@ -36,135 +46,57 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
     if (uploadedFiles.length === 0) return;
 
     const validation = validateDocumentFiles(uploadedFiles, [], EXCEL_FILE_LIMITS);
-    setFileError(rejectionMessages(validation.rejected).join(' • '));
+    const errors = rejectionMessages(validation.rejected);
     if (validation.accepted.length === 0) {
+      setFileError(errors.join(' \u2022 '));
       event.target.value = '';
       return;
     }
 
     setIsProcessing(true);
-    
+
     const newFiles = { ...files };
     const newData = { ...data };
+    const newDiagnostics = [];
 
     try {
       const XLSX = await import('xlsx');
-      for (const file of validation.accepted) {
-        const wb = await processExcelFile(file, XLSX);
-        const firstSheetName = wb.SheetNames[0];
-        const firstSheet = wb.Sheets[firstSheetName];
-        
-        // Convert to array of arrays to check headers
-        const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, blankrows: false });
-        
-        if (rows.length < 2) continue;
 
-        const isBR = firstSheetName.includes('BR');
-        
-        // Detect file type
-        let fileType = null;
-        if (isBR) {
-          fileType = 'br';
-        } else {
-          // Check row 1 or 2 for "511" or "33311"
-          const headerText = (rows[0]?.join(' ') || '') + ' ' + (rows[1]?.join(' ') || '');
-          if (headerText.includes('511')) fileType = '511';
-          else if (headerText.includes('33311')) fileType = '33311';
+      for (const file of validation.accepted) {
+        const workbook = await readWorkbookRows(file, XLSX);
+        const kind = detectWorkbookKind(workbook);
+
+        // Trước đây file không nhận diện được bị bỏ qua im lặng, khiến kết quả
+        // đối chiếu thiếu một nguồn mà người dùng không hề biết.
+        if (!kind) {
+          newDiagnostics.push({
+            sourceFile: file.name,
+            sourceSheet: workbook.sheetNames.join(', '),
+            ok: false,
+            reason: 'Không nhận diện được là Sổ 511, Sổ 33311 hay Bảng kê BR.',
+          });
+          continue;
         }
 
-        if (fileType) {
-          newFiles[fileType] = file;
-          
-          if (fileType === '511' || fileType === '33311') {
-            // Sổ chi tiết có header ở dòng 4 (index 3)
-            // Cột D (index 3) là Số hoá đơn, Cột H (index 7) là Phát sinh Có
-            // Cột E (index 4) là Diễn giải (chỉ dùng cho 33311 để check VAT hàng tặng)
-            const extractedData = [];
-            for (let i = 4; i < rows.length; i++) {
-              const row = rows[i];
-              if (!row || row.length < 8) continue;
-              
-              const invoiceRaw = row[3];
-              const valueRaw = row[7];
-              const descRaw = row[4] || '';
-              
-              const parsedValue = parseLocalizedNumber(valueRaw);
-              if (invoiceRaw && parsedValue !== null) {
-                extractedData.push({
-                  invoice: normalizeInvoiceNumber(invoiceRaw),
-                  originalInvoice: invoiceRaw,
-                  value: parsedValue,
-                  desc: String(descRaw),
-                  sourceFile: file.name,
-                  sourceSheet: firstSheetName,
-                  sourceRow: i + 1,
-                });
-              }
-            }
-            newData[fileType] = extractedData;
-            
-          } else if (fileType === 'br') {
-            // BR có 2 sheets
-            const brData = [];
-            
-            // Sheet 1: BR GTGT
-            const gtgtSheet = wb.Sheets[wb.SheetNames[0]];
-            const gtgtRows = XLSX.utils.sheet_to_json(gtgtSheet, { header: 1, blankrows: false });
-            for (let i = 5; i < gtgtRows.length; i++) {
-              const row = gtgtRows[i];
-              // D(3) = Hóa đơn, K(10) = Chưa thuế, L(11) = Thuế
-              if (!row || !row[3]) continue;
-              
-              const invoice = normalizeInvoiceNumber(row[3]);
-              if (invoice && invoice !== 'undefined') {
-                brData.push({
-                  invoice,
-                  originalInvoice: row[3],
-                  type: 'GTGT',
-                  chuaThue: parseLocalizedNumber(row[10]) ?? 0,
-                  thue: parseLocalizedNumber(row[11]) ?? 0,
-                  sourceFile: file.name,
-                  sourceSheet: wb.SheetNames[0],
-                  sourceRow: i + 1,
-                });
-              }
-            }
+        const parsed = kind === 'br'
+          ? parseBrWorkbook({ ...workbook, sourceFile: file.name })
+          : parseLedgerWorkbook({ ...workbook, sourceFile: file.name });
 
-            // Sheet 2: BR MTT (if exists)
-            if (wb.SheetNames.length > 1) {
-              const mttSheet = wb.Sheets[wb.SheetNames[1]];
-              const mttRows = XLSX.utils.sheet_to_json(mttSheet, { header: 1, blankrows: false });
-              for (let i = 5; i < mttRows.length; i++) {
-                const row = mttRows[i];
-                // D(3) = Hóa đơn, L(11) = Chưa thuế, M(12) = Thuế
-                if (!row || !row[3]) continue;
-                
-                const invoice = normalizeInvoiceNumber(row[3]);
-                if (invoice && invoice !== 'undefined') {
-                  brData.push({
-                    invoice,
-                    originalInvoice: row[3],
-                    type: 'MTT',
-                    chuaThue: parseLocalizedNumber(row[11]) ?? 0,
-                    thue: parseLocalizedNumber(row[12]) ?? 0,
-                    sourceFile: file.name,
-                    sourceSheet: wb.SheetNames[1],
-                    sourceRow: i + 1,
-                  });
-                }
-              }
-            }
-            
-            newData.br = brData;
-          }
+        newDiagnostics.push(...parsed.diagnostics.map((entry) => ({ ...entry, kind })));
+
+        if (parsed.records.length > 0) {
+          newFiles[kind] = file;
+          newData[kind] = parsed.records;
         }
       }
-      
+
       setFiles(newFiles);
       setData(newData);
+      setDiagnostics(newDiagnostics);
+      setFileError(errors.join(' \u2022 '));
     } catch (err) {
-      console.error("Lỗi đọc file:", err);
-      setFileError(err.message || 'Có lỗi xảy ra khi đọc file Excel.');
+      console.error('L\u1ed7i \u0111\u1ecdc file:', err);
+      setFileError(err.message || 'C\u00f3 l\u1ed7i x\u1ea3y ra khi \u0111\u1ecdc file Excel.');
     } finally {
       setIsProcessing(false);
       // Reset input so the same files can be selected again if needed
@@ -175,6 +107,8 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
   const removeFile = (type) => {
     setFiles(prev => ({ ...prev, [type]: null }));
     setData(prev => ({ ...prev, [type]: [] }));
+    setDiagnostics(prev => prev.filter((entry) => entry.kind !== type));
+    setFileError('');
   };
 
   // --- Reconciliation Logic ---
@@ -187,105 +121,15 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
   };
 
-  const statusLabel = (status) => ({
-    MATCH: 'Khớp',
-    DIFF: 'Lệch',
-    MISSING_BR: 'Thiếu trên BR',
-    MISSING_LEDGER: 'Thiếu trên sổ',
-  }[status] || status);
-
-  const evidenceLabel = (records) => records
-    .map((record) => `${record.sourceFile || '?'} | ${record.sourceSheet || '?'} | dòng ${record.sourceRow || '?'}`)
-    .join('; ');
-
   const exportExcel = async () => {
     if (!results) return;
-
-    const XLSX = await import('xlsx');
-
-    const wb = XLSX.utils.book_new();
-    
-    // Summary Sheet
-    const summaryData = [
-      ['BÁO CÁO ĐỐI CHIẾU KẾ TOÁN'],
-      ['KẾT QUẢ THAM KHẢO — CẦN KẾ TOÁN KIỂM TRA/PHÊ DUYỆT'],
-      ['Ngày tạo', new Date().toLocaleString('vi-VN')],
-      ['Phiên bản quy tắc', results.ruleVersion || ACCOUNTING_RULE_VERSION],
-      ['Sai số cho phép', results.tolerance],
-      [],
-      ['Tổng số hoá đơn', results.summary.total],
-      [],
-      ['ĐỐI CHIẾU DOANH THU (511 vs BR)'],
-      ['Số hoá đơn khớp', results.summary.matched511],
-      ['Số hoá đơn lệch', results.summary.unmatched511],
-      [],
-      ['ĐỐI CHIẾU THUẾ (33311 vs BR)'],
-      ['Số hoá đơn khớp', results.summary.matched33311],
-      ['Số hoá đơn lệch', results.summary.unmatched33311],
-      [],
-      ['CẢNH BÁO THIẾU SÓT'],
-      ['Có trên sổ, thiếu trên BR', results.summary.missingInBR],
-      ['Có trên BR, thiếu trên sổ', results.summary.missingInLedger],
-      ['Số hóa đơn cần xác nhận do trùng bản ghi BR', results.summary.needsReview],
-    ];
-    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, wsSummary, "Tổng hợp");
-
-    // 511 Sheet
-    const ws511 = XLSX.utils.json_to_sheet(results.report511.map(r => ({
-      'Số HĐ': r.invoice,
-      'Sổ 511 (Phát sinh Có)': r.val511,
-      'Bảng kê BR (Chưa thuế)': r.valBR,
-      'Chênh lệch': r.diff,
-      'Trạng thái': statusLabel(r.status),
-      'Cần xác nhận': r.needsReview ? 'Có' : 'Không',
-      'Nguồn sổ': evidenceLabel(r.ledgerEvidence),
-      'Nguồn BR': evidenceLabel(r.brEvidence),
-    })));
-    XLSX.utils.book_append_sheet(wb, ws511, "Đối chiếu 511");
-
-    // 33311 Sheet
-    const ws333 = XLSX.utils.json_to_sheet(results.report33311.map(r => ({
-      'Số HĐ': r.invoice,
-      'Sổ 33311 (Tổng VAT)': r.val33311,
-      'Trong đó VAT hàng tặng': r.vatTang,
-      'Bảng kê BR (Thuế)': r.valBR,
-      'Chênh lệch': r.diff,
-      'Trạng thái': statusLabel(r.status),
-      'Cần xác nhận': r.needsReview ? 'Có' : 'Không',
-      'Nguồn sổ': evidenceLabel(r.ledgerEvidence),
-      'Nguồn BR': evidenceLabel(r.brEvidence),
-    })));
-    XLSX.utils.book_append_sheet(wb, ws333, "Đối chiếu 33311");
-
-    const workflowRows = [
-      ...results.report511.map((row) => ({ account: '511', ...row })),
-      ...results.report33311.map((row) => ({ account: '33311', ...row })),
-    ];
-    const toWorkflowRow = (row) => ({
-      'Tài khoản': row.account,
-      'Số HĐ': row.invoice,
-      'Giá trị trên sổ': row.ledgerValue,
-      'Giá trị trên BR': row.brValue,
-      'Chênh lệch': row.diff,
-      'Trạng thái': statusLabel(row.status),
-      'Cần xác nhận': row.needsReview ? 'Có' : 'Không',
-      'Nguồn sổ': evidenceLabel(row.ledgerEvidence),
-      'Nguồn BR': evidenceLabel(row.brEvidence),
-    });
-    const appendWorkflowSheet = (name, rows) => {
-      const payload = rows.length > 0
-        ? rows.map(toWorkflowRow)
-        : [{ 'Thông tin': 'Không có dữ liệu' }];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(payload), name);
-    };
-
-    appendWorkflowSheet('Đã khớp', workflowRows.filter((row) => row.status === 'MATCH' && !row.needsReview));
-    appendWorkflowSheet('Chênh lệch', workflowRows.filter((row) => row.status === 'DIFF'));
-    appendWorkflowSheet('Không tìm thấy', workflowRows.filter((row) => row.status.startsWith('MISSING_')));
-    appendWorkflowSheet('Cần xác nhận', workflowRows.filter((row) => row.needsReview));
-
-    XLSX.writeFile(wb, "Ket_qua_doi_chieu.xlsx");
+    setFileError('');
+    try {
+      await exportReconcileWorkbook(results, { diagnostics });
+    } catch (error) {
+      console.error('Lỗi xuất Excel:', error);
+      setFileError(error.message || 'Không xuất được file Excel.');
+    }
   };
 
   const renderFileCard = (type, title, description) => {
@@ -416,6 +260,45 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
           {renderFileCard('33311', 'Sổ Thuế (33311)', 'Sổ chi tiết tài khoản 33311')}
           {renderFileCard('br', 'Bảng Kê (BR)', 'File BR chứa sheet GTGT & MTT')}
         </div>
+
+        {diagnostics.length > 0 && (
+          <div className="mt-5 rounded-xl border border-slate-700 bg-slate-900/60 overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-slate-700/80 flex items-center gap-2">
+              <AlertCircle size={15} className="text-slate-400" />
+              <h4 className="text-xs font-bold uppercase tracking-wide text-slate-300">
+                Công cụ đã đọc gì từ file của bạn
+              </h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="text-slate-400 bg-slate-800/60">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-semibold">File</th>
+                    <th className="px-3 py-2 text-left font-semibold">Sheet</th>
+                    <th className="px-3 py-2 text-center font-semibold">Dòng tiêu đề</th>
+                    <th className="px-3 py-2 text-center font-semibold">Số dòng đọc được</th>
+                    <th className="px-3 py-2 text-left font-semibold">Ghi chú</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {diagnostics.map((entry, index) => (
+                    <tr key={`${entry.sourceFile}-${entry.sourceSheet}-${index}`} className="border-t border-slate-800">
+                      <td className="px-3 py-2 text-slate-300 max-w-[16rem] truncate" title={entry.sourceFile}>
+                        {entry.sourceFile}
+                      </td>
+                      <td className="px-3 py-2 text-slate-400">{entry.sourceSheet || '-'}</td>
+                      <td className="px-3 py-2 text-center text-slate-400">{entry.headerRow ?? '-'}</td>
+                      <td className={`px-3 py-2 text-center font-semibold ${entry.ok ? 'text-green-400' : 'text-red-400'}`}>
+                        {entry.rowCount ?? 0}
+                      </td>
+                      <td className="px-3 py-2 text-slate-400">{entry.reason || 'Đọc thành công'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Results Section */}
