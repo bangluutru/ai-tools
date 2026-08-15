@@ -1,8 +1,9 @@
 import React from 'react';
-import { Sparkles, FileText, Image, FileSpreadsheet, Globe } from 'lucide-react';
+import { Sparkles, FileText, Image, FileSpreadsheet, Globe, Wrench } from 'lucide-react';
 import { categories } from '../config/toolsRegistry';
 
 const iconMap = {
+  Wrench,
   Sparkles,
   FileText,
   Image,
@@ -19,7 +20,7 @@ export default function CategoryTabs({ activeCategory, onSelectCategory, display
 
   return (
     <div className="flex items-center justify-center gap-2 overflow-x-auto py-4 px-2 custom-scrollbar">
-      {categories.filter((cat) => cat.id === 'all' || visibleCategoryIds.has(cat.id)).map((cat) => {
+      {categories.filter((cat) => visibleCategoryIds.has(cat.id)).map((cat) => {
         const Icon = iconMap[cat.icon] || Sparkles;
         const isActive = activeCategory === cat.id;
 

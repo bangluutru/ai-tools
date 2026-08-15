@@ -17,6 +17,13 @@ import {
   loadHiddenToolIds,
   saveHiddenToolIds,
 } from './utils/toolVisibility';
+import {
+  ALL_CATEGORY,
+  IN_DEVELOPMENT_CATEGORY,
+  partitionTools,
+  toolsForCategory,
+  visibleCategoryIds,
+} from './utils/toolFilter';
 
 // =========================================================================
 // ISOLATED LAZY LOADED TOOLS (Code-Splitting)
@@ -119,14 +126,12 @@ export default function App() {
 
   const currentTool = tools.find((t) => t.id === activeToolId);
   const ActiveComponent = activeToolId ? toolComponentMap[activeToolId] : null;
-  const hiddenToolIdSet = new Set(hiddenToolIds);
-  const visibleTools = tools.filter((tool) => !hiddenToolIdSet.has(tool.id));
-  const visibleCategoryIds = new Set(visibleTools.map((tool) => tool.category));
 
-  const filteredTools =
-    activeCategory === 'all'
-      ? visibleTools
-      : visibleTools.filter((t) => t.category === activeCategory);
+  // Miniapp đang phát triển chỉ nằm trong nhóm của riêng chúng; nơi khác trong
+  // portal chỉ thấy công cụ mở được.
+  const { active: activeTools } = partitionTools(tools, hiddenToolIds);
+  const filteredTools = toolsForCategory(tools, activeCategory, hiddenToolIds);
+  const categoryIds = visibleCategoryIds(tools, hiddenToolIds);
 
   const toggleToolVisibility = useCallback((toolId) => {
     const nextHiddenToolIds = hiddenToolIds.includes(toolId)
@@ -134,10 +139,9 @@ export default function App() {
       : [...hiddenToolIds, toolId];
     setHiddenToolIds(nextHiddenToolIds);
 
-    const categoryStillVisible = tools.some((tool) => (
-      tool.category === activeCategory && !nextHiddenToolIds.includes(tool.id)
-    ));
-    if (activeCategory !== 'all' && !categoryStillVisible) setActiveCategory('all');
+    if (activeCategory === ALL_CATEGORY || activeCategory === IN_DEVELOPMENT_CATEGORY) return;
+    const categoryStillVisible = toolsForCategory(tools, activeCategory, nextHiddenToolIds).length > 0;
+    if (!categoryStillVisible) setActiveCategory(ALL_CATEGORY);
   }, [activeCategory, hiddenToolIds]);
 
   return (
@@ -149,7 +153,7 @@ export default function App() {
           onBackToHub={backToHub}
           onSelectTool={selectTool}
           displayLang={displayLang}
-          tools={visibleTools}
+          tools={activeTools}
         >
           <ToolErrorBoundary
             toolName={currentTool.name_vn}
@@ -186,7 +190,7 @@ export default function App() {
               activeCategory={activeCategory}
               onSelectCategory={setActiveCategory}
               displayLang={displayLang}
-              visibleCategoryIds={visibleCategoryIds}
+              visibleCategoryIds={categoryIds}
             />
 
             {/* Tool Cards Grid */}
@@ -232,7 +236,7 @@ export default function App() {
         onClose={() => setIsSearchOpen(false)}
         onSelectTool={selectTool}
         displayLang={displayLang}
-        tools={visibleTools}
+        tools={activeTools}
       />
       <DataPolicyModal isOpen={isPolicyOpen} onClose={() => setIsPolicyOpen(false)} />
       <SettingsModal

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Eye, EyeOff, RotateCcw, Settings2, X } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw, Settings2, Wrench, X } from 'lucide-react';
 
 export default function SettingsModal({
   isOpen,
@@ -39,7 +39,6 @@ export default function SettingsModal({
   };
 
   const renderToolRow = (tool) => {
-    const isPaused = tool.readiness === 'in-development';
     const isVisible = !hiddenIds.has(tool.id);
     return (
       <button
@@ -55,11 +54,8 @@ export default function SettingsModal({
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold text-slate-200">{getToolName(tool)}</div>
           <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-            {isPaused ? 'Đang phát triển • không mở được' : tool.readiness}
+            {tool.readiness}
           </div>
-          {isPaused && tool.unavailableReason && (
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-500 normal-case">{tool.unavailableReason}</p>
-          )}
         </div>
         <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${isVisible ? 'bg-emerald-500' : 'bg-slate-700'}`}>
           <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${isVisible ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -122,14 +118,30 @@ export default function SettingsModal({
             <section className="space-y-2">
               <div className="rounded-2xl border border-dashed border-slate-700/80 bg-slate-950/50 px-4 py-3">
                 <h3 className="text-xs font-bold uppercase tracking-wide text-slate-300">
-                  Khu vực đang phát triển ({pausedTools.length})
+                  Đang phát triển ({pausedTools.length})
                 </h3>
                 <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                  Những miniapp này đã tạm dừng và không được build vào portal. Bật để xem trạng thái
-                  trên trang chủ; thẻ sẽ hiển thị nhưng không mở được cho đến khi công cụ được phát triển lại.
+                  Những miniapp này đã tạm dừng và không được build vào portal. Chúng nằm riêng trong
+                  nhóm <span className="font-semibold text-slate-400">Đang phát triển</span> trên trang chủ
+                  để nhắc rằng đang có công cụ chờ làm tiếp, và không xuất hiện ở nhóm nào khác.
                 </p>
               </div>
-              {pausedTools.map(renderToolRow)}
+              {pausedTools.map((tool) => (
+                <div
+                  key={tool.id}
+                  className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-950/35 p-3"
+                >
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-800 text-slate-500">
+                    <Wrench size={16} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-bold text-slate-300">{getToolName(tool)}</div>
+                    {tool.unavailableReason && (
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">{tool.unavailableReason}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
             </section>
           )}
         </div>

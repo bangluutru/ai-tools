@@ -3,11 +3,16 @@ export const categories = [
   { id: 'pdf', label_vn: 'Công cụ PDF', label_en: 'PDF Tools', label_ja: 'PDF ツール', icon: 'FileText' },
   { id: 'image', label_vn: 'Hình ảnh & WebP', label_en: 'Image & WebP', label_ja: '画像＆WebP', icon: 'Image' },
   { id: 'office', label_vn: 'Excel & Hóa đơn', label_en: 'Excel & Invoices', label_ja: 'Excel・請求書', icon: 'FileSpreadsheet' },
-  { id: 'ai', label_vn: 'Dịch thuật & AI', label_en: 'AI & Translation', label_ja: 'AI・翻訳', icon: 'Globe' }
+  { id: 'ai', label_vn: 'Dịch thuật & AI', label_en: 'AI & Translation', label_ja: 'AI・翻訳', icon: 'Globe' },
+  // Nhóm riêng cho miniapp tạm dừng. Chúng không xuất hiện ở bất kỳ nhóm nào
+  // khác, kể cả "Tất cả công cụ", nhưng vẫn được liệt kê ở đây để nhắc rằng
+  // các công cụ này đang chờ phát triển tiếp.
+  { id: 'in-development', label_vn: 'Đang phát triển', label_en: 'In development', label_ja: '開発中', icon: 'Wrench' }
 ];
 
 // Miniapp tạm dừng phát triển. Chúng không được build vào portal, không mở được
-// từ URL/command palette và mặc định bị ẩn khỏi trang chủ. Xem
+// từ URL/command palette, và chỉ xuất hiện trong nhóm "Đang phát triển" — không
+// nằm trong bất kỳ nhóm nào khác, kể cả "Tất cả công cụ". Xem
 // hub/src/tools-in-development/README.md trước khi mở lại bất kỳ công cụ nào.
 export const IN_DEVELOPMENT = 'in-development';
 
@@ -24,28 +29,24 @@ const toolGovernance = {
     readiness: IN_DEVELOPMENT,
     processing: 'browser',
     outputPurpose: 'reference',
-    defaultVisible: false,
     unavailableReason: 'Tạm dừng phát triển. Luồng hiện tại dựng HTML thay vì overlay lên PDF nguồn và còn rủi ro XSS; sẽ làm lại bằng pdf-lib khi có nhu cầu.'
   },
   'legal-studio': {
     readiness: IN_DEVELOPMENT,
     processing: 'backend-antigravity',
     outputPurpose: 'reference',
-    defaultVisible: false,
     unavailableReason: 'Tạm dừng phát triển. Phụ thuộc quyết định runtime Antigravity và kiểm thử đầu ra pháp lý.'
   },
   'long-translator': {
     readiness: IN_DEVELOPMENT,
     processing: 'backend-antigravity',
     outputPurpose: 'reference',
-    defaultVisible: false,
     unavailableReason: 'Tạm dừng phát triển theo định hướng sản phẩm; sẽ nghiên cứu lại khi cần.'
   },
   'certificate-studio': {
     readiness: IN_DEVELOPMENT,
     processing: 'manual',
     outputPurpose: 'reference',
-    defaultVisible: false,
     unavailableReason: 'Tạm dừng phát triển. Cần sanitize SVG/HTML đầu vào và bỏ dữ liệu mẫu gây hiểu nhầm.'
   },
   'excel-mapping': {
@@ -64,7 +65,6 @@ const toolGovernance = {
     readiness: IN_DEVELOPMENT,
     processing: 'browser',
     outputPurpose: 'reference',
-    defaultVisible: false,
     unavailableReason: 'Tạm dừng phát triển. Luồng hiện tại chưa đọc đủ ba bộ chứng từ và còn fallback dữ liệu giả.'
   },
   'auto-bi': { readiness: 'experimental', processing: 'browser', outputPurpose: 'reference' },
@@ -72,7 +72,6 @@ const toolGovernance = {
     readiness: IN_DEVELOPMENT,
     processing: 'browser',
     outputPurpose: 'reference',
-    defaultVisible: false,
     unavailableReason: 'Tạm dừng phát triển. Cần kho chính sách có nguồn, phiên bản và ngày hiệu lực do pháp chế duyệt.'
   },
   'accounting-reconcile': {

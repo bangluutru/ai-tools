@@ -24,6 +24,8 @@ test('every miniapp declares readiness, processing mode and output purpose', () 
   assert.equal(tools.length, 14);
   for (const tool of tools) {
     assert.match(tool.readiness, /^(beta|experimental|in-development)$/);
+    // Trạng thái quyết định miniapp nằm nhóm nào, nên không dùng cờ ẩn riêng nữa.
+    assert.equal(tool.defaultVisible, undefined, `${tool.id} không cần defaultVisible`);
     assert.match(tool.processing, /^(browser|hybrid|backend-antigravity|manual)$/);
     assert.match(tool.outputPurpose, /^(utility|reference)$/);
     assert.equal(Array.isArray(tool.tags), true);
@@ -50,8 +52,6 @@ test('paused miniapps stay in the in-development area with a stated reason', () 
 
   for (const tool of inDevelopmentTools) {
     assert.equal(tool.readiness, IN_DEVELOPMENT, `${tool.id} must be in-development`);
-    // Ẩn mặc định để trang chủ chỉ còn miniapp mở được, nhưng vẫn bật lại được từ Cài đặt.
-    assert.equal(tool.defaultVisible, false, `${tool.id} must be hidden by default`);
     assert.equal(
       typeof tool.unavailableReason === 'string' && tool.unavailableReason.length > 0,
       true,

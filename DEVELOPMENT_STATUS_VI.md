@@ -31,9 +31,9 @@ và không còn nằm trong `npm run build:all`.
 
 ## 3. Miniapp đang phát triển (6)
 
-Không được build, không mở được từ URL hay command palette, mặc định ẩn khỏi trang chủ.
-Người dùng có thể bật chúng trong **Cài đặt miniapp** để thấy trạng thái; thẻ hiển thị nhãn
-"ĐANG PHÁT TRIỂN" và không mở được.
+Không được build, không mở được từ URL hay command palette. Trên trang chủ chúng nằm trong nhóm
+riêng **Đang phát triển** — không xuất hiện ở nhóm nào khác, kể cả "Tất cả công cụ" — để nhắc
+rằng đang có công cụ chờ làm tiếp. Thẻ mang nhãn "ĐANG PHÁT TRIỂN" và không bấm mở được.
 
 | Miniapp | Lý do tạm dừng | Điều kiện mở lại |
 |---|---|---|
@@ -46,7 +46,8 @@ Người dùng có thể bật chúng trong **Cài đặt miniapp** để thấy
 
 ## 4. Cơ chế giữ chúng ngoài production
 
-1. `hub/src/config/toolsRegistry.js` — `readiness: 'in-development'` và `defaultVisible: false`.
+1. `hub/src/config/toolsRegistry.js` — `readiness: 'in-development'`; `hub/src/utils/toolFilter.js`
+   tách registry thành hai nhóm rời nhau dựa trên trạng thái này.
 2. `hub/src/App.jsx` — không import wrapper, nên code không vào bundle.
 3. `hub/src/tools-in-development/` — nơi chứa wrapper đã tạm dừng, kèm README hướng dẫn mở lại.
 4. `resolveToolId` trả `null`; `selectTool`, command palette và menu chuyển nhanh đều chặn.

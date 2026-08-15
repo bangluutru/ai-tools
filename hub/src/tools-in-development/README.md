@@ -18,12 +18,14 @@ Chi tiết đánh giá đầy đủ nằm ở `PORTAL_CODEBASE_AUDIT_VI.md` mụ
 
 ## Điều gì đang giữ chúng ngoài production
 
-1. `hub/src/config/toolsRegistry.js` gắn `readiness: 'in-development'` và `defaultVisible: false`.
+1. `hub/src/config/toolsRegistry.js` gắn `readiness: 'in-development'`. Trạng thái này quyết định
+   miniapp chỉ nằm trong nhóm "Đang phát triển", không thuộc nhóm nào khác kể cả "Tất cả công cụ".
 2. `hub/src/App.jsx` không import wrapper của chúng, nên code không lọt vào bundle.
 3. `resolveToolId` trả `null` cho deep-link tới chúng; `selectTool`, command palette và menu chuyển nhanh đều chặn.
 4. `npm run build:all` chỉ build workspace đang hoạt động. Workspace tạm dừng chạy riêng bằng `npm run build:in-development`.
 
-Portal vẫn hiển thị chúng trong Cài đặt miniapp để công bố trạng thái thay vì im lặng giấu đi.
+Portal vẫn liệt kê chúng trong nhóm "Đang phát triển" trên trang chủ và trong Cài đặt miniapp, để
+nhắc rằng đang có công cụ chờ làm tiếp thay vì im lặng giấu đi.
 
 ## Cách phát triển tiếp một miniapp
 
@@ -34,7 +36,7 @@ npm run build:in-development
 
 Khi công cụ đã đủ điều kiện mở lại:
 
-1. Bỏ `readiness: 'in-development'` và `defaultVisible: false` trong `toolsRegistry.js`, đặt lại `readiness` phù hợp (`experimental` hoặc `beta`) và xóa `unavailableReason`.
+1. Bỏ `readiness: 'in-development'` trong `toolsRegistry.js`, đặt lại `readiness` phù hợp (`experimental` hoặc `beta`) và xóa `unavailableReason`. Miniapp sẽ tự động rời nhóm "Đang phát triển" và về đúng nhóm theo `category`.
 2. Chuyển thư mục wrapper từ `hub/src/tools-in-development/<id>/` về `hub/src/tools/<id>/`.
 3. Thêm `lazy(...)` và một entry trong `toolComponentMap` ở `hub/src/App.jsx`.
 4. Đưa workspace tương ứng từ `build:in-development` sang `build:all` trong `package.json` gốc.
