@@ -165,29 +165,6 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
   const fileInputRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  // Paste listener for clipboard screenshots
-  useEffect(() => {
-    const handlePaste = (e) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      const pastedFiles = [];
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].kind === 'file') {
-          const file = items[i].getAsFile();
-          if (file) pastedFiles.push(file);
-        }
-      }
-
-      if (pastedFiles.length > 0) {
-        handleFilesSelected(pastedFiles);
-      }
-    };
-
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [handleFilesSelected]);
-
   // Handle preset selection
   const handleSelectPreset = (preset) => {
     setActivePreset(preset.id);
@@ -295,6 +272,29 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
     setQueue(prev => [...prev, ...newItems]);
   }, [mergeImagesToPdf, targetFormat]);
+
+  // Paste listener for clipboard screenshots
+  useEffect(() => {
+    const handlePaste = (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const pastedFiles = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].kind === 'file') {
+          const file = items[i].getAsFile();
+          if (file) pastedFiles.push(file);
+        }
+      }
+
+      if (pastedFiles.length > 0) {
+        handleFilesSelected(pastedFiles);
+      }
+    };
+
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [handleFilesSelected]);
 
   const handleConvertSingle = async (id) => {
     const item = queue.find(q => q.id === id);
