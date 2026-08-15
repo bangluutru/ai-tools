@@ -26,6 +26,7 @@ const toolGovernance = {
   'pdf-split': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-merge': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-compress': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
+  'omniconvert': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-overlay': {
     readiness: IN_DEVELOPMENT,
     processing: 'browser',
@@ -147,6 +148,22 @@ const toolDefinitions = [
     badge: '100% LOCAL',
     popular: true,
     tags: ['pdf', 'compress', 'nén', 'thu nhỏ', 'dung lượng', 'size', 'slim', 'optimizer']
+  },
+  {
+    id: 'omniconvert',
+    name_vn: 'Chuyển Đổi Tài Liệu & Ảnh ⇄ PDF',
+    name_en: 'OmniConvert Universal Converter',
+    name_ja: '万能ファイル・PDF相互変換',
+    desc_vn: 'Chuyển đổi 2 chiều giữa DOCX, PPTX, XLSX, Ảnh (PNG, JPG, WebP) và PDF 100% trên trình duyệt.',
+    desc_en: 'Bidirectional conversion between DOCX, PPTX, XLSX, Images (PNG, JPG, WebP) and PDF 100% in-browser.',
+    desc_ja: 'DOCX、PPTX、XLSX、画像（PNG、JPG、WebP）とPDFをブラウザ上で100%相互変換。',
+    category: 'pdf',
+    icon: 'FileStack',
+    gradient: 'from-blue-600 via-indigo-600 to-cyan-500',
+    color: '#0e8ce9',
+    badge: 'ALL-IN-ONE',
+    popular: true,
+    tags: ['convert', 'chuyển đổi', 'pdf', 'docx', 'word', 'excel', 'xlsx', 'pptx', 'powerpoint', 'image', 'png', 'jpg', 'webp']
   },
   {
     id: 'pdf-overlay',
