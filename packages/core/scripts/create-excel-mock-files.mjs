@@ -1,14 +1,26 @@
+/**
+ * Sinh file Excel mẫu cho miniapp Mapping Excel.
+ *
+ * Script nằm trong packages/core vì `xlsx` là dependency dạng tarball nên npm
+ * không hoist lên node_modules ở gốc; đặt cạnh package sở hữu nó thì Node phân
+ * giải được, chạy từ thư mục nào cũng vậy.
+ */
+
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
+
+// Bản ESM của SheetJS không tự gắn fs, thiếu dòng này thì writeFile ném lỗi.
+XLSX.set_fs(fs);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const outputDir = process.argv[2]
     ? path.resolve(process.argv[2])
-    : path.resolve(__dirname, '../fixtures/generated');
+    : path.resolve(__dirname, '../../../fixtures/generated');
 fs.mkdirSync(outputDir, { recursive: true });
 
 // 1. Create Target Supplier Template with complex layout (Company Info, Header, Blank Data Row, Footer)

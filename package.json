@@ -30,9 +30,9 @@
     "dev:overlay": "npm run dev --workspace=docstudio-pdf-overlay",
     "build:all": "npm run build --workspace=hub --workspace=image-convert --workspace=docstudio-pdf-split --workspace=docstudio-pdf-merge --workspace=docstudio-excel-mapping --workspace=docstudio-editor --workspace=auto-bi --workspace=accounting-reconcile --if-present",
     "build:in-development": "npm run build --workspace=docstudio-pdf-overlay --workspace=docstudio-legal --workspace=docstudio-translator --workspace=docstudio-certificate --workspace=contract-auditor --workspace=policy-assistant --if-present",
-    "fixtures:excel": "node scripts/create-excel-mock-files.mjs",
+    "fixtures:excel": "node packages/core/scripts/create-excel-mock-files.mjs",
     "golden:accounting": "node packages/core/scripts/accounting-golden.mjs",
-    "lint": "eslint scripts --config eslint.config.js && npm run lint --workspaces --if-present",
+    "lint": "eslint eslint.config.js scripts --config eslint.config.js --no-error-on-unmatched-pattern && npm run lint --workspaces --if-present",
     "lint:critical": "eslint --config accounting-reconcile/eslint.config.js hub/src/App.jsx hub/src/components/CommandPalette.jsx hub/src/components/HeroBanner.jsx hub/src/components/ToolCard.jsx hub/src/components/ToolContainer.jsx hub/src/components/image/DropZone.jsx hub/src/config/toolsRegistry.js hub/src/tools/image-convert/ImageConvertTool.jsx hub/src/tools/invoice-webapp/InvoiceTool.jsx packages/core/src/hooks/useAntigravityAgent.js packages/core/src/utils/accounting/reconcile.js packages/core/src/utils/image/converter.js packages/core/src/utils/image/limits.js packages/core/src/utils/image/zipExporter.js packages/core/src/components/AccountingReconcileView.jsx packages/core/src/components/LegalDocumentView.jsx packages/core/src/components/LongDocTranslatorView.jsx",
     "test": "npm run test --workspaces --if-present"
   },
