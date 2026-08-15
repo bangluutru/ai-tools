@@ -730,7 +730,7 @@ export default function InvoiceTool() {
     )));
   };
 
-  // Xuất bản nháp bảng kê. Việc điền template chuẩn cần file template đã được phê duyệt.
+  // Xuất bảng kê đề nghị thanh toán theo mẫu đã được chủ sở hữu chốt.
   const handleExportExcel = async () => {
     const confirmedInvoices = invoices.filter((invoice) => invoice.isConfirmed);
     if (confirmedInvoices.length === 0) return;
@@ -764,14 +764,14 @@ export default function InvoiceTool() {
             Xử Lý Hóa Đơn & Tạo Đề Nghị Thanh Toán
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Trích xuất XML/PDF bằng quy tắc cục bộ, sau đó yêu cầu người dùng xác nhận từng chứng từ trước khi xuất bản nháp.
+            Trích xuất XML/PDF theo tiêu thức hóa đơn tại TT 91/2026/TT-BTC, sau đó yêu cầu người dùng xác nhận từng chứng từ trước khi xuất.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
             <ShieldCheck size={14} />
-            Parser cục bộ • Bản nháp tham khảo
+            Parser cục bộ • Kiểm tra trước khi xuất
           </div>
           {invoices.length > 0 && (
             <button
@@ -853,7 +853,7 @@ export default function InvoiceTool() {
               className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-950 font-bold shadow-lg shadow-amber-500/20 transition transform active:scale-95 text-xs"
             >
               <Download size={16} />
-              Xuất bản nháp ({validInvoices.length})
+              Xuất bảng kê ({validInvoices.length})
             </button>
           </div>
         </div>

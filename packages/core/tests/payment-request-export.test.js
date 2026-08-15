@@ -43,22 +43,35 @@ test('totals are summed from the confirmed invoices only', async () => {
 });
 
 
-test('the sheet carries the Vietnamese form heading and the draft warning', async () => {
+test('the sheet carries the Vietnamese form heading', async () => {
   const { workbook } = await build();
   const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
 
   assert.equal(sheet.getRow(1).getCell(1).value, 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM');
   assert.equal(sheet.getRow(5).getCell(1).value, 'BẢNG KÊ ĐỀ NGHỊ THANH TOÁN');
-  // Cảnh báo bản nháp phải nằm trên chính tờ in, không chỉ trên màn hình.
-  assert.equal(sheet.getRow(6).getCell(1).value, 'BẢN NHÁP THAM KHẢO — CHƯA PHÊ DUYỆT');
-  assert.equal(sheet.getRow(6).getCell(1).font.color.argb, 'FFC00000');
+  assert.match(String(sheet.getRow(6).getCell(1).value), /^Ngày lập:/);
+});
+
+
+// Chủ sở hữu đã chốt dùng mẫu này nên tờ in không còn đóng dấu bản nháp.
+test('the printed form carries no draft stamp', async () => {
+  const { workbook } = await build();
+  const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
+
+  const printed = [];
+  sheet.eachRow((row) => row.eachCell({ includeEmpty: false }, (cell) => {
+    if (typeof cell.value === 'string') printed.push(cell.value);
+  }));
+
+  assert.equal(printed.some((text) => /BẢN NHÁP|CHƯA PHÊ DUYỆT/i.test(text)), false);
+  assert.equal(/Bản nháp/i.test(sheet.headerFooter.oddFooter ?? ''), false);
 });
 
 
 test('money columns stay numeric with a thousands format', async () => {
   const { workbook } = await build();
   const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
-  const firstInvoice = sheet.getRow(10);
+  const firstInvoice = sheet.getRow(9);
 
   assert.equal(firstInvoice.getCell(1).value, 1);
   // Ký hiệu hóa đơn là tiêu thức bắt buộc nên phải có cột riêng trên bảng kê.
@@ -74,7 +87,7 @@ test('money columns stay numeric with a thousands format', async () => {
 test('a highlighted total row closes the table', async () => {
   const { workbook } = await build();
   const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
-  const totalRow = sheet.getRow(12);
+  const totalRow = sheet.getRow(11);
 
   assert.equal(totalRow.getCell(1).value, 'Tổng cộng');
   assert.equal(totalRow.getCell(7).value, 14545455);
@@ -88,9 +101,9 @@ test('the amount in words matches the printed total', async () => {
   const { workbook } = await build();
   const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
 
-  const wordsRow = sheet.getRow(14);
+  const wordsRow = sheet.getRow(13);
   assert.equal(wordsRow.getCell(1).value, 'Số tiền bằng chữ: Mười sáu triệu đồng ./.');
-  assert.equal(sheet.getRow(15).getCell(1).value, 'Số chứng từ kèm theo: 2');
+  assert.equal(sheet.getRow(14).getCell(1).value, 'Số chứng từ kèm theo: 2');
 });
 
 
@@ -98,11 +111,11 @@ test('signature blocks and a signing gap are laid out for printing', async () =>
   const { workbook } = await build();
   const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
 
-  assert.equal(sheet.getRow(18).getCell(1).value, 'NGƯỜI ĐỀ NGHỊ');
-  assert.equal(sheet.getRow(18).getCell(6).value, 'KẾ TOÁN TRƯỞNG / NGƯỜI DUYỆT');
-  assert.equal(sheet.getRow(19).getCell(1).value, '(Ký, ghi rõ họ tên)');
+  assert.equal(sheet.getRow(17).getCell(1).value, 'NGƯỜI ĐỀ NGHỊ');
+  assert.equal(sheet.getRow(17).getCell(6).value, 'KẾ TOÁN TRƯỞNG / NGƯỜI DUYỆT');
+  assert.equal(sheet.getRow(18).getCell(1).value, '(Ký, ghi rõ họ tên)');
   // Dòng trống cao để ký tay.
-  assert.equal(sheet.getRow(20).height, 60);
+  assert.equal(sheet.getRow(19).height, 60);
 });
 
 
@@ -114,7 +127,7 @@ test('the form is set up to print on one A4 width with repeating headers', async
   assert.equal(sheet.pageSetup.orientation, 'landscape');
   assert.equal(sheet.pageSetup.fitToWidth, 1);
   assert.equal(sheet.pageSetup.fitToHeight, 0);
-  assert.equal(sheet.pageSetup.printTitlesRow, '9:9');
+  assert.equal(sheet.pageSetup.printTitlesRow, '8:8');
   assert.match(sheet.headerFooter.oddFooter, /Trang &P\/&N/);
   assert.equal(sheet.views[0].state, 'frozen');
 });
@@ -125,6 +138,6 @@ test('an empty invoice list still produces a valid form', async () => {
   const sheet = workbook.getWorksheet('Bảng kê ĐNTT');
 
   assert.equal(totals.totalAmount, 0);
-  assert.equal(sheet.getRow(10).getCell(1).value, 'Tổng cộng');
-  assert.equal(sheet.getRow(12).getCell(1).value, 'Số tiền bằng chữ: Không đồng ./.');
+  assert.equal(sheet.getRow(9).getCell(1).value, 'Tổng cộng');
+  assert.equal(sheet.getRow(11).getCell(1).value, 'Số tiền bằng chữ: Không đồng ./.');
 });

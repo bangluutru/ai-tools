@@ -1,12 +1,10 @@
 import {
   addTitleBlock,
   applyPrintSetup,
-  BOX_BORDER,
   columnLetter,
   downloadWorkbook,
   loadExcelJs,
   MONEY_FORMAT,
-  REPORT_COLORS,
   setColumnWidths,
   styleDataRow,
   styleHeaderRow,
@@ -83,12 +81,6 @@ export async function buildPaymentRequestWorkbook(invoices, options = {}) {
       { text: '---------------o0o---------------', size: 10 },
       { text: '' },
       { text: 'BẢNG KÊ ĐỀ NGHỊ THANH TOÁN', bold: true, size: 16, height: 26 },
-      {
-        text: 'BẢN NHÁP THAM KHẢO — CHƯA PHÊ DUYỆT',
-        bold: true,
-        size: 10,
-        color: 'FFC00000',
-      },
       { text: `Ngày lập: ${formatDate(generatedAt)}`, italic: true, size: 10, align: 'right' },
       { text: '' },
     ],
@@ -168,13 +160,6 @@ export async function buildPaymentRequestWorkbook(invoices, options = {}) {
   // Chừa khoảng trắng để ký tay khi in.
   sheet.addRow([]).height = 60;
 
-  const disclaimer = mergedRow(
-    sheet,
-    'Bản nháp do công cụ tổng hợp tự động từ hóa đơn XML/PDF người dùng tải lên. Số liệu phải được đối chiếu với chứng từ gốc và phê duyệt theo quy trình nội bộ trước khi thanh toán.',
-    { size: 9, italic: true, color: REPORT_COLORS.muted, wrap: true, height: 30 },
-  );
-  disclaimer.getCell(1).border = { top: BOX_BORDER.top };
-
   sheet.views = [{ state: 'frozen', ySplit: headerRow.number, showGridLines: false }];
   sheet.autoFilter = {
     from: { row: headerRow.number, column: 1 },
@@ -184,7 +169,6 @@ export async function buildPaymentRequestWorkbook(invoices, options = {}) {
   applyPrintSetup(sheet, {
     orientation: 'landscape',
     titleRows: `${titleLines + 1}:${headerRow.number}`,
-    footerNote: 'Bản nháp tham khảo — chưa phê duyệt',
   });
 
   return { workbook, totals };
@@ -194,7 +178,7 @@ export async function exportPaymentRequest(invoices, options = {}) {
   const generatedAt = options.generatedAt ?? new Date();
   const { workbook } = await buildPaymentRequestWorkbook(invoices, { generatedAt });
   const stamp = generatedAt.toISOString().slice(0, 10);
-  await downloadWorkbook(workbook, `Ban_Nhap_De_Nghi_Thanh_Toan_${stamp}.xlsx`);
+  await downloadWorkbook(workbook, `Bang_ke_De_Nghi_Thanh_Toan_${stamp}.xlsx`);
 }
 
 export { MONEY_FORMAT };
