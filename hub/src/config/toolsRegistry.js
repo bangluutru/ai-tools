@@ -25,6 +25,7 @@ const toolGovernance = {
   },
   'pdf-split': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-merge': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
+  'pdf-compress': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-overlay': {
     readiness: IN_DEVELOPMENT,
     processing: 'browser',
@@ -130,6 +131,22 @@ const toolDefinitions = [
     badge: 'FAST',
     popular: true,
     tags: ['pdf', 'merge', 'gộp', 'ghép', 'combine']
+  },
+  {
+    id: 'pdf-compress',
+    name_vn: 'Nén & Thu Nhỏ File PDF',
+    name_en: 'PDF Slim Compressor',
+    name_ja: 'PDF 圧縮・最適化',
+    desc_vn: 'Thu nhỏ dung lượng PDF 100% trên trình duyệt với 3 mức độ nén: Tối Đa, Cân Bằng, Chất Lượng Cao và tùy chỉnh sâu.',
+    desc_en: '100% in-browser PDF compression with 3 presets: Maximum, Balanced, High Quality, and custom precision.',
+    desc_ja: 'ブラウザ上で100%完結するPDF圧縮ツール。最大圧縮・バランス・高品質・詳細カスタムに対応。',
+    category: 'pdf',
+    icon: 'Minimize2',
+    gradient: 'from-teal-500 to-emerald-600',
+    color: '#0d9488',
+    badge: '100% LOCAL',
+    popular: true,
+    tags: ['pdf', 'compress', 'nén', 'thu nhỏ', 'dung lượng', 'size', 'slim', 'optimizer']
   },
   {
     id: 'pdf-overlay',

@@ -2,13 +2,14 @@ import React from 'react';
 import {
   Image, Scissors, Combine, Printer, Scale, Globe,
   Award, FileSpreadsheet, LayoutTemplate, Receipt, ArrowRight, Sparkles,
-  BarChart3, HelpCircle, Calculator
+  BarChart3, HelpCircle, Calculator, Minimize2
 } from 'lucide-react';
 
 const iconMap = {
   Image,
   Scissors,
   Combine,
+  Minimize2,
   Printer,
   Scale,
   Globe,

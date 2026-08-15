@@ -35,6 +35,7 @@ ehthumbs.db
 Thumbs.db
 .vscode/
 .idea/
+.claude/
 
 # Scratch & Temporary
 scratch/

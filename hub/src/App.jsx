@@ -37,6 +37,7 @@ import {
 const ImageConvertTool = lazy(() => import('./tools/image-convert/ImageConvertTool'));
 const PdfSplitTool = lazy(() => import('./tools/pdf-split/PdfSplitTool'));
 const PdfMergeTool = lazy(() => import('./tools/pdf-merge/PdfMergeTool'));
+const PdfCompressTool = lazy(() => import('./tools/pdf-compress/PdfCompressTool'));
 const ExcelMappingTool = lazy(() => import('./tools/excel-mapping/ExcelMappingTool'));
 const EditorStudioTool = lazy(() => import('./tools/editor-studio/EditorStudioTool'));
 const InvoiceTool = lazy(() => import('./tools/invoice-webapp/InvoiceTool'));
@@ -47,6 +48,7 @@ const toolComponentMap = {
   'image-convert': ImageConvertTool,
   'pdf-split': PdfSplitTool,
   'pdf-merge': PdfMergeTool,
+  'pdf-compress': PdfCompressTool,
   'excel-mapping': ExcelMappingTool,
   'editor-studio': EditorStudioTool,
   'invoice-webapp': InvoiceTool,

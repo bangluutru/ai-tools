@@ -21,7 +21,7 @@ const PAUSED_TOOL_IDS = [
 
 
 test('every miniapp declares readiness, processing mode and output purpose', () => {
-  assert.equal(tools.length, 14);
+  assert.equal(tools.length, 15);
   for (const tool of tools) {
     assert.match(tool.readiness, /^(beta|experimental|in-development)$/);
     // Trạng thái quyết định miniapp nằm nhóm nào, nên không dùng cờ ẩn riêng nữa.
