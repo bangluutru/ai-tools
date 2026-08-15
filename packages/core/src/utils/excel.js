@@ -1,5 +1,5 @@
-import * as XLSX from 'xlsx';
-import ExcelJS from 'exceljs';
+const loadSheetJs = () => import('xlsx');
+const loadExcelJs = () => import('exceljs').then((module) => module.default);
 
 // =====================================================================
 // Constants
@@ -89,6 +89,7 @@ export const readExcelFile = async (file, isSource = true) => {
 
         reader.onload = async (e) => {
             try {
+                const XLSX = await loadSheetJs();
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
@@ -121,6 +122,7 @@ export const readExcelFile = async (file, isSource = true) => {
                     }
                     resolve({ headers, sampleRows: dataRows, allRows: dataRows });
                 } else {
+                    const ExcelJS = await loadExcelJs();
                     const ejsWb = new ExcelJS.Workbook();
                     await ejsWb.xlsx.load(data);
                     const ejsWs = ejsWb.worksheets[0];
@@ -311,6 +313,7 @@ export const exportMappedExcel = async ({
     headerZone, footerZone, footerStartRow, existingDataSlots,
     fileName = 'Mapped_Order.xlsx'
 }) => {
+    const ExcelJS = await loadExcelJs();
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(targetBuffer);
     const ws = workbook.worksheets[0];

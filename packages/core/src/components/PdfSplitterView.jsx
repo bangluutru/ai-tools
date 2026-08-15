@@ -1,7 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
-import { PDFDocument } from 'pdf-lib';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import {
+    PDF_SPLIT_LIMITS,
+    formatMiB,
+    rejectionMessages,
+    validateDocumentFiles,
+    verifyDocumentSignature,
+} from '../utils/documentFiles.js';
 import {
     Upload,
     Scissors,
@@ -13,8 +17,21 @@ import {
     X,
 } from 'lucide-react';
 
-// Configure pdf.js worker using Vite ?url import
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+let pdfJsPromise;
+const loadPdfJs = () => {
+    if (!pdfJsPromise) {
+        pdfJsPromise = Promise.all([
+            import('pdfjs-dist'),
+            import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+        ]).then(([pdfjsLib, workerModule]) => {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+            return pdfjsLib;
+        });
+    }
+    return pdfJsPromise;
+};
+
+const loadPdfDocument = () => import('pdf-lib').then((module) => module.PDFDocument);
 
 // =====================================================================
 // UI Translations
@@ -76,14 +93,20 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
     const [selected, setSelected] = useState(new Set());
     const [isLoading, setIsLoading] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [fileError, setFileError] = useState('');
     const fileInputRef = useRef(null);
 
     // --- Generate thumbnails from PDF ---
     const generateThumbnails = useCallback(async (arrayBuffer) => {
         setIsLoading(true);
         try {
+            const pdfjsLib = await loadPdfJs();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
             const count = pdf.numPages;
+            if (count > PDF_SPLIT_LIMITS.maxPages) {
+                await pdf.destroy();
+                throw new Error(`PDF vượt giới hạn ${PDF_SPLIT_LIMITS.maxPages} trang`);
+            }
             setPageCount(count);
 
             const thumbs = [];
@@ -96,27 +119,41 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
                 const ctx = canvas.getContext('2d');
                 await page.render({ canvasContext: ctx, viewport }).promise;
                 thumbs.push(canvas.toDataURL('image/jpeg', 0.7));
+                page.cleanup();
             }
+            await pdf.destroy();
             setThumbnails(thumbs);
             setSelected(new Set());
         } catch (e) {
             console.error('PDF parse error:', e);
+            setFileError(e.message || 'Không thể đọc file PDF');
+            setPdfFile(null);
         } finally {
             setIsLoading(false);
         }
     }, []);
 
     // --- File upload handler ---
-    const handleFile = useCallback((file) => {
-        if (!file || file.type !== 'application/pdf') return;
-        setFileName(file.name);
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const buffer = e.target.result;
+    const handleFile = useCallback(async (file) => {
+        if (!file) return;
+        try {
+            const validation = validateDocumentFiles([file], [], PDF_SPLIT_LIMITS);
+            if (validation.accepted.length === 0) {
+                setFileError(rejectionMessages(validation.rejected).join(' • '));
+                return;
+            }
+            if (!(await verifyDocumentSignature(file))) {
+                setFileError(`${file.name}: nội dung không phải PDF hợp lệ`);
+                return;
+            }
+            setFileError('');
+            setFileName(file.name);
+            const buffer = await file.arrayBuffer();
             setPdfFile(buffer);
-            generateThumbnails(buffer);
-        };
-        reader.readAsArrayBuffer(file);
+            await generateThumbnails(buffer);
+        } catch (error) {
+            setFileError(error.message || 'Không thể đọc file PDF');
+        }
     }, [generateThumbnails]);
 
     // --- Drag & Drop ---
@@ -160,6 +197,7 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
     // --- Extract single page as PDF ---
     const extractPage = async (pageIndex) => {
         if (!pdfFile) return;
+        const PDFDocument = await loadPdfDocument();
         const srcDoc = await PDFDocument.load(pdfFile);
         const newDoc = await PDFDocument.create();
         const [copied] = await newDoc.copyPages(srcDoc, [pageIndex]);
@@ -183,6 +221,7 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
     // --- Merge selected pages into one PDF ---
     const downloadMerged = async () => {
         if (!pdfFile || selected.size === 0) return;
+        const PDFDocument = await loadPdfDocument();
         const srcDoc = await PDFDocument.load(pdfFile);
         const newDoc = await PDFDocument.create();
         const sortedPages = [...selected].sort((a, b) => a - b);
@@ -200,6 +239,7 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
         setPageCount(0);
         setThumbnails([]);
         setSelected(new Set());
+        setFileError('');
     };
 
     const selectedCount = selected.size;
@@ -222,6 +262,11 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
             </div>
 
             <div className="max-w-6xl mx-auto w-full p-4 md:p-8 flex-grow">
+                {fileError && (
+                    <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {fileError}
+                    </div>
+                )}
                 {/* Upload Zone */}
                 {!pdfFile ? (
                     <div
@@ -238,6 +283,9 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
                         <div className="text-center">
                             <p className="text-lg font-bold text-slate-500">{t.dropZone}</p>
                             <p className="text-sm text-slate-400 mt-1">{t.dropHint}</p>
+                            <p className="text-xs text-slate-400 mt-2">
+                                Tối đa {formatMiB(PDF_SPLIT_LIMITS.maxFileBytes)} MiB và {PDF_SPLIT_LIMITS.maxPages} trang; file không rời khỏi trình duyệt.
+                            </p>
                         </div>
                         <input
                             ref={fileInputRef}

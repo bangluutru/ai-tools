@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Sparkles, Search, Sun, Moon, Globe, Shield, Github } from 'lucide-react';
+import { Sparkles, Search, Sun, Moon, Globe, Settings2 } from 'lucide-react';
 
-export default function Navbar({ theme, onToggleTheme, displayLang, onLangChange, onOpenSearch }) {
+export default function Navbar({ theme, onToggleTheme, displayLang, onLangChange, onOpenSearch, onOpenSettings }) {
   const [langDropdown, setLangDropdown] = useState(false);
 
   return (
@@ -84,6 +84,15 @@ export default function Navbar({ theme, onToggleTheme, displayLang, onLangChange
               </>
             )}
           </div>
+
+          <button
+            onClick={onOpenSettings}
+            className="p-2.5 rounded-xl bg-slate-800/70 hover:bg-slate-800 text-slate-300 hover:text-emerald-400 border border-slate-700/60 transition-all"
+            title="Cài đặt miniapp"
+            aria-label="Cài đặt miniapp"
+          >
+            <Settings2 size={17} />
+          </button>
 
           {/* Theme Toggle */}
           <button

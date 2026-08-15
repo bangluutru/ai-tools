@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, ArrowRight, Sparkles } from 'lucide-react';
-import { tools } from '../config/toolsRegistry';
 
-export default function CommandPalette({ isOpen, onClose, onSelectTool, displayLang }) {
+export default function CommandPalette({ isOpen, onClose, onSelectTool, displayLang, tools }) {
   const [query, setQuery] = useState('');
   const inputRef = useRef(null);
 

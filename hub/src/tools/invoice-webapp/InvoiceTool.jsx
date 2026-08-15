@@ -5,10 +5,6 @@ import {
   Trash2, ShieldCheck, AlertCircle, FileArchive, RefreshCw, Eye,
   Building, Calendar, DollarSign, FileCheck, ArrowRight
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import JSZip from 'jszip';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { parseLocalizedNumber } from '@ai-tools/core/utils/accounting/reconcile.js';
 import {
   deriveInvoiceAmounts,
@@ -16,9 +12,21 @@ import {
   isKnownInvoiceNumber,
   isUnsafeZipPath,
 } from '@ai-tools/core/utils/invoice/validation.js';
+import { verifyDocumentSignature } from '@ai-tools/core/utils/documentFiles.js';
 
-// Cấu hình Worker cho PDF.js trong môi trường Vite
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+let pdfJsPromise;
+const loadPdfJs = () => {
+  if (!pdfJsPromise) {
+    pdfJsPromise = Promise.all([
+      import('pdfjs-dist'),
+      import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+    ]).then(([pdfjsLib, workerModule]) => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+      return pdfjsLib;
+    });
+  }
+  return pdfJsPromise;
+};
 
 const makeId = () => crypto.randomUUID();
 
@@ -74,8 +82,13 @@ function numberToWordsVN(num) {
 // Hàm trích xuất text từ buffer PDF
 async function extractTextFromPDFBuffer(arrayBuffer) {
   try {
+    const pdfjsLib = await loadPdfJs();
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
+    if (pdf.numPages > INVOICE_LIMITS.maxPdfPages) {
+      await pdf.destroy();
+      throw new Error(`PDF vượt ${INVOICE_LIMITS.maxPdfPages} trang`);
+    }
     let fullText = '';
 
     for (let i = 1; i <= pdf.numPages; i++) {
@@ -113,7 +126,9 @@ async function extractTextFromPDFBuffer(arrayBuffer) {
       // Cleanup multiple spaces
       pageText = pageText.replace(/ {2,}/g, ' ');
       fullText += pageText + '\n';
+      page.cleanup();
     }
+    await pdf.destroy();
     return fullText;
   } catch (err) {
     console.error('Lỗi khi extract text PDF:', err);
@@ -635,6 +650,7 @@ export default function InvoiceTool() {
       // 1. TRƯỜNG HỢP: TẬP TIN ZIP (.zip)
       if (lowerName.endsWith('.zip') || file.type.includes('zip')) {
         try {
+          const { default: JSZip } = await import('jszip');
           const zip = await JSZip.loadAsync(file);
           const zipEntries = Object.keys(zip.files);
           if (zipEntries.length > INVOICE_LIMITS.maxZipEntries) {
@@ -731,6 +747,9 @@ export default function InvoiceTool() {
           continue;
         }
         try {
+          if (!(await verifyDocumentSignature(file))) {
+            throw new Error('Nội dung không phải PDF hợp lệ');
+          }
           const arrayBuffer = await file.arrayBuffer();
           const pdfText = await extractTextFromPDFBuffer(arrayBuffer);
           const parsed = parsePDFInvoiceText(pdfText, file.name);
@@ -785,11 +804,12 @@ export default function InvoiceTool() {
   };
 
   // Xuất bản nháp bảng kê. Việc điền template chuẩn cần file template đã được phê duyệt.
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (invoices.length === 0) return;
 
     const validInvoices = invoices.filter((i) => i.isConfirmed);
     if (validInvoices.length === 0) return;
+    const XLSX = await import('xlsx');
     const totalAmount = validInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
     const wordsVN = numberToWordsVN(totalAmount);
 

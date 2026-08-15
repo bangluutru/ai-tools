@@ -1,6 +1,7 @@
 export const INVOICE_LIMITS = Object.freeze({
   maxFiles: 50,
   maxFileBytes: 20 * 1024 * 1024,
+  maxPdfPages: 100,
   maxZipEntries: 100,
   maxZipUncompressedBytes: 100 * 1024 * 1024,
 });

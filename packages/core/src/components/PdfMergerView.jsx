@@ -1,7 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
-import { PDFDocument } from 'pdf-lib';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import {
+    PDF_MERGE_LIMITS,
+    formatMiB,
+    rejectionMessages,
+    validateDocumentFiles,
+    verifyDocumentSignature,
+} from '../utils/documentFiles.js';
 import {
     Upload,
     FileDown,
@@ -13,7 +17,21 @@ import {
     Combine,
 } from 'lucide-react';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+let pdfJsPromise;
+const loadPdfJs = () => {
+    if (!pdfJsPromise) {
+        pdfJsPromise = Promise.all([
+            import('pdfjs-dist'),
+            import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+        ]).then(([pdfjsLib, workerModule]) => {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+            return pdfjsLib;
+        });
+    }
+    return pdfJsPromise;
+};
+
+const loadPdfDocument = () => import('pdf-lib').then((module) => module.PDFDocument);
 
 // =====================================================================
 // UI Translations
@@ -79,6 +97,7 @@ const PdfMergerView = ({ displayLang }) => {
     const [isMerging, setIsMerging] = useState(false);
     const [dragOverId, setDragOverId] = useState(null);
     const [dragItemId, setDragItemId] = useState(null);
+    const [fileError, setFileError] = useState('');
     const fileInputRef = useRef(null);
     const addFileInputRef = useRef(null);
 
@@ -92,6 +111,7 @@ const PdfMergerView = ({ displayLang }) => {
                 try {
                     const buffer = e.target.result;
                     // Get page count
+                    const pdfjsLib = await loadPdfJs();
                     const pdf = await pdfjsLib.getDocument({ data: buffer.slice(0) }).promise;
                     const pageCount = pdf.numPages;
 
@@ -104,11 +124,14 @@ const PdfMergerView = ({ displayLang }) => {
                     const ctx = canvas.getContext('2d');
                     await page.render({ canvasContext: ctx, viewport }).promise;
                     const thumbnail = canvas.toDataURL('image/jpeg', 0.6);
+                    page.cleanup();
+                    await pdf.destroy();
 
                     resolve({
                         id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
                         name: file.name,
                         arrayBuffer: buffer,
+                        size: file.size,
                         pageCount,
                         thumbnail,
                     });
@@ -117,24 +140,42 @@ const PdfMergerView = ({ displayLang }) => {
                     resolve(null);
                 }
             };
+            reader.onerror = () => resolve(null);
             reader.readAsArrayBuffer(file);
         });
     }, []);
 
     // --- Handle file selection ---
     const handleFiles = useCallback(async (fileList) => {
-        const pdfFiles = [...fileList].filter(f => f.type === 'application/pdf');
-        if (pdfFiles.length === 0) return;
+        const validation = validateDocumentFiles([...fileList], files, PDF_MERGE_LIMITS);
+        const errors = rejectionMessages(validation.rejected);
+        if (validation.accepted.length === 0) {
+            setFileError(errors.join(' • '));
+            return;
+        }
 
         setIsProcessing(true);
         const results = [];
-        for (const file of pdfFiles) {
+        let totalPages = files.reduce((sum, file) => sum + file.pageCount, 0);
+        for (const file of validation.accepted) {
+            if (!(await verifyDocumentSignature(file))) {
+                errors.push(`${file.name}: nội dung không phải PDF hợp lệ`);
+                continue;
+            }
             const result = await processFile(file);
-            if (result) results.push(result);
+            if (!result) {
+                errors.push(`${file.name}: không thể đọc PDF`);
+            } else if (totalPages + result.pageCount > PDF_MERGE_LIMITS.maxPages) {
+                errors.push(`${file.name}: tổng số trang vượt ${PDF_MERGE_LIMITS.maxPages}`);
+            } else {
+                results.push(result);
+                totalPages += result.pageCount;
+            }
         }
         setFiles(prev => [...prev, ...results]);
+        setFileError(errors.join(' • '));
         setIsProcessing(false);
-    }, [processFile]);
+    }, [files, processFile]);
 
     // --- Drag & Drop zone ---
     const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
@@ -151,7 +192,10 @@ const PdfMergerView = ({ displayLang }) => {
     };
 
     // --- Clear all ---
-    const clearAll = () => setFiles([]);
+    const clearAll = () => {
+        setFiles([]);
+        setFileError('');
+    };
 
     // --- Drag & Drop reorder ---
     const handleItemDragStart = (e, id) => {
@@ -196,6 +240,7 @@ const PdfMergerView = ({ displayLang }) => {
         if (files.length < 2) return;
         setIsMerging(true);
         try {
+            const PDFDocument = await loadPdfDocument();
             const mergedDoc = await PDFDocument.create();
             for (const file of files) {
                 const srcDoc = await PDFDocument.load(file.arrayBuffer);
@@ -239,6 +284,11 @@ const PdfMergerView = ({ displayLang }) => {
             </div>
 
             <div className="max-w-4xl mx-auto w-full p-4 md:p-8 flex-grow">
+                {fileError && (
+                    <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        {fileError}
+                    </div>
+                )}
 
                 {/* Upload Zone (shown when no files OR always as add-more) */}
                 {files.length === 0 ? (
@@ -256,6 +306,9 @@ const PdfMergerView = ({ displayLang }) => {
                         <div className="text-center">
                             <p className="text-lg font-bold text-slate-500">{t.dropZone}</p>
                             <p className="text-sm text-slate-400 mt-1">{t.dropSub}</p>
+                            <p className="text-xs text-slate-400 mt-2">
+                                Tối đa {PDF_MERGE_LIMITS.maxFiles} file, {formatMiB(PDF_MERGE_LIMITS.maxFileBytes)} MiB/file, {PDF_MERGE_LIMITS.maxPages} trang; xử lý cục bộ.
+                            </p>
                         </div>
                         <input
                             ref={fileInputRef}

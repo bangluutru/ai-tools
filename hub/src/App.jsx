@@ -7,10 +7,16 @@ import ToolContainer from './components/ToolContainer';
 import ToolErrorBoundary from './components/ToolErrorBoundary';
 import CommandPalette from './components/CommandPalette';
 import DataPolicyModal from './components/DataPolicyModal';
+import SettingsModal from './components/SettingsModal';
 import { tools } from './config/toolsRegistry';
 import { buildVersion } from './config/buildInfo';
 import { resolveToolId, toolUrl } from './utils/toolRoute';
 import { Loader2 } from 'lucide-react';
+import {
+  defaultHiddenToolIds,
+  loadHiddenToolIds,
+  saveHiddenToolIds,
+} from './utils/toolVisibility';
 
 // =========================================================================
 // ISOLATED LAZY LOADED TOOLS (Code-Splitting)
@@ -18,32 +24,20 @@ import { Loader2 } from 'lucide-react';
 const ImageConvertTool = lazy(() => import('./tools/image-convert/ImageConvertTool'));
 const PdfSplitTool = lazy(() => import('./tools/pdf-split/PdfSplitTool'));
 const PdfMergeTool = lazy(() => import('./tools/pdf-merge/PdfMergeTool'));
-const PdfOverlayTool = lazy(() => import('./tools/pdf-overlay/PdfOverlayTool'));
 const ExcelMappingTool = lazy(() => import('./tools/excel-mapping/ExcelMappingTool'));
-const LegalStudioTool = lazy(() => import('./tools/legal-studio/LegalStudioTool'));
-const LongTranslatorTool = lazy(() => import('./tools/long-translator/LongTranslatorTool'));
-const CertificateStudioTool = lazy(() => import('./tools/certificate-studio/CertificateStudioTool'));
 const EditorStudioTool = lazy(() => import('./tools/editor-studio/EditorStudioTool'));
 const InvoiceTool = lazy(() => import('./tools/invoice-webapp/InvoiceTool'));
-const ContractAuditorTool = lazy(() => import('./tools/contract-auditor/ContractAuditorTool'));
 const AutoBiTool = lazy(() => import('./tools/auto-bi/AutoBiTool'));
-const PolicyAssistantTool = lazy(() => import('./tools/policy-assistant/PolicyAssistantTool'));
 const AccountingReconcileTool = lazy(() => import('./tools/accounting-reconcile/AccountingReconcileTool'));
 
 const toolComponentMap = {
   'image-convert': ImageConvertTool,
   'pdf-split': PdfSplitTool,
   'pdf-merge': PdfMergeTool,
-  'pdf-overlay': PdfOverlayTool,
   'excel-mapping': ExcelMappingTool,
-  'legal-studio': LegalStudioTool,
-  'long-translator': LongTranslatorTool,
-  'certificate-studio': CertificateStudioTool,
   'editor-studio': EditorStudioTool,
   'invoice-webapp': InvoiceTool,
-  'contract-auditor': ContractAuditorTool,
   'auto-bi': AutoBiTool,
-  'policy-assistant': PolicyAssistantTool,
   'accounting-reconcile': AccountingReconcileTool
 };
 
@@ -56,6 +50,10 @@ export default function App() {
   );
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [hiddenToolIds, setHiddenToolIds] = useState(() =>
+    loadHiddenToolIds(window.localStorage, tools)
+  );
 
   // Sync theme attribute
   useEffect(() => {
@@ -67,6 +65,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('hub_lang', displayLang);
   }, [displayLang]);
+
+  useEffect(() => {
+    saveHiddenToolIds(window.localStorage, hiddenToolIds);
+  }, [hiddenToolIds]);
 
   // Hash routes work on static hosting and preserve the selected miniapp on refresh/share.
   useEffect(() => {
@@ -111,11 +113,26 @@ export default function App() {
 
   const currentTool = tools.find((t) => t.id === activeToolId);
   const ActiveComponent = activeToolId ? toolComponentMap[activeToolId] : null;
+  const hiddenToolIdSet = new Set(hiddenToolIds);
+  const visibleTools = tools.filter((tool) => !hiddenToolIdSet.has(tool.id));
+  const visibleCategoryIds = new Set(visibleTools.map((tool) => tool.category));
 
   const filteredTools =
     activeCategory === 'all'
-      ? tools
-      : tools.filter((t) => t.category === activeCategory);
+      ? visibleTools
+      : visibleTools.filter((t) => t.category === activeCategory);
+
+  const toggleToolVisibility = useCallback((toolId) => {
+    const nextHiddenToolIds = hiddenToolIds.includes(toolId)
+      ? hiddenToolIds.filter((id) => id !== toolId)
+      : [...hiddenToolIds, toolId];
+    setHiddenToolIds(nextHiddenToolIds);
+
+    const categoryStillVisible = tools.some((tool) => (
+      tool.category === activeCategory && !nextHiddenToolIds.includes(tool.id)
+    ));
+    if (activeCategory !== 'all' && !categoryStillVisible) setActiveCategory('all');
+  }, [activeCategory, hiddenToolIds]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white flex flex-col">
@@ -126,6 +143,7 @@ export default function App() {
           onBackToHub={backToHub}
           onSelectTool={selectTool}
           displayLang={displayLang}
+          tools={visibleTools}
         >
           <ToolErrorBoundary
             toolName={currentTool.name_vn}
@@ -152,6 +170,7 @@ export default function App() {
             displayLang={displayLang}
             onLangChange={setDisplayLang}
             onOpenSearch={() => setIsSearchOpen(true)}
+            onOpenSettings={() => setIsSettingsOpen(true)}
           />
 
           <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-8">
@@ -161,6 +180,7 @@ export default function App() {
               activeCategory={activeCategory}
               onSelectCategory={setActiveCategory}
               displayLang={displayLang}
+              visibleCategoryIds={visibleCategoryIds}
             />
 
             {/* Tool Cards Grid */}
@@ -174,6 +194,14 @@ export default function App() {
                 />
               ))}
             </div>
+            {filteredTools.length === 0 && (
+              <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-900/40 px-6 py-12 text-center">
+                <p className="text-sm font-semibold text-slate-300">Không có miniapp nào đang hiển thị trong nhóm này.</p>
+                <button type="button" onClick={() => setIsSettingsOpen(true)} className="mt-3 text-xs font-bold text-emerald-400 hover:text-emerald-300">
+                  Mở Cài đặt miniapp
+                </button>
+              </div>
+            )}
           </main>
 
           {/* Footer */}
@@ -198,8 +226,19 @@ export default function App() {
         onClose={() => setIsSearchOpen(false)}
         onSelectTool={selectTool}
         displayLang={displayLang}
+        tools={visibleTools}
       />
       <DataPolicyModal isOpen={isPolicyOpen} onClose={() => setIsPolicyOpen(false)} />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        tools={tools}
+        hiddenToolIds={hiddenToolIds}
+        onToggleTool={toggleToolVisibility}
+        onShowAll={() => setHiddenToolIds([])}
+        onReset={() => setHiddenToolIds(defaultHiddenToolIds(tools))}
+        displayLang={displayLang}
+      />
     </div>
   );
 }

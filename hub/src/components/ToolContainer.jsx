@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ChevronDown, ShieldCheck } from 'lucide-react';
-import { tools } from '../config/toolsRegistry';
 
-export default function ToolContainer({ currentTool, onBackToHub, onSelectTool, displayLang, children }) {
+export default function ToolContainer({ currentTool, onBackToHub, onSelectTool, displayLang, tools, children }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const getToolName = (t) => {

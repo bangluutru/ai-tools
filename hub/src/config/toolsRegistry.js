@@ -31,7 +31,8 @@ const toolGovernance = {
     readiness: 'disabled',
     processing: 'backend-antigravity',
     outputPurpose: 'reference',
-    unavailableReason: 'Chưa có pipeline upload, chia đoạn và phục hồi cho tài liệu dài.'
+    unavailableReason: 'Tạm dừng theo định hướng sản phẩm; sẽ được nghiên cứu và phát triển lại sau.',
+    defaultVisible: false
   },
   'certificate-studio': {
     readiness: 'disabled',

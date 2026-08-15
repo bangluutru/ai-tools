@@ -10,7 +10,7 @@ const iconMap = {
   Globe
 };
 
-export default function CategoryTabs({ activeCategory, onSelectCategory, displayLang }) {
+export default function CategoryTabs({ activeCategory, onSelectCategory, displayLang, visibleCategoryIds }) {
   const getCategoryLabel = (cat) => {
     if (displayLang === 'en') return cat.label_en;
     if (displayLang === 'ja') return cat.label_ja;
@@ -19,7 +19,7 @@ export default function CategoryTabs({ activeCategory, onSelectCategory, display
 
   return (
     <div className="flex items-center justify-center gap-2 overflow-x-auto py-4 px-2 custom-scrollbar">
-      {categories.map((cat) => {
+      {categories.filter((cat) => cat.id === 'all' || visibleCategoryIds.has(cat.id)).map((cat) => {
         const Icon = iconMap[cat.icon] || Sparkles;
         const isActive = activeCategory === cat.id;
 

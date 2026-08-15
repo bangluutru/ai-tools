@@ -1,42 +1,46 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, Download, FileX, Calculator } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import {
   ACCOUNTING_RULE_VERSION,
   normalizeInvoiceNumber,
   parseLocalizedNumber,
   reconcileAccountingData,
 } from '../utils/accounting/reconcile.js';
+import {
+  EXCEL_FILE_LIMITS,
+  rejectionMessages,
+  validateDocumentFiles,
+  verifyDocumentSignature,
+} from '../utils/documentFiles.js';
 
 export default function AccountingReconcileView({ displayLang = 'vi' }) {
   const [files, setFiles] = useState({ 511: null, 33311: null, br: null });
   const [data, setData] = useState({ 511: [], 33311: [], br: [] });
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState('summary');
+  const [fileError, setFileError] = useState('');
   
   const fileInputRef = useRef(null);
 
   // Auto-detect file type based on contents
-  const processExcelFile = async (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          resolve(workbook);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = reject;
-      reader.readAsArrayBuffer(file);
-    });
+  const processExcelFile = async (file, XLSX) => {
+    if (!(await verifyDocumentSignature(file))) {
+      throw new Error(`${file.name}: nội dung không khớp định dạng Excel`);
+    }
+    const data = new Uint8Array(await file.arrayBuffer());
+    return XLSX.read(data, { type: 'array' });
   };
 
   const handleFileUpload = async (event) => {
-    const uploadedFiles = Array.from(event.target.files);
+    const uploadedFiles = Array.from(event.target.files || []);
     if (uploadedFiles.length === 0) return;
+
+    const validation = validateDocumentFiles(uploadedFiles, [], EXCEL_FILE_LIMITS);
+    setFileError(rejectionMessages(validation.rejected).join(' • '));
+    if (validation.accepted.length === 0) {
+      event.target.value = '';
+      return;
+    }
 
     setIsProcessing(true);
     
@@ -44,8 +48,9 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
     const newData = { ...data };
 
     try {
-      for (const file of uploadedFiles) {
-        const wb = await processExcelFile(file);
+      const XLSX = await import('xlsx');
+      for (const file of validation.accepted) {
+        const wb = await processExcelFile(file, XLSX);
         const firstSheetName = wb.SheetNames[0];
         const firstSheet = wb.Sheets[firstSheetName];
         
@@ -159,7 +164,7 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
       setData(newData);
     } catch (err) {
       console.error("Lỗi đọc file:", err);
-      alert("Có lỗi xảy ra khi đọc file Excel.");
+      setFileError(err.message || 'Có lỗi xảy ra khi đọc file Excel.');
     } finally {
       setIsProcessing(false);
       // Reset input so the same files can be selected again if needed
@@ -193,8 +198,10 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
     .map((record) => `${record.sourceFile || '?'} | ${record.sourceSheet || '?'} | dòng ${record.sourceRow || '?'}`)
     .join('; ');
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
     if (!results) return;
+
+    const XLSX = await import('xlsx');
 
     const wb = XLSX.utils.book_new();
     
@@ -366,6 +373,11 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
         Kết quả chỉ mang tính tham khảo. Dữ liệu được xử lý trên trình duyệt và cần kế toán kiểm tra trước khi sử dụng.
       </div>
+      {fileError && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          {fileError}
+        </div>
+      )}
       
       {/* Upload Section */}
       <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
@@ -377,6 +389,9 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
             </h2>
             <p className="text-sm text-slate-400 mt-1">
               Chọn cùng lúc 3 file: Sổ 511, Sổ 33311 và Bảng kê hóa đơn (BR)
+            </p>
+            <p className="text-xs text-slate-500 mt-1">
+              Tối đa 20 MiB/file, tổng 60 MiB; xử lý cục bộ, không tải lên máy chủ.
             </p>
           </div>
           
