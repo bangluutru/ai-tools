@@ -8,7 +8,7 @@ import ToolErrorBoundary from './components/ToolErrorBoundary';
 import CommandPalette from './components/CommandPalette';
 import DataPolicyModal from './components/DataPolicyModal';
 import SettingsModal from './components/SettingsModal';
-import { tools } from './config/toolsRegistry';
+import { tools, isInDevelopment } from './config/toolsRegistry';
 import { buildVersion } from './config/buildInfo';
 import { resolveToolId, toolUrl } from './utils/toolRoute';
 import { Loader2 } from 'lucide-react';
@@ -20,6 +20,12 @@ import {
 
 // =========================================================================
 // ISOLATED LAZY LOADED TOOLS (Code-Splitting)
+//
+// Chỉ miniapp đang hoạt động mới có mặt ở đây. Miniapp tạm dừng nằm trong
+// hub/src/tools-in-development/ và cố tình không được import để không lọt vào
+// bundle production. Khi mở lại một công cụ, bỏ readiness 'in-development'
+// trong toolsRegistry.js, chuyển wrapper về hub/src/tools/ rồi thêm vào
+// toolComponentMap; hub/tests/tools-registry.test.js sẽ nhắc nếu thiếu bước nào.
 // =========================================================================
 const ImageConvertTool = lazy(() => import('./tools/image-convert/ImageConvertTool'));
 const PdfSplitTool = lazy(() => import('./tools/pdf-split/PdfSplitTool'));
@@ -101,7 +107,7 @@ export default function App() {
 
   const selectTool = useCallback((toolId) => {
     const tool = tools.find((candidate) => candidate.id === toolId);
-    if (!tool || tool.readiness === 'disabled') return;
+    if (!tool || isInDevelopment(tool) || !toolComponentMap[toolId]) return;
     window.history.pushState({ toolId }, '', toolUrl(window.location, toolId));
     setActiveToolId(toolId);
   }, []);

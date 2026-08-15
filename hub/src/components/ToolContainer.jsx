@@ -52,7 +52,7 @@ export default function ToolContainer({ currentTool, onBackToHub, onSelectTool, 
                     Chuyển nhanh công cụ
                   </div>
                   <div className="max-h-80 overflow-y-auto py-1 space-y-0.5">
-                    {tools.filter((t) => t.readiness !== 'disabled').map((t) => (
+                    {tools.filter((t) => t.readiness !== 'in-development').map((t) => (
                       <button
                         key={t.id}
                         onClick={() => {

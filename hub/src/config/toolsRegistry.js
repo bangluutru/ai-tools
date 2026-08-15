@@ -6,6 +6,11 @@ export const categories = [
   { id: 'ai', label_vn: 'Dịch thuật & AI', label_en: 'AI & Translation', label_ja: 'AI・翻訳', icon: 'Globe' }
 ];
 
+// Miniapp tạm dừng phát triển. Chúng không được build vào portal, không mở được
+// từ URL/command palette và mặc định bị ẩn khỏi trang chủ. Xem
+// hub/src/tools-in-development/README.md trước khi mở lại bất kỳ công cụ nào.
+export const IN_DEVELOPMENT = 'in-development';
+
 const toolGovernance = {
   'image-convert': {
     readiness: 'beta',
@@ -16,29 +21,32 @@ const toolGovernance = {
   'pdf-split': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-merge': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-overlay': {
-    readiness: 'disabled',
+    readiness: IN_DEVELOPMENT,
     processing: 'browser',
     outputPurpose: 'reference',
-    unavailableReason: 'Tạm khóa để thay luồng HTML không an toàn và làm đúng chức năng overlay PDF.'
+    defaultVisible: false,
+    unavailableReason: 'Tạm dừng phát triển. Luồng hiện tại dựng HTML thay vì overlay lên PDF nguồn và còn rủi ro XSS; sẽ làm lại bằng pdf-lib khi có nhu cầu.'
   },
   'legal-studio': {
-    readiness: 'disabled',
+    readiness: IN_DEVELOPMENT,
     processing: 'backend-antigravity',
     outputPurpose: 'reference',
-    unavailableReason: 'Tạm khóa đến khi contract Antigravity và kiểm thử đầu ra pháp lý hoàn tất.'
+    defaultVisible: false,
+    unavailableReason: 'Tạm dừng phát triển. Phụ thuộc quyết định runtime Antigravity và kiểm thử đầu ra pháp lý.'
   },
   'long-translator': {
-    readiness: 'disabled',
+    readiness: IN_DEVELOPMENT,
     processing: 'backend-antigravity',
     outputPurpose: 'reference',
-    unavailableReason: 'Tạm dừng theo định hướng sản phẩm; sẽ được nghiên cứu và phát triển lại sau.',
-    defaultVisible: false
+    defaultVisible: false,
+    unavailableReason: 'Tạm dừng phát triển theo định hướng sản phẩm; sẽ nghiên cứu lại khi cần.'
   },
   'certificate-studio': {
-    readiness: 'disabled',
+    readiness: IN_DEVELOPMENT,
     processing: 'manual',
     outputPurpose: 'reference',
-    unavailableReason: 'Tạm khóa để bổ sung kiểm tra và làm sạch SVG/HTML đầu vào.'
+    defaultVisible: false,
+    unavailableReason: 'Tạm dừng phát triển. Cần sanitize SVG/HTML đầu vào và bỏ dữ liệu mẫu gây hiểu nhầm.'
   },
   'excel-mapping': {
     readiness: 'experimental',
@@ -53,17 +61,19 @@ const toolGovernance = {
     outputPurpose: 'reference'
   },
   'contract-auditor': {
-    readiness: 'disabled',
+    readiness: IN_DEVELOPMENT,
     processing: 'browser',
     outputPurpose: 'reference',
-    unavailableReason: 'Tạm khóa vì luồng hiện tại chưa đọc đủ ba bộ chứng từ và có fallback dữ liệu mẫu.'
+    defaultVisible: false,
+    unavailableReason: 'Tạm dừng phát triển. Luồng hiện tại chưa đọc đủ ba bộ chứng từ và còn fallback dữ liệu giả.'
   },
   'auto-bi': { readiness: 'experimental', processing: 'browser', outputPurpose: 'reference' },
   'policy-assistant': {
-    readiness: 'disabled',
+    readiness: IN_DEVELOPMENT,
     processing: 'browser',
     outputPurpose: 'reference',
-    unavailableReason: 'Tạm khóa đến khi dữ liệu chính sách có nguồn, phiên bản và ngày hiệu lực.'
+    defaultVisible: false,
+    unavailableReason: 'Tạm dừng phát triển. Cần kho chính sách có nguồn, phiên bản và ngày hiệu lực do pháp chế duyệt.'
   },
   'accounting-reconcile': {
     readiness: 'beta',
@@ -307,3 +317,11 @@ export const tools = toolDefinitions.map((tool) => ({
   ...tool,
   ...toolGovernance[tool.id]
 }));
+
+export const isInDevelopment = (tool) => tool?.readiness === IN_DEVELOPMENT;
+
+/** Miniapp được build vào portal và mở được từ UI/URL. */
+export const activeTools = tools.filter((tool) => !isInDevelopment(tool));
+
+/** Miniapp đã tạm dừng; giữ lại trong registry để portal công bố trạng thái. */
+export const inDevelopmentTools = tools.filter(isInDevelopment);

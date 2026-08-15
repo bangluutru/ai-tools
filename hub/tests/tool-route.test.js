@@ -5,12 +5,12 @@ import { resolveToolId, toolHash, toolUrl } from '../src/utils/toolRoute.js';
 
 const registry = [
   { id: 'ready-tool', readiness: 'beta' },
-  { id: 'locked-tool', readiness: 'disabled' }
+  { id: 'paused-tool', readiness: 'in-development' }
 ];
 
 test('resolves only known and available miniapp routes', () => {
   assert.equal(resolveToolId('#/tools/ready-tool', registry), 'ready-tool');
-  assert.equal(resolveToolId('#/tools/locked-tool', registry), null);
+  assert.equal(resolveToolId('#/tools/paused-tool', registry), null);
   assert.equal(resolveToolId('#/tools/missing-tool', registry), null);
   assert.equal(resolveToolId('#/other/ready-tool', registry), null);
 });
