@@ -1,0 +1,156 @@
+{
+  "name": "Số theo locale, dòng trống và số 0 đầu",
+  "description": "Ba file có số dòng tiêu đề khác nhau, số tiền ghi dạng 10.000.000, và số hóa đơn có số 0 ở đầu. Đây là bộ ba từng làm phiên bản cũ đọc lệch dòng và bỏ sót bản ghi.",
+  "source": "synthetic",
+  "approvedBy": "",
+  "approvedOn": "",
+  "workbooks": [
+    {
+      "sourceFile": "So_511.xlsx",
+      "sheetNames": [
+        "So 511"
+      ],
+      "sheetRows": {
+        "So 511": [
+          [
+            "CÔNG TY TNHH MẪU"
+          ],
+          [],
+          [],
+          [
+            "SỔ CHI TIẾT TÀI KHOẢN 511"
+          ],
+          [],
+          [
+            "Ngày",
+            "Chứng từ",
+            "Ngày CT",
+            "Số hóa đơn",
+            "Diễn giải",
+            "TK đối ứng",
+            "Phát sinh Nợ",
+            "Phát sinh Có"
+          ],
+          [
+            "01/07/2026",
+            "BH",
+            "01/07/2026",
+            "0012345",
+            "Bán hàng",
+            "131",
+            0,
+            "10.000.000"
+          ]
+        ]
+      }
+    },
+    {
+      "sourceFile": "So_33311.xlsx",
+      "sheetNames": [
+        "So 33311"
+      ],
+      "sheetRows": {
+        "So 33311": [
+          [
+            "SỔ CHI TIẾT TÀI KHOẢN 33311"
+          ],
+          [],
+          [
+            "Ngày",
+            "Chứng từ",
+            "Ngày CT",
+            "Số hóa đơn",
+            "Diễn giải",
+            "TK đối ứng",
+            "Phát sinh Nợ",
+            "Phát sinh Có"
+          ],
+          [
+            "01/07/2026",
+            "BH",
+            "01/07/2026",
+            "12345",
+            "Thuế GTGT đầu ra",
+            "131",
+            0,
+            "1.000.000"
+          ]
+        ]
+      }
+    },
+    {
+      "sourceFile": "Bang_ke_BR.xlsx",
+      "sheetNames": [
+        "BR GTGT"
+      ],
+      "sheetRows": {
+        "BR GTGT": [
+          [
+            "BẢNG KÊ HÓA ĐƠN BÁN RA"
+          ],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [],
+          [
+            "STT",
+            "Ký hiệu",
+            "Mẫu số",
+            "Số hóa đơn",
+            "Ngày",
+            "Người mua",
+            "MST",
+            "Thuế suất",
+            "Doanh số chưa thuế",
+            "Thuế GTGT"
+          ],
+          [
+            1,
+            "C26TAA",
+            "1",
+            "012345",
+            "01/07/2026",
+            "KH",
+            "0100000001",
+            "10%",
+            "10.000.000",
+            "1.000.000"
+          ]
+        ]
+      }
+    }
+  ],
+  "expected": {
+    "summary": {
+      "total": 1,
+      "matched511": 1,
+      "unmatched511": 0,
+      "matched33311": 1,
+      "unmatched33311": 0,
+      "missingInBR": 0,
+      "missingInLedger": 0,
+      "needsReview": 0
+    },
+    "report511": {
+      "12345": {
+        "ledger": 10000000,
+        "br": 10000000,
+        "diff": 0,
+        "status": "MATCH",
+        "needsReview": false
+      }
+    },
+    "report33311": {
+      "12345": {
+        "ledger": 1000000,
+        "br": 1000000,
+        "diff": 0,
+        "status": "MATCH",
+        "needsReview": false,
+        "vatTang": 0
+      }
+    }
+  }
+}

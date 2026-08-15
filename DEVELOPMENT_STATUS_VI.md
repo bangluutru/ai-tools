@@ -58,7 +58,10 @@ Người dùng có thể bật chúng trong **Cài đặt miniapp** để thấy
 
 1. Runtime AI: cho SDK dùng Gemini API key, dùng Vertex/ADC, hay tiếp tục khóa AI. Hiện backend
    **fail closed** với `AI_TOOLS_ANTIGRAVITY_ENABLED=false` và trả 503 thay vì tạo đầu ra giả.
-2. Fixture kế toán đã khử nhạy cảm kèm golden result đã duyệt.
+2. Golden result trên dữ liệu thật cho Đối chiếu kế toán. Hạ tầng đã sẵn sàng — xem
+   `packages/core/tests/fixtures/accounting/README.md`; phần còn thiếu là **bộ chứng từ thật đã
+   khử nhạy cảm và chữ ký duyệt của kế toán**. Chạy `npm run golden:accounting -- --name <kỳ>
+   <các file>` để sinh hồ sơ trình duyệt.
 
 ## 6. Cổng đã được chủ sở hữu chốt (15/08/2026)
 

@@ -1,0 +1,203 @@
+{
+  "name": "Khớp hoàn toàn",
+  "description": "Ba nguồn khớp từng đồng. Đây là trường hợp nền: bất kỳ thay đổi nào làm case này lệch đều là hồi quy.",
+  "source": "synthetic",
+  "approvedBy": "",
+  "approvedOn": "",
+  "workbooks": [
+    {
+      "sourceFile": "So_511.xlsx",
+      "sheetNames": [
+        "So 511"
+      ],
+      "sheetRows": {
+        "So 511": [
+          [
+            "CÔNG TY TNHH MẪU"
+          ],
+          [
+            "SỔ CHI TIẾT TÀI KHOẢN 511"
+          ],
+          [],
+          [
+            "Ngày",
+            "Chứng từ",
+            "Ngày CT",
+            "Số hóa đơn",
+            "Diễn giải",
+            "TK đối ứng",
+            "Phát sinh Nợ",
+            "Phát sinh Có"
+          ],
+          [
+            "01/07/2026",
+            "BH",
+            "01/07/2026",
+            "00012345",
+            "Bán hàng",
+            "131",
+            0,
+            10000000
+          ],
+          [
+            "01/07/2026",
+            "BH",
+            "01/07/2026",
+            "00012346",
+            "Bán hàng",
+            "131",
+            0,
+            20000000
+          ]
+        ]
+      }
+    },
+    {
+      "sourceFile": "So_33311.xlsx",
+      "sheetNames": [
+        "So 33311"
+      ],
+      "sheetRows": {
+        "So 33311": [
+          [
+            "CÔNG TY TNHH MẪU"
+          ],
+          [
+            "SỔ CHI TIẾT TÀI KHOẢN 33311"
+          ],
+          [],
+          [
+            "Ngày",
+            "Chứng từ",
+            "Ngày CT",
+            "Số hóa đơn",
+            "Diễn giải",
+            "TK đối ứng",
+            "Phát sinh Nợ",
+            "Phát sinh Có"
+          ],
+          [
+            "01/07/2026",
+            "BH",
+            "01/07/2026",
+            "00012345",
+            "Thuế GTGT đầu ra",
+            "131",
+            0,
+            1000000
+          ],
+          [
+            "01/07/2026",
+            "BH",
+            "01/07/2026",
+            "00012346",
+            "Thuế GTGT đầu ra",
+            "131",
+            0,
+            2000000
+          ]
+        ]
+      }
+    },
+    {
+      "sourceFile": "Bang_ke_BR.xlsx",
+      "sheetNames": [
+        "BR GTGT"
+      ],
+      "sheetRows": {
+        "BR GTGT": [
+          [
+            "BẢNG KÊ HÓA ĐƠN BÁN RA"
+          ],
+          [
+            "Kỳ: Tháng 07/2026"
+          ],
+          [],
+          [],
+          [
+            "STT",
+            "Ký hiệu",
+            "Mẫu số",
+            "Số hóa đơn",
+            "Ngày",
+            "Người mua",
+            "MST",
+            "Thuế suất",
+            "Doanh số chưa thuế",
+            "Thuế GTGT"
+          ],
+          [
+            1,
+            "C26TAA",
+            "1",
+            "00012345",
+            "01/07/2026",
+            "KH",
+            "0100000001",
+            "10%",
+            10000000,
+            1000000
+          ],
+          [
+            2,
+            "C26TAA",
+            "1",
+            "00012346",
+            "01/07/2026",
+            "KH",
+            "0100000001",
+            "10%",
+            20000000,
+            2000000
+          ]
+        ]
+      }
+    }
+  ],
+  "expected": {
+    "summary": {
+      "total": 2,
+      "matched511": 2,
+      "unmatched511": 0,
+      "matched33311": 2,
+      "unmatched33311": 0,
+      "missingInBR": 0,
+      "missingInLedger": 0,
+      "needsReview": 0
+    },
+    "report511": {
+      "12345": {
+        "ledger": 10000000,
+        "br": 10000000,
+        "diff": 0,
+        "status": "MATCH",
+        "needsReview": false
+      },
+      "12346": {
+        "ledger": 20000000,
+        "br": 20000000,
+        "diff": 0,
+        "status": "MATCH",
+        "needsReview": false
+      }
+    },
+    "report33311": {
+      "12345": {
+        "ledger": 1000000,
+        "br": 1000000,
+        "diff": 0,
+        "status": "MATCH",
+        "needsReview": false,
+        "vatTang": 0
+      },
+      "12346": {
+        "ledger": 2000000,
+        "br": 2000000,
+        "diff": 0,
+        "status": "MATCH",
+        "needsReview": false,
+        "vatTang": 0
+      }
+    }
+  }
+}

@@ -1,11 +1,7 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Upload, FileSpreadsheet, AlertCircle, Download, FileX, Calculator } from 'lucide-react';
 import { reconcileAccountingData } from '../utils/accounting/reconcile.js';
-import {
-  detectWorkbookKind,
-  parseBrWorkbook,
-  parseLedgerWorkbook,
-} from '../utils/accounting/workbookParser.js';
+import { reconcileWorkbooks } from '../utils/accounting/reconcilePipeline.js';
 import { exportReconcileWorkbook } from '../utils/accounting/reconcileExport.js';
 import {
   EXCEL_FILE_LIMITS,
@@ -55,44 +51,25 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
 
     setIsProcessing(true);
 
-    const newFiles = { ...files };
-    const newData = { ...data };
-    const newDiagnostics = [];
-
     try {
       const XLSX = await import('xlsx');
 
+      const workbooks = [];
       for (const file of validation.accepted) {
-        const workbook = await readWorkbookRows(file, XLSX);
-        const kind = detectWorkbookKind(workbook);
-
-        // Trước đây file không nhận diện được bị bỏ qua im lặng, khiến kết quả
-        // đối chiếu thiếu một nguồn mà người dùng không hề biết.
-        if (!kind) {
-          newDiagnostics.push({
-            sourceFile: file.name,
-            sourceSheet: workbook.sheetNames.join(', '),
-            ok: false,
-            reason: 'Không nhận diện được là Sổ 511, Sổ 33311 hay Bảng kê BR.',
-          });
-          continue;
-        }
-
-        const parsed = kind === 'br'
-          ? parseBrWorkbook({ ...workbook, sourceFile: file.name })
-          : parseLedgerWorkbook({ ...workbook, sourceFile: file.name });
-
-        newDiagnostics.push(...parsed.diagnostics.map((entry) => ({ ...entry, kind })));
-
-        if (parsed.records.length > 0) {
-          newFiles[kind] = file;
-          newData[kind] = parsed.records;
-        }
+        workbooks.push({ ...(await readWorkbookRows(file, XLSX)), sourceFile: file.name });
       }
 
-      setFiles(newFiles);
-      setData(newData);
-      setDiagnostics(newDiagnostics);
+      // Cùng một pipeline với bộ golden test, nên kết quả kế toán đã duyệt
+      // chính là kết quả hiển thị ở đây.
+      const outcome = reconcileWorkbooks(workbooks);
+
+      setFiles((current) => ({ ...current, ...outcome.files }));
+      setData((current) => ({
+        511: outcome.data['511'].length > 0 ? outcome.data['511'] : current['511'],
+        33311: outcome.data['33311'].length > 0 ? outcome.data['33311'] : current['33311'],
+        br: outcome.data.br.length > 0 ? outcome.data.br : current.br,
+      }));
+      setDiagnostics(outcome.diagnostics);
       setFileError(errors.join(' \u2022 '));
     } catch (err) {
       console.error('L\u1ed7i \u0111\u1ecdc file:', err);

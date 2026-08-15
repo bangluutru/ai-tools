@@ -1,0 +1,218 @@
+{
+  "name": "VAT hàng tặng và bảng kê máy tính tiền",
+  "description": "Sổ 33311 có dòng thuế của hàng tặng phải tách riêng để kế toán soát, và hóa đơn thứ hai nằm ở sheet MTT có bố cục cột khác sheet GTGT.",
+  "source": "synthetic",
+  "approvedBy": "",
+  "approvedOn": "",
+  "workbooks": [
+    {
+      "sourceFile": "So_511.xlsx",
+      "sheetNames": [
+        "So 511"
+      ],
+      "sheetRows": {
+        "So 511": [
+          [
+            "CÔNG TY TNHH MẪU"
+          ],
+          [
+            "SỔ CHI TIẾT TÀI KHOẢN 511"
+          ],
+          [],
+          [
+            "Ngày",
+            "Chứng từ",
+            "Ngày CT",
+            "Số hóa đơn",
+            "Diễn giải",
+            "TK đối ứng",
+            "Phát sinh Nợ",
+            "Phát sinh Có"
+          ],
+          [
+            "01/07/2026",
+            "BH",
+            "01/07/2026",
+            "00012346",
+            "Bán hàng",
+            "131",
+            0,
+            20000000
+          ],
+          [
+            "01/07/2026",
+            "BH",
+            "01/07/2026",
+            "00012347",
+            "Bán hàng",
+            "131",
+            0,
+            5000000
+          ]
+        ]
+      }
+    },
+    {
+      "sourceFile": "So_33311.xlsx",
+      "sheetNames": [
+        "So 33311"
+      ],
+      "sheetRows": {
+        "So 33311": [
+          [
+            "CÔNG TY TNHH MẪU"
+          ],
+          [
+            "SỔ CHI TIẾT TÀI KHOẢN 33311"
+          ],
+          [],
+          [
+            "Ngày",
+            "Chứng từ",
+            "Ngày CT",
+            "Số hóa đơn",
+            "Diễn giải",
+            "TK đối ứng",
+            "Phát sinh Nợ",
+            "Phát sinh Có"
+          ],
+          [
+            "01/07/2026",
+            "BH",
+            "01/07/2026",
+            "00012346",
+            "Thuế GTGT hàng tặng",
+            "131",
+            0,
+            2000000
+          ],
+          [
+            "01/07/2026",
+            "BH",
+            "01/07/2026",
+            "00012347",
+            "Thuế GTGT đầu ra",
+            "131",
+            0,
+            500000
+          ]
+        ]
+      }
+    },
+    {
+      "sourceFile": "Bang_ke_BR.xlsx",
+      "sheetNames": [
+        "BR GTGT",
+        "BR MTT"
+      ],
+      "sheetRows": {
+        "BR GTGT": [
+          [
+            "BẢNG KÊ HÓA ĐƠN BÁN RA"
+          ],
+          [
+            "Kỳ: Tháng 07/2026"
+          ],
+          [],
+          [],
+          [
+            "STT",
+            "Ký hiệu",
+            "Mẫu số",
+            "Số hóa đơn",
+            "Ngày",
+            "Người mua",
+            "MST",
+            "Thuế suất",
+            "Doanh số chưa thuế",
+            "Thuế GTGT"
+          ],
+          [
+            1,
+            "C26TAA",
+            "1",
+            "00012346",
+            "01/07/2026",
+            "KH",
+            "0100000001",
+            "10%",
+            20000000,
+            2000000
+          ]
+        ],
+        "BR MTT": [
+          [
+            "BẢNG KÊ MÁY TÍNH TIỀN"
+          ],
+          [],
+          [
+            "STT",
+            "Ký hiệu",
+            "Số hóa đơn",
+            "Ngày",
+            "Người mua",
+            "Đơn giá",
+            "Doanh số chưa thuế",
+            "Tiền thuế"
+          ],
+          [
+            1,
+            "C26TAA",
+            "00012347",
+            "03/07/2026",
+            "KH",
+            5000000,
+            5000000,
+            500000
+          ]
+        ]
+      }
+    }
+  ],
+  "expected": {
+    "summary": {
+      "total": 2,
+      "matched511": 2,
+      "unmatched511": 0,
+      "matched33311": 2,
+      "unmatched33311": 0,
+      "missingInBR": 0,
+      "missingInLedger": 0,
+      "needsReview": 0
+    },
+    "report511": {
+      "12346": {
+        "ledger": 20000000,
+        "br": 20000000,
+        "diff": 0,
+        "status": "MATCH",
+        "needsReview": false
+      },
+      "12347": {
+        "ledger": 5000000,
+        "br": 5000000,
+        "diff": 0,
+        "status": "MATCH",
+        "needsReview": false
+      }
+    },
+    "report33311": {
+      "12346": {
+        "ledger": 2000000,
+        "br": 2000000,
+        "diff": 0,
+        "status": "MATCH",
+        "needsReview": false,
+        "vatTang": 2000000
+      },
+      "12347": {
+        "ledger": 500000,
+        "br": 500000,
+        "diff": 0,
+        "status": "MATCH",
+        "needsReview": false,
+        "vatTang": 0
+      }
+    }
+  }
+}
