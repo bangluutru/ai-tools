@@ -36,6 +36,7 @@ import {
 // =========================================================================
 const ImageConvertTool = lazy(() => import('./tools/image-convert/ImageConvertTool'));
 const ScreenCaptureTool = lazy(() => import('./tools/screen-capture/ScreenCaptureTool'));
+const BarcodeQrTool = lazy(() => import('./tools/barcode-qr/BarcodeQrTool'));
 const PdfSplitTool = lazy(() => import('./tools/pdf-split/PdfSplitTool'));
 const PdfMergeTool = lazy(() => import('./tools/pdf-merge/PdfMergeTool'));
 const PdfCompressTool = lazy(() => import('./tools/pdf-compress/PdfCompressTool'));
@@ -44,11 +45,11 @@ const EditorStudioTool = lazy(() => import('./tools/editor-studio/EditorStudioTo
 const InvoiceTool = lazy(() => import('./tools/invoice-webapp/InvoiceTool'));
 const AutoBiTool = lazy(() => import('./tools/auto-bi/AutoBiTool'));
 const AccountingReconcileTool = lazy(() => import('./tools/accounting-reconcile/AccountingReconcileTool'));
-const OmniConvertTool = lazy(() => import('./tools/omniconvert/OmniConvertTool'));
 
 const toolComponentMap = {
   'image-convert': ImageConvertTool,
   'screen-capture': ScreenCaptureTool,
+  'barcode-qr': BarcodeQrTool,
   'pdf-split': PdfSplitTool,
   'pdf-merge': PdfMergeTool,
   'pdf-compress': PdfCompressTool,
@@ -56,8 +57,7 @@ const toolComponentMap = {
   'editor-studio': EditorStudioTool,
   'invoice-webapp': InvoiceTool,
   'auto-bi': AutoBiTool,
-  'accounting-reconcile': AccountingReconcileTool,
-  'omniconvert': OmniConvertTool
+  'accounting-reconcile': AccountingReconcileTool
 };
 
 export default function App() {

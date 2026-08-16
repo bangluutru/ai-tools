@@ -23,13 +23,8 @@ const toolGovernance = {
     priority: 3,
     outputPurpose: 'utility'
   },
-  'omniconvert': {
-    readiness: 'beta',
-    processing: 'browser',
-    priority: 2,
-    outputPurpose: 'utility'
-  },
   'screen-capture': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
+  'barcode-qr': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-split': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-merge': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-compress': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
@@ -122,6 +117,22 @@ const toolDefinitions = [
     badge: 'CLIPBOARD',
     popular: true,
     tags: ['screenshot', 'capture', 'chụp màn hình', 'clipboard', 'snip', 'annotate', 'mũi tên', 'arrow', 'blur']
+  },
+  {
+    id: 'barcode-qr',
+    name_vn: 'Tạo Mã QR & Barcode Chuẩn',
+    name_en: 'CodeCraft QR & Barcode Studio',
+    name_ja: 'QRコード＆バーコード作成',
+    desc_vn: 'Tạo mã QR nghệ thuật nhúng logo, gradient màu và mã vạch 1D chuẩn GS1 (Code128, EAN-13, UPC, ITF-14) 100% offline.',
+    desc_en: 'Create styled QR codes with custom logos, dual gradients, and GS1 industrial 1D barcodes 100% in-browser.',
+    desc_ja: 'ロゴ埋め込みQRコード、グラデーションカラー、GS1産業用バーコード（Code128、EAN-13、UPC）を完全ローカルで生成。',
+    category: 'image',
+    icon: 'QrCode',
+    gradient: 'from-brand-600 via-indigo-600 to-cyan-500',
+    color: '#8b5cf6',
+    badge: 'GS1 & LOGO',
+    popular: true,
+    tags: ['qr', 'barcode', 'mã vạch', 'mã qr', 'ean', 'code128', 'upc', 'itf-14', 'logo', 'batch', 'generator']
   },
   {
     id: 'pdf-split',
@@ -250,22 +261,6 @@ const toolDefinitions = [
     badge: 'AUTOMATION',
     popular: true,
     tags: ['excel', 'mapping', 'xlsx', 'data', 'tự động hóa']
-  },
-  {
-    id: 'omniconvert',
-    name_vn: 'Chuyển Đổi Đa Năng OmniConvert',
-    name_en: 'OmniConvert Universal File Converter',
-    name_ja: 'OmniConvert ユニバーサルファイル変換',
-    desc_vn: 'Chuyển đổi cực nhanh các định dạng DOCX, PPTX, XLSX và hình ảnh sang PDF 100% bảo mật trên trình duyệt.',
-    desc_en: 'Lightning-fast client-side conversion of DOCX, PPTX, XLSX, and images to PDF with zero server uploads.',
-    desc_ja: 'サーバーにアップロードせずに、ブラウザ上でDOCX、PPTX、XLSX、および画像をPDFに高速変換します。',
-    category: 'office',
-    icon: 'RefreshCw',
-    gradient: 'from-orange-500 to-amber-600',
-    color: '#f97316',
-    badge: 'NEW',
-    popular: true,
-    tags: ['convert', 'pdf', 'docx', 'pptx', 'xlsx', 'chuyển đổi']
   },
   {
     id: 'editor-studio',

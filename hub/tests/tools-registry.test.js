@@ -41,7 +41,6 @@ test('the three production priorities are explicit and unique', () => {
 
   assert.deepEqual(priorities, [
     'accounting-reconcile',
-    'omniconvert',
     'invoice-webapp',
     'image-convert',
   ]);
