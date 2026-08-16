@@ -124,7 +124,7 @@ export function validateAndFixBarcode(symbology, input) {
     }
 
     case 'CODE39': {
-      const validChars = /^[0-9A-Z\-\.\ \$\/\+\%]+$/i;
+      const validChars = /^[0-9A-Z. $/+%-]+$/i;
       if (!validChars.test(trimmed)) {
         return {
           isValid: false,
@@ -148,7 +148,7 @@ export function validateAndFixBarcode(symbology, input) {
     }
 
     case 'codabar': {
-      const validCodabar = /^[A-D][0-9\-\$\:\/\.\+]+[A-D]$/i;
+      const validCodabar = /^[A-D][0-9$:/.+-]+[A-D]$/i;
       if (!validCodabar.test(trimmed)) {
         return {
           isValid: false,

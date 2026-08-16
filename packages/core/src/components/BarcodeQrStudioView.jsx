@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import QRCodeStyling from 'qr-code-styling';
 import JsBarcode from 'jsbarcode';
 import JSZip from 'jszip';
@@ -283,7 +283,6 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
   const t = i18n[langKey];
 
   const [mode, setMode] = useState('qr'); // 'qr' | 'barcode' | 'batch'
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   // QR Code Config
   const [qrConfig, setQrConfig] = useState({

@@ -52,6 +52,13 @@ const toolGovernance = {
     outputPurpose: 'reference',
     unavailableReason: 'Tạm dừng phát triển. Cần sanitize SVG/HTML đầu vào và bỏ dữ liệu mẫu gây hiểu nhầm.'
   },
+  // priority chỉ đánh dấu ba miniapp ưu tiên sản phẩm (kế toán, hóa đơn, ảnh);
+  // omniconvert là tiện ích nên không mang số ưu tiên.
+  'omniconvert': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility'
+  },
   'excel-mapping': {
     readiness: 'experimental',
     processing: 'hybrid',
@@ -245,6 +252,22 @@ const toolDefinitions = [
     badge: 'A4 LAYOUT',
     popular: false,
     tags: ['certificate', 'bằng cấp', 'chứng chỉ', 'bằng lái', 'diploma']
+  },
+  {
+    id: 'omniconvert',
+    name_vn: 'Chuyển Đổi Đa Năng OmniConvert',
+    name_en: 'OmniConvert Universal File Converter',
+    name_ja: 'OmniConvert ユニバーサルファイル変換',
+    desc_vn: 'Chuyển đổi cực nhanh các định dạng DOCX, PPTX, XLSX và hình ảnh sang PDF 100% bảo mật trên trình duyệt.',
+    desc_en: 'Lightning-fast client-side conversion of DOCX, PPTX, XLSX, and images to PDF with zero server uploads.',
+    desc_ja: 'サーバーにアップロードせずに、ブラウザ上でDOCX、PPTX、XLSX、および画像をPDFに高速変換します。',
+    category: 'office',
+    icon: 'RefreshCw',
+    gradient: 'from-orange-500 to-amber-600',
+    color: '#f97316',
+    badge: 'NEW',
+    popular: true,
+    tags: ['convert', 'pdf', 'docx', 'pptx', 'xlsx', 'chuyển đổi']
   },
   {
     id: 'excel-mapping',

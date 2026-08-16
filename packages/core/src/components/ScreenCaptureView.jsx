@@ -343,7 +343,6 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   const [countdown, setCountdown] = useState(0);
   const [selectedFormat, setSelectedFormat] = useState('png');
   const [showFormatDropdown, setShowFormatDropdown] = useState(false);
-  const [toastMessage, setToastMessage] = useState(null);
   const [isCopied, setIsCopied] = useState(false);
 
   const [history, setHistory] = useState(() => {
@@ -484,10 +483,8 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     try {
       await copyCanvasToClipboard(currentCanvas);
       setIsCopied(true);
-      setToastMessage(t.bannerAutoCopied);
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.85 }, colors: ['#7c3aed', '#06b6d4', '#10b981'] });
       setTimeout(() => setIsCopied(false), 3000);
-      setTimeout(() => setToastMessage(null), 5000);
     } catch (err) {
       alert(`Copy error: ${err.message}`);
     }

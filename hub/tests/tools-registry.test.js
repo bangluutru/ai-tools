@@ -21,7 +21,7 @@ const PAUSED_TOOL_IDS = [
 
 
 test('every miniapp declares readiness, processing mode and output purpose', () => {
-  assert.equal(tools.length, 17);
+  assert.equal(tools.length, 18);
   for (const tool of tools) {
     assert.match(tool.readiness, /^(beta|experimental|in-development)$/);
     // Trạng thái quyết định miniapp nằm nhóm nào, nên không dùng cờ ẩn riêng nữa.
@@ -34,8 +34,9 @@ test('every miniapp declares readiness, processing mode and output purpose', () 
 
 
 test('the three production priorities are explicit and unique', () => {
-  const priorities = tools
-    .filter((tool) => tool.priority)
+  const prioritised = tools.filter((tool) => tool.priority);
+  const priorities = prioritised
+    .slice()
     .sort((left, right) => left.priority - right.priority)
     .map((tool) => tool.id);
 
@@ -44,6 +45,12 @@ test('the three production priorities are explicit and unique', () => {
     'invoice-webapp',
     'image-convert',
   ]);
+
+  // Test này từng bị nới lỏng để khớp với hai miniapp cùng mang priority 2,
+  // nên kiểm tra tính duy nhất tách riêng để lần sau va chạm sẽ báo đỏ.
+  const numbers = prioritised.map((tool) => tool.priority);
+  assert.deepEqual(numbers.slice().sort(), [1, 2, 3]);
+  assert.equal(new Set(numbers).size, numbers.length, 'mỗi mức ưu tiên chỉ thuộc về một miniapp');
 });
 
 
