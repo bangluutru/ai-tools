@@ -2,6 +2,18 @@ import { renderAsync } from 'docx-preview';
 import mammoth from 'mammoth';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+
+/**
+ * Tiền tố class mà docx-preview gắn cho phần tử nó sinh ra. Selector chọn trang
+ * phải dựng từ đúng hằng này, nếu không hai bên lệch nhau là chọn nhầm phần tử.
+ */
+const DOCX_CLASS_PREFIX = 'docx-preview-root';
+
+/** Dung sai chiều cao (pt) để lệch làm tròn pixel không kích hoạt cắt trang. */
+const PAGE_FIT_TOLERANCE_PT = 2;
+
+/** Phần dư mỏng hơn ngần này (px) thì bỏ, không dựng thêm lát. */
+const MIN_SLICE_PX = 1;
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import { loadPdfDocument, extractPdfStructuredText } from './pdfHelper.js';
 
@@ -35,7 +47,7 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
     // 1. Ưu tiên render bằng docx-preview để giữ nguyên 1:1 format Word (bảng, layout, margins, fonts, images)
     try {
       await renderAsync(arrayBuffer, staging, undefined, {
-        className: 'docx-preview-root',
+        className: DOCX_CLASS_PREFIX,
         inWrapper: true,
         ignoreWidth: false,
         ignoreHeight: false,
@@ -107,16 +119,34 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
     }
     await new Promise((r) => setTimeout(r, 400));
 
-    // Tìm các trang được phân chia bởi docx-preview
-    let pageElements = Array.from(staging.querySelectorAll('section.docx, article.docx'));
+    // Tìm các trang docx-preview đã chia.
+    //
+    // `className` của docx-preview là *tiền tố* class chứ không phải tên class
+    // gốc, nên trang thật mang class `${DOCX_CLASS_PREFIX}` còn wrapper mang
+    // `${DOCX_CLASS_PREFIX}-wrapper`. Trước đây selector viết cứng `section.docx`
+    // trong khi prefix lại được đặt khác, nên không khớp gì và rơi xuống
+    // `staging.firstElementChild` — vốn là thẻ <style> do docx-preview chèn.
+    // Kích thước 0x0 khiến canvas 0x0, tỷ lệ 0/0 = NaN và jsPDF ném
+    // "Invalid argument passed to jsPDF.scale".
+    const hasSize = (el) => el && el.scrollWidth > 0 && el.scrollHeight > 0;
+
+    let pageElements = Array.from(
+      staging.querySelectorAll(`section.${DOCX_CLASS_PREFIX}, article.${DOCX_CLASS_PREFIX}`),
+    ).filter(hasSize);
+
     if (pageElements.length === 0) {
-      const wrapperEl = staging.querySelector('.docx-wrapper, .docx-preview-root');
-      if (wrapperEl) {
-        pageElements = Array.from(wrapperEl.querySelectorAll('section'));
-      }
+      // Bất kể prefix là gì, docx-preview luôn phát một <section> cho mỗi trang.
+      pageElements = Array.from(staging.querySelectorAll('section')).filter(hasSize);
     }
     if (pageElements.length === 0) {
-      pageElements = [staging.firstElementChild || staging];
+      const wrapperEl = staging.querySelector(`.${DOCX_CLASS_PREFIX}-wrapper, .${DOCX_CLASS_PREFIX}`);
+      pageElements = Array.from(wrapperEl?.children ?? []).filter(hasSize);
+    }
+    if (pageElements.length === 0) {
+      pageElements = [staging.firstElementChild, staging].filter(hasSize);
+    }
+    if (pageElements.length === 0) {
+      throw new Error('Không dựng được nội dung DOCX để chụp trang.');
     }
 
     if (onProgress) onProgress(70);
@@ -174,24 +204,33 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
       const imgData = canvas.toDataURL('image/jpeg', 0.96);
 
       // Tính tỷ lệ vừa trang
+      if (!canvas.width || !canvas.height) {
+        throw new Error(`Trang ${i + 1} của DOCX dựng ra ảnh rỗng, không thể xuất PDF.`);
+      }
+
       const canvasRatio = canvas.height / canvas.width;
       const targetHeight = pdfWidth * canvasRatio;
 
-      if (targetHeight > pdfHeight && totalPages === 1) {
+      // Một trang A4 render ra đúng 841,9pt, nhỉnh hơn chiều cao A4 (841,89pt)
+      // chỉ vì làm tròn pixel. Không có dung sai thì trang bình thường cũng bị
+      // đẩy vào nhánh cắt và sinh ra lát thừa cao 0.
+      if (targetHeight > pdfHeight + PAGE_FIT_TOLERANCE_PT && totalPages === 1) {
         // Nếu chỉ có 1 trang dài (từ fallback), tự động chia nhỏ thành các trang A4
         let remainingHeight = canvas.height;
         let yOffset = 0;
         const pageCanvasHeight = canvas.width * (pdfHeight / pdfWidth);
 
         let sliceIndex = 0;
-        while (remainingHeight > 0) {
+        // Dừng khi phần dư mỏng hơn một pixel: canvas cao 0 làm toDataURL trả
+        // "data:," và jsPDF ném "Invalid argument passed to jsPDF.scale".
+        while (remainingHeight >= MIN_SLICE_PX) {
           if (sliceIndex > 0) {
             pdf.addPage('a4', 'portrait');
           }
 
           const sliceCanvas = document.createElement('canvas');
           sliceCanvas.width = canvas.width;
-          sliceCanvas.height = Math.min(pageCanvasHeight, remainingHeight);
+          sliceCanvas.height = Math.max(1, Math.round(Math.min(pageCanvasHeight, remainingHeight)));
           const sCtx = sliceCanvas.getContext('2d');
 
           sCtx.drawImage(

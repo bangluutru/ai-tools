@@ -7,7 +7,9 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {
   if (onProgress) onProgress(15);
   const arrayBuffer = await file.arrayBuffer();
 
-  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+  // cellDates: ô ngày trong xlsx lưu dưới dạng số sê-ri; không bật cờ này thì
+  // "15/01/2026" đọc ra thành 46037.
+  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
   const sheetNames = workbook.SheetNames;
 
   if (sheetNames.length === 0) {
@@ -40,7 +42,9 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {
     for (let sIndex = 0; sIndex < totalSheets; sIndex++) {
       const sheetName = sheetNames[sIndex];
       const worksheet = workbook.Sheets[sheetName];
-      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      // raw: false trả về chuỗi đã áp định dạng của ô, nên ngày, tiền tệ và
+      // phần trăm hiện trong PDF đúng như người dùng thấy trong Excel.
+      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
 
       if (rawData.length === 0) continue;
 
@@ -217,7 +221,9 @@ export async function convertPdfToXlsx(file, _options = {}, onProgress = () => {
 export async function convertXlsxToCsv(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(30);
   const arrayBuffer = await file.arrayBuffer();
-  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+  // cellDates: ô ngày trong xlsx lưu dưới dạng số sê-ri; không bật cờ này thì
+  // "15/01/2026" đọc ra thành 46037.
+  const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
 
