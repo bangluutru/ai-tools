@@ -23,6 +23,12 @@ const toolGovernance = {
     priority: 3,
     outputPurpose: 'utility'
   },
+  'omniconvert': {
+    readiness: 'beta',
+    processing: 'browser',
+    priority: 2,
+    outputPurpose: 'utility'
+  },
   'screen-capture': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-split': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-merge': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
@@ -244,6 +250,22 @@ const toolDefinitions = [
     badge: 'AUTOMATION',
     popular: true,
     tags: ['excel', 'mapping', 'xlsx', 'data', 'tự động hóa']
+  },
+  {
+    id: 'omniconvert',
+    name_vn: 'Chuyển Đổi Đa Năng OmniConvert',
+    name_en: 'OmniConvert Universal File Converter',
+    name_ja: 'OmniConvert ユニバーサルファイル変換',
+    desc_vn: 'Chuyển đổi cực nhanh các định dạng DOCX, PPTX, XLSX và hình ảnh sang PDF 100% bảo mật trên trình duyệt.',
+    desc_en: 'Lightning-fast client-side conversion of DOCX, PPTX, XLSX, and images to PDF with zero server uploads.',
+    desc_ja: 'サーバーにアップロードせずに、ブラウザ上でDOCX、PPTX、XLSX、および画像をPDFに高速変換します。',
+    category: 'office',
+    icon: 'RefreshCw',
+    gradient: 'from-orange-500 to-amber-600',
+    color: '#f97316',
+    badge: 'NEW',
+    popular: true,
+    tags: ['convert', 'pdf', 'docx', 'pptx', 'xlsx', 'chuyển đổi']
   },
   {
     id: 'editor-studio',

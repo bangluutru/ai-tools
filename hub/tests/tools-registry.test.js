@@ -21,7 +21,7 @@ const PAUSED_TOOL_IDS = [
 
 
 test('every miniapp declares readiness, processing mode and output purpose', () => {
-  assert.equal(tools.length, 16);
+  assert.equal(tools.length, 17);
   for (const tool of tools) {
     assert.match(tool.readiness, /^(beta|experimental|in-development)$/);
     // Trạng thái quyết định miniapp nằm nhóm nào, nên không dùng cờ ẩn riêng nữa.
@@ -41,6 +41,7 @@ test('the three production priorities are explicit and unique', () => {
 
   assert.deepEqual(priorities, [
     'accounting-reconcile',
+    'omniconvert',
     'invoice-webapp',
     'image-convert',
   ]);
