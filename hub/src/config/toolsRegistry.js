@@ -23,10 +23,10 @@ const toolGovernance = {
     priority: 3,
     outputPurpose: 'utility'
   },
+  'screen-capture': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-split': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-merge': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-compress': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
-  'omniconvert': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
   'pdf-overlay': {
     readiness: IN_DEVELOPMENT,
     processing: 'browser',
@@ -102,6 +102,22 @@ const toolDefinitions = [
     tags: ['image', 'webp', 'convert', 'png', 'jpg', 'gif', 'compress', 'ảnh']
   },
   {
+    id: 'screen-capture',
+    name_vn: 'Chụp Màn Hình & Chú Thích',
+    name_en: 'SnapCraft Screen Capture',
+    name_ja: '画面キャプチャ＆注釈',
+    desc_vn: 'Chụp nhanh màn hình, kéo chọn vùng tự động copy Clipboard 1-chạm và biên tập vẽ mũi tên, ghi chú, làm mờ.',
+    desc_en: 'Fast screen capture, instant auto-copy to clipboard on snipping release, with live vector annotation & blur.',
+    desc_ja: '画面を素早くキャプチャ、選択領域を即時クリップボードにコピーし、矢印や文字注釈・ぼかしを追加。',
+    category: 'image',
+    icon: 'Camera',
+    gradient: 'from-brand-500 to-cyan-500',
+    color: '#7c3aed',
+    badge: 'CLIPBOARD',
+    popular: true,
+    tags: ['screenshot', 'capture', 'chụp màn hình', 'clipboard', 'snip', 'annotate', 'mũi tên', 'arrow', 'blur']
+  },
+  {
     id: 'pdf-split',
     name_vn: 'Tách Tệp PDF (Splitter)',
     name_en: 'PDF Splitter',
@@ -148,22 +164,6 @@ const toolDefinitions = [
     badge: '100% LOCAL',
     popular: true,
     tags: ['pdf', 'compress', 'nén', 'thu nhỏ', 'dung lượng', 'size', 'slim', 'optimizer']
-  },
-  {
-    id: 'omniconvert',
-    name_vn: 'Chuyển Đổi Tài Liệu & Ảnh ⇄ PDF',
-    name_en: 'OmniConvert Universal Converter',
-    name_ja: '万能ファイル・PDF相互変換',
-    desc_vn: 'Chuyển đổi 2 chiều giữa DOCX, PPTX, XLSX, Ảnh (PNG, JPG, WebP) và PDF 100% trên trình duyệt.',
-    desc_en: 'Bidirectional conversion between DOCX, PPTX, XLSX, Images (PNG, JPG, WebP) and PDF 100% in-browser.',
-    desc_ja: 'DOCX、PPTX、XLSX、画像（PNG、JPG、WebP）とPDFをブラウザ上で100%相互変換。',
-    category: 'pdf',
-    icon: 'FileStack',
-    gradient: 'from-blue-600 via-indigo-600 to-cyan-500',
-    color: '#0e8ce9',
-    badge: 'ALL-IN-ONE',
-    popular: true,
-    tags: ['convert', 'chuyển đổi', 'pdf', 'docx', 'word', 'excel', 'xlsx', 'pptx', 'powerpoint', 'image', 'png', 'jpg', 'webp']
   },
   {
     id: 'pdf-overlay',

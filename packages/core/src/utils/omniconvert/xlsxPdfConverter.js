@@ -101,8 +101,46 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {
       const canvasRatio = canvas.height / canvas.width;
       const targetHeight = pdfWidth * canvasRatio;
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.96);
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, Math.min(targetHeight, pdfHeight));
+      if (targetHeight <= pdfHeight) {
+        const imgData = canvas.toDataURL('image/jpeg', 0.96);
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, targetHeight);
+      } else {
+        let remainingHeight = canvas.height;
+        let yOffset = 0;
+        const pageCanvasHeight = canvas.width * (pdfHeight / pdfWidth);
+
+        let sliceIndex = 0;
+        while (remainingHeight > 0) {
+          if (sliceIndex > 0) {
+            pdf.addPage('a4', 'landscape');
+          }
+
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = Math.min(pageCanvasHeight, remainingHeight);
+          const sCtx = sliceCanvas.getContext('2d');
+
+          sCtx.drawImage(
+            canvas,
+            0,
+            yOffset,
+            canvas.width,
+            sliceCanvas.height,
+            0,
+            0,
+            canvas.width,
+            sliceCanvas.height
+          );
+
+          const sliceImgData = sliceCanvas.toDataURL('image/jpeg', 0.96);
+          const sliceRenderHeight = (sliceCanvas.height / canvas.width) * pdfWidth;
+          pdf.addImage(sliceImgData, 'JPEG', 0, 0, pdfWidth, sliceRenderHeight);
+
+          yOffset += pageCanvasHeight;
+          remainingHeight -= pageCanvasHeight;
+          sliceIndex++;
+        }
+      }
 
       if (onProgress) onProgress(30 + Math.round(((sIndex + 1) / totalSheets) * 60));
     }

@@ -16,14 +16,13 @@ code bị bỏ.
 Khác biệt so với "tạm khóa" trước đây: code của chúng không còn được build vào bundle portal
 và không còn nằm trong `npm run build:all`.
 
-## 2. Miniapp đang hoạt động (9)
+## 2. Miniapp đang hoạt động (8)
 
 | Miniapp | Readiness | Xử lý | Ghi chú |
 |---|---|---|---|
 | Đối chiếu kế toán | beta | trình duyệt | Ưu tiên 1. Vẫn cần fixture thật + golden result do kế toán duyệt. |
 | Đề nghị thanh toán | beta | trình duyệt | Ưu tiên 2. Bóc tách theo TT 91/2026/TT-BTC; mẫu bảng kê hiện tại đã được chủ sở hữu chấp nhận. |
 | Chuyển đổi ảnh WebP | beta | trình duyệt | Ưu tiên 3. |
-| OmniConvert (Tài liệu & Ảnh ⇄ PDF) | beta | trình duyệt | Chuyển đổi 2 chiều DOCX, PPTX, XLSX, Ảnh ⇄ PDF 100% In-Browser. |
 | Tách PDF | beta | trình duyệt | Giới hạn 50 MiB, 200 trang. |
 | Gộp PDF | beta | trình duyệt | Giới hạn 20 file, 500 trang. |
 | Mapping Excel | experimental | hybrid | Chỉ chế độ cục bộ; auto-map bằng AI chưa hoạt động. |

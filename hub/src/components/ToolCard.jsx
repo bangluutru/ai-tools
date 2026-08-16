@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Image, Scissors, Combine, Printer, Scale, Globe,
   Award, FileSpreadsheet, LayoutTemplate, Receipt, ArrowRight, Sparkles,
-  BarChart3, HelpCircle, Calculator, Minimize2
+  BarChart3, HelpCircle, Calculator, Minimize2, Camera
 } from 'lucide-react';
 
 const iconMap = {
@@ -10,6 +10,7 @@ const iconMap = {
   Scissors,
   Combine,
   Minimize2,
+  Camera,
   Printer,
   Scale,
   Globe,
