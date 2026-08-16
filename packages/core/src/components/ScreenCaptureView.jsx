@@ -1,4 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  IMAGE_INPUT_LIMITS,
+  rejectionMessages,
+  validateDocumentFiles,
+  verifyDocumentSignature,
+} from '../utils/documentFiles.js';
+import { MiniAppError } from './shared/MiniAppLayout.jsx';
 import confetti from 'canvas-confetti';
 import {
   Camera,
@@ -310,6 +317,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   const t = i18n[langKey];
 
   // Workflow Stage: 'idle' | 'snipping' | 'editing'
+  const [fileError, setFileError] = useState('');
   const [stage, setStage] = useState('idle');
 
   // Image states
@@ -418,7 +426,19 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   };
 
   // Handle Upload local file
-  const handleUploadFile = (file) => {
+  const handleUploadFile = async (file) => {
+    // Cùng giới hạn ảnh với các miniapp khác thay vì nhận bất kỳ tệp nào.
+    const validation = validateDocumentFiles([file], [], IMAGE_INPUT_LIMITS);
+    if (validation.accepted.length === 0) {
+      setFileError(rejectionMessages(validation.rejected).join(' • '));
+      return;
+    }
+    if (!(await verifyDocumentSignature(file))) {
+      setFileError(`${file.name}: nội dung không phải ảnh hợp lệ`);
+      return;
+    }
+    setFileError('');
+
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result;
@@ -890,6 +910,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col gap-6">
+      <MiniAppError>{fileError}</MiniAppError>
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}

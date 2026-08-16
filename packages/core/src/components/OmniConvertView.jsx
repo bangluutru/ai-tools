@@ -1,4 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  CONVERT_LIMITS,
+  rejectionMessages,
+  validateDocumentFiles,
+  verifyDocumentSignature,
+} from '../utils/documentFiles.js';
+import { MiniAppError } from './shared/MiniAppLayout.jsx';
 import confetti from 'canvas-confetti';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
@@ -147,6 +154,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
   const [mergeImagesToPdf, setMergeImagesToPdf] = useState(false);
 
   const [queue, setQueue] = useState([]);
+
+  const [fileError, setFileError] = useState('');
   const [isProcessingAll, setIsProcessingAll] = useState(false);
 
   const [previewItem, setPreviewItem] = useState(null);
@@ -211,8 +220,21 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
     }
   };
 
-  const handleFilesSelected = useCallback((files) => {
+  const handleFilesSelected = useCallback(async (files) => {
     if (!files || files.length === 0) return;
+
+    // Cùng bộ kiểm tra với các miniapp khác: giới hạn số lượng/dung lượng và
+    // đối chiếu magic byte trước khi đưa vào engine chuyển đổi.
+    const validation = validateDocumentFiles(files, [], CONVERT_LIMITS);
+    const rejected = rejectionMessages(validation.rejected);
+    const checked = [];
+    for (const file of validation.accepted) {
+      if (await verifyDocumentSignature(file)) checked.push(file);
+      else rejected.push(`${file.name}: nội dung không khớp phần mở rộng`);
+    }
+    setFileError(rejected.join(' • '));
+    if (checked.length === 0) return;
+    files = checked;
 
     const imageExts = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'bmp'];
     const imageFiles = files.filter(f => imageExts.includes(getFileExtension(f.name)));
@@ -537,6 +559,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
       {/* Drop Zone */}
       <div className="space-y-3">
+        <MiniAppError>{fileError}</MiniAppError>
         <div
           onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
           onDragLeave={(e) => { e.preventDefault(); setIsDragOver(false); }}

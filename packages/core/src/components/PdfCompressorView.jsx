@@ -1,4 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import {
+  PDF_COMPRESS_LIMITS,
+  rejectionMessages,
+  validateDocumentFiles,
+  verifyDocumentSignature,
+} from '../utils/documentFiles.js';
+import { MiniAppError } from './shared/MiniAppLayout.jsx';
 import JSZip from 'jszip';
 import confetti from 'canvas-confetti';
 import {
@@ -235,6 +242,8 @@ export default function PdfCompressorView({ displayLang = 'vi' }) {
   });
 
   const [files, setFiles] = useState([]);
+
+  const [fileError, setFileError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
   const [comparisonItem, setComparisonItem] = useState(null);
@@ -415,7 +424,21 @@ export default function PdfCompressorView({ displayLang = 'vi' }) {
   }, []);
 
   const handleFilesSelected = async (newFiles) => {
-    const newItems = newFiles.map((file) => ({
+    // Dùng chung bộ kiểm tra của portal: giới hạn số lượng/dung lượng và đối
+    // chiếu magic byte để tệp đổi đuôi không lọt vào engine nén.
+    const validation = validateDocumentFiles(newFiles, files, PDF_COMPRESS_LIMITS);
+    const rejected = rejectionMessages(validation.rejected);
+
+    const accepted = [];
+    for (const file of validation.accepted) {
+      if (await verifyDocumentSignature(file)) accepted.push(file);
+      else rejected.push(`${file.name}: nội dung không phải PDF hợp lệ`);
+    }
+
+    setFileError(rejected.join(' • '));
+    if (accepted.length === 0) return;
+
+    const newItems = accepted.map((file) => ({
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       file,
       name: file.name,
@@ -535,6 +558,8 @@ export default function PdfCompressorView({ displayLang = 'vi' }) {
           {t.subtitle}
         </p>
       </div>
+
+      <MiniAppError>{fileError}</MiniAppError>
 
       {/* Preset Selector Panel */}
       <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-4">

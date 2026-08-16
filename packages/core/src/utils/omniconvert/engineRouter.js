@@ -1,9 +1,26 @@
 import { getFileExtension } from './formats.js';
-import { convertImagesToPdf, convertPdfToImages, convertImageToImage } from './imagePdfConverter.js';
-import { convertDocxToPdf, convertPdfToDocx, convertDocxToTxt, convertPdfToTxt } from './docxPdfConverter.js';
-import { convertXlsxToPdf, convertPdfToXlsx, convertXlsxToCsv } from './xlsxPdfConverter.js';
-import { convertPdfToPptx, convertPptxToPdf } from './pptxPdfConverter.js';
-import { jsPDF } from 'jspdf';
+/**
+ * Bốn engine được nạp theo yêu cầu. Nếu import tĩnh, mở công cụ là kéo về cả
+ * jspdf, mammoth, docx-preview, pptxgenjs và html2canvas (~1,4 MB) dù người
+ * dùng chỉ định chuyển một tấm ảnh.
+ */
+const imageEngine = () => import('./imagePdfConverter.js');
+const docxEngine = () => import('./docxPdfConverter.js');
+const xlsxEngine = () => import('./xlsxPdfConverter.js');
+const pptxEngine = () => import('./pptxPdfConverter.js');
+
+const convertImagesToPdf = async (...args) => (await imageEngine()).convertImagesToPdf(...args);
+const convertPdfToImages = async (...args) => (await imageEngine()).convertPdfToImages(...args);
+const convertImageToImage = async (...args) => (await imageEngine()).convertImageToImage(...args);
+const convertDocxToPdf = async (...args) => (await docxEngine()).convertDocxToPdf(...args);
+const convertPdfToDocx = async (...args) => (await docxEngine()).convertPdfToDocx(...args);
+const convertDocxToTxt = async (...args) => (await docxEngine()).convertDocxToTxt(...args);
+const convertPdfToTxt = async (...args) => (await docxEngine()).convertPdfToTxt(...args);
+const convertXlsxToPdf = async (...args) => (await xlsxEngine()).convertXlsxToPdf(...args);
+const convertPdfToXlsx = async (...args) => (await xlsxEngine()).convertPdfToXlsx(...args);
+const convertXlsxToCsv = async (...args) => (await xlsxEngine()).convertXlsxToCsv(...args);
+const convertPdfToPptx = async (...args) => (await pptxEngine()).convertPdfToPptx(...args);
+const convertPptxToPdf = async (...args) => (await pptxEngine()).convertPptxToPdf(...args);
 
 export async function executeConversion(file, targetFormat, options = {}, onProgress = () => {}) {
   const sourceExt = getFileExtension(file.name);
@@ -70,6 +87,8 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
     if (targetExt === 'pdf') {
       if (onProgress) onProgress(20);
       const text = await file.text();
+      // Chỉ nhánh TXT→PDF cần jspdf, nạp tại chỗ để nhánh khác khỏi gánh.
+      const { jsPDF } = await import('jspdf');
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(11);

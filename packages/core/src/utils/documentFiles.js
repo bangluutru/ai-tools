@@ -23,6 +23,28 @@ export const PDF_MERGE_LIMITS = Object.freeze({
   extensions: ['.pdf'],
 });
 
+export const PDF_COMPRESS_LIMITS = Object.freeze({
+  maxFiles: 20,
+  maxFileBytes: 100 * MIB,
+  maxTotalBytes: 300 * MIB,
+  extensions: ['.pdf'],
+});
+
+export const CONVERT_LIMITS = Object.freeze({
+  maxFiles: 20,
+  maxFileBytes: 50 * MIB,
+  maxTotalBytes: 200 * MIB,
+  extensions: ['.docx', '.pptx', '.xlsx', '.pdf', '.png', '.jpg', '.jpeg', '.webp', '.svg'],
+});
+
+/** Ảnh đơn lẻ dùng làm đầu vào: logo mã QR, ảnh nạp vào trình chú thích. */
+export const IMAGE_INPUT_LIMITS = Object.freeze({
+  maxFiles: 1,
+  maxFileBytes: 15 * MIB,
+  maxTotalBytes: 15 * MIB,
+  extensions: ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'],
+});
+
 function extensionOf(name = '') {
   const dotIndex = name.lastIndexOf('.');
   return dotIndex >= 0 ? name.slice(dotIndex).toLowerCase() : '';
@@ -79,6 +101,37 @@ export function hasExpectedDocumentSignature(bytes, extension) {
         || (bytes[2] === 0x07 && bytes[3] === 0x08)
       );
   }
+  if (ext === '.docx' || ext === '.pptx') {
+    // Cùng họ OOXML với .xlsx nên dùng chung chữ ký ZIP.
+    return bytes.length >= 4
+      && bytes[0] === 0x50
+      && bytes[1] === 0x4b
+      && (
+        (bytes[2] === 0x03 && bytes[3] === 0x04)
+        || (bytes[2] === 0x05 && bytes[3] === 0x06)
+        || (bytes[2] === 0x07 && bytes[3] === 0x08)
+      );
+  }
+  if (ext === '.png') {
+    const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+    return signature.every((value, index) => bytes[index] === value);
+  }
+  if (ext === '.jpg' || ext === '.jpeg') {
+    return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+  if (ext === '.gif') {
+    return bytes.length >= 6 && String.fromCharCode(...bytes.slice(0, 6)).startsWith('GIF8');
+  }
+  if (ext === '.webp') {
+    // RIFF....WEBP — bốn byte kích thước nằm giữa nên cần 12 byte đầu.
+    return bytes.length >= 12
+      && String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF'
+      && String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP';
+  }
+  if (ext === '.svg') {
+    // SVG là văn bản nên không có magic byte cố định; chấp nhận theo phần mở rộng.
+    return true;
+  }
   if (ext === '.xls') {
     const signature = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1];
     return signature.every((value, index) => bytes[index] === value);
@@ -88,7 +141,7 @@ export function hasExpectedDocumentSignature(bytes, extension) {
 
 export async function verifyDocumentSignature(file) {
   const extension = extensionOf(file.name);
-  const bytes = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  const bytes = new Uint8Array(await file.slice(0, 12).arrayBuffer());
   return hasExpectedDocumentSignature(bytes, extension);
 }
 

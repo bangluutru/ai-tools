@@ -1,4 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import {
+  IMAGE_INPUT_LIMITS,
+  rejectionMessages,
+  validateDocumentFiles,
+  verifyDocumentSignature,
+} from '../utils/documentFiles.js';
+import { MiniAppError } from './shared/MiniAppLayout.jsx';
 import QRCodeStyling from 'qr-code-styling';
 import JsBarcode from 'jsbarcode';
 import JSZip from 'jszip';
@@ -285,6 +292,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
   const [mode, setMode] = useState('qr'); // 'qr' | 'barcode' | 'batch'
 
   // QR Code Config
+  const [fileError, setFileError] = useState('');
   const [qrConfig, setQrConfig] = useState({
     contentType: 'url',
     rawText: 'https://github.com/bangluutru/ai-tools',
@@ -625,19 +633,27 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col gap-6">
+      <MiniAppError>{fileError}</MiniAppError>
       {/* Hidden File Inputs */}
       <input
         ref={logoInputRef}
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(e) => {
-          if (e.target.files && e.target.files[0]) {
-            const r = new FileReader();
-            r.onload = () => setQrConfig((prev) => ({ ...prev, logoUrl: r.result }));
-            r.readAsDataURL(e.target.files[0]);
-            e.target.value = '';
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (!file) return;
+          const validation = validateDocumentFiles([file], [], IMAGE_INPUT_LIMITS);
+          if (validation.accepted.length === 0 || !(await verifyDocumentSignature(file))) {
+            setFileError(rejectionMessages(validation.rejected).join(' • ')
+              || `${file.name}: nội dung không phải ảnh hợp lệ`);
+            return;
           }
+          setFileError('');
+          const r = new FileReader();
+          r.onload = () => setQrConfig((prev) => ({ ...prev, logoUrl: r.result }));
+          r.readAsDataURL(file);
         }}
       />
       <input
