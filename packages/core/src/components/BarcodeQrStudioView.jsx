@@ -1139,10 +1139,15 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
               </div>
 
               <div className="w-full min-h-[280px] flex items-center justify-center p-4 rounded-2xl bg-slate-950/80 border border-slate-800 shadow-inner overflow-hidden">
+                {/* key bắt buộc: canvas QR do qr-code-styling chèn bằng appendChild
+                    nên React không quản lý nó. Hai nhánh cùng là <div> ở cùng vị
+                    trí thì React tái dùng đúng node cũ, và canvas chèn tay sống
+                    sót sang tab mã vạch — preview vẫn hiện QR. Đặt key khác nhau
+                    buộc React thay hẳn node, xoá luôn canvas mồ côi. */}
                 {mode === 'qr' ? (
-                  <div ref={qrContainerRef} className="flex items-center justify-center" />
+                  <div key="preview-qr" ref={qrContainerRef} className="flex items-center justify-center" />
                 ) : (
-                  <div className="flex items-center justify-center overflow-x-auto max-w-full p-2">
+                  <div key="preview-barcode" className="flex items-center justify-center overflow-x-auto max-w-full p-2">
                     <svg ref={barcodeSvgRef} className="max-w-full h-auto" />
                   </div>
                 )}
