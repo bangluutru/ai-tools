@@ -28,9 +28,8 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {
   const staging = document.createElement('div');
   staging.style.position = 'fixed';
   staging.style.top = '0';
-  staging.style.left = '0';
+  staging.style.left = '-9999px';
   staging.style.zIndex = '-9999';
-  staging.style.opacity = '0';
   staging.style.pointerEvents = 'none';
   staging.style.width = '1120px';
   staging.style.background = '#ffffff';

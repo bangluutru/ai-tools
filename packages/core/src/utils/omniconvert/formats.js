@@ -126,7 +126,7 @@ export const FORMAT_DETAILS = {
 
 export const COMPATIBILITY_MATRIX = {
   docx: ['pdf', 'txt'],
-  pptx: ['pdf', 'png'],
+  pptx: ['pdf'],
   xlsx: ['pdf', 'csv'],
   pdf: ['docx', 'pptx', 'xlsx', 'png', 'jpg', 'webp', 'txt'],
   png: ['pdf', 'jpg', 'webp'],
@@ -135,8 +135,8 @@ export const COMPATIBILITY_MATRIX = {
   webp: ['pdf', 'png', 'jpg'],
   svg: ['pdf', 'png'],
   bmp: ['pdf', 'png', 'jpg'],
-  txt: ['pdf', 'docx'],
-  csv: ['pdf', 'xlsx']
+  txt: ['pdf'],
+  csv: ['pdf']
 };
 
 export const POPULAR_PRESETS = [

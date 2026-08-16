@@ -3,6 +3,7 @@ import { convertImagesToPdf, convertPdfToImages, convertImageToImage } from './i
 import { convertDocxToPdf, convertPdfToDocx, convertDocxToTxt, convertPdfToTxt } from './docxPdfConverter.js';
 import { convertXlsxToPdf, convertPdfToXlsx, convertXlsxToCsv } from './xlsxPdfConverter.js';
 import { convertPdfToPptx, convertPptxToPdf } from './pptxPdfConverter.js';
+import { jsPDF } from 'jspdf';
 
 export async function executeConversion(file, targetFormat, options = {}, onProgress = () => {}) {
   const sourceExt = getFileExtension(file.name);
@@ -62,6 +63,44 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
     }
     if (['png', 'jpg', 'jpeg', 'webp'].includes(targetExt)) {
       return await convertImageToImage(file, targetExt, options, onProgress);
+    }
+  }
+  // 6. TXT
+  if (sourceExt === 'txt') {
+    if (targetExt === 'pdf') {
+      if (onProgress) onProgress(20);
+      const text = await file.text();
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(11);
+      const pageWidth = 595.28;
+      const marginX = 40;
+      const marginTop = 50;
+      const marginBottom = 50;
+      const usableWidth = pageWidth - marginX * 2;
+      const lineHeight = 15;
+      const pageHeight = 841.89;
+      const maxY = pageHeight - marginBottom;
+
+      const wrappedLines = pdf.splitTextToSize(text, usableWidth);
+      let y = marginTop;
+      for (let i = 0; i < wrappedLines.length; i++) {
+        if (y + lineHeight > maxY) {
+          pdf.addPage();
+          y = marginTop;
+        }
+        pdf.text(wrappedLines[i], marginX, y);
+        y += lineHeight;
+      }
+      if (onProgress) onProgress(90);
+      const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'text';
+      if (onProgress) onProgress(100);
+      return {
+        blob: pdf.output('blob'),
+        filename: `${baseName}.pdf`,
+        mimeType: 'application/pdf',
+        isZip: false
+      };
     }
   }
 

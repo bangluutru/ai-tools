@@ -17,9 +17,8 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
   staging.id = 'docx-render-staging-' + Date.now();
   staging.style.position = 'fixed';
   staging.style.top = '0';
-  staging.style.left = '0';
+  staging.style.left = '-9999px';
   staging.style.zIndex = '-9999';
-  staging.style.opacity = '0';
   staging.style.pointerEvents = 'none';
   staging.style.width = '816px'; // Chuẩn A4 pixel tại 96 DPI
   staging.style.background = '#ffffff';
@@ -98,8 +97,11 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
       })
     );
 
-    // Cho DOM reflow hoàn chỉnh
-    await new Promise((r) => setTimeout(r, 120));
+    // Chờ web fonts tải xong + DOM reflow hoàn chỉnh
+    if (document.fonts && document.fonts.ready) {
+      await document.fonts.ready;
+    }
+    await new Promise((r) => setTimeout(r, 350));
 
     // Tìm các trang được phân chia bởi docx-preview
     let pageElements = Array.from(staging.querySelectorAll('section.docx, article.docx, .docx-preview-root > section'));
