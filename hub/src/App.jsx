@@ -46,6 +46,7 @@ const EditorStudioTool = lazy(() => import('./tools/editor-studio/EditorStudioTo
 const InvoiceTool = lazy(() => import('./tools/invoice-webapp/InvoiceTool'));
 const AutoBiTool = lazy(() => import('./tools/auto-bi/AutoBiTool'));
 const AccountingReconcileTool = lazy(() => import('./tools/accounting-reconcile/AccountingReconcileTool'));
+const WatermarkStudioTool = lazy(() => import('./tools/watermark-studio/WatermarkStudioTool'));
 
 const toolComponentMap = {
   'image-convert': ImageConvertTool,
@@ -59,7 +60,8 @@ const toolComponentMap = {
   'editor-studio': EditorStudioTool,
   'invoice-webapp': InvoiceTool,
   'auto-bi': AutoBiTool,
-  'accounting-reconcile': AccountingReconcileTool
+  'accounting-reconcile': AccountingReconcileTool,
+  'watermark-studio': WatermarkStudioTool
 };
 
 export default function App() {

@@ -89,6 +89,11 @@ const toolGovernance = {
     processing: 'browser',
     priority: 1,
     outputPurpose: 'reference'
+  },
+  'watermark-studio': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility'
   }
 };
 
@@ -380,6 +385,22 @@ const toolDefinitions = [
     badge: 'NEW',
     popular: true,
     tags: ['accounting', 'reconcile', 'đối chiếu', 'kế toán', 'thuế', 'doanh thu', '511', '33311', 'br', 'excel']
+  },
+  {
+    id: 'watermark-studio',
+    name_vn: 'Watermark Studio — Đóng Dấu Tài Liệu',
+    name_en: 'Watermark Studio — Document Stamping',
+    name_ja: 'ウォーターマークスタジオ — 文書透かし',
+    desc_vn: 'Đóng dấu watermark văn bản hoặc logo lên PDF, DOCX, XLSX, PPTX và ảnh. Tùy chỉnh màu sắc, độ đậm nhạt, bố cục lưới/đơn. 100% xử lý trên trình duyệt.',
+    desc_en: 'Stamp text or logo watermarks on PDF, DOCX, XLSX, PPTX and images. Customizable color, opacity, tiled/single layout. 100% client-side processing.',
+    desc_ja: 'PDF、DOCX、XLSX、PPTXや画像にテキストまたはロゴの透かしを追加。色、透明度、レイアウトをカスタマイズ。100%ブラウザ処理。',
+    category: 'office',
+    icon: 'Stamp',
+    gradient: 'from-indigo-500 to-violet-600',
+    color: '#6366f1',
+    badge: 'NEW',
+    popular: true,
+    tags: ['watermark', 'stamp', 'đóng dấu', 'bản quyền', 'confidential', 'draft', 'logo', 'pdf', 'docx', 'xlsx', 'pptx', 'ảnh']
   }
 ];
 
