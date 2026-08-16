@@ -549,6 +549,17 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  /** Nạp lại cấu hình đã lưu để chỉnh tiếp thay vì gõ lại từ đầu. */
+  const handleRestoreHistory = (item) => {
+    setMode(item.type);
+    if (item.type === 'qr' && item.qrConfig) setQrConfig(item.qrConfig);
+    if (item.type === 'barcode' && item.barcodeConfig) setBarcodeConfig(item.barcodeConfig);
+  };
+
+  const handleDeleteHistory = (id) => {
+    setHistory((prev) => prev.filter((item) => item.id !== id));
+  };
+
   // Batch Processor
   const handleProcessBatch = async () => {
     const lines = batchRawInput.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -1167,6 +1178,45 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                   >
                     <Save className="w-4 h-4 text-brand-400" />
                   </button>
+                </div>
+
+                {/* Lịch sử: trước đây mã đã lưu chỉ nằm trong localStorage mà
+                    người dùng không có cách nào xem hay dùng lại. */}
+                <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                      {t.btnSaveHistory}
+                    </span>
+                    {history.length > 0 && (
+                      <span className="text-[10px] text-slate-500">{history.length}/20</span>
+                    )}
+                  </div>
+                  {history.length === 0 ? (
+                    <p className="text-[11px] text-slate-500 py-2 text-center">{t.emptyHistory}</p>
+                  ) : (
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {history.map((item) => (
+                        <div key={item.id} className="relative shrink-0 group">
+                          <button
+                            type="button"
+                            onClick={() => handleRestoreHistory(item)}
+                            title={item.title}
+                            className="block w-16 h-16 rounded-xl border border-slate-700 bg-white overflow-hidden hover:border-brand-500 transition"
+                          >
+                            <img src={item.previewDataUrl} alt={item.title} className="w-full h-full object-contain" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteHistory(item.id)}
+                            aria-label={`Xoá ${item.title}`}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-800 border border-slate-600 text-slate-400 hover:text-rose-400 hover:border-rose-500 text-[10px] leading-none opacity-0 group-hover:opacity-100 transition"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">

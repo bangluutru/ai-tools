@@ -1,6 +1,6 @@
 # Kế hoạch audit portal miniapp
 
-**Ngày lập:** 16/08/2026
+**Ngày lập:** 16/08/2026 — **cập nhật:** 16/08/2026, đã thực hiện xong giai đoạn 1→4
 **Phạm vi:** 12 miniapp đang hoạt động + 6 miniapp đang phát triển, `packages/core`, vỏ portal `hub`.
 
 Mục tiêu do chủ sở hữu đặt ra: các miniapp **dùng chung tài nguyên portal** để tối ưu, nhưng
@@ -112,3 +112,46 @@ Ghi lại để khỏi mất công nghi ngờ về sau:
 - Nút chuyển giao diện làm đúng điều nó hứa, hoặc không tồn tại.
 - Mọi ô tải file đều công bố giới hạn và từ chối file sai định dạng.
 - Không miniapp nào tải tài nguyên của miniapp khác khi mở.
+
+
+---
+
+## 5. Kết quả thực hiện (16/08/2026)
+
+Chủ sở hữu chọn hướng **chuẩn hoá về giao diện tối** và làm hết bốn giai đoạn.
+
+### Giai đoạn 1 — chặn hồi quy ✅
+- `hub/tests/workspace-integrity.test.js`: thư mục miniapp và registry phải khớp hai chiều;
+  đã thử xoá lại OmniConvert để xác nhận test đỏ đúng lúc.
+- Test bắt buộc `packages/core` khai báo mọi lib nó import.
+
+### Giai đoạn 2 — một ngôn ngữ thiết kế ✅
+- Thêm `packages/core/src/components/shared/MiniAppLayout.jsx` (layout, header, panel, dải lỗi).
+- PDF Split, PDF Merge chuyển sang layout chung; Excel Mapping, Editor Studio giữ bố cục
+  workspace nhưng bỏ nhãn hiệu và đổi sang nền tối.
+- Bỏ `min-h-screen`/`h-screen` khỏi cả bốn — portal đã sở hữu chiều cao trang.
+- Gỡ nút chuyển giao diện Sáng/Tối vì nó không có tác dụng, kèm khối CSS chết.
+
+### Giai đoạn 3 — dùng chung tài nguyên ✅
+- Thêm preset `PDF_COMPRESS_LIMITS`, `CONVERT_LIMITS`, `IMAGE_INPUT_LIMITS` và chữ ký cho
+  docx/pptx/png/jpg/gif/webp.
+- Bốn miniapp mới nay đều kiểm tra số lượng, dung lượng, phần mở rộng và magic byte.
+- Đặt tên 8 vendor chunk nặng; OmniConvert nạp engine theo định dạng.
+
+| Chunk | Trước | Sau |
+|---|---|---|
+| OmniConvertTool | 993 kB | 37,6 kB |
+| BarcodeQrTool | 161 kB | 45,3 kB |
+
+### Giai đoạn 4 — đúng ý tưởng thiết kế ✅
+- Dựng panel lịch sử cho Barcode QR: xem lại, nạp lại cấu hình, xoá từng mục.
+- Quét 12 miniapp trên trình duyệt: đều render, không nhãn hiệu lạ, không lỗi console.
+  Phần tử nền trắng duy nhất còn lại là khung xem trước mã QR — đúng ý đồ vì mã QR cần
+  nền trắng mới quét được.
+
+### Còn tồn đọng
+
+- `documentFiles.js` chưa có preset cho miniapp Chuyển đổi ảnh (`image-convert`), vốn dùng
+  bộ giới hạn riêng ở `utils/image/limits.js`. Hai bộ nên hợp nhất ở đợt sau.
+- Tám miniapp vốn đã tối chưa chuyển sang `MiniAppLayout`; chúng đang khớp thiết kế bằng
+  cách tự lặp lại cùng một bố cục. Gom về layout chung sẽ bỏ được phần lặp còn lại.
