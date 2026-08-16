@@ -128,7 +128,9 @@ export const COMPATIBILITY_MATRIX = {
   docx: ['pdf', 'txt'],
   pptx: ['pdf'],
   xlsx: ['pdf', 'csv'],
-  pdf: ['docx', 'pptx', 'xlsx', 'png', 'jpg', 'webp', 'txt'],
+  // PDF→PPTX đã gỡ cùng pptxgenjs: thư viện phụ thuộc image-size, vốn dính
+  // advisory DoS ở mọi phiên bản và không có bản vá. Chiều PPTX→PDF giữ nguyên.
+  pdf: ['docx', 'xlsx', 'png', 'jpg', 'webp', 'txt'],
   png: ['pdf', 'jpg', 'webp'],
   jpg: ['pdf', 'png', 'webp'],
   jpeg: ['pdf', 'png', 'webp'],

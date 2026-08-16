@@ -1,7 +1,7 @@
 import { getFileExtension } from './formats.js';
 /**
  * Bốn engine được nạp theo yêu cầu. Nếu import tĩnh, mở công cụ là kéo về cả
- * jspdf, mammoth, docx-preview, pptxgenjs và html2canvas (~1,4 MB) dù người
+ * jspdf, mammoth, docx-preview và html2canvas (~1,4 MB) dù người
  * dùng chỉ định chuyển một tấm ảnh.
  */
 const imageEngine = () => import('./imagePdfConverter.js');
@@ -19,7 +19,6 @@ const convertPdfToTxt = async (...args) => (await docxEngine()).convertPdfToTxt(
 const convertXlsxToPdf = async (...args) => (await xlsxEngine()).convertXlsxToPdf(...args);
 const convertPdfToXlsx = async (...args) => (await xlsxEngine()).convertPdfToXlsx(...args);
 const convertXlsxToCsv = async (...args) => (await xlsxEngine()).convertXlsxToCsv(...args);
-const convertPdfToPptx = async (...args) => (await pptxEngine()).convertPdfToPptx(...args);
 const convertPptxToPdf = async (...args) => (await pptxEngine()).convertPptxToPdf(...args);
 
 export async function executeConversion(file, targetFormat, options = {}, onProgress = () => {}) {
@@ -58,7 +57,6 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
   if (sourceExt === 'pdf') {
     if (targetExt === 'docx') return await convertPdfToDocx(file, options, onProgress);
     if (targetExt === 'xlsx') return await convertPdfToXlsx(file, options, onProgress);
-    if (targetExt === 'pptx') return await convertPdfToPptx(file, options, onProgress);
     if (['png', 'jpg', 'jpeg', 'webp'].includes(targetExt)) {
       return await convertPdfToImages(file, targetExt, options, onProgress);
     }

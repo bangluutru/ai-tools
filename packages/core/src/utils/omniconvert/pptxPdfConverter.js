@@ -1,47 +1,6 @@
-import PptxGenJS from 'pptxgenjs';
 import JSZip from 'jszip';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
-import { loadPdfDocument, renderPdfPageToCanvas } from './pdfHelper.js';
-
-export async function convertPdfToPptx(file, _options = {}, onProgress = () => {}) {
-  if (onProgress) onProgress(15);
-  const pdfDoc = await loadPdfDocument(file);
-  const numPages = pdfDoc.numPages;
-
-  const pptx = new PptxGenJS();
-  pptx.layout = 'LAYOUT_16x9';
-  pptx.title = file.name || 'Presentation';
-
-  for (let i = 1; i <= numPages; i++) {
-    if (onProgress) onProgress(15 + Math.round((i / numPages) * 70));
-
-    const canvas = await renderPdfPageToCanvas(pdfDoc, i, 2.5);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-
-    const slide = pptx.addSlide();
-    slide.addImage({
-      data: dataUrl,
-      x: 0,
-      y: 0,
-      w: '100%',
-      h: '100%',
-      sizing: { type: 'contain', w: 10, h: 5.625 }
-    });
-  }
-
-  if (onProgress) onProgress(90);
-  const pptxBlob = await pptx.writeFile({ outputType: 'blob' });
-  const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'presentation';
-  if (onProgress) onProgress(100);
-
-  return {
-    blob: pptxBlob,
-    filename: `${baseName}.pptx`,
-    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    isZip: false
-  };
-}
 
 export async function convertPptxToPdf(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(20);

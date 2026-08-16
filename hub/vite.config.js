@@ -29,7 +29,6 @@ export default defineConfig({
           if (id.includes('/docx/')) return 'vendor-docx';
           if (id.includes('/jspdf/')) return 'vendor-jspdf';
           if (id.includes('/html2canvas/')) return 'vendor-html2canvas';
-          if (id.includes('/pptxgenjs/')) return 'vendor-pptxgenjs';
           if (id.includes('qr-code-styling')) return 'vendor-qrcode';
           if (id.includes('/jsbarcode/')) return 'vendor-jsbarcode';
           return undefined;
