@@ -12,7 +12,7 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
   if (onProgress) onProgress(10);
   const arrayBuffer = await file.arrayBuffer();
 
-  // Tạo staging container trong DOM để render Word trung thực 1:1
+  // Tạo staging container — đủ rộng để docx-preview render thoải mái không bị clip
   const staging = document.createElement('div');
   staging.id = 'docx-render-staging-' + Date.now();
   staging.style.position = 'fixed';
@@ -20,10 +20,11 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
   staging.style.left = '-9999px';
   staging.style.zIndex = '-9999';
   staging.style.pointerEvents = 'none';
-  staging.style.width = '816px'; // Chuẩn A4 pixel tại 96 DPI
+  staging.style.width = '1400px';
   staging.style.background = '#ffffff';
   staging.style.color = '#000000';
-  staging.style.fontFamily = '"Plus Jakarta Sans", "Inter", "Roboto", "Times New Roman", "Arial", sans-serif';
+  staging.style.fontFamily = '"Times New Roman", "Arial", "Roboto", sans-serif';
+  staging.style.overflow = 'visible';
   document.body.appendChild(staging);
 
   try {
@@ -65,6 +66,9 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
       wrapper.style.lineHeight = '1.6';
       wrapper.style.fontSize = '14px';
       wrapper.style.color = '#1e293b';
+      wrapper.style.width = '816px';
+      wrapper.style.boxSizing = 'border-box';
+      wrapper.style.backgroundColor = '#ffffff';
       wrapper.innerHTML = `
         <style>
           .docx-mammoth-fallback h1 { font-size: 24px; font-weight: 700; margin-bottom: 16px; color: #0f172a; }
@@ -101,12 +105,18 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
     if (document.fonts && document.fonts.ready) {
       await document.fonts.ready;
     }
-    await new Promise((r) => setTimeout(r, 350));
+    await new Promise((r) => setTimeout(r, 400));
 
     // Tìm các trang được phân chia bởi docx-preview
-    let pageElements = Array.from(staging.querySelectorAll('section.docx, article.docx, .docx-preview-root > section'));
+    let pageElements = Array.from(staging.querySelectorAll('section.docx, article.docx'));
     if (pageElements.length === 0) {
-      pageElements = [staging];
+      const wrapperEl = staging.querySelector('.docx-wrapper, .docx-preview-root');
+      if (wrapperEl) {
+        pageElements = Array.from(wrapperEl.querySelectorAll('section'));
+      }
+    }
+    if (pageElements.length === 0) {
+      pageElements = [staging.firstElementChild || staging];
     }
 
     if (onProgress) onProgress(70);
@@ -118,18 +128,43 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
       format: 'a4'
     });
 
+    // Xóa wrapper decorations (box-shadow, border, background xám) để PDF sạch
+    for (const pageEl of pageElements) {
+      pageEl.style.boxShadow = 'none';
+      pageEl.style.border = 'none';
+      pageEl.style.margin = '0';
+      pageEl.style.overflow = 'visible';
+    }
+    const wrapperDecorators = staging.querySelectorAll('.docx-wrapper, .docx-preview-root');
+    for (const wd of wrapperDecorators) {
+      wd.style.background = '#ffffff';
+      wd.style.boxShadow = 'none';
+      wd.style.padding = '0';
+      wd.style.overflow = 'visible';
+    }
+    await new Promise((r) => setTimeout(r, 50));
+
     const totalPages = pageElements.length;
+    const pdfWidth = 595.28;
+    const pdfHeight = 841.89;
 
     for (let i = 0; i < totalPages; i++) {
       const pageEl = pageElements[i];
 
-      // Chụp trang dưới dạng Canvas độ nét cao (2.0x scale cho độ phân giải retina/print)
+      // Đọc kích thước thực tế mà docx-preview đã render
+      const elWidth = pageEl.scrollWidth || pageEl.offsetWidth;
+      const elHeight = pageEl.scrollHeight || pageEl.offsetHeight;
+
+      // Chụp trang — KHÔNG giới hạn windowWidth để tránh clip nội dung
       const canvas = await html2canvas(pageEl, {
         scale: 2.0,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: 816
+        width: elWidth,
+        height: elHeight,
+        scrollX: 0,
+        scrollY: 0
       });
 
       if (i > 0) {
@@ -137,8 +172,6 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
       }
 
       const imgData = canvas.toDataURL('image/jpeg', 0.96);
-      const pdfWidth = 595.28;
-      const pdfHeight = 841.89;
 
       // Tính tỷ lệ vừa trang
       const canvasRatio = canvas.height / canvas.width;
