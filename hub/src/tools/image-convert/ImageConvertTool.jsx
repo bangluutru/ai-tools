@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { MiniAppLayout } from '@ai-tools/core/components/shared/MiniAppLayout.jsx';
 import confetti from 'canvas-confetti';
 import DropZone from '../../components/image/DropZone';
 import SettingsBar from '../../components/image/SettingsBar';
@@ -8,6 +9,7 @@ import CompareModal from '../../components/image/CompareModal';
 import { convertImageToWebP } from '@ai-tools/core/utils/image/converter.js';
 import { downloadAllAsZip } from '@ai-tools/core/utils/image/zipExporter.js';
 import { IMAGE_LIMITS, validateImageFiles } from '@ai-tools/core/utils/image/limits.js';
+import { verifyDocumentSignature } from '@ai-tools/core/utils/documentFiles.js';
 
 export default function ImageConvertTool() {
   const [settings, setSettings] = useState({
@@ -41,10 +43,18 @@ export default function ImageConvertTool() {
   };
 
   const processFiles = async (fileList, currentSettings = settings) => {
-    const { accepted, rejected } = validateImageFiles(fileList, imagesRef.current);
-    setNotice(rejected.length > 0
-      ? rejected.map(({ file, reason }) => `${file.name}: ${reason}`).join(' • ')
-      : '');
+    const validation = validateImageFiles(fileList, imagesRef.current);
+    const problems = validation.rejected.map(({ file, reason }) => `${file.name}: ${reason}`);
+
+    // Kiểm tra magic byte như các miniapp khác: tệp đổi đuôi thành .png sẽ bị
+    // chặn ở đây thay vì gục giữa chừng trong canvas.
+    const accepted = [];
+    for (const file of validation.accepted) {
+      if (await verifyDocumentSignature(file)) accepted.push(file);
+      else problems.push(`${file.name}: nội dung không phải ảnh hợp lệ`);
+    }
+
+    setNotice(problems.join(' • '));
     if (accepted.length === 0) return;
 
     setIsProcessing(true);
@@ -130,7 +140,7 @@ export default function ImageConvertTool() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col gap-6">
+    <MiniAppLayout gap="normal">
       <div className="text-center mb-2">
         <h2 className="text-2xl md:text-3xl font-extrabold text-slate-100 tracking-tight">
           WebP Master & Nén Ảnh Tự Động
@@ -178,6 +188,6 @@ export default function ImageConvertTool() {
       <ImageGrid items={images} onCompare={setSelectedForCompare} onDelete={handleDeleteItem} />
 
       <CompareModal item={selectedForCompare} onClose={() => setSelectedForCompare(null)} />
-    </div>
+    </MiniAppLayout>
   );
 }

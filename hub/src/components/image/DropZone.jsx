@@ -33,11 +33,13 @@ export default function DropZone({ onFilesSelected, isProcessing }) {
     }
   };
 
+  /**
+   * Chuyển nguyên danh sách lên trên. Trước đây chỗ này tự loại file sai định
+   * dạng rồi im lặng, nên người dùng thả nhầm một tệp là nó biến mất không lời
+   * giải thích. Việc loại và giải thích thuộc về bộ kiểm tra dùng chung.
+   */
   const filterAndEmitFiles = (files) => {
-    const validImages = files.filter(file => /\.(png|jpe?g|gif|webp)$/i.test(file.name));
-    if (validImages.length > 0) {
-      onFilesSelected(validImages);
-    }
+    if (files.length > 0) onFilesSelected(files);
   };
 
   const handleClick = () => {

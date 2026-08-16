@@ -5,7 +5,7 @@ import {
   validateDocumentFiles,
   verifyDocumentSignature,
 } from '../utils/documentFiles.js';
-import { MiniAppError } from './shared/MiniAppLayout.jsx';
+import { MiniAppError, MiniAppLayout } from './shared/MiniAppLayout.jsx';
 import confetti from 'canvas-confetti';
 import {
   Camera,
@@ -909,7 +909,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col gap-6">
+    <MiniAppLayout width="wide" gap="normal">
       <MiniAppError>{fileError}</MiniAppError>
       {/* Hidden File Input */}
       <input
@@ -1425,6 +1425,6 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
           </div>
         </div>
       )}
-    </div>
+    </MiniAppLayout>
   );
 }

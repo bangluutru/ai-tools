@@ -5,7 +5,7 @@ import {
   validateDocumentFiles,
   verifyDocumentSignature,
 } from '../utils/documentFiles.js';
-import { MiniAppError } from './shared/MiniAppLayout.jsx';
+import { MiniAppError, MiniAppLayout } from './shared/MiniAppLayout.jsx';
 import QRCodeStyling from 'qr-code-styling';
 import JsBarcode from 'jsbarcode';
 import JSZip from 'jszip';
@@ -643,7 +643,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
   const barcodeValidation = validateAndFixBarcode(barcodeConfig.symbology, barcodeConfig.value);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col gap-6">
+    <MiniAppLayout width="wide" gap="normal">
       <MiniAppError>{fileError}</MiniAppError>
       {/* Hidden File Inputs */}
       <input
@@ -1395,6 +1395,6 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
           )}
         </div>
       )}
-    </div>
+    </MiniAppLayout>
   );
 }

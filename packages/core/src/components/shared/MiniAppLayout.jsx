@@ -14,14 +14,19 @@ import { ShieldCheck } from 'lucide-react';
 
 const WIDTHS = {
   narrow: 'max-w-3xl',
+  medium: 'max-w-5xl',
   default: 'max-w-6xl',
   wide: 'max-w-7xl',
   full: 'max-w-none',
 };
 
-export function MiniAppLayout({ children, width = 'default', className = '' }) {
+// Bề rộng và khoảng cách là khác biệt hợp lệ giữa các miniapp; phần đệm, canh
+// giữa và màu chữ thì không, nên chỉ hai thứ đầu mới mở ra thành tham số.
+const GAPS = { tight: 'gap-4', normal: 'gap-6', loose: 'gap-8' };
+
+export function MiniAppLayout({ children, width = 'default', gap = 'loose', className = '' }) {
   return (
-    <div className={`${WIDTHS[width] ?? WIDTHS.default} mx-auto w-full px-4 py-8 flex flex-col gap-8 text-slate-100 ${className}`}>
+    <div className={`${WIDTHS[width] ?? WIDTHS.default} mx-auto w-full px-4 py-8 flex flex-col ${GAPS[gap] ?? GAPS.loose} text-slate-100 ${className}`}>
       {children}
     </div>
   );

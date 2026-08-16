@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
+import { MiniAppHeader, MiniAppLayout } from './shared/MiniAppLayout.jsx';
 import { Upload, FileSpreadsheet, AlertCircle, Download, FileX, Calculator } from 'lucide-react';
 import { reconcileAccountingData } from '../utils/accounting/reconcile.js';
 import { reconcileWorkbooks } from '../utils/accounting/reconcilePipeline.js';
@@ -190,7 +191,15 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+    <MiniAppLayout gap="normal">
+      <MiniAppHeader
+        title={displayLang === 'en' ? 'Accounting Reconciliation' : 'Đối Chiếu Kế Toán'}
+        subtitle={displayLang === 'en'
+          ? 'Compare revenue and VAT between internal ledgers (511, 33311) and tax authority invoices (BR).'
+          : 'Tự động đối chiếu chênh lệch doanh thu và thuế GTGT giữa sổ kế toán nội bộ và bảng kê hóa đơn thuế.'}
+        badge={displayLang === 'en' ? '100% Client-Side • Secure' : '100% Client-Side • Bảo mật'}
+        tone="blue"
+      />
       <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
         Kết quả chỉ mang tính tham khảo. Dữ liệu được xử lý trên trình duyệt và cần kế toán kiểm tra trước khi sử dụng.
       </div>
@@ -393,6 +402,6 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
           </div>
         </div>
       )}
-    </div>
+    </MiniAppLayout>
   );
 }

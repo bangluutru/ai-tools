@@ -5,7 +5,7 @@ import {
   validateDocumentFiles,
   verifyDocumentSignature,
 } from '../utils/documentFiles.js';
-import { MiniAppError } from './shared/MiniAppLayout.jsx';
+import { MiniAppError, MiniAppLayout } from './shared/MiniAppLayout.jsx';
 import confetti from 'canvas-confetti';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
@@ -439,7 +439,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
   const errorCount = queue.filter(q => q.status === 'error').length;
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in pb-12">
+    <MiniAppLayout width="medium" gap="normal">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-md">
         <div className="flex items-center space-x-3.5">
@@ -991,6 +991,6 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
           </div>
         </div>
       )}
-    </div>
+    </MiniAppLayout>
   );
 }

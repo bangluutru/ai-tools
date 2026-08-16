@@ -37,6 +37,19 @@ export const CONVERT_LIMITS = Object.freeze({
   extensions: ['.docx', '.pptx', '.xlsx', '.pdf', '.png', '.jpg', '.jpeg', '.webp', '.svg'],
 });
 
+/**
+ * Chuyển đổi ảnh hàng loạt. `maxPixels` là giới hạn riêng của ảnh: canvas của
+ * trình duyệt sẽ gục trước khi hết RAM, nên chặn theo số điểm ảnh chứ không chỉ
+ * theo dung lượng tệp.
+ */
+export const IMAGE_CONVERT_LIMITS = Object.freeze({
+  maxFiles: 50,
+  maxFileBytes: 25 * MIB,
+  maxTotalBytes: 100 * MIB,
+  maxPixels: 40_000_000,
+  extensions: ['.png', '.jpg', '.jpeg', '.webp', '.gif'],
+});
+
 /** Ảnh đơn lẻ dùng làm đầu vào: logo mã QR, ảnh nạp vào trình chú thích. */
 export const IMAGE_INPUT_LIMITS = Object.freeze({
   maxFiles: 1,

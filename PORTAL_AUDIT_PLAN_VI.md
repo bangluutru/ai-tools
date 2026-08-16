@@ -149,9 +149,29 @@ Chủ sở hữu chọn hướng **chuẩn hoá về giao diện tối** và là
   Phần tử nền trắng duy nhất còn lại là khung xem trước mã QR — đúng ý đồ vì mã QR cần
   nền trắng mới quét được.
 
+### Tồn đọng đã xử lý nốt (16/08/2026)
+
+**Hợp nhất giới hạn ảnh.** `utils/image/limits.js` từng có bản `validateImageFiles` riêng,
+gần trùng hoàn toàn với bộ dùng chung nhưng lệch câu chữ báo lỗi. Nay thêm preset
+`IMAGE_CONVERT_LIMITS` vào `documentFiles.js`, còn `limits.js` chỉ còn 25 dòng uỷ thác cho
+`validateDocumentFiles` và quy đổi danh sách item về dạng `{size}`. `maxPixels` — ràng buộc
+riêng của ảnh vì canvas gục trước khi hết RAM — được giữ nguyên và có test bảo vệ.
+
+**Gom về layout chung.** Bảy miniapp còn lại chuyển sang `MiniAppLayout`. Chúng vốn tự dựng
+container với bề rộng 5xl/6xl/7xl và khoảng cách gap-6/gap-8 khác nhau; layout nay nhận
+`width` và `gap` vì đó là khác biệt hợp lệ, còn phần đệm, canh giữa và màu chữ thì thống nhất.
+Wrapper `AccountingReconcileTool` từng tự dựng lại khối tiêu đề đã có trong `MiniAppHeader`,
+nay chỉ còn dựng view.
+
+**Hai lỗi phát hiện thêm khi kiểm chứng:**
+
+- `DropZone` của Chuyển đổi ảnh **âm thầm loại** file sai định dạng trước khi gọi bộ kiểm tra,
+  nên thả nhầm một tệp là nó biến mất không lời giải thích — đúng kiểu lỗi đã sửa ở Đối chiếu
+  kế toán. Nay chuyển nguyên danh sách lên trên để bộ dùng chung loại và giải thích.
+- Chuyển đổi ảnh chưa kiểm tra magic byte, nên tệp đổi đuôi thành `.png` vẫn vào tới canvas.
+  Nay chặn ngay với thông báo rõ ràng.
+
 ### Còn tồn đọng
 
-- `documentFiles.js` chưa có preset cho miniapp Chuyển đổi ảnh (`image-convert`), vốn dùng
-  bộ giới hạn riêng ở `utils/image/limits.js`. Hai bộ nên hợp nhất ở đợt sau.
-- Tám miniapp vốn đã tối chưa chuyển sang `MiniAppLayout`; chúng đang khớp thiết kế bằng
-  cách tự lặp lại cùng một bố cục. Gom về layout chung sẽ bỏ được phần lặp còn lại.
+- Hai advisory **moderate** của `uuid` qua `exceljs`, dưới ngưỡng chặn của CI, chờ `exceljs`
+  ra bản mới.

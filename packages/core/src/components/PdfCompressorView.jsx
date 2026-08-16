@@ -5,7 +5,7 @@ import {
   validateDocumentFiles,
   verifyDocumentSignature,
 } from '../utils/documentFiles.js';
-import { MiniAppError } from './shared/MiniAppLayout.jsx';
+import { MiniAppError, MiniAppLayout } from './shared/MiniAppLayout.jsx';
 import JSZip from 'jszip';
 import confetti from 'canvas-confetti';
 import {
@@ -544,7 +544,7 @@ export default function PdfCompressorView({ displayLang = 'vi' }) {
   }, [files]);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 flex flex-col gap-8">
+    <MiniAppLayout>
       {/* Header */}
       <div className="text-center space-y-2">
         <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold">
@@ -1065,6 +1065,6 @@ export default function PdfCompressorView({ displayLang = 'vi' }) {
           </div>
         </div>
       )}
-    </div>
+    </MiniAppLayout>
   );
 }
