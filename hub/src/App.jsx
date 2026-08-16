@@ -63,7 +63,6 @@ const toolComponentMap = {
 };
 
 export default function App() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('hub_theme') || 'dark');
   const [displayLang, setDisplayLang] = useState(() => localStorage.getItem('hub_lang') || 'vi');
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeToolId, setActiveToolId] = useState(() =>
@@ -75,12 +74,6 @@ export default function App() {
   const [hiddenToolIds, setHiddenToolIds] = useState(() =>
     loadHiddenToolIds(window.localStorage, tools)
   );
-
-  // Sync theme attribute
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('hub_theme', theme);
-  }, [theme]);
 
   // Sync language
   useEffect(() => {
@@ -115,10 +108,6 @@ export default function App() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  };
 
   const selectTool = useCallback((toolId) => {
     const tool = tools.find((candidate) => candidate.id === toolId);
@@ -183,8 +172,6 @@ export default function App() {
         /* CASE 2: MAIN HUB DASHBOARD (iLovePDF Style) */
         <>
           <Navbar
-            theme={theme}
-            onToggleTheme={toggleTheme}
             displayLang={displayLang}
             onLangChange={setDisplayLang}
             onOpenSearch={() => setIsSearchOpen(true)}

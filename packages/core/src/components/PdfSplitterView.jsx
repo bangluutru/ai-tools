@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { MiniAppHeader, MiniAppLayout } from './shared/MiniAppLayout.jsx';
 import {
     PDF_SPLIT_LIMITS,
     formatMiB,
@@ -38,7 +39,9 @@ const loadPdfDocument = () => import('pdf-lib').then((module) => module.PDFDocum
 // =====================================================================
 const uiText = {
     vn: {
-        subtitle: 'TÁCH & GHÉP TRANG PDF',
+        title: 'Tách & Trích Xuất Trang PDF',
+        subtitle: 'Chọn đúng những trang cần giữ, tải riêng từng trang hoặc ghép lại thành một tệp.',
+        privacyBadge: '100% Client-Side • Bảo mật',
         dropZone: 'Kéo thả file PDF vào đây',
         dropHint: 'hoặc click để chọn file',
         pages: 'trang',
@@ -52,7 +55,9 @@ const uiText = {
         page: 'Trang',
     },
     en: {
-        subtitle: 'PDF PAGE SPLITTER & MERGER',
+        title: 'Split & Extract PDF Pages',
+        subtitle: 'Pick the pages you need, download them individually or merge them into one file.',
+        privacyBadge: '100% Client-Side • Secure',
         dropZone: 'Drag & drop PDF file here',
         dropHint: 'or click to choose file',
         pages: 'pages',
@@ -66,7 +71,9 @@ const uiText = {
         page: 'Page',
     },
     jp: {
-        subtitle: 'PDFページ分割・結合',
+        title: 'PDFページの分割・抽出',
+        subtitle: '必要なページを選び、個別にダウンロードまたは1つのファイルに結合します。',
+        privacyBadge: '100% ローカル処理・安全',
         dropZone: 'PDFファイルをここにドラッグ＆ドロップ',
         dropHint: 'またはクリックしてファイルを選択',
         pages: 'ページ',
@@ -247,25 +254,17 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
     const selectedCount = selected.size;
 
     return (
-        <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-900">
-            {/* Header Bar */}
-            <div className="no-print bg-gradient-to-r from-rose-600 to-rose-800 p-5 shadow-lg">
-                <div className="max-w-6xl mx-auto">
-                    <div className="flex items-center gap-2.5 text-white mb-1">
-                        <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
-                            <Scissors size={18} strokeWidth={2.5} />
-                        </div>
-                        <h1 className="text-xl font-black tracking-tight uppercase italic">DocStudio</h1>
-                    </div>
-                    <p className="text-[10px] text-rose-200 font-bold uppercase tracking-widest mt-0.5">
-                        {t.subtitle}
-                    </p>
-                </div>
-            </div>
+        <MiniAppLayout>
+            <MiniAppHeader
+                title={t.title}
+                subtitle={t.subtitle}
+                badge={t.privacyBadge}
+                tone="rose"
+            />
 
-            <div className="max-w-6xl mx-auto w-full p-4 md:p-8 flex-grow">
+            <div className="w-full">
                 {fileError && (
-                    <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                         {fileError}
                     </div>
                 )}
@@ -278,12 +277,12 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
                         onClick={() => fileInputRef.current?.click()}
                         className={`w-full min-h-[400px] border-3 border-dashed rounded-2xl flex flex-col items-center justify-center gap-5 cursor-pointer transition-all ${isDragging
                             ? 'border-rose-400 bg-rose-50 scale-[1.01]'
-                            : 'border-slate-300 bg-white hover:border-rose-300 hover:bg-rose-50/30'
+                            : 'border-slate-700 bg-slate-900 hover:border-rose-300 hover:bg-rose-50/30'
                             }`}
                     >
                         <Upload size={64} strokeWidth={1.2} className={isDragging ? 'text-rose-400' : 'text-slate-300'} />
                         <div className="text-center">
-                            <p className="text-lg font-bold text-slate-500">{t.dropZone}</p>
+                            <p className="text-lg font-bold text-slate-400">{t.dropZone}</p>
                             <p className="text-sm text-slate-400 mt-1">{t.dropHint}</p>
                             <p className="text-xs text-slate-400 mt-2">
                                 Tối đa {formatMiB(PDF_SPLIT_LIMITS.maxFileBytes)} MiB và {PDF_SPLIT_LIMITS.maxPages} trang; file không rời khỏi trình duyệt.
@@ -300,24 +299,24 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
                 ) : (
                     <>
                         {/* Toolbar */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+                        <div className="bg-slate-900 rounded-2xl shadow-lg border border-slate-800 p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-3 flex-wrap">
-                                <div className="bg-slate-100 px-3 py-2 rounded-xl text-sm font-mono text-slate-600 max-w-[200px] truncate border border-slate-200">
+                                <div className="bg-slate-800 px-3 py-2 rounded-xl text-sm font-mono text-slate-300 max-w-[200px] truncate border border-slate-800">
                                     {fileName}
                                 </div>
-                                <span className="text-sm text-slate-500">
+                                <span className="text-sm text-slate-400">
                                     {pageCount} {t.pages} · <strong className="text-rose-600">{selectedCount}</strong> {t.selected}
                                 </span>
                                 <div className="flex gap-1">
                                     <button
                                         onClick={selectAll}
-                                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all"
+                                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all"
                                     >
                                         {t.selectAll}
                                     </button>
                                     <button
                                         onClick={deselectAll}
-                                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all"
+                                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all"
                                     >
                                         {t.deselectAll}
                                     </button>
@@ -341,7 +340,7 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
                                 </button>
                                 <button
                                     onClick={clearAll}
-                                    className="flex items-center gap-1.5 px-3 py-2.5 border border-red-200 text-red-400 hover:bg-red-50 hover:text-red-600 font-bold rounded-xl transition-all text-sm"
+                                    className="flex items-center gap-1.5 px-3 py-2.5 border border-red-500/30 text-red-400 hover:bg-red-50 hover:text-red-600 font-bold rounded-xl transition-all text-sm"
                                 >
                                     <Trash2 size={14} />
                                 </button>
@@ -352,7 +351,7 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
                         {isLoading && (
                             <div className="flex items-center justify-center py-20">
                                 <div className="animate-spin w-10 h-10 border-4 border-rose-200 border-t-rose-600 rounded-full" />
-                                <span className="ml-4 text-slate-500 font-medium">{t.processing}</span>
+                                <span className="ml-4 text-slate-400 font-medium">{t.processing}</span>
                             </div>
                         )}
 
@@ -367,13 +366,13 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
                                             onClick={() => togglePage(index)}
                                             className={`relative cursor-pointer group rounded-xl overflow-hidden shadow-md border-3 transition-all hover:shadow-lg hover:scale-[1.02] ${isSelected
                                                 ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50'
-                                                : 'border-transparent bg-white hover:border-slate-300'
+                                                : 'border-transparent bg-slate-900 hover:border-slate-700'
                                                 }`}
                                         >
                                             {/* Selection badge */}
                                             <div className={`absolute top-2 left-2 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all ${isSelected
                                                 ? 'bg-rose-500 text-white shadow-md'
-                                                : 'bg-white/80 text-slate-400 border border-slate-200 group-hover:border-slate-400'
+                                                : 'bg-slate-900/80 text-slate-400 border border-slate-800 group-hover:border-slate-400'
                                                 }`}>
                                                 {isSelected ? <CheckSquare size={14} /> : <Square size={14} />}
                                             </div>
@@ -386,7 +385,7 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
                                             {/* Download single page */}
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); extractPage(index); }}
-                                                className="absolute bottom-2 right-2 z-10 bg-white/90 backdrop-blur-sm text-slate-600 hover:text-rose-600 hover:bg-white p-1.5 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-all border border-slate-200"
+                                                className="absolute bottom-2 right-2 z-10 bg-white/90 backdrop-blur-sm text-slate-300 hover:text-rose-600 hover:bg-white p-1.5 rounded-lg shadow-sm opacity-0 group-hover:opacity-100 transition-all border border-slate-800"
                                                 title={`${t.downloadPage} ${index + 1}`}
                                             >
                                                 <FileDown size={12} />
@@ -407,7 +406,7 @@ const PdfSplitterView = ({ displayLang = 'vn' }) => {
                     </>
                 )}
             </div>
-        </div>
+        </MiniAppLayout>
     );
 };
 

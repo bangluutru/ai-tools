@@ -23,16 +23,6 @@
   --radius-lg: 20px;
 }
 
-[data-theme="light"] {
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --bg-card: rgba(255, 255, 255, 0.9);
-  --border-color: rgba(0, 0, 0, 0.08);
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --bg-input: #f1f5f9;
-}
-
 body {
   font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--bg-primary);

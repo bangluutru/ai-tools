@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Sparkles, Search, Sun, Moon, Globe, Settings2 } from 'lucide-react';
+import { Sparkles, Search, Globe, Settings2 } from 'lucide-react';
 
-export default function Navbar({ theme, onToggleTheme, displayLang, onLangChange, onOpenSearch, onOpenSettings }) {
+export default function Navbar({ displayLang, onLangChange, onOpenSearch, onOpenSettings }) {
   const [langDropdown, setLangDropdown] = useState(false);
 
   return (
@@ -94,14 +94,6 @@ export default function Navbar({ theme, onToggleTheme, displayLang, onLangChange
             <Settings2 size={17} />
           </button>
 
-          {/* Theme Toggle */}
-          <button
-            onClick={onToggleTheme}
-            className="p-2.5 rounded-xl bg-slate-800/70 hover:bg-slate-800 text-slate-300 hover:text-amber-400 border border-slate-700/60 transition-all"
-            title={theme === 'dark' ? 'Chuyển sang Giao diện Sáng' : 'Chuyển sang Giao diện Tối'}
-          >
-            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-          </button>
         </div>
       </div>
     </header>

@@ -299,19 +299,19 @@ export default function ExcelMappingView({ t: tProp }) {
     };
     const bgColors = {
         auto: 'bg-green-100 text-green-800 border-green-200',
-        manual: 'bg-amber-100 text-amber-800 border-amber-200',
-        unmapped: 'bg-red-50 border-red-200 text-red-600 border-dashed'
+        manual: 'bg-amber-100 text-amber-800 border-amber-500/30',
+        unmapped: 'bg-red-500/10 border-red-500/30 text-red-600 border-dashed'
     };
 
     // --- UI RENDER ---
     return (
-        <div className="flex flex-col h-screen w-full bg-slate-50 font-sans overflow-hidden">
+        <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[32rem] w-full rounded-2xl border border-slate-800 bg-slate-900/60 font-sans overflow-hidden text-slate-100">
 
             {/* 1. TOP BAR */}
-            <header className="h-14 shrink-0 bg-gradient-to-r from-indigo-700 to-purple-700 text-white flex items-center justify-between px-6 shadow-md z-10">
+            <header className="h-14 shrink-0 bg-slate-900 border-b border-slate-800 text-slate-100 flex items-center justify-between px-6 z-10">
                 <div className="flex items-center gap-3">
-                    <FileSpreadsheet className="w-5 h-5 text-indigo-200" />
-                    <h1 className="font-semibold text-lg tracking-tight">DocStudio <span className="text-indigo-300 font-normal">· {t.tabExcelMapping || 'Excel Order Mapping'}</span></h1>
+                    <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                    <h1 className="font-semibold text-base tracking-tight text-slate-100">{t.tabExcelMapping || 'Excel Order Mapping'}</h1>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -343,7 +343,7 @@ export default function ExcelMappingView({ t: tProp }) {
             </header>
 
             {error && (
-                <div className="bg-red-50 text-red-600 p-2 text-center text-sm font-medium border-b border-red-100 flex items-center justify-center gap-2 shrink-0">
+                <div className="bg-red-500/10 text-red-600 p-2 text-center text-sm font-medium border-b border-red-100 flex items-center justify-center gap-2 shrink-0">
                     <AlertCircle className="w-4 h-4" /> {error}
                 </div>
             )}
@@ -353,12 +353,12 @@ export default function ExcelMappingView({ t: tProp }) {
 
                 {/* LEFT COLUMN: SOURCE */}
                 <section className="flex-1 flex flex-col p-4 overflow-y-auto">
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden">
-                        <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
-                            <h2 className="font-bold text-slate-700 text-sm">{t.sourceCustomer || 'Nguồn: Đơn hàng Khách'}</h2>
+                    <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 flex-1 flex flex-col overflow-hidden">
+                        <div className="p-3 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between shrink-0">
+                            <h2 className="font-bold text-slate-200 text-sm">{t.sourceCustomer || 'Nguồn: Đơn hàng Khách'}</h2>
                             <label className="cursor-pointer">
                                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleFileUpload(e, true)} />
-                                <div className={`px-3 py-1.5 rounded text-xs font-medium border border-dashed transition-colors flex items-center gap-2 ${sourceFile ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'hover:bg-slate-100 border-slate-300 text-slate-600'}`}>
+                                <div className={`px-3 py-1.5 rounded text-xs font-medium border border-dashed transition-colors flex items-center gap-2 ${sourceFile ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'hover:bg-slate-800 border-slate-700 text-slate-300'}`}>
                                     <Upload className="w-3.5 h-3.5" />
                                     {sourceFile ? `${sourceFile} ✓` : 'Upload File'}
                                 </div>
@@ -371,7 +371,7 @@ export default function ExcelMappingView({ t: tProp }) {
                                     <thead className="bg-slate-50/80 sticky top-0 z-10 shadow-sm backdrop-blur">
                                         <tr>
                                             {sourceHeaders.map((header, i) => (
-                                                <th key={i} className="py-2 px-2 border-b border-slate-200 font-semibold text-slate-700 whitespace-nowrap">
+                                                <th key={i} className="py-2 px-2 border-b border-slate-800 font-semibold text-slate-200 whitespace-nowrap">
                                                     <div className="flex items-center gap-1.5">
                                                         {header}
                                                         <div className={`w-2 h-2 rounded-full ${statusColors[getSourceStatus(header)]}`} />
@@ -382,7 +382,7 @@ export default function ExcelMappingView({ t: tProp }) {
                                     </thead>
                                     <tbody>
                                         {sourceData.map((row, rowIdx) => (
-                                            <tr key={rowIdx} className="hover:bg-slate-50 border-b border-slate-100">
+                                            <tr key={rowIdx} className="hover:bg-slate-800/60 border-b border-slate-800">
                                                 {sourceHeaders.map((header, colIdx) => (
                                                     <td key={colIdx} className={`py-1.5 px-2 truncate max-w-[130px] border-l-2 ${getSourceStatus(header) === 'auto' ? 'border-green-400' : getSourceStatus(header) === 'manual' ? 'border-amber-400' : 'border-transparent'}`}>
                                                         {row[header] !== undefined ? String(row[header]) : ''}
@@ -401,7 +401,7 @@ export default function ExcelMappingView({ t: tProp }) {
 
                 {/* CENTER SMART DIVIDER */}
                 <div className="w-20 shrink-0 flex flex-col items-center justify-center z-10">
-                    <div className="flex-1 w-px bg-slate-200 my-4" />
+                    <div className="flex-1 w-px bg-slate-700 my-4" />
                     <button
                         onClick={handleAutoMap}
                         disabled={!sourceFile || !targetFile || isProcessing || isMappingLoading}
@@ -411,17 +411,17 @@ export default function ExcelMappingView({ t: tProp }) {
                         {isMappingLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 animate-pulse group-hover:animate-none" />}
                     </button>
                     <div className="text-[10px] font-bold tracking-wider text-indigo-400 mt-2 uppercase">Auto-map</div>
-                    <div className="flex-1 w-px bg-slate-200 my-4" />
+                    <div className="flex-1 w-px bg-slate-700 my-4" />
                 </div>
 
                 {/* RIGHT COLUMN: TARGET with 3-Zone Layout */}
                 <section className="flex-1 flex flex-col p-4 overflow-y-auto">
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col overflow-hidden">
-                        <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between shrink-0">
-                            <h2 className="font-bold text-slate-700 text-sm">{t.targetSupplier || 'Đích: Mẫu Nhà cung cấp'}</h2>
+                    <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 flex-1 flex flex-col overflow-hidden">
+                        <div className="p-3 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between shrink-0">
+                            <h2 className="font-bold text-slate-200 text-sm">{t.targetSupplier || 'Đích: Mẫu Nhà cung cấp'}</h2>
                             <label className="cursor-pointer">
                                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleFileUpload(e, false)} />
-                                <div className={`px-3 py-1.5 rounded text-xs font-medium border border-dashed transition-colors flex items-center gap-2 ${targetFile ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'hover:bg-slate-100 border-slate-300 text-slate-600'}`}>
+                                <div className={`px-3 py-1.5 rounded text-xs font-medium border border-dashed transition-colors flex items-center gap-2 ${targetFile ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'hover:bg-slate-800 border-slate-700 text-slate-300'}`}>
                                     <Upload className="w-3.5 h-3.5" />
                                     {targetFile ? `${targetFile} ✓` : 'Upload Template'}
                                 </div>
@@ -440,18 +440,18 @@ export default function ExcelMappingView({ t: tProp }) {
                                     />
 
                                     {/* ZONE 2: Product Data Table */}
-                                    <div className="bg-white rounded-lg border border-green-200">
+                                    <div className="bg-slate-900 rounded-lg border border-green-200">
                                         <div className="px-3 py-2 bg-green-50 border-b border-green-200 rounded-t-lg">
                                             <span className="text-xs font-bold text-green-700 uppercase tracking-wider">
                                                 📦 Bảng sản phẩm ({sourceData.length} sản phẩm)
                                             </span>
                                         </div>
                                         <table className="w-full text-xs text-left border-collapse">
-                                            <thead className="bg-slate-50">
+                                            <thead className="bg-slate-900/60">
                                                 <tr>
-                                                    <th className="py-1.5 px-2 border-b border-slate-200 font-semibold text-slate-500 whitespace-nowrap text-center w-12">Row</th>
+                                                    <th className="py-1.5 px-2 border-b border-slate-800 font-semibold text-slate-400 whitespace-nowrap text-center w-12">Row</th>
                                                     {targetHeaders.map((header, i) => (
-                                                        <th key={i} className="py-1.5 px-2 border-b border-slate-200 font-semibold text-slate-700 whitespace-nowrap">
+                                                        <th key={i} className="py-1.5 px-2 border-b border-slate-800 font-semibold text-slate-200 whitespace-nowrap">
                                                             {header}
                                                         </th>
                                                     ))}
@@ -459,8 +459,8 @@ export default function ExcelMappingView({ t: tProp }) {
                                             </thead>
                                             <tbody>
                                                 {sourceData.length > 0 ? sourceData.map((_, rowIdx) => (
-                                                    <tr key={rowIdx} className="border-b border-slate-100">
-                                                        <td className="py-1 px-2 text-center text-[10px] font-mono text-slate-400 bg-slate-50 border-r border-slate-100">
+                                                    <tr key={rowIdx} className="border-b border-slate-800">
+                                                        <td className="py-1 px-2 text-center text-[10px] font-mono text-slate-400 bg-slate-900/60 border-r border-slate-800">
                                                             {headerRowIndex !== null ? headerRowIndex + 2 + rowIdx : rowIdx + 1}
                                                         </td>
                                                         {targetHeaders.map((header, colIdx) => {
@@ -468,7 +468,7 @@ export default function ExcelMappingView({ t: tProp }) {
                                                             const isMapped = val !== '';
                                                             return (
                                                                 <td key={colIdx} className="py-1 px-2 truncate max-w-[120px]">
-                                                                    <div className={`px-1.5 py-0.5 rounded text-xs min-h-[22px] ${isMapped ? 'bg-green-50 text-green-900 border border-green-100' : 'bg-slate-50 text-slate-400 border border-dashed border-slate-200'}`}>
+                                                                    <div className={`px-1.5 py-0.5 rounded text-xs min-h-[22px] ${isMapped ? 'bg-green-50 text-green-900 border border-green-100' : 'bg-slate-900/60 text-slate-400 border border-dashed border-slate-800'}`}>
                                                                         {val || '—'}
                                                                     </div>
                                                                 </td>
@@ -504,21 +504,21 @@ export default function ExcelMappingView({ t: tProp }) {
             </main>
 
             {/* 3. BOTTOM PANEL: MAPPING RULES */}
-            <footer className={`bg-white/80 backdrop-blur border-t border-slate-200 transition-all duration-300 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-20 ${showBottomPanel ? 'h-44' : 'h-11'}`}>
+            <footer className={`bg-slate-900/80 backdrop-blur border-t border-slate-800 transition-all duration-300 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-20 ${showBottomPanel ? 'h-44' : 'h-11'}`}>
 
-                <div className="h-11 px-6 flex items-center justify-between border-b border-slate-100">
+                <div className="h-11 px-6 flex items-center justify-between border-b border-slate-800">
                     <button
                         onClick={() => setShowBottomPanel(!showBottomPanel)}
-                        className="flex items-center gap-2 font-bold text-slate-700 hover:text-indigo-600 focus:outline-none text-sm"
+                        className="flex items-center gap-2 font-bold text-slate-200 hover:text-indigo-600 focus:outline-none text-sm"
                     >
                         {t.fieldMappingRules || 'Quy tắc khớp trường (Rules)'}
-                        <div className="bg-slate-100 p-1 rounded-full text-slate-500">
+                        <div className="bg-slate-800 p-1 rounded-full text-slate-400">
                             {showBottomPanel ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
                         </div>
                     </button>
 
                     <div className="flex gap-3">
-                        <button onClick={addEmptyRule} className="text-xs font-medium text-slate-600 hover:text-indigo-600 flex items-center gap-1 border border-slate-200 bg-white px-3 py-1 rounded shadow-sm hover:border-indigo-200">
+                        <button onClick={addEmptyRule} className="text-xs font-medium text-slate-300 hover:text-indigo-600 flex items-center gap-1 border border-slate-800 bg-slate-900 px-3 py-1 rounded shadow-sm hover:border-indigo-200">
                             <Plus size={12} /> {t.addRule || '+ Thêm Rule'}
                         </button>
                         <button onClick={saveProfile} className="text-xs font-medium text-white hover:bg-slate-700 flex items-center gap-1 border border-slate-800 bg-slate-800 px-3 py-1 rounded shadow-sm">

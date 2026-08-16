@@ -14,7 +14,7 @@ import LayoutSettingsBar from './LayoutSettingsBar';
 // =====================================================================
 const dsTranslations = {
     vn: {
-        sidebarTitle: 'DocStudio',
+        sidebarTitle: 'Soạn thảo tài liệu',
         sidebarSubtitle: 'Quản lý & Xuất tài liệu',
         navDocs: 'Tài liệu',
         navTemplates: 'Mẫu tài liệu',
@@ -49,7 +49,7 @@ const dsTranslations = {
         importingDocx: 'Đang đọc file DOCX...',
     },
     en: {
-        sidebarTitle: 'DocStudio',
+        sidebarTitle: 'Document Studio',
         sidebarSubtitle: 'Manage & Export',
         navDocs: 'Documents',
         navTemplates: 'Templates',
@@ -84,7 +84,7 @@ const dsTranslations = {
         importingDocx: 'Reading DOCX file...',
     },
     jp: {
-        sidebarTitle: 'DocStudio',
+        sidebarTitle: '文書スタジオ',
         sidebarSubtitle: '管理 & エクスポート',
         navDocs: 'ドキュメント',
         navTemplates: 'テンプレート',
@@ -336,9 +336,9 @@ export default function DocStudioApp({ displayLang }) {
     };
 
     return (
-        <div className="flex flex-col md:flex-row min-h-screen bg-slate-50 w-full text-slate-800 font-sans">
+        <div className="flex flex-col md:flex-row min-h-[calc(100vh-8rem)] w-full rounded-2xl border border-slate-800 bg-slate-950 text-slate-100 font-sans overflow-hidden">
             {/* Sidebar */}
-            <aside className="print:hidden w-full md:w-64 bg-slate-900 text-slate-200 border-r border-slate-800 shrink-0 sticky top-0 h-screen overflow-y-auto">
+            <aside className="print:hidden w-full md:w-64 bg-slate-900 text-slate-200 border-r border-slate-800 shrink-0 overflow-y-auto">
                 <div className="p-5 border-b border-white/10 shrink-0">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center shadow-inner">
@@ -380,15 +380,15 @@ export default function DocStudioApp({ displayLang }) {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto bg-slate-50 p-6 relative print:p-0 print:bg-white print:overflow-visible">
+            <main className="flex-1 overflow-y-auto bg-slate-900/60 p-6 relative print:p-0 print:bg-white print:overflow-visible">
                 <div className="max-w-5xl mx-auto">
                     {/* ── Dashboard ── */}
                     {activeSubTab === 'dashboard' && (
                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <header className="mb-8 flex justify-between items-end">
                                 <div>
-                                    <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t.dashTitle}</h2>
-                                    <p className="text-slate-500 text-sm mt-1">{t.dashSubtitle}</p>
+                                    <h2 className="text-2xl font-bold tracking-tight text-slate-100">{t.dashTitle}</h2>
+                                    <p className="text-slate-400 text-sm mt-1">{t.dashSubtitle}</p>
                                 </div>
                                 <button
                                     onClick={() => setActiveSubTab('editor')}
@@ -397,33 +397,33 @@ export default function DocStudioApp({ displayLang }) {
                                     <PlusCircle size={16} /> {t.createDoc}
                                 </button>
                             </header>
-                            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                                <div className="p-4 border-b border-slate-100 flex gap-4">
+                            <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+                                <div className="p-4 border-b border-slate-800 flex gap-4">
                                     <div className="relative flex-1">
                                         <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
                                         <input type="text" placeholder={t.searchPlaceholder} value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                            className="w-full pl-9 pr-4 py-2 bg-slate-900/60 border border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                                     </div>
                                 </div>
                                 <div className="divide-y divide-slate-100">
                                     {MOCK_DOCS.filter(d => getDocTitle(d).toLowerCase().includes(searchQuery.toLowerCase())).map(doc => (
-                                        <div key={doc.id} onClick={() => handleLoadDocument(doc)} className="p-4 hover:bg-slate-50 flex items-center justify-between group transition-colors cursor-pointer">
+                                        <div key={doc.id} onClick={() => handleLoadDocument(doc)} className="p-4 hover:bg-slate-800/60 flex items-center justify-between group transition-colors cursor-pointer">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
                                                     <FileText size={18} />
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-bold text-slate-800 text-sm">{getDocTitle(doc)}</h3>
+                                                    <h3 className="font-bold text-slate-100 text-sm">{getDocTitle(doc)}</h3>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">{doc.type}</span>
+                                                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{doc.type}</span>
                                                         <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
                                                         <span className="text-xs text-slate-400">{t.updated} {doc.updatedAt}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-4">
-                                                <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide ${doc.status === 'DRAFT' ? 'bg-slate-100 text-slate-500' : doc.status === 'GENERATED' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'} `}>
+                                                <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide ${doc.status === 'DRAFT' ? 'bg-slate-800 text-slate-400' : doc.status === 'GENERATED' ? 'bg-blue-500/10 text-blue-600' : 'bg-emerald-500/10 text-emerald-600'} `}>
                                                     {doc.status}
                                                 </span>
                                                 <button className="text-slate-400 hover:text-slate-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -441,14 +441,14 @@ export default function DocStudioApp({ displayLang }) {
                     {activeSubTab === 'templates' && (
                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <header className="mb-8">
-                                <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t.templateTitle}</h2>
-                                <p className="text-slate-500 text-sm mt-1">{t.templateSubtitle}</p>
+                                <h2 className="text-2xl font-bold tracking-tight text-slate-100">{t.templateTitle}</h2>
+                                <p className="text-slate-400 text-sm mt-1">{t.templateSubtitle}</p>
                             </header>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {['Official Letter', 'Meeting Minutes', 'Contract'].map((template) => (
-                                    <div key={template} onClick={() => handleLoadTemplate(template)} className="bg-white border border-slate-200 p-5 rounded-xl hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group">
+                                    <div key={template} onClick={() => handleLoadTemplate(template)} className="bg-slate-900 border border-slate-800 p-5 rounded-xl hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group">
                                         <div className="flex justify-between items-start mb-4">
-                                            <div className="w-10 h-10 bg-slate-100 text-slate-500 rounded-lg flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                                            <div className="w-10 h-10 bg-slate-800 text-slate-400 rounded-lg flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                                                 <LayoutTemplate size={20} />
                                             </div>
                                             <button
@@ -459,8 +459,8 @@ export default function DocStudioApp({ displayLang }) {
                                                 <Download size={16} />
                                             </button>
                                         </div>
-                                        <h3 className="font-bold text-slate-800">{template}</h3>
-                                        <p className="text-xs text-slate-500 mt-1">A4 | Mẫu tài liệu chuẩn</p>
+                                        <h3 className="font-bold text-slate-100">{template}</h3>
+                                        <p className="text-xs text-slate-400 mt-1">A4 | Mẫu tài liệu chuẩn</p>
                                     </div>
                                 ))}
                             </div>
@@ -474,19 +474,19 @@ export default function DocStudioApp({ displayLang }) {
                             <header className="mb-3 flex justify-between items-center shrink-0 print:hidden">
                                 <div className="flex items-center gap-3">
                                     <button onClick={() => setActiveSubTab('dashboard')}
-                                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title={t.backToDash}>
+                                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-800 rounded-lg transition-colors" title={t.backToDash}>
                                         <ArrowLeft size={18} />
                                     </button>
                                     <div>
-                                        <h2 className="text-xl font-bold tracking-tight text-slate-900">{t.editorTitle}</h2>
-                                        <p className="text-slate-500 text-xs mt-0.5">{t.editorSubtitle}</p>
+                                        <h2 className="text-xl font-bold tracking-tight text-slate-100">{t.editorTitle}</h2>
+                                        <p className="text-slate-400 text-xs mt-0.5">{t.editorSubtitle}</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-2 flex-wrap justify-end">
                                     <input ref={fileInputRef} type="file" accept=".txt,.md,.text,.markdown,.doc,.docx"
                                         onChange={handleFileUpload} className="hidden" />
                                     <button onClick={() => fileInputRef.current?.click()}
-                                        className="px-3 py-1.5 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
+                                        className="px-3 py-1.5 bg-slate-900 border border-indigo-200 hover:bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
                                         title={t.uploadHint}>
                                         <Upload size={14} /> {t.uploadBtn}
                                     </button>
@@ -495,7 +495,7 @@ export default function DocStudioApp({ displayLang }) {
                                         <Sparkles size={14} /> {t.analyzeBtn}
                                     </button>
                                     <button onClick={handleGeneratePreview} disabled={!rawInput.trim()}
-                                        className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 disabled:opacity-40 text-slate-600 text-xs font-bold rounded-lg transition-all">
+                                        className="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800/60 disabled:opacity-40 text-slate-300 text-xs font-bold rounded-lg transition-all">
                                         {t.generatePreview}
                                     </button>
                                     {generatedSchema && (
@@ -515,7 +515,7 @@ export default function DocStudioApp({ displayLang }) {
 
                             {/* Status message */}
                             {statusMessage && (
-                                <div className={`print:hidden mb-3 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 shrink-0 ${statusType === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : statusType === 'error' ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-blue-50 border border-blue-200 text-blue-700'}`}>
+                                <div className={`print:hidden mb-3 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 shrink-0 ${statusType === 'success' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300' : statusType === 'error' ? 'bg-red-500/10 border border-red-500/30 text-red-200' : 'bg-blue-500/10 border border-blue-500/30 text-blue-200'}`}>
                                     {statusType === 'info' ? <Sparkles size={14} className="animate-spin text-blue-500" /> : <Sparkles size={14} />}
                                     {statusMessage}
                                 </div>
@@ -526,9 +526,9 @@ export default function DocStudioApp({ displayLang }) {
                                 {/* Left: Editor + Suggestions + Validation */}
                                 <div className="w-1/2 flex flex-col gap-3 min-h-0 print:hidden">
                                     {/* Textarea */}
-                                    <div className={`relative flex flex-col bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm ${suggestions.length > 0 ? 'h-1/3' : 'flex-1'}`}>
-                                        <div className="p-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
-                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t.rawInputLabel}</span>
+                                    <div className={`relative flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm ${suggestions.length > 0 ? 'h-1/3' : 'flex-1'}`}>
+                                        <div className="p-3 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between shrink-0">
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.rawInputLabel}</span>
                                             <span className="text-[10px] text-slate-400">{t.uploadHint}</span>
                                         </div>
                                         <textarea
@@ -537,7 +537,7 @@ export default function DocStudioApp({ displayLang }) {
                                             onChange={(e) => setRawInput(e.target.value)}
                                             onSelect={handleTextSelect}
                                             onBlur={() => setTimeout(() => setSelectionRange(null), 200)}
-                                            className="flex-1 p-4 resize-none outline-none font-mono text-sm text-slate-700 custom-scrollbar"
+                                            className="flex-1 p-4 resize-none outline-none font-mono text-sm text-slate-200 custom-scrollbar"
                                             placeholder={t.rawInputPlaceholder}
                                         />
 
@@ -577,20 +577,20 @@ export default function DocStudioApp({ displayLang }) {
 
                                     {/* Validation Panel */}
                                     {validationIssues.length > 0 && (
-                                        <div className="h-40 bg-white border border-rose-200 rounded-xl shadow-sm overflow-hidden flex flex-col shrink-0">
+                                        <div className="h-40 bg-slate-900 border border-rose-200 rounded-xl shadow-sm overflow-hidden flex flex-col shrink-0">
                                             <div className="p-2.5 bg-rose-50 border-b border-rose-100 flex items-center gap-2 text-rose-700 font-bold text-xs uppercase tracking-wider">
                                                 <Layers size={14} /> {t.validationLabel} ({validationIssues.length})
                                             </div>
                                             <div className="p-3 overflow-y-auto custom-scrollbar flex-1 space-y-2">
                                                 {validationIssues.map(issue => (
-                                                    <div key={issue.id} className="p-2 border border-slate-100 rounded bg-slate-50">
+                                                    <div key={issue.id} className="p-2 border border-slate-800 rounded bg-slate-900/60">
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${issue.severity === 'ERROR' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
                                                                 {issue.severity}
                                                             </span>
-                                                            <span className="text-xs font-bold text-slate-700">{issue.message}</span>
+                                                            <span className="text-xs font-bold text-slate-200">{issue.message}</span>
                                                         </div>
-                                                        <p className="text-[11px] text-slate-500 ml-1">{t.noteLabel}: {issue.suggestion}</p>
+                                                        <p className="text-[11px] text-slate-400 ml-1">{t.noteLabel}: {issue.suggestion}</p>
                                                     </div>
                                                 ))}
                                             </div>
@@ -599,15 +599,15 @@ export default function DocStudioApp({ displayLang }) {
                                 </div>
 
                                 {/* Right: Preview */}
-                                <div className="w-1/2 flex flex-col min-h-0 bg-slate-200 border border-slate-300 rounded-xl overflow-hidden print:w-full print:border-none print:shadow-none print:bg-transparent print:block print:overflow-visible">
-                                    <div className="p-2 border-b border-slate-300 bg-white/50 backdrop-blur-sm z-10 shrink-0 print:hidden">
+                                <div className="w-1/2 flex flex-col min-h-0 bg-slate-700 border border-slate-700 rounded-xl overflow-hidden print:w-full print:border-none print:shadow-none print:bg-transparent print:block print:overflow-visible">
+                                    <div className="p-2 border-b border-slate-700 bg-white/50 backdrop-blur-sm z-10 shrink-0 print:hidden">
                                         <LayoutSettingsBar config={layoutConfig} onChange={setLayoutConfig} />
                                     </div>
                                     <div className="flex-1 overflow-y-auto p-4 flex justify-center custom-scrollbar print:p-0 print:m-0 print:overflow-visible print:block">
                                         {generatedSchema ? (
                                             <DocStudioPreview schema={generatedSchema} layoutConfig={layoutConfig} />
                                         ) : (
-                                            <div className="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-lg p-10 flex flex-col items-center justify-center">
+                                            <div className="bg-slate-900 w-full max-w-[210mm] min-h-[297mm] shadow-lg p-10 flex flex-col items-center justify-center">
                                                 <FileUp size={48} className="text-slate-200 mb-4" />
                                                 <p className="text-slate-400 text-center italic text-sm max-w-xs">{t.previewEmpty}</p>
                                             </div>

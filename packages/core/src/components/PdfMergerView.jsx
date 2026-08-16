@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { MiniAppHeader, MiniAppLayout } from './shared/MiniAppLayout.jsx';
 import {
     PDF_MERGE_LIMITS,
     formatMiB,
@@ -40,6 +41,7 @@ const uiText = {
     vn: {
         title: 'Ghép File PDF',
         subtitle: 'Tải lên nhiều file PDF và ghép thành 1 file duy nhất',
+        privacyBadge: '100% Client-Side • Bảo mật',
         dropZone: 'Kéo thả file PDF vào đây',
         dropSub: 'hoặc click để chọn file (chọn nhiều file)',
         addMore: 'Thêm file',
@@ -56,6 +58,7 @@ const uiText = {
     en: {
         title: 'Merge PDF Files',
         subtitle: 'Upload multiple PDF files and merge into a single file',
+        privacyBadge: '100% Client-Side • Secure',
         dropZone: 'Drag & drop PDF files here',
         dropSub: 'or click to select files (multi-select)',
         addMore: 'Add more',
@@ -72,6 +75,7 @@ const uiText = {
     jp: {
         title: 'PDF結合',
         subtitle: '複数のPDFファイルをアップロードして1つに結合',
+        privacyBadge: '100% ローカル処理・安全',
         dropZone: 'PDFファイルをここにドラッグ＆ドロップ',
         dropSub: 'またはクリックで選択（複数可）',
         addMore: '追加',
@@ -269,25 +273,17 @@ const PdfMergerView = ({ displayLang }) => {
     const totalPages = files.reduce((sum, f) => sum + f.pageCount, 0);
 
     return (
-        <div className="min-h-screen bg-slate-100 flex flex-col font-sans text-slate-900">
-            {/* Header */}
-            <div className="no-print bg-gradient-to-r from-violet-600 to-violet-800 p-5 shadow-lg">
-                <div className="max-w-4xl mx-auto">
-                    <div className="flex items-center gap-2.5 text-white mb-1">
-                        <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/30">
-                            <Combine size={18} strokeWidth={2.5} />
-                        </div>
-                        <h1 className="text-xl font-black tracking-tight uppercase italic">DocStudio</h1>
-                    </div>
-                    <p className="text-[10px] text-violet-200 font-bold uppercase tracking-widest mt-0.5">
-                        {t.title}
-                    </p>
-                </div>
-            </div>
+        <MiniAppLayout width="narrow">
+            <MiniAppHeader
+                title={t.title}
+                subtitle={t.subtitle}
+                badge={t.privacyBadge}
+                tone="violet"
+            />
 
-            <div className="max-w-4xl mx-auto w-full p-4 md:p-8 flex-grow">
+            <div className="w-full">
                 {fileError && (
-                    <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
                         {fileError}
                     </div>
                 )}
@@ -301,12 +297,12 @@ const PdfMergerView = ({ displayLang }) => {
                         onClick={() => fileInputRef.current?.click()}
                         className={`w-full min-h-[400px] border-3 border-dashed rounded-2xl flex flex-col items-center justify-center gap-5 cursor-pointer transition-all ${isDragging
                                 ? 'border-violet-400 bg-violet-50 scale-[1.01]'
-                                : 'border-slate-300 bg-white hover:border-violet-300 hover:bg-violet-50/30'
+                                : 'border-slate-700 bg-slate-900 hover:border-violet-300 hover:bg-violet-50/30'
                             }`}
                     >
                         <Upload size={64} strokeWidth={1.2} className={isDragging ? 'text-violet-400' : 'text-slate-300'} />
                         <div className="text-center">
-                            <p className="text-lg font-bold text-slate-500">{t.dropZone}</p>
+                            <p className="text-lg font-bold text-slate-400">{t.dropZone}</p>
                             <p className="text-sm text-slate-400 mt-1">{t.dropSub}</p>
                             <p className="text-xs text-slate-400 mt-2">
                                 Tối đa {PDF_MERGE_LIMITS.maxFiles} file, {formatMiB(PDF_MERGE_LIMITS.maxFileBytes)} MiB/file, {PDF_MERGE_LIMITS.maxPages} trang; xử lý cục bộ.
@@ -324,9 +320,9 @@ const PdfMergerView = ({ displayLang }) => {
                 ) : (
                     <>
                         {/* Toolbar */}
-                        <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
+                        <div className="bg-slate-900 rounded-2xl shadow-lg border border-slate-800 p-4 mb-6 flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-3 flex-wrap">
-                                <span className="text-sm text-slate-500">
+                                <span className="text-sm text-slate-400">
                                     <strong className="text-violet-600">{files.length}</strong> {t.files} ·
                                     {' '}{t.totalPages} <strong className="text-violet-600">{totalPages}</strong> {t.pages}
                                 </span>
@@ -336,7 +332,7 @@ const PdfMergerView = ({ displayLang }) => {
                             <div className="flex items-center gap-2 flex-wrap">
                                 <button
                                     onClick={() => addFileInputRef.current?.click()}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-white text-violet-600 font-bold rounded-xl border border-violet-200 hover:bg-violet-50 transition-all text-sm"
+                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-900 text-violet-600 font-bold rounded-xl border border-violet-200 hover:bg-violet-50 transition-all text-sm"
                                 >
                                     <FilePlus2 size={14} /> {t.addMore}
                                 </button>
@@ -357,7 +353,7 @@ const PdfMergerView = ({ displayLang }) => {
                                 </button>
                                 <button
                                     onClick={clearAll}
-                                    className="flex items-center gap-1.5 px-3 py-2.5 border border-red-200 text-red-400 hover:bg-red-50 hover:text-red-600 font-bold rounded-xl transition-all text-sm"
+                                    className="flex items-center gap-1.5 px-3 py-2.5 border border-red-500/30 text-red-400 hover:bg-red-50 hover:text-red-600 font-bold rounded-xl transition-all text-sm"
                                 >
                                     <Trash2 size={14} />
                                 </button>
@@ -368,7 +364,7 @@ const PdfMergerView = ({ displayLang }) => {
                         {isProcessing && (
                             <div className="flex items-center justify-center py-8">
                                 <div className="animate-spin w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full" />
-                                <span className="ml-3 text-slate-500 font-medium">{t.processing}</span>
+                                <span className="ml-3 text-slate-400 font-medium">{t.processing}</span>
                             </div>
                         )}
 
@@ -382,10 +378,10 @@ const PdfMergerView = ({ displayLang }) => {
                                     onDragOver={(e) => handleItemDragOver(e, file.id)}
                                     onDrop={(e) => handleItemDrop(e, file.id)}
                                     onDragEnd={handleItemDragEnd}
-                                    className={`flex items-center gap-4 p-4 bg-white rounded-2xl shadow-md border-2 transition-all cursor-grab active:cursor-grabbing group ${dragOverId === file.id && dragItemId !== file.id
+                                    className={`flex items-center gap-4 p-4 bg-slate-900 rounded-2xl shadow-md border-2 transition-all cursor-grab active:cursor-grabbing group ${dragOverId === file.id && dragItemId !== file.id
                                             ? 'border-violet-400 bg-violet-50 scale-[1.01]'
                                             : dragItemId === file.id
-                                                ? 'opacity-50 border-slate-300'
+                                                ? 'opacity-50 border-slate-700'
                                                 : 'border-transparent hover:border-violet-200 hover:shadow-lg'
                                         }`}
                                 >
@@ -400,13 +396,13 @@ const PdfMergerView = ({ displayLang }) => {
                                     </div>
 
                                     {/* Thumbnail */}
-                                    <div className="w-14 h-18 bg-slate-100 rounded-lg overflow-hidden shadow-sm shrink-0 border border-slate-200">
+                                    <div className="w-14 h-18 bg-slate-800 rounded-lg overflow-hidden shadow-sm shrink-0 border border-slate-800">
                                         <img src={file.thumbnail} alt={file.name} className="w-full h-full object-cover" />
                                     </div>
 
                                     {/* File info */}
                                     <div className="flex-grow min-w-0">
-                                        <p className="font-bold text-sm text-slate-700 truncate">{file.name}</p>
+                                        <p className="font-bold text-sm text-slate-200 truncate">{file.name}</p>
                                         <p className="text-xs text-slate-400 mt-0.5">
                                             {file.pageCount} {t.pages}
                                         </p>
@@ -431,7 +427,7 @@ const PdfMergerView = ({ displayLang }) => {
                             onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }}
                             className={`mt-6 w-full py-8 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all ${isDragging
                                     ? 'border-violet-400 bg-violet-50'
-                                    : 'border-slate-200 bg-white/50 hover:border-violet-300 hover:bg-violet-50/30'
+                                    : 'border-slate-800 bg-white/50 hover:border-violet-300 hover:bg-violet-50/30'
                                 }`}
                             onClick={() => addFileInputRef.current?.click()}
                         >
@@ -441,7 +437,7 @@ const PdfMergerView = ({ displayLang }) => {
                     </>
                 )}
             </div>
-        </div>
+        </MiniAppLayout>
     );
 };
 
