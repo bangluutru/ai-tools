@@ -32,6 +32,7 @@ import {
   AMOUNT_BALANCE_WARNING_PREFIX,
   amountBalanceWarning,
   extractInvoiceFields,
+  foldText,
   missingInvoiceFields,
   parseInvoiceSymbol,
   validateInvoiceFields,
@@ -281,6 +282,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       amountBeforeTax: resolved.amountBeforeTax,
       vatAmount: resolved.vatAmount,
       authorityCollection: resolved.authorityCollection,
+      authorityCollectionDerived: resolved.authorityCollectionDerived,
       totalAmount: resolved.totalAmount,
       amountInWords: fields.amountInWords || '',
       status: missingFields.length === 0 && warnings.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
@@ -508,15 +510,29 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
     ]);
 
     // Khoản thu hộ nhà chức trách trên hóa đơn hàng không: không chịu thuế GTGT
-    // nhưng vẫn nằm trong số tiền phải trả. Mỗi phần mềm phát hành đặt một tên
-    // thẻ khác nhau, và nhiều nơi nhét vào khối thông tin khác (TTin).
-    let authorityCollection = parseAmount([
-      'TgTienThuHo', 'ThuHoNhaChucTrach', 'TThuHo', 'TienThuHo', 'AuthorizedCollection'
-    ]);
+    // nhưng vẫn nằm trong số tiền phải trả.
+    //
+    // Mỗi phần mềm phát hành đặt một tên khác nhau, có nơi là tên thẻ
+    // ("TgTienThuHo"), có nơi nhét vào khối thông tin khác dưới dạng nhãn tiếng
+    // Việt có dấu ("Thu hộ nhà chức trách"). Vì vậy so khớp trên tên đã bỏ dấu
+    // và bỏ ký tự ngăn cách, thay vì liệt kê sẵn tên thẻ.
+    const isAuthorityField = (name) => /thuho|authorizedcollection/.test(
+      foldText(name).replace(/[^a-z0-9]/g, ''),
+    );
+
+    let authorityCollection = 0;
+    for (const [field, value] of Object.entries(ttinData)) {
+      if (!isAuthorityField(field)) continue;
+      const parsed = parseXmlAmount(value);
+      if (parsed !== null && parsed > 0) {
+        authorityCollection = parsed;
+        break;
+      }
+    }
     if (!authorityCollection) {
-      for (const [field, value] of Object.entries(ttinData)) {
-        if (!/thu\s*ho|authorized\s*collection/i.test(field)) continue;
-        const parsed = parseXmlAmount(value);
+      for (const node of xmlDoc.querySelectorAll('*')) {
+        if (node.children.length > 0 || !isAuthorityField(node.tagName)) continue;
+        const parsed = parseXmlAmount(node.textContent.trim());
         if (parsed !== null && parsed > 0) {
           authorityCollection = parsed;
           break;
@@ -525,7 +541,14 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
     }
 
     // Chỉ suy ra phép cộng trực tiếp khi cả trước thuế và thuế đều có bằng chứng.
-    ({ totalAmount, amountBeforeTax, vatAmount } = deriveInvoiceAmounts({
+    let authorityCollectionDerived = false;
+    ({
+      totalAmount,
+      amountBeforeTax,
+      vatAmount,
+      authorityCollection,
+      authorityCollectionDerived,
+    } = deriveInvoiceAmounts({
       totalAmount,
       amountBeforeTax,
       vatAmount,
@@ -578,6 +601,7 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       amountBeforeTax,
       vatAmount,
       authorityCollection,
+      authorityCollectionDerived,
       totalAmount,
       status: missingFields.length === 0 && warnings.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
       rawType: 'XML',
@@ -1444,8 +1468,14 @@ export default function InvoiceTool() {
                         label={`Tiền thuế GTGT của ${inv.rawFileName || inv.fileName}`}
                       />
                       {inv.authorityCollection > 0 && (
-                        <p className="mt-1 text-right text-[10px] text-slate-500">
-                          Thu hộ: {inv.authorityCollection.toLocaleString('vi-VN')}
+                        <p
+                          className="mt-1 text-right text-[10px] text-slate-500"
+                          title={inv.authorityCollectionDerived
+                            ? 'Hóa đơn không ghi riêng khoản này; số hiện ra là phần chênh giữa tổng thanh toán và chưa thuế + tiền thuế.'
+                            : 'Đọc thẳng từ trường khoản thu hộ trên hóa đơn.'}
+                        >
+                          Thu hộ{inv.authorityCollectionDerived ? ' (suy ra)' : ''}:{' '}
+                          {inv.authorityCollection.toLocaleString('vi-VN')}
                         </p>
                       )}
                     </td>

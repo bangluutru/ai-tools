@@ -1,3 +1,6 @@
+/** Sai lệch làm tròn chấp nhận được giữa các cột tiền trên hóa đơn. */
+const ROUNDING_TOLERANCE = 1;
+
 export const INVOICE_LIMITS = Object.freeze({
   maxFiles: 200,
   maxFileBytes: 20 * 1024 * 1024,
@@ -133,10 +136,32 @@ export function deriveInvoiceAmounts({
   let total = Number(totalAmount) || 0;
   let beforeTax = Number(amountBeforeTax) || 0;
   let vat = Number(vatAmount) || 0;
-  const authority = Number(authorityCollection) || 0;
+  let authority = Number(authorityCollection) || 0;
+  let authorityDerived = false;
 
   if (!total && beforeTax && vat) total = beforeTax + vat + authority;
   if (total && beforeTax && !vat && total >= beforeTax + authority) vat = total - beforeTax - authority;
 
-  return { totalAmount: total, amountBeforeTax: beforeTax, vatAmount: vat, authorityCollection: authority };
+  // Không phần mềm phát hành nào đặt tên trường giống nhau, nên khi không đọc
+  // được khoản thu hộ mà hóa đơn vẫn ghi rõ cả ba cột tiền thì phần dôi ra
+  // chính là khoản không chịu thuế GTGT đã nằm sẵn trong tổng thanh toán. Tổng
+  // thanh toán là con số đọc thẳng từ chứng từ nên phần dôi này là số thật, ghi
+  // nhận đúng nó vẫn hơn là báo lệch một hóa đơn hợp lệ.
+  if (!authority && total && beforeTax && vat) {
+    const residual = total - beforeTax - vat;
+    // Thu hộ là khoản phụ thu; lớn hơn cả tiền hàng thì đó là đọc sai, giữ
+    // nguyên cảnh báo thay vì lấp liếm.
+    if (residual > ROUNDING_TOLERANCE && residual < beforeTax) {
+      authority = residual;
+      authorityDerived = true;
+    }
+  }
+
+  return {
+    totalAmount: total,
+    amountBeforeTax: beforeTax,
+    vatAmount: vat,
+    authorityCollection: authority,
+    authorityCollectionDerived: authorityDerived,
+  };
 }

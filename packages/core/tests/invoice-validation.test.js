@@ -16,7 +16,10 @@ import {
 test('never invents a tax rate when only the total is known', () => {
   assert.deepEqual(
     deriveInvoiceAmounts({ totalAmount: 1_080_000 }),
-    { totalAmount: 1_080_000, amountBeforeTax: 0, vatAmount: 0, authorityCollection: 0 },
+    {
+      totalAmount: 1_080_000, amountBeforeTax: 0, vatAmount: 0,
+      authorityCollection: 0, authorityCollectionDerived: false,
+    },
   );
 });
 
@@ -24,11 +27,17 @@ test('never invents a tax rate when only the total is known', () => {
 test('derives only direct arithmetic from fields present in the document', () => {
   assert.deepEqual(
     deriveInvoiceAmounts({ amountBeforeTax: 1_000_000, vatAmount: 80_000 }),
-    { totalAmount: 1_080_000, amountBeforeTax: 1_000_000, vatAmount: 80_000, authorityCollection: 0 },
+    {
+      totalAmount: 1_080_000, amountBeforeTax: 1_000_000, vatAmount: 80_000,
+      authorityCollection: 0, authorityCollectionDerived: false,
+    },
   );
   assert.deepEqual(
     deriveInvoiceAmounts({ totalAmount: 1_080_000, amountBeforeTax: 1_000_000 }),
-    { totalAmount: 1_080_000, amountBeforeTax: 1_000_000, vatAmount: 80_000, authorityCollection: 0 },
+    {
+      totalAmount: 1_080_000, amountBeforeTax: 1_000_000, vatAmount: 80_000,
+      authorityCollection: 0, authorityCollectionDerived: false,
+    },
   );
 });
 
@@ -42,6 +51,7 @@ test('an airline authorized collection is part of the amount payable', () => {
       amountBeforeTax: 3_450_000,
       vatAmount: 276_000,
       authorityCollection: 351_543,
+      authorityCollectionDerived: false,
     },
   );
 
@@ -53,8 +63,43 @@ test('an airline authorized collection is part of the amount payable', () => {
       amountBeforeTax: 3_450_000,
       vatAmount: 276_000,
       authorityCollection: 351_543,
+      authorityCollectionDerived: false,
     },
   );
+});
+
+
+// Mỗi phần mềm phát hành đặt tên trường một kiểu nên không thể liệt kê hết.
+// Hóa đơn ghi đủ ba cột thì phần dôi ra chính là khoản không chịu thuế GTGT.
+test('the untaxed remainder is recovered even when no field names it', () => {
+  const vietjet = deriveInvoiceAmounts({
+    totalAmount: 4_077_543, amountBeforeTax: 3_450_000, vatAmount: 276_000,
+  });
+
+  assert.equal(vietjet.authorityCollection, 351_543);
+  assert.equal(vietjet.authorityCollectionDerived, true);
+  // Tổng thanh toán đọc thẳng từ chứng từ nên không được sửa.
+  assert.equal(vietjet.totalAmount, 4_077_543);
+});
+
+
+test('a remainder bigger than the goods is a misread, not a collection', () => {
+  const broken = deriveInvoiceAmounts({
+    totalAmount: 99_000_000, amountBeforeTax: 1_000_000, vatAmount: 80_000,
+  });
+
+  assert.equal(broken.authorityCollection, 0);
+  assert.equal(broken.authorityCollectionDerived, false);
+});
+
+
+test('a total that already adds up gains no phantom collection', () => {
+  const clean = deriveInvoiceAmounts({
+    totalAmount: 1_080_000, amountBeforeTax: 1_000_000, vatAmount: 80_000,
+  });
+
+  assert.equal(clean.authorityCollection, 0);
+  assert.equal(clean.authorityCollectionDerived, false);
 });
 
 
