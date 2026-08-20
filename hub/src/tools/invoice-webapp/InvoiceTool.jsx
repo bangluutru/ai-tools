@@ -1,10 +1,11 @@
 /* eslint-disable no-useless-escape */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
-  FileSpreadsheet, UploadCloud, Download, FileText, CheckCircle2,
-  Trash2, ShieldCheck, AlertCircle, FileArchive, RefreshCw, Eye,
-  Building, Calendar, DollarSign, FileCheck, ArrowRight
+  FileSpreadsheet, UploadCloud, Download,
+  Trash2, ShieldCheck, RefreshCw,
+  Building2, DollarSign, FileCheck
 } from 'lucide-react';
+import { useLocalStorage } from '@ai-tools/core/hooks/useLocalStorage.js';
 import { parseLocalizedNumber } from '@ai-tools/core/utils/accounting/reconcile.js';
 import {
   deriveInvoiceAmounts,
@@ -14,6 +15,17 @@ import {
 } from '@ai-tools/core/utils/invoice/validation.js';
 import { verifyDocumentSignature } from '@ai-tools/core/utils/documentFiles.js';
 import { exportPaymentRequest } from '@ai-tools/core/utils/invoice/paymentRequestExport.js';
+import {
+  exportPaymentRequestForms,
+  monthSheetName,
+} from '@ai-tools/core/utils/invoice/paymentRequestForm.js';
+import {
+  buildFormsFromGroups,
+  companyKeyOf,
+  describeFormContent,
+  groupInvoicesByCompany,
+} from '@ai-tools/core/utils/invoice/companyGrouping.js';
+import { describeExpense } from '@ai-tools/core/utils/invoice/expenseCategory.js';
 import {
   extractInvoiceFields,
   missingInvoiceFields,
@@ -100,6 +112,17 @@ async function extractTextFromPDFBuffer(arrayBuffer) {
  * biên nhận taxi). Chỉ dùng để đặt tên hiển thị khi hóa đơn không có trường
  * "Tên người bán" theo quy định.
  */
+function findFlightRoutes(text, fileName) {
+  const routes = [];
+  for (const match of text.matchAll(/\b([A-Z]{3})\s*[-–]\s*([A-Z]{3})\b/g)) {
+    const route = `${match[1]}-${match[2]}`;
+    if (!routes.includes(route)) routes.push(route);
+  }
+  const fromName = fileName.match(/([A-Z]{3}-[A-Z]{3})/);
+  if (fromName && !routes.includes(fromName[1])) routes.push(fromName[1]);
+  return routes;
+}
+
 function describeTravelDocument(text, fileName) {
   const textLower = text.toLowerCase();
 
@@ -110,16 +133,7 @@ function describeTravelDocument(text, fileName) {
     return fnamePnr && !/^\d+$/.test(fnamePnr[1]) ? fnamePnr[1].toUpperCase() : '';
   };
 
-  const findRoutes = () => {
-    const routes = [];
-    for (const match of text.matchAll(/\b([A-Z]{3})\s*[-–]\s*([A-Z]{3})\b/g)) {
-      const route = `${match[1]}-${match[2]}`;
-      if (!routes.includes(route)) routes.push(route);
-    }
-    const fromName = fileName.match(/([A-Z]{3}-[A-Z]{3})/);
-    if (fromName && !routes.includes(fromName[1])) routes.push(fromName[1]);
-    return routes;
-  };
+  const findRoutes = () => findFlightRoutes(text, fileName);
 
   const isAirline = textLower.includes('vietjet')
     || textLower.includes('vietnam airlines')
@@ -250,8 +264,15 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       invoiceFormName: fields.symbol?.formName || '',
       date: fields.date || 'Chưa rõ ngày',
       seller,
+      // Tên người bán và tên hàng hóa "sạch" (chưa ghép chú thích) để suy ra
+      // nội dung khoản chi trên Giấy đề nghị thanh toán.
+      sellerName: fields.seller || travelName || '',
+      itemName: lineItem || '',
+      route: findFlightRoutes(text, fileName)[0] || '',
       sellerTax: fields.sellerTax || '',
+      buyer: fields.buyer || '',
       buyerTax: fields.buyerTax || '',
+      buyerAddress: fields.buyerAddress || '',
       amountBeforeTax: resolved.amountBeforeTax,
       vatAmount: resolved.vatAmount,
       totalAmount: resolved.totalAmount,
@@ -332,6 +353,19 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
     const sellerTax = getText([
       'NBan MST', 'Seller MST', 'Seller TaxCode', 'MST', 'MaSoThue', 'TaxCode', 'NBan > MST'
     ]) || '';
+    const sellerName = seller;
+
+    // Người mua quyết định hóa đơn thuộc về pháp nhân nào, nên đây là khóa để
+    // tách Giấy đề nghị thanh toán theo công ty.
+    const buyer = getText([
+      'NMua Ten', 'Buyer Ten', 'NMua > Ten', 'TenNguoiMua', 'TenDonViMua', 'BuyerName'
+    ]) || '';
+    const buyerTax = getText([
+      'NMua MST', 'Buyer MST', 'NMua > MST', 'MaSoThueNguoiMua', 'BuyerTaxCode'
+    ]) || '';
+    const buyerAddress = getText([
+      'NMua DChi', 'Buyer DChi', 'NMua > DChi', 'DiaChiNguoiMua', 'BuyerAddress'
+    ]) || '';
 
     // 4. Trích xuất nâng cao: Taxi, Vé máy bay, và tên hàng hóa dịch vụ
     const thhdvuTexts = Array.from(xmlDoc.querySelectorAll('THHDVu, TenHHDVu, HHDVu > THHDVu, HHDVu > Ten'))
@@ -348,6 +382,7 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       }
     });
 
+    let flightRoute = '';
     const sellerUpper = seller.toUpperCase();
     const isAirline = sellerUpper.includes('VIETJET') || sellerUpper.includes('VIETNAM AIRLINES');
     const isTaxi = ['GSM', 'XANH', 'DI CHUYỂN XANH', 'GREEN CAR', 'PHÚ HOÀNG', 'SACO', 'ĐẠI THÀNH', 'TỴ MÙI'].some(k => sellerUpper.includes(k));
@@ -366,6 +401,7 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
           routes.push(val);
         }
       }
+      flightRoute = routes[0] || '';
       const airline = sellerUpper.includes('VIETJET') ? 'Vietjet Air' : 'Vietnam Airlines';
       if (pnr && routes.length > 0) {
         seller = `${airline} [PNR: ${pnr} | ${routes.join(', ')}]`;
@@ -496,7 +532,13 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       invoiceFormName: symbol?.formName || '',
       date: dateStr,
       seller,
+      sellerName,
+      itemName: thhdvuTexts[0] || '',
+      route: flightRoute,
       sellerTax,
+      buyer,
+      buyerTax,
+      buyerAddress,
       amountBeforeTax,
       vatAmount,
       totalAmount,
@@ -529,10 +571,48 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
   }
 }
 
+const todayInputValue = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
+/** "2026-06-23" (input type=date) → Date theo giờ địa phương. */
+const parseInputDate = (value) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value ?? ''));
+  if (!match) return new Date();
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+};
+
+const DEFAULT_FORM_SETTINGS = {
+  requester: '',
+  department: 'Ban Giám Đốc',
+  accountant: '',
+  invoiceLink: '',
+  contentPrefix: 'Chi phí đi lại công tác',
+  sheetName: '',
+};
+
 export default function InvoiceTool() {
   const [invoices, setInvoices] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [notice, setNotice] = useState('');
+
+  // Thông tin cố định của người lập chứng từ: giữ lại giữa các lần dùng để
+  // khỏi phải gõ lại mỗi tháng.
+  const [formSettings, setFormSettings] = useLocalStorage(
+    'payment-request-form',
+    DEFAULT_FORM_SETTINGS,
+    'invoice',
+  );
+  const [companyOverrides, setCompanyOverrides] = useLocalStorage(
+    'payment-request-companies',
+    {},
+    'invoice',
+  );
+  const [issuedAtInput, setIssuedAtInput] = useState(todayInputValue);
+  const [contents, setContents] = useState({});
+
+  const updateSetting = (key, value) => setFormSettings({ ...formSettings, [key]: value });
 
   // Xử lý nạp các tệp tải lên (XML, PDF, ZIP)
   const handleFileUpload = async (e) => {
@@ -730,14 +810,89 @@ export default function InvoiceTool() {
     )));
   };
 
-  // Xuất bảng kê đề nghị thanh toán theo mẫu đã được chủ sở hữu chốt.
-  const handleExportExcel = async () => {
-    const confirmedInvoices = invoices.filter((invoice) => invoice.isConfirmed);
-    if (confirmedInvoices.length === 0) return;
+  /** Nội dung khoản chi hiển thị trên ĐNTT — người dùng sửa được từng dòng. */
+  const setExpenseNote = (id, expenseNote) => {
+    setInvoices((current) => current.map((invoice) => (
+      invoice.id === id ? { ...invoice, expenseNote } : invoice
+    )));
+  };
+
+  /** Chuyển một hóa đơn sang pháp nhân khác khi hóa đơn ghi sai người mua. */
+  const setInvoiceCompany = (id, key) => {
+    setInvoices((current) => current.map((invoice) => (
+      invoice.id === id ? { ...invoice, companyKey: key || undefined } : invoice
+    )));
+  };
+
+  const validInvoices = useMemo(
+    () => invoices.filter((invoice) => invoice.isConfirmed),
+    [invoices],
+  );
+
+  // Tách theo pháp nhân đứng tên người mua: mỗi công ty là một giấy đề nghị.
+  const companyGroups = useMemo(
+    () => groupInvoicesByCompany(validInvoices, companyOverrides),
+    [validInvoices, companyOverrides],
+  );
+
+  /**
+   * Danh sách đơn vị để đổi trong bảng: gom trên toàn bộ hóa đơn (kể cả chưa
+   * xác nhận) nên luôn chứa nhóm hiện tại của mọi dòng.
+   */
+  const companyOptions = useMemo(
+    () => groupInvoicesByCompany(invoices, companyOverrides).map((group) => ({
+      key: group.key,
+      label: group.company.name || 'Chưa xác định đơn vị',
+    })),
+    [invoices, companyOverrides],
+  );
+
+  const forms = useMemo(
+    () => buildFormsFromGroups(companyGroups, {
+      contents,
+      contentPrefix: formSettings.contentPrefix || DEFAULT_FORM_SETTINGS.contentPrefix,
+    }),
+    [companyGroups, contents, formSettings.contentPrefix],
+  );
+
+  const updateCompany = (key, field, value) => {
+    const current = companyOverrides[key] ?? {};
+    setCompanyOverrides({ ...companyOverrides, [key]: { ...current, [field]: value } });
+  };
+
+  // Xuất Giấy đề nghị thanh toán: một sheet cho mỗi công ty, đúng biểu mẫu giấy.
+  const handleExportForms = async () => {
+    if (forms.length === 0) return;
+
+    const missingCompany = forms.find((form) => !form.company.name || form.company.name.startsWith('Chưa xác định'));
+    if (missingCompany) {
+      setNotice('Có nhóm chưa xác định được đơn vị thanh toán. Hãy điền tên công ty trước khi xuất.');
+      return;
+    }
 
     setNotice('');
     try {
-      await exportPaymentRequest(confirmedInvoices);
+      await exportPaymentRequestForms(forms, {
+        issuedAt: parseInputDate(issuedAtInput),
+        sheetName: formSettings.sheetName,
+        requester: formSettings.requester,
+        department: formSettings.department,
+        accountant: formSettings.accountant,
+        invoiceLink: formSettings.invoiceLink,
+      });
+    } catch (error) {
+      console.error('Lỗi xuất Giấy đề nghị thanh toán:', error);
+      setNotice(error.message || 'Không xuất được Giấy đề nghị thanh toán.');
+    }
+  };
+
+  // Bảng kê chi tiết hóa đơn — phụ lục kèm theo giấy đề nghị.
+  const handleExportExcel = async () => {
+    if (validInvoices.length === 0) return;
+
+    setNotice('');
+    try {
+      await exportPaymentRequest(validInvoices);
     } catch (error) {
       console.error('Lỗi xuất Excel:', error);
       setNotice(error.message || 'Không xuất được file Excel.');
@@ -746,10 +901,10 @@ export default function InvoiceTool() {
 
   const handleClearAll = () => {
     setInvoices([]);
+    setContents({});
     setNotice('');
   };
 
-  const validInvoices = invoices.filter((i) => i.isConfirmed);
   const allConfirmed = invoices.length > 0 && validInvoices.length === invoices.length;
   const cleanRowCount = invoices.filter((invoice) => !invoice.needsReview).length;
   const totalAmount = validInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
@@ -846,15 +1001,160 @@ export default function InvoiceTool() {
             </div>
           </div>
 
-          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center justify-end">
+          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+              <Building2 size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-400 font-medium">Đơn vị thanh toán</p>
+              <p className="text-lg font-bold text-slate-100">{companyGroups.length} <span className="text-xs text-slate-500 font-normal">giấy đề nghị</span></p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Thông tin in trên Giấy đề nghị thanh toán */}
+      {invoices.length > 0 && (
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Thông tin in trên Giấy đề nghị thanh toán
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <label className="flex flex-col gap-1.5 text-xs">
+              <span className="font-semibold text-slate-400">Người đề nghị thanh toán</span>
+              <input
+                type="text"
+                value={formSettings.requester}
+                onChange={(event) => updateSetting('requester', event.target.value)}
+                placeholder="Nguyễn Văn A"
+                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-xs">
+              <span className="font-semibold text-slate-400">Bộ phận (hoặc địa chỉ)</span>
+              <input
+                type="text"
+                value={formSettings.department}
+                onChange={(event) => updateSetting('department', event.target.value)}
+                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-xs">
+              <span className="font-semibold text-slate-400">Kế toán ký duyệt</span>
+              <input
+                type="text"
+                value={formSettings.accountant}
+                onChange={(event) => updateSetting('accountant', event.target.value)}
+                placeholder="Trần Thị B"
+                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-xs">
+              <span className="font-semibold text-slate-400">Ngày lập giấy đề nghị</span>
+              <input
+                type="date"
+                value={issuedAtInput}
+                onChange={(event) => setIssuedAtInput(event.target.value)}
+                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-xs">
+              <span className="font-semibold text-slate-400">Tên sheet (kỳ lập)</span>
+              <input
+                type="text"
+                value={formSettings.sheetName}
+                onChange={(event) => updateSetting('sheetName', event.target.value)}
+                placeholder={monthSheetName(parseInputDate(issuedAtInput))}
+                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-xs">
+              <span className="font-semibold text-slate-400">Mở đầu nội dung thanh toán</span>
+              <input
+                type="text"
+                value={formSettings.contentPrefix}
+                onChange={(event) => updateSetting('contentPrefix', event.target.value)}
+                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5 text-xs">
+              <span className="font-semibold text-slate-400">Link hóa đơn (ô &quot;Link Hoá đơn&quot;)</span>
+              <input
+                type="text"
+                value={formSettings.invoiceLink}
+                onChange={(event) => updateSetting('invoiceLink', event.target.value)}
+                placeholder="Tên thư mục hoặc đường dẫn lưu hóa đơn gốc"
+                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+              />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* Các đơn vị thanh toán đã tách theo hóa đơn */}
+      {companyGroups.length > 0 && (
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+              Đơn vị thanh toán ({companyGroups.length}) — cùng một sheet, mỗi đơn vị một giấy
+            </h3>
             <button
-              onClick={handleExportExcel}
-              disabled={validInvoices.length === 0}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-950 font-bold shadow-lg shadow-amber-500/20 transition transform active:scale-95 text-xs"
+              onClick={handleExportForms}
+              disabled={forms.length === 0}
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-950 font-bold shadow-lg shadow-amber-500/20 transition transform active:scale-95 text-xs"
             >
               <Download size={16} />
-              Xuất bảng kê ({validInvoices.length})
+              Xuất Giấy đề nghị thanh toán ({companyGroups.length})
             </button>
+          </div>
+
+          <div className="space-y-3">
+            {companyGroups.map((group, index) => (
+              <div key={group.key} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+                  <span className="font-bold text-slate-300">Giấy {index + 1}: {forms[index]?.label}</span>
+                  <span>
+                    {group.invoices.length} hóa đơn •{' '}
+                    <span className="font-bold text-emerald-400">{group.total.toLocaleString('vi-VN')} VNĐ</span>
+                    {group.company.taxCode && <> • MST {group.company.taxCode}</>}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  <label className="flex flex-col gap-1.5 text-xs">
+                    <span className="font-semibold text-slate-400">Tên đơn vị</span>
+                    <input
+                      type="text"
+                      value={group.company.name}
+                      onChange={(event) => updateCompany(group.key, 'name', event.target.value)}
+                      placeholder="CÔNG TY ..."
+                      className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs">
+                    <span className="font-semibold text-slate-400">Địa chỉ</span>
+                    <input
+                      type="text"
+                      value={group.company.address}
+                      onChange={(event) => updateCompany(group.key, 'address', event.target.value)}
+                      placeholder="Số nhà, đường, phường, tỉnh/thành phố"
+                      className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+                    />
+                  </label>
+                </div>
+                <label className="flex flex-col gap-1.5 text-xs">
+                  <span className="font-semibold text-slate-400">Nội dung thanh toán</span>
+                  <input
+                    type="text"
+                    value={contents[group.key] ?? describeFormContent(
+                      group.invoices.map((invoice) => ({ date: invoice.date })),
+                      formSettings.contentPrefix || DEFAULT_FORM_SETTINGS.contentPrefix,
+                    )}
+                    onChange={(event) => setContents({ ...contents, [group.key]: event.target.value })}
+                    className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+                  />
+                </label>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -894,6 +1194,16 @@ export default function InvoiceTool() {
               >
                 Bỏ chọn tất cả
               </button>
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                disabled={validInvoices.length === 0}
+                title="Bảng kê chi tiết hóa đơn kèm theo giấy đề nghị"
+                className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] font-bold text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:text-slate-600"
+              >
+                <Download size={13} />
+                Xuất bảng kê chi tiết ({validInvoices.length})
+              </button>
             </div>
           </div>
           <p className="px-6 pb-3 text-[11px] italic text-amber-400/90">
@@ -923,6 +1233,8 @@ export default function InvoiceTool() {
                   </th>
                   <th className="py-3 px-4 w-28">Ngày tháng</th>
                   <th className="py-3 px-4">Nội dung chi tiết</th>
+                  <th className="py-3 px-4 w-56">Nội dung trên ĐNTT</th>
+                  <th className="py-3 px-4 w-48">Đơn vị thanh toán</th>
                   <th className="py-3 px-4 w-28 text-right">Trước thuế</th>
                   <th className="py-3 px-4 w-24 text-right">Tiền thuế</th>
                   <th className="py-3 px-4 w-32 text-right">Sau thuế</th>
@@ -974,6 +1286,30 @@ export default function InvoiceTool() {
                             {inv.textSample}
                           </pre>
                         </details>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <input
+                        type="text"
+                        value={inv.expenseNote ?? describeExpense(inv)}
+                        onChange={(event) => setExpenseNote(inv.id, event.target.value)}
+                        aria-label={`Nội dung trên đề nghị thanh toán của ${inv.rawFileName || inv.fileName}`}
+                        className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-2 py-1.5 text-[11px] text-slate-200 outline-none focus:border-amber-500/60"
+                      />
+                    </td>
+                    <td className="py-3 px-4">
+                      <select
+                        value={companyKeyOf(inv)}
+                        onChange={(event) => setInvoiceCompany(inv.id, event.target.value)}
+                        aria-label={`Đơn vị thanh toán của ${inv.rawFileName || inv.fileName}`}
+                        className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-2 py-1.5 text-[11px] text-slate-200 outline-none focus:border-amber-500/60"
+                      >
+                        {companyOptions.map((option) => (
+                          <option key={option.key} value={option.key}>{option.label}</option>
+                        ))}
+                      </select>
+                      {!inv.isConfirmed && (
+                        <p className="mt-1 text-[10px] italic text-slate-500">Chưa xác nhận nên chưa vào giấy nào.</p>
                       )}
                     </td>
                     <td className="py-3 px-4 text-right font-medium text-slate-300 whitespace-nowrap">

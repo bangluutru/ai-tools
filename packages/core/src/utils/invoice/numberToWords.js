@@ -38,10 +38,13 @@ function readTriple(group, isLeading) {
 /**
  * Đọc số tiền VND thành chữ theo cách viết trên chứng từ kế toán Việt Nam.
  * Trả về chuỗi đã viết hoa chữ đầu và kết thúc bằng "đồng ./.".
+ *
+ * `suffix` cho phép đổi phần đuôi vì mỗi biểu mẫu chốt một cách viết riêng:
+ * bảng kê dùng "đồng ./.", còn Giấy đề nghị thanh toán dùng "đồng chẵn./.".
  */
-export function numberToWordsVN(value) {
+export function numberToWordsVN(value, { suffix = 'đồng ./.' } = {}) {
   const amount = Math.round(Math.abs(Number(value) || 0));
-  if (amount === 0) return 'Không đồng ./.';
+  if (amount === 0) return `Không ${suffix}`;
 
   const groups = [];
   let remaining = amount;
@@ -62,7 +65,7 @@ export function numberToWordsVN(value) {
 
   const sentence = words.join(' ').replace(/\s+/g, ' ').trim();
   const signed = Number(value) < 0 ? `Âm ${sentence}` : sentence;
-  return `${signed.charAt(0).toUpperCase()}${signed.slice(1)} đồng ./.`;
+  return `${signed.charAt(0).toUpperCase()}${signed.slice(1)} ${suffix}`;
 }
 
 export default numberToWordsVN;

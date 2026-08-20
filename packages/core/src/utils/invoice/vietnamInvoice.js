@@ -234,6 +234,7 @@ export const LABELS = Object.freeze({
     'buyer',
   ],
   taxCode: ['ma so thue', 'mst', 'tax code'],
+  address: ['dia chi', 'address'],
   totalAmount: [
     'tong cong tien thanh toan',
     'tong tien thanh toan da co thue gtgt',
@@ -359,11 +360,17 @@ function findParties(lines) {
     ? null
     : findLabeledValue(lines, LABELS.taxCode, { startIndex: buyerLine });
 
+  // Địa chỉ người mua dùng để điền khối tiêu đề của Giấy đề nghị thanh toán.
+  const buyerAddressHit = buyerLine < 0
+    ? null
+    : findLabeledValue(lines, LABELS.address, { startIndex: buyerLine });
+
   return {
     seller: seller?.value ?? '',
     buyer: buyer?.value ?? '',
     sellerTax: normalizeTaxCode(sellerTaxHit?.value ?? ''),
     buyerTax: normalizeTaxCode(buyerTaxHit?.value ?? ''),
+    buyerAddress: buyerAddressHit?.value ?? '',
   };
 }
 
@@ -411,6 +418,7 @@ export function extractInvoiceFields(rawText) {
     sellerTax: parties.sellerTax,
     buyer: parties.buyer,
     buyerTax: parties.buyerTax,
+    buyerAddress: parties.buyerAddress,
     amountBeforeTax: beforeTaxHit?.amount ?? 0,
     vatAmount: vatHit?.amount ?? 0,
     totalAmount: totalHit?.amount ?? totalFromWords ?? 0,
