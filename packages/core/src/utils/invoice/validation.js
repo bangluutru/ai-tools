@@ -68,6 +68,23 @@ export function isSameInvoiceDocument(left, right) {
 }
 
 /**
+ * Một tệp có phải bản thể hiện hóa đơn hay không.
+ *
+ * Số hóa đơn và mã số thuế người bán đều là tiêu thức bắt buộc (Phụ lục V
+ * Thông tư 91/2026/TT-BTC), nên tệp không có cả hai thì không phải hóa đơn:
+ * thường là lịch trình bay, thẻ lên tàu hay bản sao đính kèm trong cùng thư mục
+ * nén. Xếp riêng những tệp này để bảng hóa đơn không bị lặp bởi các bản đính
+ * kèm của cùng một chuyến đi.
+ */
+export function isInvoiceDocument(document) {
+  if (!document) return false;
+  if (document.forcedAsInvoice) return true;
+  if (document.missingFields?.includes('readError')) return false;
+  return isKnownInvoiceNumber(document.invoiceNo)
+    || Boolean(String(document.sellerTax ?? '').trim());
+}
+
+/**
  * Gộp mẻ chứng từ vừa đọc vào danh sách đang có.
  *
  * Trả về cả số dòng thực sự thêm mới để báo lại cho người dùng biết mẻ vừa nạp

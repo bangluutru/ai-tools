@@ -10,6 +10,7 @@ import { parseLocalizedNumber } from '@ai-tools/core/utils/accounting/reconcile.
 import {
   deriveInvoiceAmounts,
   INVOICE_LIMITS,
+  isInvoiceDocument,
   isKnownInvoiceNumber,
   isUnsafeZipPath,
   mergeInvoiceBatch,
@@ -793,13 +794,22 @@ export default function InvoiceTool() {
   };
 
   const setAllConfirmed = (isConfirmed) => {
-    setInvoices((current) => current.map((invoice) => ({ ...invoice, isConfirmed })));
+    setInvoices((current) => current.map((invoice) => (
+      isInvoiceDocument(invoice) ? { ...invoice, isConfirmed } : invoice
+    )));
   };
 
   /** Xác nhận nhanh những dòng công cụ đọc đủ trường và không có cảnh báo. */
   const confirmCleanRows = () => {
     setInvoices((current) => current.map((invoice) => (
-      invoice.needsReview ? invoice : { ...invoice, isConfirmed: true }
+      invoice.needsReview || !isInvoiceDocument(invoice) ? invoice : { ...invoice, isConfirmed: true }
+    )));
+  };
+
+  /** Đưa một tệp đính kèm vào bảng khi người dùng xác định đó là hóa đơn. */
+  const forceAsInvoice = (id) => {
+    setInvoices((current) => current.map((document) => (
+      document.id === id ? { ...document, forcedAsInvoice: true } : document
     )));
   };
 
@@ -823,9 +833,17 @@ export default function InvoiceTool() {
     )));
   };
 
-  const validInvoices = useMemo(
-    () => invoices.filter((invoice) => invoice.isConfirmed),
+  // Chỉ những tệp là bản thể hiện hóa đơn mới lên bảng; lịch trình bay và bản
+  // đính kèm được xếp riêng để không trông như hóa đơn bị lặp.
+  const invoiceRows = useMemo(() => invoices.filter(isInvoiceDocument), [invoices]);
+  const otherDocuments = useMemo(
+    () => invoices.filter((document) => !isInvoiceDocument(document)),
     [invoices],
+  );
+
+  const validInvoices = useMemo(
+    () => invoiceRows.filter((invoice) => invoice.isConfirmed),
+    [invoiceRows],
   );
 
   // Tách theo pháp nhân đứng tên người mua: mỗi công ty là một giấy đề nghị.
@@ -904,8 +922,8 @@ export default function InvoiceTool() {
     setNotice('');
   };
 
-  const allConfirmed = invoices.length > 0 && validInvoices.length === invoices.length;
-  const cleanRowCount = invoices.filter((invoice) => !invoice.needsReview).length;
+  const allConfirmed = invoiceRows.length > 0 && validInvoices.length === invoiceRows.length;
+  const cleanRowCount = invoiceRows.filter((invoice) => !invoice.needsReview).length;
   const totalAmount = validInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
 
   return (
@@ -992,7 +1010,7 @@ export default function InvoiceTool() {
             </div>
             <div>
               <p className="text-xs text-slate-400 font-medium">Đã kiểm tra và xác nhận</p>
-              <p className="text-lg font-bold text-slate-100">{validInvoices.length} <span className="text-xs text-slate-500 font-normal">/ {invoices.length} tệp</span></p>
+              <p className="text-lg font-bold text-slate-100">{validInvoices.length} <span className="text-xs text-slate-500 font-normal">/ {invoiceRows.length} hóa đơn</span></p>
             </div>
           </div>
 
@@ -1165,13 +1183,13 @@ export default function InvoiceTool() {
       )}
 
       {/* Invoice Table */}
-      {invoices.length > 0 && (
+      {invoiceRows.length > 0 && (
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
           <div className="px-6 py-4 border-b border-slate-800/80 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Danh sách hóa đơn đã bóc tách ({invoices.length})
+              Danh sách hóa đơn đã bóc tách ({invoiceRows.length})
               <span className="ml-2 font-normal normal-case text-slate-500">
-                đã xác nhận {validInvoices.length}/{invoices.length}
+                đã xác nhận {validInvoices.length}/{invoiceRows.length}
               </span>
             </h3>
             <div className="flex flex-wrap items-center gap-2">
@@ -1182,7 +1200,7 @@ export default function InvoiceTool() {
               >
                 Chọn tất cả
               </button>
-              {cleanRowCount > 0 && cleanRowCount < invoices.length && (
+              {cleanRowCount > 0 && cleanRowCount < invoiceRows.length && (
                 <button
                   type="button"
                   onClick={confirmCleanRows}
@@ -1249,7 +1267,7 @@ export default function InvoiceTool() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                {invoices.map((inv, idx) => (
+                {invoiceRows.map((inv, idx) => (
                   <tr key={inv.id} className="hover:bg-slate-800/40 transition">
                     <td className="py-3 px-4 text-center font-medium text-slate-500">{idx + 1}</td>
                     <td className="py-3 px-4 text-center">
@@ -1355,6 +1373,46 @@ export default function InvoiceTool() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Tệp đọc được nhưng không phải bản thể hiện hóa đơn */}
+      {otherDocuments.length > 0 && (
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-3">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+            Tệp không phải hóa đơn ({otherDocuments.length})
+          </h3>
+          <p className="text-[11px] italic text-slate-500">
+            Các tệp này thiếu cả số hóa đơn lẫn mã số thuế người bán — thường là lịch trình bay, thẻ lên tàu
+            hoặc bản đính kèm của cùng một chuyến đi. Công cụ để riêng ra để bảng hóa đơn không bị lặp.
+            Nếu đây thật sự là hóa đơn, hãy đưa vào bảng và nhập tay phần còn thiếu.
+          </p>
+          <ul className="space-y-2">
+            {otherDocuments.map((document) => (
+              <li
+                key={document.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-mono text-[11px] text-slate-300">
+                    {document.fileName}
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    {document.seller}
+                    {document.date && document.date !== '-' ? ` • ${document.date}` : ''}
+                    {document.totalAmount ? ` • ${document.totalAmount.toLocaleString('vi-VN')} VNĐ` : ''}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => forceAsInvoice(document.id)}
+                  className="shrink-0 rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] font-bold text-slate-300 transition hover:bg-slate-800 hover:text-slate-100"
+                >
+                  Đưa vào bảng hóa đơn
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

@@ -312,3 +312,78 @@ test('label helpers pick the most specific amount label first', () => {
   assert.equal(findLabeledAmount(lines, LABELS.amountBeforeTax).amount, 10000000);
   assert.equal(findLabeledValue(['Ký hiệu: 1C26TAA'], LABELS.symbol).value, '1C26TAA');
 });
+
+
+// Bản thể hiện vé máy bay hay dùng dấu cách làm dấu phân nhóm nghìn. Cắt số ở
+// dấu cách đầu tiên biến "2 859 000" thành 2 — đúng lỗi người dùng gặp.
+const SPACED_TICKET = [
+  'HÓA ĐƠN GIÁ TRỊ GIA TĂNG',
+  'Ký hiệu: 1C26TAA',
+  'Số: 02236513',
+  'Ngày 19 tháng 05 năm 2026',
+  'Tên người bán: CÔNG TY CỔ PHẦN HÀNG KHÔNG VIETJET',
+  'Mã số thuế: 0102325399',
+  'Tên người mua: CÔNG TY SẢN XUẤT VÀ THƯƠNG MẠI HUMA MEDICAL',
+  'Mã số thuế: 0101234567',
+  'STT Tên hàng hóa, dịch vụ Số lượng Đơn giá Thành tiền',
+  '1 Vé máy bay HAN-VTE 1 2 859 000 2 859 000',
+  'Tổng tiền thanh toán: 2 859 000',
+  'Số tiền viết bằng chữ: Hai triệu tám trăm năm mươi chín nghìn đồng chẵn',
+].join('\n');
+
+
+test('reads thousands grouped with spaces instead of stopping at the first digit', () => {
+  const fields = extractInvoiceFields(SPACED_TICKET);
+
+  assert.equal(fields.totalAmount, 2_859_000);
+  assert.equal(fields.amountInWordsValue, 2_859_000);
+});
+
+
+test('a leading line number does not get mistaken for the amount', () => {
+  const fields = extractInvoiceFields(
+    SPACED_TICKET.replace('Tổng tiền thanh toán: 2 859 000', 'Tổng tiền thanh toán: 1 2.859.000'),
+  );
+
+  assert.equal(fields.totalAmount, 2_859_000);
+});
+
+
+// Đọc lệch dấu chấm nghìn khiến 4.246.000 thành 4.246.000.000; chữ viết không
+// có dấu phân nhóm nên là bản đối chứng bắt được lỗi này.
+test('an amount read a thousand times too big is corrected from the words', () => {
+  const fields = extractInvoiceFields([
+    'Ký hiệu: 1C26TAA',
+    'Số: 02236510',
+    'Ngày 19 tháng 05 năm 2026',
+    'Tên người bán: CÔNG TY CỔ PHẦN HÀNG KHÔNG VIETJET',
+    'Mã số thuế: 0102325399',
+    'Tổng tiền thanh toán: 4.246.000.000',
+    'Số tiền viết bằng chữ: Bốn triệu hai trăm bốn mươi sáu nghìn đồng chẵn',
+  ].join('\n'));
+
+  assert.equal(fields.totalAmount, 4_246_000);
+  assert.equal(fields.numericTotal, 4_246_000_000);
+  assert.equal(fields.totalSource, 'words-override');
+  assert.match(validateInvoiceFields(fields)[0], /đã lấy theo chữ/);
+});
+
+
+// Khi bảng thuế xác nhận cột số thì cột số mới là bên đáng tin.
+test('a total backed by the tax breakdown is kept even if the words disagree', () => {
+  const fields = extractInvoiceFields([
+    'Ký hiệu: 1C26TAA',
+    'Số: 00012345',
+    'Ngày 19 tháng 05 năm 2026',
+    'Tên người bán: CÔNG TY TNHH ABC',
+    'Mã số thuế: 0102325399',
+    'Tổng tiền chưa có thuế GTGT: 10.000.000',
+    'Tiền thuế GTGT: 1.000.000',
+    'Tổng tiền thanh toán: 11.000.000',
+    'Số tiền viết bằng chữ: Mười triệu đồng chẵn',
+  ].join('\n'));
+
+  assert.equal(fields.totalAmount, 11_000_000);
+  assert.equal(fields.totalSource, 'label');
+  assert.match(validateInvoiceFields(fields)[0], /Số tiền bằng chữ.*không khớp/);
+});

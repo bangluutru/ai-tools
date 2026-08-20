@@ -6,6 +6,7 @@ import {
   INVOICE_LIMITS,
   invoiceIdentityKey,
   isKnownInvoiceNumber,
+  isInvoiceDocument,
   isSameInvoiceDocument,
   isUnsafeZipPath,
   mergeInvoiceBatch,
@@ -122,4 +123,36 @@ test('the XML replaces the PDF rendering whichever order they arrive in', async 
   const xmlFirst = mergeInvoiceBatch(mergeInvoiceBatch([], [xmlDoc({})]).invoices, [pdf]);
   assert.deepEqual(xmlFirst.invoices.map((item) => item.rawType), ['XML']);
   assert.equal(xmlFirst.added, 0);
+});
+
+
+// Lịch trình bay đi kèm trong cùng thư mục nén trông rất giống hóa đơn của
+// chính chuyến đó, nên trước đây bảng bị lặp một dòng cho mỗi bản đính kèm.
+test('an itinerary with neither invoice number nor seller tax code is not an invoice', async () => {
+  assert.equal(isInvoiceDocument({
+    invoiceNo: 'Chưa rõ số', sellerTax: '', seller: 'Vietjet Air [HAN-VTE]', totalAmount: 0,
+  }), false);
+});
+
+
+test('a hard-to-read invoice still counts as one when a mandatory field survives', async () => {
+  // Chỉ đọc được số hóa đơn.
+  assert.equal(isInvoiceDocument({ invoiceNo: '02236513', sellerTax: '' }), true);
+  // Chỉ đọc được mã số thuế người bán.
+  assert.equal(isInvoiceDocument({ invoiceNo: 'Chưa rõ số', sellerTax: '0102325399' }), true);
+});
+
+
+test('the user can overrule the tool and pull an attachment into the table', async () => {
+  const attachment = { invoiceNo: 'Chưa rõ số', sellerTax: '' };
+
+  assert.equal(isInvoiceDocument(attachment), false);
+  assert.equal(isInvoiceDocument({ ...attachment, forcedAsInvoice: true }), true);
+});
+
+
+test('a file that could not be opened is never treated as an invoice', async () => {
+  assert.equal(isInvoiceDocument({
+    invoiceNo: 'Lỗi đọc tệp', sellerTax: '', missingFields: ['readError'],
+  }), false);
 });

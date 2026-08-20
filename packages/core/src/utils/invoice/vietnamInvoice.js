@@ -171,10 +171,26 @@ export function findLabeledValue(lines, labels, options = {}) {
   return null;
 }
 
+/**
+ * Cụm chữ số kèm dấu phân nhóm. Các phần mềm phát hành dùng cả ba kiểu nhóm
+ * nghìn: "4.246.000", "4,246,000" và "4 246 000" — kiểu dấu cách khá phổ biến
+ * trên bản thể hiện vé máy bay.
+ */
+const MONEY_TOKEN = /\d{1,3}(?:[ .,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/g;
+
+const isGroupedMoney = (token) => /[ .,]\d{3}/.test(token);
+
+/**
+ * Số tiền đầu tiên trong một đoạn text.
+ *
+ * Cụm có dấu phân nhóm được ưu tiên hơn số trơ đứng cùng dòng: dòng bảng của
+ * bản thể hiện thường bắt đầu bằng số thứ tự hoặc số lượng, nếu lấy số đầu tiên
+ * thì "1 2.859.000" thành 1 và "2 859 000" bị cắt ở dấu cách thành 2.
+ */
 const firstAmountIn = (text) => {
-  const numberMatch = String(text ?? '').match(/-?\d[\d.,]*\d|\d/);
-  if (!numberMatch) return null;
-  const amount = parseLocalizedNumber(numberMatch[0]);
+  const tokens = String(text ?? '').match(MONEY_TOKEN);
+  if (!tokens) return null;
+  const amount = parseLocalizedNumber(tokens.find(isGroupedMoney) ?? tokens[0]);
   return amount !== null && Number.isFinite(amount) ? amount : null;
 };
 
@@ -403,9 +419,34 @@ export function extractInvoiceFields(rawText) {
   const amountInWordsValue = amountInWords ? parseVietnameseAmountWords(amountInWords) : null;
 
   // "Số tiền viết bằng chữ" là tiêu thức bắt buộc và là bản ghi độc lập của
-  // tổng thanh toán. Khi cột số không đọc được, đọc chữ vẫn là đọc dữ liệu trên
-  // chứng từ chứ không phải suy đoán — nhưng vẫn phải báo để người dùng soát.
-  const totalFromWords = totalHit === null && amountInWordsValue ? amountInWordsValue : null;
+  // tổng thanh toán. Chữ không có dấu phân nhóm nên không bị đọc lệch hệ số như
+  // cột số, vì vậy khi hai bên lệch nhau thì lấy theo chữ và báo lại cả hai —
+  // đây là cách bắt được lỗi đọc nhầm dấu chấm nghìn thành hàng tỷ.
+  const numericTotal = totalHit?.amount ?? null;
+  const beforeTax = beforeTaxHit?.amount ?? 0;
+  const vat = vatHit?.amount ?? 0;
+
+  let totalAmount = numericTotal ?? 0;
+  let totalSource = totalHit ? 'label' : '';
+
+  if (amountInWordsValue !== null && amountInWordsValue !== undefined) {
+    if (numericTotal === null) {
+      totalAmount = amountInWordsValue;
+      totalSource = 'words';
+    } else if (Math.abs(amountInWordsValue - numericTotal) > AMOUNT_TOLERANCE) {
+      // Bảng thuế là nhân chứng thứ hai cho cột số: khi chưa thuế + tiền thuế
+      // đúng bằng cột số thì cột số mới là bên đáng tin, chỉ cảnh báo. Không có
+      // nhân chứng đó thì lấy theo chữ, vì chữ không có dấu phân nhóm nên không
+      // bị đọc lệch hệ số nghìn như cột số.
+      const hasBreakdown = beforeTax > 0 || vat > 0;
+      const numericCorroborated = hasBreakdown
+        && Math.abs(beforeTax + vat - numericTotal) <= AMOUNT_TOLERANCE;
+      if (!numericCorroborated) {
+        totalAmount = amountInWordsValue;
+        totalSource = 'words-override';
+      }
+    }
+  }
 
   return {
     ruleVersion: INVOICE_RULE_VERSION,
@@ -413,15 +454,16 @@ export function extractInvoiceFields(rawText) {
     invoiceNo,
     date,
     dateSource,
-    totalSource: totalHit ? 'label' : (totalFromWords ? 'words' : ''),
+    totalSource,
     seller: parties.seller,
     sellerTax: parties.sellerTax,
     buyer: parties.buyer,
     buyerTax: parties.buyerTax,
     buyerAddress: parties.buyerAddress,
-    amountBeforeTax: beforeTaxHit?.amount ?? 0,
-    vatAmount: vatHit?.amount ?? 0,
-    totalAmount: totalHit?.amount ?? totalFromWords ?? 0,
+    amountBeforeTax: beforeTax,
+    vatAmount: vat,
+    totalAmount,
+    numericTotal,
     taxRate: rateHit?.amount ?? null,
     amountInWords,
     amountInWordsValue,
@@ -477,6 +519,12 @@ export function validateInvoiceFields(fields) {
 
   if (fields.totalSource === 'words') {
     warnings.push('Không đọc được dòng tổng thanh toán; số tiền lấy từ "Số tiền viết bằng chữ".');
+  }
+
+  if (fields.totalSource === 'words-override') {
+    warnings.push(
+      `Cột số đọc được ${fields.numericTotal} nhưng "Số tiền viết bằng chữ" là ${totalAmount}; đã lấy theo chữ, cần đối chiếu chứng từ gốc.`,
+    );
   }
 
   return warnings;
