@@ -28,6 +28,7 @@ import {
   groupInvoicesByCompany,
 } from '@ai-tools/core/utils/invoice/companyGrouping.js';
 import { describeExpense } from '@ai-tools/core/utils/invoice/expenseCategory.js';
+import { buildPerDiemRow, perDiemDays } from '@ai-tools/core/utils/invoice/perDiem.js';
 import {
   AMOUNT_BALANCE_WARNING_PREFIX,
   amountBalanceWarning,
@@ -651,6 +652,9 @@ const DEFAULT_FORM_SETTINGS = {
   invoiceLink: '',
   contentPrefix: 'Chi phí đi lại công tác',
   sheetName: '',
+  perDiemAmount: '',
+  perDiemFrom: '',
+  perDiemTo: '',
 };
 
 /**
@@ -697,10 +701,16 @@ export default function InvoiceTool() {
 
   // Thông tin cố định của người lập chứng từ: giữ lại giữa các lần dùng để
   // khỏi phải gõ lại mỗi tháng.
-  const [formSettings, setFormSettings] = useLocalStorage(
+  const [storedSettings, setFormSettings] = useLocalStorage(
     'payment-request-form',
     DEFAULT_FORM_SETTINGS,
     'invoice',
+  );
+  // Thiết lập lưu từ phiên trước không có những trường thêm về sau; phủ lên mặc
+  // định để mọi ô luôn có giá trị thay vì nhảy từ undefined sang có giá trị.
+  const formSettings = useMemo(
+    () => ({ ...DEFAULT_FORM_SETTINGS, ...storedSettings }),
+    [storedSettings],
   );
   const [companyOverrides, setCompanyOverrides] = useLocalStorage(
     'payment-request-companies',
@@ -709,6 +719,8 @@ export default function InvoiceTool() {
   );
   const [issuedAtInput, setIssuedAtInput] = useState(todayInputValue);
   const [contents, setContents] = useState({});
+  // Công tác phí là khoản khoán của cả đợt, chỉ vào giấy của một đơn vị.
+  const [perDiemCompanyKey, setPerDiemCompanyKey] = useState('');
 
   const updateSetting = (key, value) => setFormSettings({ ...formSettings, [key]: value });
 
@@ -930,6 +942,7 @@ export default function InvoiceTool() {
       if (invoice.id !== id) return invoice;
 
       const edited = { ...invoice, [field]: amount, amountsEdited: true };
+      if (field === 'authorityCollection') edited.authorityCollectionDerived = false;
       const kept = (invoice.warnings ?? [])
         .filter((warning) => !warning.startsWith(AMOUNT_BALANCE_WARNING_PREFIX));
       const balance = amountBalanceWarning(edited);
@@ -983,12 +996,28 @@ export default function InvoiceTool() {
     [invoices, companyOverrides],
   );
 
+  const perDiemRow = useMemo(
+    () => buildPerDiemRow({
+      amountPerDay: parseLocalizedNumber(formSettings.perDiemAmount) ?? 0,
+      from: formSettings.perDiemFrom,
+      to: formSettings.perDiemTo,
+      issuedAt: parseInputDate(issuedAtInput),
+    }),
+    [formSettings.perDiemAmount, formSettings.perDiemFrom, formSettings.perDiemTo, issuedAtInput],
+  );
+
+  // Đơn vị người dùng chọn, lùi về đơn vị đầu tiên khi lựa chọn cũ không còn.
+  const perDiemTarget = companyGroups.some((group) => group.key === perDiemCompanyKey)
+    ? perDiemCompanyKey
+    : companyGroups[0]?.key ?? '';
+
   const forms = useMemo(
     () => buildFormsFromGroups(companyGroups, {
       contents,
       contentPrefix: formSettings.contentPrefix || DEFAULT_FORM_SETTINGS.contentPrefix,
+      extraRows: perDiemRow && perDiemTarget ? { [perDiemTarget]: [perDiemRow] } : {},
     }),
-    [companyGroups, contents, formSettings.contentPrefix],
+    [companyGroups, contents, formSettings.contentPrefix, perDiemRow, perDiemTarget],
   );
 
   const updateCompany = (key, field, value) => {
@@ -1230,6 +1259,71 @@ export default function InvoiceTool() {
               />
             </label>
           </div>
+
+          {/* Công tác phí khoán: một dòng riêng nối sau các dòng hóa đơn */}
+          <div className="space-y-3 border-t border-slate-800 pt-4">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Công tác phí khoán (không có hóa đơn)
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <label className="flex flex-col gap-1.5 text-xs">
+                <span className="font-semibold text-slate-400">Công tác phí (đồng/ngày)</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={formSettings.perDiemAmount}
+                  onChange={(event) => updateSetting('perDiemAmount', event.target.value)}
+                  placeholder="200.000"
+                  className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs">
+                <span className="font-semibold text-slate-400">Từ ngày</span>
+                <input
+                  type="date"
+                  value={formSettings.perDiemFrom}
+                  onChange={(event) => updateSetting('perDiemFrom', event.target.value)}
+                  className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs">
+                <span className="font-semibold text-slate-400">Đến ngày</span>
+                <input
+                  type="date"
+                  value={formSettings.perDiemTo}
+                  onChange={(event) => updateSetting('perDiemTo', event.target.value)}
+                  className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs">
+                <span className="font-semibold text-slate-400">Tính vào giấy của đơn vị</span>
+                <select
+                  value={perDiemTarget}
+                  onChange={(event) => setPerDiemCompanyKey(event.target.value)}
+                  disabled={companyGroups.length === 0}
+                  className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60 disabled:text-slate-600"
+                >
+                  {companyGroups.length === 0 && <option value="">Chưa có đơn vị nào</option>}
+                  {companyGroups.map((group) => (
+                    <option key={group.key} value={group.key}>{group.company.name}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {perDiemRow ? (
+              <p className="text-[11px] text-emerald-400">
+                {perDiemDays(formSettings.perDiemFrom, formSettings.perDiemTo)} ngày ×{' '}
+                {(parseLocalizedNumber(formSettings.perDiemAmount) ?? 0).toLocaleString('vi-VN')} ={' '}
+                <span className="font-bold">{perDiemRow.amount.toLocaleString('vi-VN')} VNĐ</span>
+                {' '}— thêm một dòng &quot;{perDiemRow.description}&quot; sau dòng hóa đơn cuối cùng.
+              </p>
+            ) : (
+              <p className="text-[11px] italic text-slate-500">
+                Số ngày tính bằng ngày kết thúc trừ ngày bắt đầu. Bỏ trống thì giấy đề nghị không có dòng công tác phí.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -1379,6 +1473,12 @@ export default function InvoiceTool() {
                   <th className="py-3 px-4 w-48">Đơn vị thanh toán</th>
                   <th className="py-3 px-4 w-28 text-right">Trước thuế</th>
                   <th className="py-3 px-4 w-24 text-right">Tiền thuế</th>
+                  <th
+                    className="py-3 px-4 w-28 text-right"
+                    title="Khoản hãng thu hộ nhà chức trách (phí sân bay, phí soi chiếu) — không chịu thuế GTGT nhưng vẫn nằm trong tổng thanh toán"
+                  >
+                    Thu hộ
+                  </th>
                   <th className="py-3 px-4 w-32 text-right">Sau thuế</th>
                   <th className="py-3 px-4 w-32">Số hóa đơn</th>
                   <th className="py-3 px-4 w-24 text-center">Loại</th>
@@ -1467,15 +1567,19 @@ export default function InvoiceTool() {
                         onCommit={(next) => setInvoiceAmount(inv.id, 'vatAmount', next)}
                         label={`Tiền thuế GTGT của ${inv.rawFileName || inv.fileName}`}
                       />
-                      {inv.authorityCollection > 0 && (
+                    </td>
+                    <td className="py-3 px-2">
+                      <AmountInput
+                        value={inv.authorityCollection || 0}
+                        onCommit={(next) => setInvoiceAmount(inv.id, 'authorityCollection', next)}
+                        label={`Khoản thu hộ nhà chức trách của ${inv.rawFileName || inv.fileName}`}
+                      />
+                      {inv.authorityCollection > 0 && inv.authorityCollectionDerived && (
                         <p
-                          className="mt-1 text-right text-[10px] text-slate-500"
-                          title={inv.authorityCollectionDerived
-                            ? 'Hóa đơn không ghi riêng khoản này; số hiện ra là phần chênh giữa tổng thanh toán và chưa thuế + tiền thuế.'
-                            : 'Đọc thẳng từ trường khoản thu hộ trên hóa đơn.'}
+                          className="mt-1 text-right text-[10px] italic text-slate-500"
+                          title="Hóa đơn không ghi riêng khoản này; số hiện ra là phần chênh giữa tổng thanh toán và chưa thuế + tiền thuế."
                         >
-                          Thu hộ{inv.authorityCollectionDerived ? ' (suy ra)' : ''}:{' '}
-                          {inv.authorityCollection.toLocaleString('vi-VN')}
+                          suy ra
                         </p>
                       )}
                     </td>

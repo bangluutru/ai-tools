@@ -106,10 +106,15 @@ export function groupInvoicesByCompany(invoices, overrides = {}) {
   }).sort((left, right) => String(left.company.name).localeCompare(String(right.company.name), 'vi'));
 }
 
-/** Chuyển nhóm công ty thành dữ liệu đầu vào của biểu mẫu ĐNTT. */
+/**
+ * Chuyển nhóm công ty thành dữ liệu đầu vào của biểu mẫu ĐNTT.
+ *
+ * `extraRows` là các dòng không gắn với hóa đơn nào (công tác phí khoán), nối
+ * vào sau dòng hóa đơn cuối cùng của đúng đơn vị chịu khoản đó.
+ */
 export function buildFormsFromGroups(groups, options = {}) {
   return groups.map((group) => {
-    const rows = group.invoices
+    const invoiceRows = group.invoices
       .map((invoice) => ({
         date: invoice.date,
         description: invoice.expenseNote || describeExpense(invoice),
@@ -118,6 +123,8 @@ export function buildFormsFromGroups(groups, options = {}) {
       }))
       .sort(byDateThenInvoiceNo);
 
+    const rows = [...invoiceRows, ...(options.extraRows?.[group.key] ?? [])];
+
     return {
       company: {
         name: group.company.name || 'Chưa xác định đơn vị thanh toán',
@@ -125,7 +132,9 @@ export function buildFormsFromGroups(groups, options = {}) {
         taxCode: group.company.taxCode || '',
       },
       label: shortCompanyName(group.company.name) || 'Chưa xác định',
-      content: options.contents?.[group.key] || describeFormContent(rows, options.contentPrefix),
+      // Khoảng thời gian trên nội dung lấy theo ngày chứng từ, không tính dòng
+      // công tác phí vốn mang ngày lập giấy.
+      content: options.contents?.[group.key] || describeFormContent(invoiceRows, options.contentPrefix),
       rows,
     };
   });

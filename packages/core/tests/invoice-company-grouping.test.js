@@ -134,3 +134,32 @@ test('the short company label drops the legal-form prefix', async () => {
   assert.equal(shortCompanyName('CÔNG TY SẢN XUẤT VÀ THƯƠNG MẠI HUMA MEDICAL'), 'HUMA MEDICAL');
   assert.equal(shortCompanyName('CÔNG TY TNHH ABC'), 'ABC');
 });
+
+
+test('an extra row is appended after the last invoice of its company only', async () => {
+  const groups = groupInvoicesByCompany([
+    invoice({ ...HUMA, date: '18/06/2026', invoiceNo: 'B' }),
+    invoice({ ...HUMA, date: '09/06/2026', invoiceNo: 'A' }),
+    invoice({ ...GENKI }),
+  ]);
+  const perDiem = { date: '23/06/2026', description: 'Công tác phí từ 09/06/2026 đến 18/06/2026', amount: 1_800_000, invoiceNo: '' };
+  const forms = buildFormsFromGroups(groups, { extraRows: { 'mst:0101234567': [perDiem] } });
+
+  const huma = forms.find((form) => form.company.taxCode === '0101234567');
+  const genki = forms.find((form) => form.company.taxCode === '0107654321');
+
+  assert.deepEqual(huma.rows.map((row) => row.invoiceNo), ['A', 'B', '']);
+  assert.equal(huma.rows.at(-1).amount, 1_800_000);
+  // Khoản khoán chỉ vào giấy của một đơn vị, không nhân lên cho đơn vị khác.
+  assert.equal(genki.rows.length, 1);
+});
+
+
+test('the payment content ignores the per diem row when reading the date range', async () => {
+  const groups = groupInvoicesByCompany([invoice({ ...HUMA, date: '09/06/2026' })]);
+  const perDiem = { date: '23/06/2026', description: 'Công tác phí', amount: 1_800_000, invoiceNo: '' };
+  const [form] = buildFormsFromGroups(groups, { extraRows: { 'mst:0101234567': [perDiem] } });
+
+  // Ngày lập giấy (23/06) không được kéo dài khoảng thời gian công tác.
+  assert.equal(form.content, 'Chi phí đi lại công tác ngày 09/06/2026');
+});
