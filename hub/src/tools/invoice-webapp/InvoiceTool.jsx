@@ -1,5 +1,5 @@
 /* eslint-disable no-useless-escape */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileSpreadsheet, UploadCloud, Download,
   Trash2, ShieldCheck, RefreshCw,
@@ -12,6 +12,7 @@ import {
   INVOICE_LIMITS,
   isKnownInvoiceNumber,
   isUnsafeZipPath,
+  mergeInvoiceBatch,
 } from '@ai-tools/core/utils/invoice/validation.js';
 import { verifyDocumentSignature } from '@ai-tools/core/utils/documentFiles.js';
 import { exportPaymentRequest } from '@ai-tools/core/utils/invoice/paymentRequestExport.js';
@@ -594,7 +595,12 @@ const DEFAULT_FORM_SETTINGS = {
 
 export default function InvoiceTool() {
   const [invoices, setInvoices] = useState([]);
+  // Việc đọc chứng từ chạy bất đồng bộ khá lâu; ref giữ danh sách mới nhất để
+  // mẻ vừa đọc gộp đúng vào những gì đang có trên bảng.
+  const invoicesRef = useRef(invoices);
+  useEffect(() => { invoicesRef.current = invoices; }, [invoices]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(null);
   const [notice, setNotice] = useState('');
 
   // Thông tin cố định của người lập chứng từ: giữ lại giữa các lần dùng để
@@ -619,178 +625,171 @@ export default function InvoiceTool() {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const rejected = [];
+    const notes = [];
     const accepted = files.slice(0, INVOICE_LIMITS.maxFiles).filter((file) => {
-      if (file.size <= 0 || file.size > INVOICE_LIMITS.maxFileBytes) {
-        rejected.push(`${file.name}: file rỗng hoặc vượt ${Math.round(INVOICE_LIMITS.maxFileBytes / 1024 / 1024)} MiB`);
+      const isZip = /\.zip$/i.test(file.name);
+      const sizeCap = isZip ? INVOICE_LIMITS.maxZipBytes : INVOICE_LIMITS.maxFileBytes;
+      if (file.size <= 0 || file.size > sizeCap) {
+        notes.push(`${file.name}: file rỗng hoặc vượt ${Math.round(sizeCap / 1024 / 1024)} MiB`);
         return false;
       }
       if (!/\.(xml|pdf|zip)$/i.test(file.name)) {
-        rejected.push(`${file.name}: định dạng không hỗ trợ`);
+        notes.push(`${file.name}: định dạng không hỗ trợ`);
         return false;
       }
       return true;
     });
     if (files.length > INVOICE_LIMITS.maxFiles) {
-      rejected.push(`Chỉ xử lý ${INVOICE_LIMITS.maxFiles} file đầu tiên`);
+      notes.push(`Chỉ xử lý ${INVOICE_LIMITS.maxFiles} file đầu tiên trong ${files.length} file đã chọn`);
     }
-    setNotice(rejected.join(' • '));
+    setNotice(notes.join(' • '));
     if (accepted.length === 0) return;
 
     setIsProcessing(true);
-    const parsedList = [];
+    setProgress({ done: 0, total: accepted.length, label: '' });
 
-    for (const file of accepted) {
+    const parsedList = [];
+    // Ghi lại những gì công cụ gặp nhưng không bóc tách được, để báo lại thay vì
+    // im lặng bỏ qua — người dùng cần biết đã đọc thiếu chứng từ nào.
+    const skipped = [];
+
+    const readXmlEntry = async (text, displayName, zipName) => {
+      parsedList.push(parseXMLInvoice(text, displayName, zipName));
+    };
+
+    const readPdfEntry = async (buffer, displayName, zipName) => {
+      const pdfText = await extractTextFromPDFBuffer(buffer);
+      const parsed = parsePDFInvoiceText(pdfText, displayName, zipName);
+      // Vé/lịch trình đi kèm không phải hóa đơn, nhưng vẫn hiện ra để người dùng
+      // tự quyết định thay vì bị loại âm thầm như trước.
+      if (/itinerary|\bcopy\b|lich trinh/i.test(displayName)) {
+        parsed.warnings = [
+          ...(parsed.warnings ?? []),
+          'Tên tệp cho thấy đây có thể là lịch trình hoặc bản sao chứ không phải hóa đơn.',
+        ];
+        parsed.needsReview = true;
+        parsed.status = 'Cần kiểm tra';
+      }
+      parsedList.push(parsed);
+    };
+
+    /** Mở một thư mục nén, kể cả ZIP lồng trong ZIP. */
+    const readZip = async (blob, zipLabel, depth) => {
+      if (depth > INVOICE_LIMITS.maxZipDepth) {
+        skipped.push(`${zipLabel}: ZIP lồng quá ${INVOICE_LIMITS.maxZipDepth} lớp`);
+        return;
+      }
+
+      const { default: JSZip } = await import('jszip');
+      const zip = await JSZip.loadAsync(blob);
+      const entryNames = Object.keys(zip.files);
+
+      if (entryNames.length > INVOICE_LIMITS.maxZipEntries) {
+        throw new Error(`ZIP vượt ${INVOICE_LIMITS.maxZipEntries} entries`);
+      }
+      if (entryNames.some(isUnsafeZipPath)) {
+        throw new Error('ZIP chứa đường dẫn không an toàn');
+      }
+      const uncompressedBytes = entryNames.reduce(
+        (sum, entryName) => sum + (zip.files[entryName]._data?.uncompressedSize || 0),
+        0,
+      );
+      if (uncompressedBytes > INVOICE_LIMITS.maxZipUncompressedBytes) {
+        throw new Error(`ZIP vượt ${Math.round(INVOICE_LIMITS.maxZipUncompressedBytes / 1024 / 1024)} MiB sau giải nén`);
+      }
+
+      const usable = entryNames.filter((entryName) => {
+        const entry = zip.files[entryName];
+        if (entry.dir) return false;
+        // Thư mục rác của macOS, không phải chứng từ.
+        return !entryName.includes('__MACOSX') && !entryName.split('/').pop().startsWith('._');
+      });
+
+      // XML là bản gốc có giá trị pháp lý, PDF chỉ là bản thể hiện: khi cùng một
+      // hóa đơn có cả hai thì đọc XML và bỏ PDF trùng tên.
+      const xmlBaseNames = new Set(
+        usable
+          .filter((entryName) => /\.xml$/i.test(entryName))
+          .map((entryName) => entryName.split('/').pop().replace(/\.xml$/i, '').toLowerCase()),
+      );
+
+      for (const entryName of usable) {
+        if (parsedList.length >= INVOICE_LIMITS.maxDocuments) {
+          skipped.push(`Dừng ở ${INVOICE_LIMITS.maxDocuments} chứng từ`);
+          return;
+        }
+
+        const entry = zip.files[entryName];
+        const baseName = entryName.split('/').pop();
+        const displayName = zipLabel ? `${zipLabel} ➔ ${baseName}` : baseName;
+
+        if (/\.xml$/i.test(baseName)) {
+          await readXmlEntry(await entry.async('text'), baseName, zipLabel);
+        } else if (/\.pdf$/i.test(baseName)) {
+          if (xmlBaseNames.has(baseName.replace(/\.pdf$/i, '').toLowerCase())) continue;
+          await readPdfEntry(await entry.async('arraybuffer'), baseName, zipLabel);
+        } else if (/\.zip$/i.test(baseName)) {
+          await readZip(await entry.async('blob'), displayName, depth + 1);
+        } else {
+          skipped.push(`${displayName}: không phải XML/PDF`);
+        }
+      }
+    };
+
+    for (const [index, file] of accepted.entries()) {
+      setProgress({ done: index, total: accepted.length, label: file.name });
       const lowerName = file.name.toLowerCase();
 
-      // 1. TRƯỜNG HỢP: TẬP TIN ZIP (.zip)
-      if (lowerName.endsWith('.zip') || file.type.includes('zip')) {
-        try {
-          const { default: JSZip } = await import('jszip');
-          const zip = await JSZip.loadAsync(file);
-          const zipEntries = Object.keys(zip.files);
-          if (zipEntries.length > INVOICE_LIMITS.maxZipEntries) {
-            throw new Error(`ZIP vượt ${INVOICE_LIMITS.maxZipEntries} entries`);
-          }
-          if (zipEntries.some(isUnsafeZipPath)) {
-            throw new Error('ZIP chứa đường dẫn không an toàn');
-          }
-          const uncompressedBytes = zipEntries.reduce(
-            (sum, entryName) => sum + (zip.files[entryName]._data?.uncompressedSize || 0),
-            0,
-          );
-          if (uncompressedBytes > INVOICE_LIMITS.maxZipUncompressedBytes) {
-            throw new Error(`ZIP vượt ${Math.round(INVOICE_LIMITS.maxZipUncompressedBytes / 1024 / 1024)} MiB sau giải nén`);
-          }
-
-          // Phase 1: Thu thập danh sách base name các file XML trong ZIP
-          const xmlBaseNames = new Set();
-          for (const entryName of zipEntries) {
-            const entryLower = entryName.toLowerCase();
-            if (entryLower.endsWith('.xml')) {
-              const baseName = entryName.split('/').pop();
-              // Lưu base name không extension để so sánh với PDF
-              xmlBaseNames.add(baseName.replace(/\.xml$/i, '').toLowerCase());
-            }
-          }
-
-          // Phase 2: Xử lý XML trước, rồi PDF (skip PDF nếu đã có XML cùng base)
-          for (const entryName of zipEntries) {
-            const zipEntry = zip.files[entryName];
-            if (zipEntry.dir || entryName.includes('__MACOSX') || entryName.startsWith('._')) {
-              continue;
-            }
-
-            const entryLower = entryName.toLowerCase();
-            const baseName = entryName.split('/').pop();
-
-            if (entryLower.endsWith('.xml')) {
-              const xmlContent = await zipEntry.async('text');
-              const parsed = parseXMLInvoice(xmlContent, baseName, file.name);
-              parsedList.push(parsed);
-            }
-            else if (entryLower.endsWith('.pdf')) {
-              // Skip PDF nếu có XML cùng base name (ưu tiên XML chính xác hơn)
-              const pdfBase = baseName.replace(/\.pdf$/i, '').toLowerCase();
-              if (xmlBaseNames.has(pdfBase)) {
-                continue; // Đã có XML, không cần PDF
-              }
-              // Skip Itinerary/copy PDF (không phải hoá đơn)
-              if (baseName.toLowerCase().includes('itinerary') || baseName.toLowerCase().includes(' copy')) {
-                continue;
-              }
-              const pdfBuffer = await zipEntry.async('arraybuffer');
-              const pdfText = await extractTextFromPDFBuffer(pdfBuffer);
-              const parsed = parsePDFInvoiceText(pdfText, baseName, file.name);
-              parsedList.push(parsed);
-            }
-          }
-        } catch (err) {
-          console.error('Lỗi khi giải nén ZIP:', err);
-          parsedList.push({
-            id: makeId(),
-            fileName: file.name,
-            invoiceNo: 'Lỗi file ZIP',
-            date: '-',
-            seller: 'Không thể đọc file ZIP',
-            sellerTax: '-',
-            amountBeforeTax: 0,
-            vatAmount: 0,
-            totalAmount: 0,
-            status: 'Lỗi giải nén',
-            errorMessage: err.message,
-            rawType: 'ZIP',
-            missingFields: ['zipError'],
-            needsReview: true,
-            isConfirmed: false,
-          });
-        }
-      }
-      // 2. TRƯỜNG HỢP: TẬP TIN XML (.xml)
-      else if (lowerName.endsWith('.xml')) {
-        try {
-          const xmlContent = await file.text();
-          const parsed = parseXMLInvoice(xmlContent, file.name);
-          parsedList.push(parsed);
-        } catch (err) {
-          console.error('Lỗi đọc XML:', err);
-        }
-      }
-      // 3. TRƯỜNG HỢP: TẬP TIN PDF (.pdf)
-      else if (lowerName.endsWith('.pdf')) {
-        // Skip Itinerary/copy PDF
-        if (lowerName.includes('itinerary') || lowerName.includes(' copy')) {
-          continue;
-        }
-        try {
+      try {
+        if (lowerName.endsWith('.zip') || file.type.includes('zip')) {
+          await readZip(file, file.name, 1);
+        } else if (lowerName.endsWith('.xml')) {
+          await readXmlEntry(await file.text(), file.name, null);
+        } else if (lowerName.endsWith('.pdf')) {
           if (!(await verifyDocumentSignature(file))) {
             throw new Error('Nội dung không phải PDF hợp lệ');
           }
-          const arrayBuffer = await file.arrayBuffer();
-          const pdfText = await extractTextFromPDFBuffer(arrayBuffer);
-          const parsed = parsePDFInvoiceText(pdfText, file.name);
-          parsedList.push(parsed);
-        } catch (err) {
-          console.error('Lỗi đọc PDF:', err);
+          await readPdfEntry(await file.arrayBuffer(), file.name, null);
         }
+      } catch (err) {
+        console.error('Lỗi khi đọc chứng từ:', file.name, err);
+        parsedList.push({
+          id: makeId(),
+          fileName: file.name,
+          rawFileName: file.name,
+          invoiceNo: 'Lỗi đọc tệp',
+          date: '-',
+          seller: `Không đọc được ${file.name}`,
+          sellerTax: '',
+          amountBeforeTax: 0,
+          vatAmount: 0,
+          totalAmount: 0,
+          status: 'Lỗi đọc tệp',
+          errorMessage: err.message,
+          rawType: lowerName.endsWith('.zip') ? 'ZIP' : lowerName.endsWith('.xml') ? 'XML' : 'PDF',
+          missingFields: ['readError'],
+          warnings: [],
+          needsReview: true,
+          isConfirmed: false,
+        });
       }
     }
 
-    // Khử trùng lặp thông minh: Ưu tiên XML hơn PDF khi cùng amount+date
-    setInvoices((prev) => {
-      const combined = [...prev, ...parsedList];
+    setProgress({ done: accepted.length, total: accepted.length, label: '' });
 
-      // Bước 1: Chỉ dedupe PDF/XML khi có cùng số hóa đơn đáng tin cậy.
-      const xmlInvoiceNumbers = new Set();
-      for (const inv of combined) {
-        if (inv.rawType === 'XML' && isKnownInvoiceNumber(inv.invoiceNo)) {
-          xmlInvoiceNumbers.add(String(inv.invoiceNo).trim().toUpperCase());
-        }
-      }
+    const { invoices: merged, added } = mergeInvoiceBatch(invoicesRef.current, parsedList);
+    setInvoices(merged);
 
-      // Bước 2: Loại bỏ PDF trùng với XML (cùng amount + date)
-      const afterXmlDedup = combined.filter((item) => {
-        if (item.rawType === 'PDF') {
-          const invoiceNo = String(item.invoiceNo || '').trim().toUpperCase();
-          if (isKnownInvoiceNumber(item.invoiceNo) && xmlInvoiceNumbers.has(invoiceNo)) return false;
-        }
-        return true;
-      });
-
-      // Bước 3: Khử trùng còn lại theo invoiceNo + amount
-      const seen = new Set();
-      return afterXmlDedup.filter((item) => {
-        const invNo = item.invoiceNo;
-        const key = invNo && invNo !== 'N/A' && invNo !== 'Chưa rõ số'
-          ? `${invNo}_${item.totalAmount}`
-          : `${item.rawFileName}_${item.totalAmount}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-    });
+    const summary = [`Đã đọc ${added} chứng từ từ ${accepted.length} tệp`];
+    if (skipped.length > 0) {
+      summary.push(`bỏ qua ${skipped.length} mục: ${skipped.slice(0, 5).join(', ')}${skipped.length > 5 ? '…' : ''}`);
+    }
+    setNotice([...notes, summary.join(' • ')].join(' • '));
 
     setIsProcessing(false);
+    setProgress(null);
+    // Cho phép chọn lại đúng những tệp vừa nạp mà vẫn kích hoạt onChange.
+    e.target.value = '';
   };
 
   const setAllConfirmed = (isConfirmed) => {
@@ -969,11 +968,17 @@ export default function InvoiceTool() {
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-200">
-              Kéo thả thư mục nén <span className="text-amber-400 font-bold">.ZIP</span> hoặc các tệp <span className="text-amber-400 font-bold">.XML, .PDF</span> vào đây
+              Kéo thả nhiều thư mục nén <span className="text-amber-400 font-bold">.ZIP</span> hoặc các tệp <span className="text-amber-400 font-bold">.XML, .PDF</span> vào đây
             </p>
             <p className="text-xs text-slate-400 mt-1">
-              Tối đa {INVOICE_LIMITS.maxFiles} file, {Math.round(INVOICE_LIMITS.maxFileBytes / 1024 / 1024)} MiB/file; ZIP tối đa {INVOICE_LIMITS.maxZipEntries} entries
+              Tối đa {INVOICE_LIMITS.maxFiles} file mỗi lần • ZIP tối đa {Math.round(INVOICE_LIMITS.maxZipBytes / 1024 / 1024)} MiB và {INVOICE_LIMITS.maxZipEntries} mục, đọc được cả ZIP lồng ZIP • XML/PDF tối đa {Math.round(INVOICE_LIMITS.maxFileBytes / 1024 / 1024)} MiB
             </p>
+            {progress && (
+              <p className="mt-2 text-xs font-semibold text-amber-300">
+                Đang đọc {progress.done}/{progress.total}
+                {progress.label ? ` — ${progress.label}` : ''}
+              </p>
+            )}
           </div>
         </div>
       </div>
