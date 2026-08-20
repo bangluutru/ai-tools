@@ -11,28 +11,31 @@ import {
 const ISSUED_AT = new Date(2026, 5, 23);
 
 
-test('counts the days of a trip as end minus start', () => {
-  assert.equal(perDiemDays('2026-06-09', '2026-06-18'), 9);
-  assert.equal(perDiemDays('2026-06-09', '2026-06-10'), 1);
+// Trọn ngày: đợt 09/06 - 18/06 được tính 10 ngày, kể cả ngày đi và ngày về.
+test('counts whole days, both ends of the trip included', () => {
+  assert.equal(perDiemDays('2026-06-09', '2026-06-18'), 10);
+  assert.equal(perDiemDays('2026-06-09', '2026-06-10'), 2);
+  // Đi và về trong ngày vẫn là một ngày công tác.
+  assert.equal(perDiemDays('2026-06-09', '2026-06-09'), 1);
 });
 
 
-test('a trip that does not move forward pays nothing', () => {
-  assert.equal(perDiemDays('2026-06-09', '2026-06-09'), 0);
+test('a trip that ends before it starts pays nothing', () => {
   assert.equal(perDiemDays('2026-06-18', '2026-06-09'), 0);
   assert.equal(perDiemDays('', '2026-06-18'), 0);
+  assert.equal(perDiemDays('2026-06-09', ''), 0);
 });
 
 
 // Đổi giờ mùa hè làm phép trừ mốc thời gian lệch một phần ngày.
 test('day counting survives a daylight saving shift', () => {
-  assert.equal(perDiemDays('2026-03-01', '2026-04-01'), 31);
-  assert.equal(perDiemDays('2026-10-01', '2026-11-01'), 31);
+  assert.equal(perDiemDays('2026-03-01', '2026-04-01'), 32);
+  assert.equal(perDiemDays('2026-10-01', '2026-11-01'), 32);
 });
 
 
 test('the amount is the day count times the daily rate', () => {
-  assert.equal(perDiemAmount({ amountPerDay: 200_000, from: '2026-06-09', to: '2026-06-18' }), 1_800_000);
+  assert.equal(perDiemAmount({ amountPerDay: 200_000, from: '2026-06-09', to: '2026-06-18' }), 2_000_000);
   assert.equal(perDiemAmount({ amountPerDay: 0, from: '2026-06-09', to: '2026-06-18' }), 0);
 });
 
@@ -44,7 +47,7 @@ test('the row is dated the day the request is raised, not the trip', () => {
 
   assert.equal(row.date, '23/06/2026');
   assert.equal(row.description, 'Công tác phí từ 09/06/2026 đến 18/06/2026');
-  assert.equal(row.amount, 1_800_000);
+  assert.equal(row.amount, 2_000_000);
   // Khoản khoán không có hóa đơn nên cột hóa đơn để trống.
   assert.equal(row.invoiceNo, '');
 });

@@ -26,14 +26,15 @@ const formatDate = (date) => [
 ].join('/');
 
 /**
- * Số ngày công tác được thanh toán: ngày kết thúc trừ ngày bắt đầu.
- * Trả về 0 khi thiếu ngày hoặc ngày kết thúc không sau ngày bắt đầu.
+ * Số ngày công tác được thanh toán, tính trọn ngày: kể cả ngày đi và ngày về,
+ * nên đi và về trong cùng một ngày vẫn được một ngày khoán.
+ * Trả về 0 khi thiếu ngày hoặc ngày kết thúc nằm trước ngày bắt đầu.
  */
 export function perDiemDays(from, to) {
   const start = parseIsoDate(from);
   const end = parseIsoDate(to);
   if (!start || !end) return 0;
-  const days = Math.round((end - start) / MILLISECONDS_PER_DAY);
+  const days = Math.round((end - start) / MILLISECONDS_PER_DAY) + 1;
   return days > 0 ? days : 0;
 }
 

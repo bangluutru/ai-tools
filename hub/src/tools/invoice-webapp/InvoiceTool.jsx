@@ -1320,7 +1320,7 @@ export default function InvoiceTool() {
               </p>
             ) : (
               <p className="text-[11px] italic text-slate-500">
-                Số ngày tính bằng ngày kết thúc trừ ngày bắt đầu. Bỏ trống thì giấy đề nghị không có dòng công tác phí.
+                Số ngày tính trọn ngày, kể cả ngày đi và ngày về. Bỏ trống thì giấy đề nghị không có dòng công tác phí.
               </p>
             )}
           </div>
