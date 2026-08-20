@@ -16,7 +16,7 @@ import {
 test('never invents a tax rate when only the total is known', () => {
   assert.deepEqual(
     deriveInvoiceAmounts({ totalAmount: 1_080_000 }),
-    { totalAmount: 1_080_000, amountBeforeTax: 0, vatAmount: 0 },
+    { totalAmount: 1_080_000, amountBeforeTax: 0, vatAmount: 0, authorityCollection: 0 },
   );
 });
 
@@ -24,11 +24,36 @@ test('never invents a tax rate when only the total is known', () => {
 test('derives only direct arithmetic from fields present in the document', () => {
   assert.deepEqual(
     deriveInvoiceAmounts({ amountBeforeTax: 1_000_000, vatAmount: 80_000 }),
-    { totalAmount: 1_080_000, amountBeforeTax: 1_000_000, vatAmount: 80_000 },
+    { totalAmount: 1_080_000, amountBeforeTax: 1_000_000, vatAmount: 80_000, authorityCollection: 0 },
   );
   assert.deepEqual(
     deriveInvoiceAmounts({ totalAmount: 1_080_000, amountBeforeTax: 1_000_000 }),
-    { totalAmount: 1_080_000, amountBeforeTax: 1_000_000, vatAmount: 80_000 },
+    { totalAmount: 1_080_000, amountBeforeTax: 1_000_000, vatAmount: 80_000, authorityCollection: 0 },
+  );
+});
+
+
+// Hóa đơn hàng không: 3.450.000 + 276.000 + 351.543 thu hộ = 4.077.543.
+test('an airline authorized collection is part of the amount payable', () => {
+  assert.deepEqual(
+    deriveInvoiceAmounts({ amountBeforeTax: 3_450_000, vatAmount: 276_000, authorityCollection: 351_543 }),
+    {
+      totalAmount: 4_077_543,
+      amountBeforeTax: 3_450_000,
+      vatAmount: 276_000,
+      authorityCollection: 351_543,
+    },
+  );
+
+  // Biết tổng và chưa thuế thì phần thuế còn lại đã trừ khoản thu hộ.
+  assert.deepEqual(
+    deriveInvoiceAmounts({ totalAmount: 4_077_543, amountBeforeTax: 3_450_000, authorityCollection: 351_543 }),
+    {
+      totalAmount: 4_077_543,
+      amountBeforeTax: 3_450_000,
+      vatAmount: 276_000,
+      authorityCollection: 351_543,
+    },
   );
 });
 

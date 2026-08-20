@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  AMOUNT_BALANCE_WARNING_PREFIX,
+  amountBalanceWarning,
   extractInvoiceFields,
   findLabeledAmount,
   findLabeledValue,
@@ -279,7 +281,7 @@ test('flags a tax breakdown that does not add up to the total', () => {
   const fields = extractInvoiceFields(VAT_INVOICE.replace('Tiền thuế GTGT: 1.000.000', 'Tiền thuế GTGT: 900.000'));
 
   const warnings = validateInvoiceFields(fields);
-  assert.equal(warnings.some((warning) => /không khớp tổng thanh toán/.test(warning)), true);
+  assert.equal(warnings.some((warning) => /khác tổng thanh toán/.test(warning)), true);
 });
 
 
@@ -386,4 +388,59 @@ test('a total backed by the tax breakdown is kept even if the words disagree', (
   assert.equal(fields.totalAmount, 11_000_000);
   assert.equal(fields.totalSource, 'label');
   assert.match(validateInvoiceFields(fields)[0], /Số tiền bằng chữ.*không khớp/);
+});
+
+
+// Hóa đơn hàng không tách riêng khoản thu hộ nhà chức trách (phí sân bay). Nó
+// không chịu thuế GTGT nhưng vẫn nằm trong tổng tiền, nên bỏ qua nó là báo lệch
+// phép cộng trên những hóa đơn hoàn toàn hợp lệ.
+const AIRLINE_WITH_COLLECTION = [
+  'HÓA ĐƠN GIÁ TRỊ GIA TĂNG',
+  'Ký hiệu: 1C26TMB',
+  'Số: 3152207',
+  'Ngày 19 tháng 07 năm 2026',
+  'Tên người bán: CÔNG TY CỔ PHẦN HÀNG KHÔNG VIETJET',
+  'Mã số thuế: 0102325399',
+  'Tên người mua: CÔNG TY CỔ PHẦN GENKI FAMI VIỆT NAM',
+  'Mã số thuế: 0107654321',
+  'Tiền trước thuế (Amount before VAT) 3.450.000',
+  'Thuế suất (Tax rate) 8%',
+  'Tiền thuế GTGT (VAT Amount) 276.000',
+  'Các khoản thu hộ nhà chức trách (đã bao gồm VAT) 351.543',
+  'Tổng tiền (Total Amount) 4.077.543',
+].join('\n');
+
+
+test('reads the authorized collection an airline invoice charges on top', () => {
+  const fields = extractInvoiceFields(AIRLINE_WITH_COLLECTION);
+
+  assert.equal(fields.amountBeforeTax, 3_450_000);
+  assert.equal(fields.vatAmount, 276_000);
+  assert.equal(fields.authorityCollection, 351_543);
+  assert.equal(fields.totalAmount, 4_077_543);
+});
+
+
+test('an airline invoice that adds up through the collection raises no warning', () => {
+  const warnings = validateInvoiceFields(extractInvoiceFields(AIRLINE_WITH_COLLECTION));
+
+  assert.equal(warnings.some((warning) => /khác tổng thanh toán/.test(warning)), false);
+});
+
+
+test('the balance check still catches a total that is genuinely wrong', () => {
+  const warning = amountBalanceWarning({
+    amountBeforeTax: 3_450_000, vatAmount: 276_000, authorityCollection: 351_543, totalAmount: 4_000_000,
+  });
+
+  assert.match(warning, new RegExp(`^${AMOUNT_BALANCE_WARNING_PREFIX}`));
+  assert.match(warning, /thu hộ nhà chức trách \(4077543\)/);
+});
+
+
+test('rounding differences are tolerated, not reported', () => {
+  assert.equal(
+    amountBalanceWarning({ amountBeforeTax: 1_000_000, vatAmount: 80_000, totalAmount: 1_080_001 }),
+    null,
+  );
 });

@@ -29,6 +29,8 @@ import {
 } from '@ai-tools/core/utils/invoice/companyGrouping.js';
 import { describeExpense } from '@ai-tools/core/utils/invoice/expenseCategory.js';
 import {
+  AMOUNT_BALANCE_WARNING_PREFIX,
+  amountBalanceWarning,
   extractInvoiceFields,
   missingInvoiceFields,
   parseInvoiceSymbol,
@@ -228,6 +230,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       totalAmount: fields.totalAmount,
       amountBeforeTax: fields.amountBeforeTax,
       vatAmount: fields.vatAmount,
+      authorityCollection: fields.authorityCollection,
     });
     const resolved = { ...fields, ...amounts };
 
@@ -277,6 +280,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       buyerAddress: fields.buyerAddress || '',
       amountBeforeTax: resolved.amountBeforeTax,
       vatAmount: resolved.vatAmount,
+      authorityCollection: resolved.authorityCollection,
       totalAmount: resolved.totalAmount,
       amountInWords: fields.amountInWords || '',
       status: missingFields.length === 0 && warnings.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
@@ -470,11 +474,22 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       }
     }
 
-    // 5. Các loại tiền (Ưu tiên số tiền sau thuế chuẩn)
+    // 5. Các loại tiền.
+    //
+    // Thẻ tiền trong XML hóa đơn điện tử là số thập phân theo XSD, dấu chấm
+    // luôn là dấu thập phân: "3450000.000" là ba triệu tư chứ không phải ba tỷ
+    // rưỡi. Bộ đọc theo thói quen viết số Việt Nam hiểu ".000" là nhóm nghìn
+    // nên phải đọc đúng kiểu XML trước, chỉ lùi về bộ đọc kia khi phần mềm phát
+    // hành ghi số đã định dạng sẵn ("3.450.000").
+    const parseXmlAmount = (valStr) => {
+      if (/^-?\d+(\.\d+)?$/.test(valStr)) return Number(valStr);
+      return parseLocalizedNumber(valStr);
+    };
+
     const parseAmount = (selectors) => {
       const valStr = getText(selectors);
       if (valStr) {
-        const num = parseLocalizedNumber(valStr);
+        const num = parseXmlAmount(valStr);
         if (num !== null && num >= 0) return num;
       }
       return 0;
@@ -492,11 +507,29 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       'TgTThue', 'VATAmount', 'TongTienThue', 'TienThue', 'TaxAmount'
     ]);
 
+    // Khoản thu hộ nhà chức trách trên hóa đơn hàng không: không chịu thuế GTGT
+    // nhưng vẫn nằm trong số tiền phải trả. Mỗi phần mềm phát hành đặt một tên
+    // thẻ khác nhau, và nhiều nơi nhét vào khối thông tin khác (TTin).
+    let authorityCollection = parseAmount([
+      'TgTienThuHo', 'ThuHoNhaChucTrach', 'TThuHo', 'TienThuHo', 'AuthorizedCollection'
+    ]);
+    if (!authorityCollection) {
+      for (const [field, value] of Object.entries(ttinData)) {
+        if (!/thu\s*ho|authorized\s*collection/i.test(field)) continue;
+        const parsed = parseXmlAmount(value);
+        if (parsed !== null && parsed > 0) {
+          authorityCollection = parsed;
+          break;
+        }
+      }
+    }
+
     // Chỉ suy ra phép cộng trực tiếp khi cả trước thuế và thuế đều có bằng chứng.
     ({ totalAmount, amountBeforeTax, vatAmount } = deriveInvoiceAmounts({
       totalAmount,
       amountBeforeTax,
       vatAmount,
+      authorityCollection,
     }));
 
     // Ký hiệu mẫu số + ký hiệu hóa đơn theo Điều 4 và Phụ lục I TT 91/2026/TT-BTC.
@@ -518,6 +551,7 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       date: dateStr === 'Chưa rõ ngày' ? '' : dateStr,
       amountBeforeTax,
       vatAmount,
+      authorityCollection,
       totalAmount,
       sellerTax,
       amountInWordsValue: null,
@@ -543,6 +577,7 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       buyerAddress,
       amountBeforeTax,
       vatAmount,
+      authorityCollection,
       totalAmount,
       status: missingFields.length === 0 && warnings.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
       rawType: 'XML',
@@ -593,6 +628,38 @@ const DEFAULT_FORM_SETTINGS = {
   contentPrefix: 'Chi phí đi lại công tác',
   sheetName: '',
 };
+
+/**
+ * Ô sửa tay một cột tiền. Giá trị hiển thị được định dạng theo kiểu Việt Nam
+ * khi không có con trỏ trong ô, còn lúc gõ thì giữ nguyên chuỗi người dùng nhập
+ * để không bị nhảy con trỏ giữa chừng.
+ */
+function AmountInput({ value, onCommit, label, emphasis = false }) {
+  const [draft, setDraft] = useState(null);
+
+  const commit = () => {
+    if (draft !== null) onCommit(draft);
+    setDraft(null);
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={draft ?? (Number(value) || 0).toLocaleString('vi-VN')}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur();
+        if (event.key === 'Escape') setDraft(null);
+      }}
+      aria-label={label}
+      className={`w-full rounded-lg border border-slate-700 bg-slate-950/60 px-2 py-1.5 text-right text-[11px] outline-none focus:border-amber-500/60 ${
+        emphasis ? 'font-bold text-amber-400' : 'text-slate-300'
+      }`}
+    />
+  );
+}
 
 export default function InvoiceTool() {
   const [invoices, setInvoices] = useState([]);
@@ -824,6 +891,34 @@ export default function InvoiceTool() {
     setInvoices((current) => current.map((invoice) => (
       invoice.id === id ? { ...invoice, expenseNote } : invoice
     )));
+  };
+
+  /**
+   * Sửa tay một cột tiền. Bóc tách tự động không bao giờ đúng 100% với mọi mẫu
+   * hóa đơn, nên người lập chứng từ phải sửa được trước khi xuất — và cảnh báo
+   * lệch phép cộng được tính lại ngay để thấy sửa đã khớp hay chưa.
+   */
+  const setInvoiceAmount = (id, field, rawValue) => {
+    const parsed = parseLocalizedNumber(rawValue);
+    const amount = parsed === null ? 0 : Math.max(0, parsed);
+
+    setInvoices((current) => current.map((invoice) => {
+      if (invoice.id !== id) return invoice;
+
+      const edited = { ...invoice, [field]: amount, amountsEdited: true };
+      const kept = (invoice.warnings ?? [])
+        .filter((warning) => !warning.startsWith(AMOUNT_BALANCE_WARNING_PREFIX));
+      const balance = amountBalanceWarning(edited);
+      const warnings = balance ? [...kept, balance] : kept;
+
+      const needsReview = warnings.length > 0 || (edited.missingFields?.length ?? 0) > 0;
+      return {
+        ...edited,
+        warnings,
+        needsReview,
+        status: needsReview ? 'Cần kiểm tra' : 'Đã trích xuất',
+      };
+    }));
   };
 
   /** Chuyển một hóa đơn sang pháp nhân khác khi hóa đơn ghi sai người mua. */
@@ -1335,14 +1430,35 @@ export default function InvoiceTool() {
                         <p className="mt-1 text-[10px] italic text-slate-500">Chưa xác nhận nên chưa vào giấy nào.</p>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-right font-medium text-slate-300 whitespace-nowrap">
-                      {inv.amountBeforeTax.toLocaleString('vi-VN')}
+                    <td className="py-3 px-2">
+                      <AmountInput
+                        value={inv.amountBeforeTax}
+                        onCommit={(next) => setInvoiceAmount(inv.id, 'amountBeforeTax', next)}
+                        label={`Tiền trước thuế của ${inv.rawFileName || inv.fileName}`}
+                      />
                     </td>
-                    <td className="py-3 px-4 text-right font-medium text-slate-400 whitespace-nowrap">
-                      {inv.vatAmount.toLocaleString('vi-VN')}
+                    <td className="py-3 px-2">
+                      <AmountInput
+                        value={inv.vatAmount}
+                        onCommit={(next) => setInvoiceAmount(inv.id, 'vatAmount', next)}
+                        label={`Tiền thuế GTGT của ${inv.rawFileName || inv.fileName}`}
+                      />
+                      {inv.authorityCollection > 0 && (
+                        <p className="mt-1 text-right text-[10px] text-slate-500">
+                          Thu hộ: {inv.authorityCollection.toLocaleString('vi-VN')}
+                        </p>
+                      )}
                     </td>
-                    <td className="py-3 px-4 text-right font-bold text-amber-400 whitespace-nowrap">
-                      {inv.totalAmount.toLocaleString('vi-VN')}
+                    <td className="py-3 px-2">
+                      <AmountInput
+                        value={inv.totalAmount}
+                        onCommit={(next) => setInvoiceAmount(inv.id, 'totalAmount', next)}
+                        label={`Tổng thanh toán của ${inv.rawFileName || inv.fileName}`}
+                        emphasis
+                      />
+                      {inv.amountsEdited && (
+                        <p className="mt-1 text-right text-[10px] italic text-cyan-400">đã sửa tay</p>
+                      )}
                     </td>
                     <td className="py-3 px-4 font-mono text-slate-400">
                       <div>{inv.invoiceNo}</div>

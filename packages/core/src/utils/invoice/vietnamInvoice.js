@@ -263,6 +263,10 @@ export const LABELS = Object.freeze({
   ],
   amountBeforeTax: [
     'tong tien chua co thue gtgt',
+    // Cách ghi của hóa đơn hàng không.
+    'tong tien truoc thue',
+    'tien truoc thue',
+    'amount before vat',
     'thanh tien chua co thue gtgt',
     'cong tien hang chua co thue gtgt',
     'cong tien hang',
@@ -281,6 +285,18 @@ export const LABELS = Object.freeze({
     'vat amount',
   ],
   taxRate: ['thue suat gia tri gia tang', 'thue suat gtgt', 'thue suat'],
+  // Khoản hãng hàng không thu hộ nhà chức trách (phí sân bay, phí soi chiếu).
+  // Không chịu thuế GTGT nhưng vẫn nằm trong tổng tiền khách phải trả, nên
+  // thiếu nó thì phép cộng trên hóa đơn không bao giờ khớp.
+  authorityCollection: [
+    'cac khoan thu ho nha chuc trach',
+    'khoan thu ho nha chuc trach',
+    'thu ho nha chuc trach',
+    'tong tien thu ho',
+    'tien thu ho',
+    'thu ho',
+    'authorized collection',
+  ],
   amountInWords: [
     'so tien viet bang chu',
     'so tien bang chu',
@@ -416,6 +432,8 @@ export function extractInvoiceFields(rawText) {
   const amountInWords = wordsHit?.value ?? '';
 
   const rateHit = findLabeledAmount(lines, LABELS.taxRate);
+  const authorityHit = findLabeledAmount(lines, LABELS.authorityCollection);
+  const authorityCollection = authorityHit?.amount ?? 0;
   const amountInWordsValue = amountInWords ? parseVietnameseAmountWords(amountInWords) : null;
 
   // "Số tiền viết bằng chữ" là tiêu thức bắt buộc và là bản ghi độc lập của
@@ -462,6 +480,7 @@ export function extractInvoiceFields(rawText) {
     buyerAddress: parties.buyerAddress,
     amountBeforeTax: beforeTax,
     vatAmount: vat,
+    authorityCollection,
     totalAmount,
     numericTotal,
     taxRate: rateHit?.amount ?? null,
@@ -473,13 +492,38 @@ export function extractInvoiceFields(rawText) {
 /** Sai lệch làm tròn chấp nhận được giữa các cột tiền trên hóa đơn. */
 export const AMOUNT_TOLERANCE = 1;
 
+/** Nhận ra cảnh báo lệch phép cộng để tính lại khi người dùng sửa tay số tiền. */
+export const AMOUNT_BALANCE_WARNING_PREFIX = 'Các cột tiền không khớp';
+
+/**
+ * Đối chiếu phép cộng của các cột tiền: chưa thuế + tiền thuế + thu hộ nhà
+ * chức trách phải bằng tổng thanh toán. Trả về câu cảnh báo, hoặc null khi
+ * khớp hoặc khi thiếu dữ liệu để đối chiếu.
+ */
+export function amountBalanceWarning(fields) {
+  const beforeTax = Number(fields?.amountBeforeTax) || 0;
+  const vat = Number(fields?.vatAmount) || 0;
+  const authority = Number(fields?.authorityCollection) || 0;
+  const total = Number(fields?.totalAmount) || 0;
+
+  if (!beforeTax || !vat || !total) return null;
+
+  const sum = beforeTax + vat + authority;
+  if (Math.abs(sum - total) <= AMOUNT_TOLERANCE) return null;
+
+  const parts = authority
+    ? `chưa thuế + tiền thuế + thu hộ nhà chức trách (${sum})`
+    : `chưa thuế + tiền thuế (${sum})`;
+  return `${AMOUNT_BALANCE_WARNING_PREFIX}: ${parts} khác tổng thanh toán (${total}).`;
+}
+
 /**
  * Đối chiếu chéo các trường đã đọc với nhau theo đúng ràng buộc của biểu mẫu.
  * Trả về cảnh báo để người dùng kiểm tra chứng từ gốc, không tự sửa số liệu.
  */
 export function validateInvoiceFields(fields) {
   const warnings = [];
-  const { symbol, date, amountBeforeTax, vatAmount, totalAmount } = fields;
+  const { symbol, date, vatAmount, totalAmount } = fields;
 
   if (symbol && date) {
     const year = Number(date.slice(-4));
@@ -488,14 +532,8 @@ export function validateInvoiceFields(fields) {
     }
   }
 
-  if (amountBeforeTax && vatAmount && totalAmount) {
-    const diff = Math.abs(amountBeforeTax + vatAmount - totalAmount);
-    if (diff > AMOUNT_TOLERANCE) {
-      warnings.push(
-        `Chưa thuế + tiền thuế (${amountBeforeTax + vatAmount}) không khớp tổng thanh toán (${totalAmount}).`,
-      );
-    }
-  }
+  const balance = amountBalanceWarning(fields);
+  if (balance) warnings.push(balance);
 
   if (fields.amountInWordsValue !== null && fields.amountInWordsValue !== undefined && totalAmount) {
     if (Math.abs(fields.amountInWordsValue - totalAmount) > AMOUNT_TOLERANCE) {

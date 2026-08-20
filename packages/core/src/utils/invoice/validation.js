@@ -118,13 +118,25 @@ export function mergeInvoiceBatch(existing, incoming) {
   return { invoices, added };
 }
 
-export function deriveInvoiceAmounts({ totalAmount = 0, amountBeforeTax = 0, vatAmount = 0 }) {
+/**
+ * `authorityCollection` là khoản thu hộ nhà chức trách trên hóa đơn hàng không
+ * (phí sân bay, phí soi chiếu). Khoản này không chịu thuế GTGT nhưng vẫn nằm
+ * trong số tiền khách phải trả, nên khi phải tự cộng ra tổng thanh toán thì
+ * thiếu nó là thiếu tiền thật.
+ */
+export function deriveInvoiceAmounts({
+  totalAmount = 0,
+  amountBeforeTax = 0,
+  vatAmount = 0,
+  authorityCollection = 0,
+}) {
   let total = Number(totalAmount) || 0;
   let beforeTax = Number(amountBeforeTax) || 0;
   let vat = Number(vatAmount) || 0;
+  const authority = Number(authorityCollection) || 0;
 
-  if (!total && beforeTax && vat) total = beforeTax + vat;
-  if (total && beforeTax && !vat && total >= beforeTax) vat = total - beforeTax;
+  if (!total && beforeTax && vat) total = beforeTax + vat + authority;
+  if (total && beforeTax && !vat && total >= beforeTax + authority) vat = total - beforeTax - authority;
 
-  return { totalAmount: total, amountBeforeTax: beforeTax, vatAmount: vat };
+  return { totalAmount: total, amountBeforeTax: beforeTax, vatAmount: vat, authorityCollection: authority };
 }
