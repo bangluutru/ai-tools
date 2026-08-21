@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileSpreadsheet, UploadCloud, Download,
   Trash2, ShieldCheck, RefreshCw,
-  Building2, DollarSign, FileCheck
+  Building2, CalendarDays, DollarSign, FileCheck
 } from 'lucide-react';
 import { useLocalStorage } from '@ai-tools/core/hooks/useLocalStorage.js';
 import { parseLocalizedNumber } from '@ai-tools/core/utils/accounting/reconcile.js';
@@ -28,7 +28,7 @@ import {
   groupInvoicesByCompany,
 } from '@ai-tools/core/utils/invoice/companyGrouping.js';
 import { describeExpense } from '@ai-tools/core/utils/invoice/expenseCategory.js';
-import { buildPerDiemRow, perDiemDays } from '@ai-tools/core/utils/invoice/perDiem.js';
+import { buildPerDiemRow, parseIsoDate, perDiemDays } from '@ai-tools/core/utils/invoice/perDiem.js';
 import {
   AMOUNT_BALANCE_WARNING_PREFIX,
   amountBalanceWarning,
@@ -689,6 +689,113 @@ function AmountInput({ value, onCommit, label, emphasis = false }) {
   );
 }
 
+/**
+ * Ô nhập ngày dạng dd/mm/yyyy kèm nút mở lịch.
+ *
+ * Không dùng thẳng <input type="date">: ô năm của widget gốc nhận tới sáu chữ
+ * số trước khi nhảy sang ô tháng (năm hợp lệ tới 275760), nên gõ "18062026" là
+ * hỏng — min/max không đổi được hành vi này. Ở đây phần gõ là ô text tự chèn
+ * dấu gạch và dừng ở bốn chữ số năm, còn phần chọn lịch vẫn dùng widget gốc
+ * thông qua showPicker().
+ */
+function DateField({ value, onChange, label, id }) {
+  const pickerRef = useRef(null);
+  const [draft, setDraft] = useState(null);
+
+  const toDisplay = (isoValue) => {
+    const date = parseIsoDate(isoValue);
+    if (!date) return '';
+    return [
+      String(date.getDate()).padStart(2, '0'),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      date.getFullYear(),
+    ].join('/');
+  };
+
+  /** Chèn dấu gạch theo nhịp gõ và chặn ở tám chữ số. */
+  const formatTyping = (text) => {
+    const digits = String(text).replace(/\D/g, '').slice(0, 8);
+    const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
+    return parts.join('/');
+  };
+
+  /** "18062026" → "2026-06-18", rỗng nếu chưa đủ tám chữ số hoặc ngày không có thật. */
+  const toIso = (text) => {
+    const digits = String(text).replace(/\D/g, '');
+    if (digits.length !== 8) return '';
+    const iso = [digits.slice(4, 8), digits.slice(2, 4), digits.slice(0, 2)].join('-');
+    return parseIsoDate(iso) ? iso : '';
+  };
+
+  /**
+   * Chốt giá trị ngay khi gõ đủ một ngày có thật, không đợi rời ô. Nếu đợi thì
+   * ô có thể hiện một ngày trong khi giá trị đem đi tính vẫn là ngày cũ.
+   */
+  const handleTyping = (text) => {
+    const formatted = formatTyping(text);
+    setDraft(formatted);
+    const iso = toIso(formatted);
+    if (iso) onChange(iso);
+    else if (formatted === '') onChange('');
+  };
+
+  /** Rời ô mà chuỗi còn dở hoặc là ngày không có thật thì trả về giá trị cũ. */
+  const commit = () => setDraft(null);
+
+  const openCalendar = () => {
+    const picker = pickerRef.current;
+    if (!picker) return;
+    try {
+      picker.showPicker();
+    } catch {
+      // Trình duyệt không hỗ trợ showPicker thì mở widget theo cách thường.
+      picker.focus();
+      picker.click();
+    }
+  };
+
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        type="text"
+        inputMode="numeric"
+        value={draft ?? toDisplay(value)}
+        onChange={(event) => handleTyping(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            commit();
+            event.currentTarget.blur();
+          }
+          if (event.key === 'Escape') setDraft(null);
+        }}
+        placeholder="dd/mm/yyyy"
+        aria-label={label}
+        className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 pr-9 text-slate-200 outline-none focus:border-amber-500/60"
+      />
+      <button
+        type="button"
+        onClick={openCalendar}
+        aria-label={`Chọn ${label} trên lịch`}
+        className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 transition hover:bg-slate-800 hover:text-amber-400"
+      >
+        <CalendarDays size={15} />
+      </button>
+      {/* Widget gốc chỉ dùng để chọn trên lịch, không nhận bàn phím. */}
+      <input
+        ref={pickerRef}
+        type="date"
+        tabIndex={-1}
+        aria-hidden="true"
+        value={value || ''}
+        onChange={(event) => onChange(event.target.value)}
+        className="pointer-events-none absolute right-2 bottom-0 h-0 w-0 opacity-0"
+      />
+    </div>
+  );
+}
+
 export default function InvoiceTool() {
   const [invoices, setInvoices] = useState([]);
   // Việc đọc chứng từ chạy bất đồng bộ khá lâu; ref giữ danh sách mới nhất để
@@ -1222,11 +1329,10 @@ export default function InvoiceTool() {
             </label>
             <label className="flex flex-col gap-1.5 text-xs">
               <span className="font-semibold text-slate-400">Ngày lập giấy đề nghị</span>
-              <input
-                type="date"
+              <DateField
                 value={issuedAtInput}
-                onChange={(event) => setIssuedAtInput(event.target.value)}
-                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+                onChange={setIssuedAtInput}
+                label="Ngày lập giấy đề nghị"
               />
             </label>
             <label className="flex flex-col gap-1.5 text-xs">
@@ -1279,20 +1385,18 @@ export default function InvoiceTool() {
               </label>
               <label className="flex flex-col gap-1.5 text-xs">
                 <span className="font-semibold text-slate-400">Từ ngày</span>
-                <input
-                  type="date"
+                <DateField
                   value={formSettings.perDiemFrom}
-                  onChange={(event) => updateSetting('perDiemFrom', event.target.value)}
-                  className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+                  onChange={(next) => updateSetting('perDiemFrom', next)}
+                  label="Ngày bắt đầu đợt công tác"
                 />
               </label>
               <label className="flex flex-col gap-1.5 text-xs">
                 <span className="font-semibold text-slate-400">Đến ngày</span>
-                <input
-                  type="date"
+                <DateField
                   value={formSettings.perDiemTo}
-                  onChange={(event) => updateSetting('perDiemTo', event.target.value)}
-                  className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+                  onChange={(next) => updateSetting('perDiemTo', next)}
+                  label="Ngày kết thúc đợt công tác"
                 />
               </label>
               <label className="flex flex-col gap-1.5 text-xs">
