@@ -9,7 +9,7 @@ import { MiniAppError, MiniAppLayout } from './shared/MiniAppLayout.jsx';
 import JSZip from 'jszip';
 import confetti from 'canvas-confetti';
 import {
-  UploadCloud,
+  Upload,
   Zap,
   Scale,
   Sparkles,
@@ -246,6 +246,7 @@ export default function PdfCompressorView({ displayLang = 'vi' }) {
   const [fileError, setFileError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [comparisonItem, setComparisonItem] = useState(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -561,6 +562,65 @@ export default function PdfCompressorView({ displayLang = 'vi' }) {
 
       <MiniAppError>{fileError}</MiniAppError>
 
+      {/* Drop Zone */}
+      <div
+        onClick={() => !isProcessing && fileInputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDragging(false);
+          if (isProcessing) return;
+          const pdfs = [];
+          if (e.dataTransfer.files) {
+            for (let i = 0; i < e.dataTransfer.files.length; i++) {
+              const file = e.dataTransfer.files[i];
+              if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                pdfs.push(file);
+              }
+            }
+          }
+          if (pdfs.length > 0) handleFilesSelected(pdfs);
+        }}
+        className={`w-full min-h-[400px] border-3 border-dashed rounded-2xl flex flex-col items-center justify-center gap-5 cursor-pointer transition-all mb-6 ${
+          isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+        } ${isDragging
+          ? 'border-teal-400 bg-teal-50 scale-[1.01]'
+          : 'border-slate-700 bg-slate-900 hover:border-teal-300 hover:bg-teal-50/30'
+          }`}
+      >
+        <Upload size={64} strokeWidth={1.2} className={isDragging ? 'text-teal-400' : 'text-slate-300'} />
+        <div className="text-center">
+          <p className="text-lg font-bold text-slate-400">{t.dropTitle}</p>
+          <p className="text-sm text-slate-400 mt-1">{t.dropHint}</p>
+          <p className="text-xs text-slate-400 mt-2">
+            {t.multipleHint}
+          </p>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          multiple
+          disabled={isProcessing}
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) {
+              const pdfs = [];
+              for (let i = 0; i < e.target.files.length; i++) {
+                const file = e.target.files[i];
+                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+                  pdfs.push(file);
+                }
+              }
+              if (pdfs.length > 0) handleFilesSelected(pdfs);
+              e.target.value = '';
+            }
+          }}
+          className="hidden"
+        />
+      </div>
+
       {/* Preset Selector Panel */}
       <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-4">
         <div className="flex items-center justify-between">
@@ -705,65 +765,6 @@ export default function PdfCompressorView({ displayLang = 'vi' }) {
             </div>
           </div>
         )}
-      </div>
-
-      {/* Drop Zone */}
-      <div
-        onClick={() => !isProcessing && fileInputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        onDrop={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (isProcessing) return;
-          const pdfs = [];
-          if (e.dataTransfer.files) {
-            for (let i = 0; i < e.dataTransfer.files.length; i++) {
-              const file = e.dataTransfer.files[i];
-              if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                pdfs.push(file);
-              }
-            }
-          }
-          if (pdfs.length > 0) handleFilesSelected(pdfs);
-        }}
-        className={`w-full rounded-3xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200 border-2 border-dashed bg-slate-900/40 hover:bg-slate-800/60 border-slate-700 hover:border-teal-500/60 ${
-          isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-        }`}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/pdf,.pdf"
-          multiple
-          disabled={isProcessing}
-          onChange={(e) => {
-            if (e.target.files && e.target.files.length > 0) {
-              const pdfs = [];
-              for (let i = 0; i < e.target.files.length; i++) {
-                const file = e.target.files[i];
-                if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                  pdfs.push(file);
-                }
-              }
-              if (pdfs.length > 0) handleFilesSelected(pdfs);
-              e.target.value = '';
-            }
-          }}
-          className="hidden"
-        />
-
-        <div className="flex flex-col items-center justify-center max-w-md mx-auto space-y-3">
-          <div className="w-16 h-16 rounded-2xl bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center justify-center">
-            <UploadCloud className="w-8 h-8" />
-          </div>
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-slate-100 mb-1">{t.dropTitle}</h3>
-            <p className="text-xs sm:text-sm text-slate-400">{t.dropHint}</p>
-          </div>
-          <div className="text-[11px] text-slate-500 pt-1">
-            {t.multipleHint}
-          </div>
-        </div>
       </div>
 
       {/* Stats Overview */}
