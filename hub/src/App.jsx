@@ -37,9 +37,7 @@ import {
 const ImageConvertTool = lazy(() => import('./tools/image-convert/ImageConvertTool'));
 const ScreenCaptureTool = lazy(() => import('./tools/screen-capture/ScreenCaptureTool'));
 const BarcodeQrTool = lazy(() => import('./tools/barcode-qr/BarcodeQrTool'));
-const PdfSplitTool = lazy(() => import('./tools/pdf-split/PdfSplitTool'));
-const PdfMergeTool = lazy(() => import('./tools/pdf-merge/PdfMergeTool'));
-const PdfCompressTool = lazy(() => import('./tools/pdf-compress/PdfCompressTool'));
+const PdfToolkitTool = lazy(() => import('./tools/pdf-toolkit/PdfToolkitTool'));
 const OmniConvertTool = lazy(() => import('./tools/omniconvert/OmniConvertTool'));
 const ExcelMappingTool = lazy(() => import('./tools/excel-mapping/ExcelMappingTool'));
 const EditorStudioTool = lazy(() => import('./tools/editor-studio/EditorStudioTool'));
@@ -52,9 +50,7 @@ const toolComponentMap = {
   'image-convert': ImageConvertTool,
   'screen-capture': ScreenCaptureTool,
   'barcode-qr': BarcodeQrTool,
-  'pdf-split': PdfSplitTool,
-  'pdf-merge': PdfMergeTool,
-  'pdf-compress': PdfCompressTool,
+  'pdf-toolkit': PdfToolkitTool,
   'omniconvert': OmniConvertTool,
   'excel-mapping': ExcelMappingTool,
   'editor-studio': EditorStudioTool,
