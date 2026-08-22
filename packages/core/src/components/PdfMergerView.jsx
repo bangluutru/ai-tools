@@ -273,7 +273,7 @@ const PdfMergerView = ({ displayLang }) => {
     const totalPages = files.reduce((sum, f) => sum + f.pageCount, 0);
 
     return (
-        <MiniAppLayout width="narrow">
+        <MiniAppLayout>
             <MiniAppHeader
                 title={t.title}
                 subtitle={t.subtitle}
