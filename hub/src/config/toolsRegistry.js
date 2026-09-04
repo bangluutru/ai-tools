@@ -92,10 +92,31 @@ const toolGovernance = {
     readiness: 'beta',
     processing: 'browser',
     outputPurpose: 'utility'
+  },
+  'id-photo-studio': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility'
   }
 };
 
 const toolDefinitions = [
+  {
+    id: 'id-photo-studio',
+    name_vn: 'Tạo Ảnh Thẻ & Hộ Chiếu Chuẩn',
+    name_en: 'ID & Passport Photo Studio',
+    name_ja: '証明写真＆パスポートスタジオ',
+    desc_vn: 'Tách nền AI Studio HD, căn chuẩn khuôn mặt theo lưới ICAO/Combini, xuất file đơn Ultra HD và sheet in 300/600 DPI.',
+    desc_en: 'AI Studio HD background removal, ICAO standard face framing, Ultra HD single photo & 300/600 DPI combini print sheet export.',
+    desc_ja: 'AI高精度背景透過、規格準拠の自動顔位置調整、ウルトラHD単体出力およびコンビニ印刷用シート生成。',
+    category: 'image',
+    icon: 'UserCheck',
+    gradient: 'from-blue-600 via-indigo-600 to-cyan-500',
+    color: '#2563eb',
+    badge: 'AI & PHOTO',
+    popular: true,
+    tags: ['id photo', 'passport', 'ảnh thẻ', 'hộ chiếu', 'combini', 'cv', 'visa', 'ai matting', '履歴書']
+  },
   {
     id: 'image-convert',
     name_vn: 'WebP Master & Nén Ảnh',

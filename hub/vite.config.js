@@ -31,6 +31,8 @@ export default defineConfig({
           if (id.includes('/html2canvas/')) return 'vendor-html2canvas';
           if (id.includes('qr-code-styling')) return 'vendor-qrcode';
           if (id.includes('/jsbarcode/')) return 'vendor-jsbarcode';
+          if (id.includes('@imgly/background-removal')) return 'vendor-imgly';
+          if (id.includes('@mediapipe')) return 'vendor-mediapipe';
           return undefined;
         }
       }
