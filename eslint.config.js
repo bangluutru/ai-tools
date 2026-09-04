@@ -43,7 +43,10 @@ export default defineConfig([
     }
   },
   {
-    files: ['**/GoogleFontPicker.jsx'],
-    rules: { 'react-refresh/only-export-components': 'off' }
+    files: ['**/GoogleFontPicker.jsx', '**/i18n/**/*.jsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+      'react-hooks/set-state-in-effect': 'off'
+    }
   }
 ]);

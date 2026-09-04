@@ -7,6 +7,7 @@ const registry = [
   { id: 'ready-tool', readiness: 'beta' },
   { id: 'paused-tool', readiness: 'in-development' },
   { id: 'pdf-toolkit', readiness: 'beta' },
+  { id: 'invoice-studio', readiness: 'beta' },
 ];
 
 test('resolves only known and available miniapp routes', () => {
@@ -14,13 +15,15 @@ test('resolves only known and available miniapp routes', () => {
   assert.equal(resolveToolId('#/tools/paused-tool', registry), null);
   assert.equal(resolveToolId('#/tools/missing-tool', registry), null);
   assert.equal(resolveToolId('#/tools/pdf-toolkit', registry), 'pdf-toolkit');
+  assert.equal(resolveToolId('#/tools/invoice-studio', registry), 'invoice-studio');
   assert.equal(resolveToolId('#/other/ready-tool', registry), null);
 });
 
-test('legacy PDF tool URLs redirect to pdf-toolkit', () => {
+test('legacy tool URLs redirect to new merged/renamed tools', () => {
   assert.equal(resolveToolId('#/tools/pdf-split', registry), 'pdf-toolkit');
   assert.equal(resolveToolId('#/tools/pdf-merge', registry), 'pdf-toolkit');
   assert.equal(resolveToolId('#/tools/pdf-compress', registry), 'pdf-toolkit');
+  assert.equal(resolveToolId('#/tools/invoice-webapp', registry), 'invoice-studio');
 });
 
 test('resolves routes with query parameters (tab hint)', () => {

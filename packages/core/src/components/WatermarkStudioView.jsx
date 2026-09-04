@@ -15,7 +15,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { PDFDocument, degrees, rgb, StandardFonts } from 'pdf-lib';
 import JSZip from 'jszip';
-import confetti from 'canvas-confetti';
 import {
   ShieldCheck, HelpCircle, Sparkles, LayoutGrid,
   Zap, Check, UploadCloud, FileText, Image as ImageIcon, FileSpreadsheet,
@@ -770,7 +769,7 @@ function createSampleStampSvg(type) {
 // MAIN VIEW COMPONENT — WatermarkStudioView
 // ========================================================================
 
-export default function WatermarkStudioView({ displayLang }) {
+export default function WatermarkStudioView({ displayLang: _displayLang }) {
   var [config, setConfig] = useState(DEFAULT_WATERMARK_CONFIG);
   var [fileItems, setFileItems] = useState([]);
   var [selectedId, setSelectedId] = useState(null);
@@ -797,7 +796,11 @@ export default function WatermarkStudioView({ displayLang }) {
         img.onload = function () { if (isMounted) setBgImage(img); };
         img.src = url;
       });
-    } else { setBgImage(null); }
+    } else {
+      Promise.resolve().then(function () {
+        if (isMounted) setBgImage(null);
+      });
+    }
     return function () { isMounted = false; };
   }, [activeFile]);
 

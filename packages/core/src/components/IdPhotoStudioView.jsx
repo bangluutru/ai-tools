@@ -19,7 +19,7 @@ function IdPhotoAppContent() {
   // Workflow State
   const [originalImage, setOriginalImage] = useState(null);
   const [compositeImage, setCompositeImage] = useState(null);
-  const [maskCanvas, setMaskCanvas] = useState(null);
+  const [_maskCanvas, setMaskCanvas] = useState(null);
   const [detectedFace, setDetectedFace] = useState(null);
 
   const [selectedBgColor, setSelectedBgColor] = useState('#FFFFFF');

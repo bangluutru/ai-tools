@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from '../../utils/id-photo/i18n/index.jsx';
 import { Eraser, Paintbrush, Undo, Redo, Check, X, ZoomIn, ZoomOut } from "lucide-react";
 import { applyBrushToMask } from '../../utils/id-photo/backgroundRemoval.js';
@@ -20,8 +20,30 @@ const MaskBrushModal = ({
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const workingMaskRef = useRef(null);
+
+  const renderEditorCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const workingMask = workingMaskRef.current;
+    if (!canvas || !workingMask || !originalImage) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    canvas.width = workingMask.width;
+    canvas.height = workingMask.height;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(originalImage, 0, 0);
+    const overlay = document.createElement("canvas");
+    overlay.width = canvas.width;
+    overlay.height = canvas.height;
+    const oCtx = overlay.getContext("2d");
+    oCtx.fillStyle = "rgba(239, 68, 68, 0.45)";
+    oCtx.fillRect(0, 0, overlay.width, overlay.height);
+    oCtx.globalCompositeOperation = "destination-out";
+    oCtx.drawImage(workingMask, 0, 0);
+    ctx.drawImage(overlay, 0, 0);
+  }, [originalImage]);
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !maskCanvas) return;
     const working = document.createElement("canvas");
     working.width = maskCanvas.width;
     working.height = maskCanvas.height;
@@ -29,11 +51,15 @@ const MaskBrushModal = ({
     ctx.drawImage(maskCanvas, 0, 0);
     workingMaskRef.current = working;
     const initialData = ctx.getImageData(0, 0, working.width, working.height);
-    setHistory([initialData]);
-    setHistoryIndex(0);
-    setZoom(1);
-    renderEditorCanvas();
-  }, [isOpen, maskCanvas]);
+    
+    requestAnimationFrame(() => {
+      setHistory([initialData]);
+      setHistoryIndex(0);
+      setZoom(1);
+      renderEditorCanvas();
+    });
+  }, [isOpen, maskCanvas, renderEditorCanvas]);
+
   const saveHistoryState = () => {
     if (!workingMaskRef.current) return;
     const ctx = workingMaskRef.current.getContext("2d", { willReadFrequently: true });
@@ -61,26 +87,6 @@ const MaskBrushModal = ({
       setHistoryIndex(newIdx);
       renderEditorCanvas();
     }
-  };
-  const renderEditorCanvas = () => {
-    const canvas = canvasRef.current;
-    const workingMask = workingMaskRef.current;
-    if (!canvas || !workingMask) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    canvas.width = workingMask.width;
-    canvas.height = workingMask.height;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(originalImage, 0, 0);
-    const overlay = document.createElement("canvas");
-    overlay.width = canvas.width;
-    overlay.height = canvas.height;
-    const oCtx = overlay.getContext("2d");
-    oCtx.fillStyle = "rgba(239, 68, 68, 0.45)";
-    oCtx.fillRect(0, 0, overlay.width, overlay.height);
-    oCtx.globalCompositeOperation = "destination-out";
-    oCtx.drawImage(workingMask, 0, 0);
-    ctx.drawImage(overlay, 0, 0);
   };
   const getCanvasCoordinates = (e) => {
     const canvas = canvasRef.current;

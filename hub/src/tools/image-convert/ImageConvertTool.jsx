@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MiniAppLayout } from '@ai-tools/core/components/shared/MiniAppLayout.jsx';
 import confetti from 'canvas-confetti';
-import DropZone from '../../components/image/DropZone';
-import SettingsBar from '../../components/image/SettingsBar';
-import StatsOverview from '../../components/image/StatsOverview';
-import ImageGrid from '../../components/image/ImageGrid';
-import CompareModal from '../../components/image/CompareModal';
+import DropZone from './components/DropZone';
+import SettingsBar from './components/SettingsBar';
+import StatsOverview from './components/StatsOverview';
+import ImageGrid from './components/ImageGrid';
+import CompareModal from './components/CompareModal';
 import { convertImageToWebP } from '@ai-tools/core/utils/image/converter.js';
 import { downloadAllAsZip } from '@ai-tools/core/utils/image/zipExporter.js';
 import { IMAGE_LIMITS, validateImageFiles } from '@ai-tools/core/utils/image/limits.js';

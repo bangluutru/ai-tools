@@ -63,7 +63,7 @@ const toolGovernance = {
     outputPurpose: 'reference'
   },
   'editor-studio': { readiness: 'experimental', processing: 'browser', outputPurpose: 'reference' },
-  'invoice-webapp': {
+  'invoice-studio': {
     readiness: 'beta',
     processing: 'browser',
     priority: 2,
@@ -294,7 +294,7 @@ const toolDefinitions = [
     tags: ['editor', 'template', 'docx', 'form', 'soạn thảo']
   },
   {
-    id: 'invoice-webapp',
+    id: 'invoice-studio',
     name_vn: 'Xử Lý Hóa Đơn & Đề Nghị Thanh Toán',
     name_en: 'Invoice to Payment Request',
     name_ja: '請求書・支払申請自動化',

@@ -14,7 +14,7 @@ Chúng được giữ lại nguyên trạng để có thể phát triển tiếp
 | `contract-auditor` | `contract-auditor` | Chưa đọc đủ ba bộ chứng từ; khi parse lỗi còn gán nhà cung cấp/MST/số tiền giả trong khi vẫn xuất báo cáo có hình thức chính thức. |
 | `policy-assistant` | `policy-assistant` | Bảng định mức và FAQ hard-code, không có nguồn/phiên bản/ngày hiệu lực. Ngưỡng chứng từ không dùng tiền mặt trong FAQ đã lỗi thời so với Nghị định 181/2025/NĐ-CP. |
 
-Chi tiết đánh giá đầy đủ nằm ở `PORTAL_CODEBASE_AUDIT_VI.md` mục 4.
+Chi tiết đánh giá đầy đủ nằm ở `docs/reports/PORTAL_CODEBASE_AUDIT_VI.md` mục 4.
 
 ## Điều gì đang giữ chúng ngoài production
 

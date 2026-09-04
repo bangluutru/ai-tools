@@ -1,5 +1,5 @@
 {
-  "name": "docstudio-excel-mapping",
+  "name": "legal-studio",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -41,5 +41,5 @@
     "tailwindcss": "^3.4.19",
     "vite": "^7.3.1"
   },
-  "description": "DocStudio Excel Mapping - Mapping D\u1eef Li\u1ec7u Excel"
+  "description": "DocStudio Legal - So\u1ea1n Th\u1ea3o & D\u1ecbch V\u0103n B\u1ea3n Ph\u00e1p L\u00fd"
 }

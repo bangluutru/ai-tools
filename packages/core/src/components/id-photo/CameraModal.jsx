@@ -1,26 +1,27 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from '../../utils/id-photo/i18n/index.jsx';
 import { Camera, X, RefreshCw, Clock } from "lucide-react";
 const CameraModal = ({ isOpen, onClose, onCapture }) => {
   const { t } = useTranslation();
   const videoRef = useRef(null);
-  const [stream, setStream] = useState(null);
+  const streamRef = useRef(null);
   const [facingMode, setFacingMode] = useState("user");
   const [countdown, setCountdown] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const [useTimer, setUseTimer] = useState(true);
-  useEffect(() => {
-    if (!isOpen) {
-      stopStream();
-      return;
+
+  const stopStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
-    startCamera();
-    return () => {
-      stopStream();
-    };
-  }, [isOpen, facingMode]);
-  const startCamera = async () => {
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const startCamera = useCallback(async () => {
     stopStream();
     setErrorMessage(null);
     try {
@@ -32,7 +33,7 @@ const CameraModal = ({ isOpen, onClose, onCapture }) => {
         },
         audio: false
       });
-      setStream(mediaStream);
+      streamRef.current = mediaStream;
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
@@ -40,16 +41,21 @@ const CameraModal = ({ isOpen, onClose, onCapture }) => {
       console.error("Camera access error:", err);
       setErrorMessage(t.cameraError);
     }
-  };
-  const stopStream = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
+  }, [facingMode, stopStream, t.cameraError]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      stopStream();
+      return;
     }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  };
+    const timer = setTimeout(() => {
+      startCamera();
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      stopStream();
+    };
+  }, [isOpen, startCamera, stopStream]);
   const switchCamera = () => {
     setFacingMode((prev) => prev === "user" ? "environment" : "user");
   };

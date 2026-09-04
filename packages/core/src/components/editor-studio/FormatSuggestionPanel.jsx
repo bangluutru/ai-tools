@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check, CheckCheck, ChevronDown, Sparkles, AlertCircle } from 'lucide-react';
-import { FORMAT_TYPES, FORMAT_LABELS, FORMAT_COLORS } from '../../lib/docstudio/formatSuggester';
+import { FORMAT_TYPES, FORMAT_LABELS, FORMAT_COLORS } from '../../lib/editor-studio/formatSuggester';
 
 /**
  * FormatSuggestionPanel

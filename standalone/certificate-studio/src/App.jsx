@@ -34,7 +34,7 @@ import PdfMergerView from '@ai-tools/core/components/PdfMergerView.jsx';
 import TemplateOverlayView from '@ai-tools/core/components/TemplateOverlayView.jsx';
 import ExcelMappingView from '@ai-tools/core/components/ExcelMappingView.jsx';
 import UserGuideView from '@ai-tools/core/components/UserGuideView.jsx';
-import DocStudioApp from '@ai-tools/core/components/docstudio/DocStudioApp.jsx';
+import DocStudioApp from '@ai-tools/core/components/editor-studio/DocStudioApp.jsx';
 import PageCard from '@ai-tools/core/components/PageCard.jsx';
 import PromptHelper from '@ai-tools/core/components/PromptHelper.jsx';
 import LongDocTranslatorView from '@ai-tools/core/components/LongDocTranslatorView.jsx';

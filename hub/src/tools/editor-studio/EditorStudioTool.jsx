@@ -1,5 +1,5 @@
 import React from 'react';
-import DocStudioApp from '@ai-tools/core/components/docstudio/DocStudioApp.jsx';
+import DocStudioApp from '@ai-tools/core/components/editor-studio/DocStudioApp.jsx';
 
 export default function EditorStudioTool({ displayLang }) {
   return (

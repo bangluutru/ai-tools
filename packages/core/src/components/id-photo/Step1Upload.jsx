@@ -9,7 +9,7 @@ const Step1Upload = ({ onImageSelected }) => {
   const fileInputRef = useRef(null);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
   const processFile = async (file) => {
     const isValid = await verifyDocumentSignature(file);
     if (!isValid) {

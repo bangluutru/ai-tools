@@ -1,5 +1,5 @@
 {
-  "name": "docstudio-editor",
+  "name": "excel-mapping",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -41,5 +41,5 @@
     "tailwindcss": "^3.4.19",
     "vite": "^7.3.1"
   },
-  "description": "DocStudio Interactive Editor - B\u1ed9 So\u1ea1n Th\u1ea3o Form & Template"
+  "description": "DocStudio Excel Mapping - Mapping D\u1eef Li\u1ec7u Excel"
 }

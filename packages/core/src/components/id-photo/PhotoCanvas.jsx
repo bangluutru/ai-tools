@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useTranslation } from '../../utils/id-photo/i18n/index.jsx';
-import { mmToPixels } from '../../utils/id-photo/exportEngine.js';
+import { adjustBrightness, mmToPixels } from '../../utils/id-photo/exportEngine.js';
 const PhotoCanvas = ({
   compositeImage,
   standard,
@@ -17,12 +17,52 @@ const PhotoCanvas = ({
   const isDraggingRef = useRef(false);
   const startPosRef = useRef({ x: 0, y: 0 });
   const startOffsetRef = useRef({ x: 0, y: 0 });
-  const aspect = standard.widthMm / standard.heightMm;
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !compositeImage) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    const drawGuidelines = (targetCtx, w, h, std) => {
+      targetCtx.save();
+      targetCtx.strokeStyle = "rgba(59, 130, 246, 0.4)";
+      targetCtx.lineWidth = 2;
+      targetCtx.setLineDash([6, 6]);
+      targetCtx.beginPath();
+      targetCtx.moveTo(w / 2, 0);
+      targetCtx.lineTo(w / 2, h);
+      targetCtx.stroke();
+      const topMarginAvg = (std.topMarginPercentMin + std.topMarginPercentMax) / 2 / 100 * h;
+      targetCtx.strokeStyle = "rgba(239, 68, 68, 0.7)";
+      targetCtx.beginPath();
+      targetCtx.moveTo(0, topMarginAvg);
+      targetCtx.lineTo(w, topMarginAvg);
+      targetCtx.stroke();
+      targetCtx.fillStyle = "rgba(239, 68, 68, 0.9)";
+      targetCtx.font = "bold 11px sans-serif";
+      targetCtx.fillText(t.guideCrown, 10, topMarginAvg - 6);
+      const faceHeightAvg = (std.faceHeightPercentMin + std.faceHeightPercentMax) / 2 / 100 * h;
+      const chinY = topMarginAvg + faceHeightAvg;
+      targetCtx.strokeStyle = "rgba(16, 185, 129, 0.8)";
+      targetCtx.beginPath();
+      targetCtx.moveTo(0, chinY);
+      targetCtx.lineTo(w, chinY);
+      targetCtx.stroke();
+      targetCtx.fillStyle = "rgba(16, 185, 129, 0.9)";
+      targetCtx.font = "bold 11px sans-serif";
+      targetCtx.fillText(t.guideChin, 10, chinY + 16);
+      targetCtx.strokeStyle = "rgba(59, 130, 246, 0.35)";
+      targetCtx.setLineDash([]);
+      targetCtx.beginPath();
+      const ovalCenterY = (topMarginAvg + chinY) / 2;
+      const ovalRadiusY = faceHeightAvg / 2;
+      const ovalRadiusX = faceHeightAvg * 0.75 / 2;
+      targetCtx.ellipse(w / 2, ovalCenterY, ovalRadiusX, ovalRadiusY, 0, 0, Math.PI * 2);
+      targetCtx.stroke();
+      targetCtx.restore();
+    };
+
     const targetW = mmToPixels(standard.widthMm, 300);
     const targetH = mmToPixels(standard.heightMm, 300);
     const dpr = typeof window !== "undefined" ? Math.max(window.devicePixelRatio || 1, 2) : 2;
@@ -38,25 +78,30 @@ const PhotoCanvas = ({
       const grad = ctx.createRadialGradient(
         targetW / 2,
         targetH * 0.38,
-        targetW * 0.15,
+        Math.min(targetW, targetH) * 0.15,
         targetW / 2,
         targetH * 0.45,
-        targetW * 0.85
+        Math.max(targetW, targetH) * 0.72
       );
       grad.addColorStop(0, bgColor);
-      grad.addColorStop(1, bgColor);
+      grad.addColorStop(0.65, adjustBrightness(bgColor, -8));
+      grad.addColorStop(1, adjustBrightness(bgColor, -22));
       ctx.fillStyle = grad;
     } else {
       ctx.fillStyle = bgColor;
     }
     ctx.fillRect(0, 0, targetW, targetH);
     ctx.save();
-    ctx.translate(targetW / 2 + transform.offsetX, targetH / 2 + transform.offsetY);
+    ctx.beginPath();
+    ctx.rect(0, 0, targetW, targetH);
+    ctx.clip();
+    const scale = transform.scale;
+    const drawW = srcW * scale;
+    const drawH = srcH * scale;
+    const drawX = targetW / 2 + transform.offsetX;
+    const drawY = targetH / 2 + transform.offsetY;
+    ctx.translate(drawX, drawY);
     ctx.rotate(transform.rotation * Math.PI / 180);
-    const baseScale = Math.max(targetW / srcW, targetH / srcH);
-    const totalScale = baseScale * transform.scale;
-    const drawW = srcW * totalScale;
-    const drawH = srcH * totalScale;
     const filters = [];
     if (transform.brightness !== 0) filters.push(`brightness(${100 + transform.brightness}%)`);
     if (transform.contrast !== 0) filters.push(`contrast(${100 + transform.contrast}%)`);
@@ -69,44 +114,6 @@ const PhotoCanvas = ({
     }
     ctx.restore();
   }, [compositeImage, standard, transform, showGuides, bgColor, useVignette, t]);
-  const drawGuidelines = (ctx, w, h, std) => {
-    ctx.save();
-    ctx.strokeStyle = "rgba(59, 130, 246, 0.4)";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 6]);
-    ctx.beginPath();
-    ctx.moveTo(w / 2, 0);
-    ctx.lineTo(w / 2, h);
-    ctx.stroke();
-    const topMarginAvg = (std.topMarginPercentMin + std.topMarginPercentMax) / 2 / 100 * h;
-    ctx.strokeStyle = "rgba(239, 68, 68, 0.7)";
-    ctx.beginPath();
-    ctx.moveTo(0, topMarginAvg);
-    ctx.lineTo(w, topMarginAvg);
-    ctx.stroke();
-    ctx.fillStyle = "rgba(239, 68, 68, 0.9)";
-    ctx.font = "bold 11px sans-serif";
-    ctx.fillText(t.guideCrown, 10, topMarginAvg - 6);
-    const faceHeightAvg = (std.faceHeightPercentMin + std.faceHeightPercentMax) / 2 / 100 * h;
-    const chinY = topMarginAvg + faceHeightAvg;
-    ctx.strokeStyle = "rgba(16, 185, 129, 0.8)";
-    ctx.beginPath();
-    ctx.moveTo(0, chinY);
-    ctx.lineTo(w, chinY);
-    ctx.stroke();
-    ctx.fillStyle = "rgba(16, 185, 129, 0.9)";
-    ctx.font = "bold 11px sans-serif";
-    ctx.fillText(t.guideChin, 10, chinY + 16);
-    ctx.strokeStyle = "rgba(59, 130, 246, 0.35)";
-    ctx.setLineDash([]);
-    ctx.beginPath();
-    const ovalCenterY = (topMarginAvg + chinY) / 2;
-    const ovalRadiusY = faceHeightAvg / 2;
-    const ovalRadiusX = faceHeightAvg * 0.75 / 2;
-    ctx.ellipse(w / 2, ovalCenterY, ovalRadiusX, ovalRadiusY, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  };
   const handlePointerDown = (clientX, clientY) => {
     isDraggingRef.current = true;
     startPosRef.current = { x: clientX, y: clientY };

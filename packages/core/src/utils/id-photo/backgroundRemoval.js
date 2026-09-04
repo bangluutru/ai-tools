@@ -401,7 +401,7 @@ function generateFallbackMask(source, width, height) {
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   ctx.drawImage(source, 0, 0);
   const srcData = ctx.getImageData(0, 0, width, height);
-  const src = srcData.data;
+  const _src = srcData.data;
   const maskImg = ctx.createImageData(width, height);
   const mask = maskImg.data;
   const centerX = width / 2;
