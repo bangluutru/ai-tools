@@ -1,6 +1,17 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { MiniAppHeader, MiniAppLayout } from './shared/MiniAppLayout.jsx';
-import { Upload, FileSpreadsheet, AlertCircle, Download, FileX, Calculator } from 'lucide-react';
+import {
+  Upload,
+  FileSpreadsheet,
+  AlertCircle,
+  Download,
+  FileX,
+  Calculator,
+  ShieldCheck,
+  CheckCircle2,
+  FileCheck,
+  Cpu,
+  Lock,
+} from 'lucide-react';
 import { reconcileAccountingData } from '../utils/accounting/reconcile.js';
 import { reconcileWorkbooks } from '../utils/accounting/reconcilePipeline.js';
 import { exportReconcileWorkbook } from '../utils/accounting/reconcileExport.js';
@@ -23,8 +34,7 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
 
   /**
    * Đọc workbook thành map sheet -> mảng dòng. Giữ nguyên dòng trống
-   * (blankrows mặc định) để chỉ số mảng khớp đúng số dòng thật trong Excel —
-   * bằng chứng "dòng N" phải chỉ đúng dòng người dùng mở ra xem.
+   * để chỉ số mảng khớp đúng số dòng thật trong Excel.
    */
   const readWorkbookRows = async (file, XLSX) => {
     if (!(await verifyDocumentSignature(file))) {
@@ -45,7 +55,7 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
     const validation = validateDocumentFiles(uploadedFiles, [], EXCEL_FILE_LIMITS);
     const errors = rejectionMessages(validation.rejected);
     if (validation.accepted.length === 0) {
-      setFileError(errors.join(' \u2022 '));
+      setFileError(errors.join(' • '));
       event.target.value = '';
       return;
     }
@@ -60,8 +70,6 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
         workbooks.push({ ...(await readWorkbookRows(file, XLSX)), sourceFile: file.name });
       }
 
-      // Cùng một pipeline với bộ golden test, nên kết quả kế toán đã duyệt
-      // chính là kết quả hiển thị ở đây.
       const outcome = reconcileWorkbooks(workbooks);
 
       setFiles((current) => ({ ...current, ...outcome.files }));
@@ -71,21 +79,20 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
         br: outcome.data.br.length > 0 ? outcome.data.br : current.br,
       }));
       setDiagnostics(outcome.diagnostics);
-      setFileError(errors.join(' \u2022 '));
+      setFileError(errors.join(' • '));
     } catch (err) {
-      console.error('L\u1ed7i \u0111\u1ecdc file:', err);
-      setFileError(err.message || 'C\u00f3 l\u1ed7i x\u1ea3y ra khi \u0111\u1ecdc file Excel.');
+      console.error('Lỗi đọc file:', err);
+      setFileError(err.message || 'Có lỗi xảy ra khi đọc file Excel.');
     } finally {
       setIsProcessing(false);
-      // Reset input so the same files can be selected again if needed
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
   const removeFile = (type) => {
-    setFiles(prev => ({ ...prev, [type]: null }));
-    setData(prev => ({ ...prev, [type]: [] }));
-    setDiagnostics(prev => prev.filter((entry) => entry.kind !== type));
+    setFiles((prev) => ({ ...prev, [type]: null }));
+    setData((prev) => ({ ...prev, [type]: [] }));
+    setDiagnostics((prev) => prev.filter((entry) => entry.kind !== type));
     setFileError('');
   };
 
@@ -113,28 +120,41 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
   const renderFileCard = (type, title, description) => {
     const file = files[type];
     const rowCount = data[type].length;
-    
+
     return (
-      <div className={`p-4 rounded-xl border ${file ? 'border-green-500 bg-green-500/10' : 'border-slate-700 bg-slate-800'}`}>
+      <div
+        className={`p-space-4 rounded-xl border transition-all ${
+          file
+            ? 'border-secondary/40 bg-secondary-container/10'
+            : 'border-border-subtle/40 bg-surface-container-low'
+        }`}
+      >
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet className={file ? "text-green-400" : "text-slate-400"} size={20} />
-            <h3 className="font-medium text-slate-200">{title}</h3>
+            <FileSpreadsheet className={file ? 'text-secondary' : 'text-outline'} size={20} />
+            <h3 className="font-title-sm text-title-sm text-on-surface font-semibold">{title}</h3>
           </div>
           {file && (
-            <button onClick={() => removeFile(type)} className="text-slate-400 hover:text-red-400 transition-colors">
+            <button
+              type="button"
+              onClick={() => removeFile(type)}
+              className="text-on-surface-variant hover:text-error transition-colors p-1 cursor-pointer"
+              title="Xóa tệp"
+            >
               <FileX size={16} />
             </button>
           )}
         </div>
-        
+
         {file ? (
           <div>
-            <p className="text-sm text-green-300 truncate" title={file.name}>{file.name}</p>
-            <p className="text-xs text-slate-400 mt-1">Đã nạp {rowCount} dòng dữ liệu</p>
+            <p className="text-body-sm text-secondary font-mono truncate" title={file.name}>
+              {file.name}
+            </p>
+            <p className="text-label-sm text-on-surface-variant mt-1">Đã nạp {rowCount.toLocaleString('vi-VN')} dòng dữ liệu</p>
           </div>
         ) : (
-          <p className="text-xs text-slate-400">{description}</p>
+          <p className="text-body-sm text-on-surface-variant text-[12px]">{description}</p>
         )}
       </div>
     );
@@ -142,46 +162,72 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
 
   const renderTable = (reportData, type) => {
     return (
-      <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900 mt-4">
-        <table className="w-full text-sm text-left">
-          <thead className="text-xs text-slate-400 uppercase bg-slate-800 border-b border-slate-700">
+      <div className="overflow-x-auto rounded-xl border border-border-subtle/40 bg-surface-container-lowest mt-4 shadow-sm">
+        <table className="w-full text-sm text-left font-body-sm">
+          <thead className="text-xs text-on-surface-variant uppercase bg-surface-container-low border-b border-border-subtle/40">
             <tr>
-              <th className="px-4 py-3">Số HĐ</th>
-              <th className="px-4 py-3 text-right">{type === '511' ? '511 (Có)' : '33311 (Tổng)'}</th>
-              {type === '33311' && <th className="px-4 py-3 text-right">VAT Tặng</th>}
-              <th className="px-4 py-3 text-right">BR ({type === '511' ? 'Chưa thuế' : 'Thuế'})</th>
-              <th className="px-4 py-3 text-right">Chênh lệch</th>
-              <th className="px-4 py-3 text-center">Trạng thái</th>
+              <th className="px-4 py-3 font-semibold">Số HĐ</th>
+              <th className="px-4 py-3 text-right font-semibold">{type === '511' ? '511 (Có)' : '33311 (Tổng)'}</th>
+              {type === '33311' && <th className="px-4 py-3 text-right font-semibold">VAT Tặng</th>}
+              <th className="px-4 py-3 text-right font-semibold">BR ({type === '511' ? 'Chưa thuế' : 'Thuế'})</th>
+              <th className="px-4 py-3 text-right font-semibold">Chênh lệch</th>
+              <th className="px-4 py-3 text-center font-semibold">Trạng thái</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border-subtle/20">
             {reportData.map((row, idx) => (
-              <tr key={`${row.invoice}-${idx}`} className="border-b border-slate-800 hover:bg-slate-800/50">
-                <td className="px-4 py-3 font-medium text-slate-200">{row.invoice}</td>
-                <td className="px-4 py-3 text-right text-slate-300">
+              <tr key={`${row.invoice}-${idx}`} className="hover:bg-surface-container/50 transition-colors">
+                <td className="px-4 py-3 font-mono font-medium text-on-surface">{row.invoice}</td>
+                <td className="px-4 py-3 text-right text-on-surface font-mono">
                   {type === '511' ? formatCurrency(row.val511) : formatCurrency(row.val33311)}
                 </td>
                 {type === '33311' && (
-                  <td className="px-4 py-3 text-right text-slate-400">
+                  <td className="px-4 py-3 text-right text-on-surface-variant font-mono">
                     {row.vatTang > 0 ? formatCurrency(row.vatTang) : '-'}
                   </td>
                 )}
-                <td className="px-4 py-3 text-right text-slate-300">{formatCurrency(row.valBR)}</td>
-                <td className={`px-4 py-3 text-right font-medium ${row.diff === 0 ? 'text-green-400' : 'text-red-400'}`}>
+                <td className="px-4 py-3 text-right text-on-surface font-mono">{formatCurrency(row.valBR)}</td>
+                <td
+                  className={`px-4 py-3 text-right font-mono font-semibold ${
+                    row.diff === 0 ? 'text-secondary' : 'text-error'
+                  }`}
+                >
                   {formatCurrency(row.diff)}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  {row.status === 'MATCH' && <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-900/50 text-green-400">Khớp</span>}
-                  {row.status === 'DIFF' && <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-900/50 text-red-400">Lệch</span>}
-                  {row.status === 'MISSING_BR' && <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-900/50 text-orange-400">Thiếu BR</span>}
-                  {row.status === 'MISSING_LEDGER' && <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-900/50 text-orange-400">Thiếu sổ</span>}
-                  {row.needsReview && <span className="ml-1 inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-amber-900/50 text-amber-300">Cần xác nhận</span>}
+                  {row.status === 'MATCH' && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-label-sm font-semibold bg-secondary-container/20 text-secondary">
+                      Khớp
+                    </span>
+                  )}
+                  {row.status === 'DIFF' && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-label-sm font-semibold bg-error-container/20 text-error">
+                      Lệch
+                    </span>
+                  )}
+                  {row.status === 'MISSING_BR' && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-label-sm font-semibold bg-tertiary-container/20 text-tertiary">
+                      Thiếu BR
+                    </span>
+                  )}
+                  {row.status === 'MISSING_LEDGER' && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-label-sm font-semibold bg-tertiary-container/20 text-tertiary">
+                      Thiếu sổ
+                    </span>
+                  )}
+                  {row.needsReview && (
+                    <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded text-label-sm font-semibold bg-amber-500/20 text-amber-300">
+                      Cần xác nhận
+                    </span>
+                  )}
                 </td>
               </tr>
             ))}
             {reportData.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-slate-500">Không có dữ liệu đối chiếu</td>
+                <td colSpan={6} className="px-4 py-8 text-center text-outline font-body-sm">
+                  Không có dữ liệu đối chiếu
+                </td>
               </tr>
             )}
           </tbody>
@@ -191,41 +237,109 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
   };
 
   return (
-    <MiniAppLayout gap="normal">
-      <MiniAppHeader
-        title={displayLang === 'en' ? 'Accounting Reconciliation' : 'Đối Chiếu Kế Toán'}
-        subtitle={displayLang === 'en'
-          ? 'Compare revenue and VAT between internal ledgers (511, 33311) and tax authority invoices (BR).'
-          : 'Tự động đối chiếu chênh lệch doanh thu và thuế GTGT giữa sổ kế toán nội bộ và bảng kê hóa đơn thuế.'}
-        badge={displayLang === 'en' ? '100% Client-Side • Secure' : '100% Client-Side • Bảo mật'}
-        tone="blue"
-      />
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-        Kết quả chỉ mang tính tham khảo. Dữ liệu được xử lý trên trình duyệt và cần kế toán kiểm tra trước khi sử dụng.
-      </div>
-      {fileError && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-          {fileError}
+    <div className="flex flex-col w-full text-on-surface max-w-[1240px] mx-auto">
+      {/* BREADCRUMB */}
+      <nav className="flex items-center gap-space-2 text-on-surface-variant font-body-sm text-body-sm mb-space-4">
+        <a href="#" className="hover:text-primary transition-colors flex items-center gap-space-1">
+          <span className="material-symbols-outlined text-[16px]">home</span>
+          <span>Trang chủ</span>
+        </a>
+        <span className="text-outline">/</span>
+        <a href="#" className="hover:text-primary transition-colors">
+          Excel &amp; Hóa đơn
+        </a>
+        <span className="text-outline">/</span>
+        <span className="text-on-surface font-title-sm text-title-sm">
+          {displayLang === 'en' ? 'Accounting Reconciliation' : 'Đối Chiếu Kế Toán'}
+        </span>
+      </nav>
+
+      {/* TOOL HEADER */}
+      <div className="flex flex-col gap-space-4 pb-space-6 border-b border-border-subtle/40 mb-space-6">
+        <div className="flex flex-wrap items-center justify-between gap-space-4">
+          <div className="flex items-center gap-space-3">
+            <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-primary-container shadow-sm">
+              <Calculator className="w-7 h-7 text-primary-container" />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex flex-wrap items-center gap-space-2">
+                <h1 className="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">
+                  {displayLang === 'en' ? 'Accounting Reconciliation' : 'Đối Chiếu Kế Toán (511, 33311, BR)'}
+                </h1>
+                <span className="px-space-2 py-[2px] bg-primary-container/10 text-brand-cyan-bright font-label-sm text-label-sm rounded uppercase">
+                  Accounting Engine
+                </span>
+                <span className="px-space-2 py-[2px] bg-secondary-container/10 text-secondary font-label-sm text-label-sm rounded uppercase flex items-center gap-space-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                  Offline Client-Side
+                </span>
+                <span className="px-space-2 py-[2px] bg-surface-subtle text-tertiary font-label-sm text-label-sm rounded uppercase">
+                  Triple Reconciliation
+                </span>
+              </div>
+              <span className="font-label-sm text-label-sm text-outline mt-0.5">
+                PIPELINE ID: RECONCILE-511-33311-BR-V2.1
+              </span>
+            </div>
+          </div>
         </div>
-      )}
-      
-      {/* Upload Section */}
-      <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-              <Upload size={24} className="text-blue-400" />
-              {displayLang === 'en' ? 'Upload Files' : 'Tải lên File Kế Toán'}
-            </h2>
-            <p className="text-sm text-slate-400 mt-1">
-              Chọn cùng lúc 3 file: Sổ 511, Sổ 33311 và Bảng kê hóa đơn (BR)
-            </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Tối đa 20 MiB/file, tổng 60 MiB; xử lý cục bộ, không tải lên máy chủ.
+
+        <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl">
+          {displayLang === 'en'
+            ? 'Compare revenue and VAT between internal ledgers (511, 33311) and tax authority invoices (BR) with zero server upload.'
+            : 'Tự động đối chiếu chênh lệch doanh thu và thuế GTGT giữa sổ kế toán nội bộ (TK 511, TK 33311) và bảng kê hóa đơn thuế (BR). Phát hiện ngay các hóa đơn thiếu, lệch số tiền hoặc chưa hạch toán.'}
+        </p>
+
+        {/* PRIVACY BANNER */}
+        <div className="p-space-3 bg-surface-container-low rounded-lg flex items-center gap-space-3 border-l-2 border-secondary">
+          <div className="w-8 h-8 rounded bg-secondary-container/20 flex items-center justify-center shrink-0 text-secondary">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-space-2">
+              <span className="font-title-sm text-title-sm text-secondary font-semibold">BẢO MẬT CLIENT-SIDE 100%</span>
+              <span className="px-space-1 py-[1px] bg-secondary/15 text-secondary font-label-sm text-label-sm rounded">
+                ISO-27001 ISOLATED
+              </span>
+            </div>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">
+              Toàn bộ dữ liệu doanh thu, thuế và sổ cái kế toán được phân tích in-memory trên trình duyệt của bạn với WebAssembly, tuyệt đối không gửi dữ liệu lên máy chủ.
             </p>
           </div>
-          
-          <div className="relative">
+        </div>
+      </div>
+
+      {/* ADVISORY ALERT */}
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-space-3 text-body-sm text-amber-200 mb-space-4 flex items-center gap-2">
+        <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
+        <span>Kết quả chỉ mang tính tham khảo kỹ thuật. Dữ liệu được xử lý cục bộ trên trình duyệt và cần kế toán kiểm tra đối chiếu trước khi lập báo cáo tài chính chính thức.</span>
+      </div>
+
+      {/* ERROR NOTICE */}
+      {fileError && (
+        <div className="rounded-xl border border-error/30 bg-error-container/20 p-space-3 text-body-sm text-error mb-space-4 flex items-center gap-2">
+          <AlertCircle className="w-5 h-5 text-error shrink-0" />
+          <span>{fileError}</span>
+        </div>
+      )}
+
+      {/* UPLOAD SECTION CARD */}
+      <div className="bg-surface-container border border-border-subtle/40 rounded-xl p-space-6 mb-space-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-space-4 pb-space-4 border-b border-border-subtle/30">
+          <div>
+            <h2 className="font-title-sm text-title-sm text-on-surface font-bold flex items-center gap-2">
+              <Upload size={20} className="text-primary-container" />
+              {displayLang === 'en' ? 'Upload Accounting Workbooks' : 'Tải Lên 3 File Kế Toán'}
+            </h2>
+            <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
+              Chọn cùng lúc 3 file: Sổ chi tiết 511, Sổ chi tiết 33311 và Bảng kê hóa đơn (BR)
+            </p>
+            <p className="font-label-sm text-label-sm text-outline mt-0.5">
+              Hỗ trợ .xlsx, .xls • Tối đa 20 MiB/file, tổng 60 MiB • Xử lý hoàn toàn trong bộ nhớ RAM
+            </p>
+          </div>
+
+          <div className="relative shrink-0">
             <input
               type="file"
               ref={fileInputRef}
@@ -234,50 +348,59 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
               onChange={handleFileUpload}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
-            <button className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2">
+            <button
+              type="button"
+              className="px-space-4 py-space-3 bg-primary-container hover:bg-brand-cyan-bright text-on-primary-container font-title-sm text-title-sm font-bold rounded-lg shadow transition-colors flex items-center gap-2 cursor-pointer"
+            >
               <Upload size={18} />
-              {isProcessing ? 'Đang đọc...' : 'Chọn 3 File Excel'}
+              {isProcessing ? 'Đang phân tích...' : 'Chọn 3 File Excel'}
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {renderFileCard('511', 'Sổ Doanh Thu (511)', 'Sổ chi tiết tài khoản 511')}
-          {renderFileCard('33311', 'Sổ Thuế (33311)', 'Sổ chi tiết tài khoản 33311')}
-          {renderFileCard('br', 'Bảng Kê (BR)', 'File BR chứa sheet GTGT & MTT')}
+        {/* 3 File Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-space-4">
+          {renderFileCard('511', 'Sổ Doanh Thu (TK 511)', 'Sổ chi tiết doanh thu bán hàng & dịch vụ TK 511')}
+          {renderFileCard('33311', 'Sổ Thuế GTGT (TK 33311)', 'Sổ chi tiết thuế GTGT đầu ra phải nộp TK 33311')}
+          {renderFileCard('br', 'Bảng Kê Hóa Đơn (BR)', 'File bảng kê hóa đơn thuế chứa sheet GTGT & MTT')}
         </div>
 
+        {/* Diagnostics Table */}
         {diagnostics.length > 0 && (
-          <div className="mt-5 rounded-xl border border-slate-700 bg-slate-900/60 overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-slate-700/80 flex items-center gap-2">
-              <AlertCircle size={15} className="text-slate-400" />
-              <h4 className="text-xs font-bold uppercase tracking-wide text-slate-300">
-                Công cụ đã đọc gì từ file của bạn
+          <div className="mt-space-5 rounded-xl border border-border-subtle/40 bg-surface-container-low overflow-hidden">
+            <div className="px-space-4 py-space-2 border-b border-border-subtle/40 flex items-center gap-2 bg-surface-container">
+              <AlertCircle size={15} className="text-primary-container" />
+              <h4 className="font-label-sm text-label-sm font-bold uppercase tracking-wider text-on-surface">
+                Chi tiết các Sheet &amp; Dòng dữ liệu đã đọc
               </h4>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="text-slate-400 bg-slate-800/60">
+              <table className="w-full text-xs font-body-sm">
+                <thead className="text-on-surface-variant bg-surface-container/60 border-b border-border-subtle/30">
                   <tr>
-                    <th className="px-3 py-2 text-left font-semibold">File</th>
-                    <th className="px-3 py-2 text-left font-semibold">Sheet</th>
+                    <th className="px-3 py-2 text-left font-semibold">Tên File</th>
+                    <th className="px-3 py-2 text-left font-semibold">Tên Sheet</th>
                     <th className="px-3 py-2 text-center font-semibold">Dòng tiêu đề</th>
                     <th className="px-3 py-2 text-center font-semibold">Số dòng đọc được</th>
                     <th className="px-3 py-2 text-left font-semibold">Ghi chú</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-border-subtle/20">
                   {diagnostics.map((entry, index) => (
-                    <tr key={`${entry.sourceFile}-${entry.sourceSheet}-${index}`} className="border-t border-slate-800">
-                      <td className="px-3 py-2 text-slate-300 max-w-[16rem] truncate" title={entry.sourceFile}>
+                    <tr key={`${entry.sourceFile}-${entry.sourceSheet}-${index}`}>
+                      <td className="px-3 py-2 text-on-surface font-mono max-w-[16rem] truncate" title={entry.sourceFile}>
                         {entry.sourceFile}
                       </td>
-                      <td className="px-3 py-2 text-slate-400">{entry.sourceSheet || '-'}</td>
-                      <td className="px-3 py-2 text-center text-slate-400">{entry.headerRow ?? '-'}</td>
-                      <td className={`px-3 py-2 text-center font-semibold ${entry.ok ? 'text-green-400' : 'text-red-400'}`}>
+                      <td className="px-3 py-2 text-on-surface-variant">{entry.sourceSheet || '-'}</td>
+                      <td className="px-3 py-2 text-center text-on-surface-variant font-mono">{entry.headerRow ?? '-'}</td>
+                      <td
+                        className={`px-3 py-2 text-center font-mono font-semibold ${
+                          entry.ok ? 'text-secondary' : 'text-error'
+                        }`}
+                      >
                         {entry.rowCount ?? 0}
                       </td>
-                      <td className="px-3 py-2 text-slate-400">{entry.reason || 'Đọc thành công'}</td>
+                      <td className="px-3 py-2 text-on-surface-variant">{entry.reason || 'Đọc thành công'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -287,100 +410,143 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
         )}
       </div>
 
-      {/* Results Section */}
+      {/* RESULTS SECTION CARD */}
       {results && (
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl overflow-hidden">
+        <div className="bg-surface-container border border-border-subtle/40 rounded-xl overflow-hidden shadow-sm mb-space-12">
           {/* Header */}
-          <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
-            <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-              <Calculator size={24} className="text-indigo-400" />
-              Kết quả đối chiếu
+          <div className="p-space-4 sm:p-space-6 border-b border-border-subtle/40 flex flex-wrap justify-between items-center gap-4 bg-surface-container-high/40">
+            <h2 className="font-headline-md text-headline-md text-on-surface font-bold flex items-center gap-2">
+              <Calculator size={22} className="text-primary-container" />
+              Kết Quả Đối Chiếu 3 Chiều
             </h2>
-            <button 
+            <button
+              type="button"
               onClick={exportExcel}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-emerald-500/20 flex items-center gap-2"
+              className="px-space-4 py-space-2 bg-brand-emerald-deep hover:bg-secondary-container text-white font-title-sm text-title-sm font-bold rounded-lg shadow flex items-center gap-2 cursor-pointer transition-colors"
             >
               <Download size={16} />
-              Xuất Excel
+              Xuất Báo Cáo Excel (.xlsx)
             </button>
           </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-slate-700 px-4">
+          {/* Navigation Tabs */}
+          <div className="flex border-b border-border-subtle/40 px-space-4 bg-surface-container-low/50">
             <button
+              type="button"
               onClick={() => setActiveTab('summary')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'summary' ? 'border-indigo-500 text-indigo-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+              className={`px-space-4 py-space-3 font-title-sm text-title-sm border-b-2 transition-colors cursor-pointer ${
+                activeTab === 'summary'
+                  ? 'border-primary-container text-primary-container font-bold'
+                  : 'border-transparent text-on-surface-variant hover:text-on-surface'
+              }`}
             >
-              Tổng hợp
+              Tổng hợp đối chiếu
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('511')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === '511' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+              className={`px-space-4 py-space-3 font-title-sm text-title-sm border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
+                activeTab === '511'
+                  ? 'border-primary-container text-primary-container font-bold'
+                  : 'border-transparent text-on-surface-variant hover:text-on-surface'
+              }`}
             >
-              Đối chiếu 511
+              <span>Đối chiếu Doanh thu 511</span>
               {results.summary.unmatched511 > 0 && (
-                <span className="bg-red-500/20 text-red-400 text-xs px-2 py-0.5 rounded-full">{results.summary.unmatched511} lệch</span>
+                <span className="bg-error-container/20 text-error text-label-sm px-2 py-0.5 rounded-full font-semibold">
+                  {results.summary.unmatched511} lệch
+                </span>
               )}
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('33311')}
-              className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === '33311' ? 'border-purple-500 text-purple-400' : 'border-transparent text-slate-400 hover:text-slate-200'}`}
+              className={`px-space-4 py-space-3 font-title-sm text-title-sm border-b-2 transition-colors flex items-center gap-2 cursor-pointer ${
+                activeTab === '33311'
+                  ? 'border-primary-container text-primary-container font-bold'
+                  : 'border-transparent text-on-surface-variant hover:text-on-surface'
+              }`}
             >
-              Đối chiếu 33311
+              <span>Đối chiếu Thuế GTGT 33311</span>
               {results.summary.unmatched33311 > 0 && (
-                <span className="bg-red-500/20 text-red-400 text-xs px-2 py-0.5 rounded-full">{results.summary.unmatched33311} lệch</span>
+                <span className="bg-error-container/20 text-error text-label-sm px-2 py-0.5 rounded-full font-semibold">
+                  {results.summary.unmatched33311} lệch
+                </span>
               )}
             </button>
           </div>
 
           {/* Tab Content */}
-          <div className="p-6">
+          <div className="p-space-6">
             {activeTab === 'summary' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Summary Card 1 */}
-                  <div className="bg-slate-900 border border-slate-700 rounded-xl p-5">
-                    <h4 className="text-slate-400 text-sm font-medium mb-4">Tổng số hóa đơn phát hiện</h4>
-                    <div className="text-4xl font-bold text-slate-100">{results.summary.total}</div>
-                  </div>
-                  
-                  {/* Summary Card 2 */}
-                  <div className="bg-slate-900 border border-slate-700 rounded-xl p-5">
-                    <h4 className="text-slate-400 text-sm font-medium mb-4">Lệch Doanh Thu (511)</h4>
-                    <div className="flex items-end gap-3">
-                      <div className={`text-4xl font-bold ${results.summary.unmatched511 > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                        {results.summary.unmatched511}
-                      </div>
-                      <div className="text-slate-500 mb-1">/ {results.report511.length} HĐ</div>
+              <div className="space-y-space-6">
+                {/* 3 Summary Metric Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-space-4">
+                  <div className="bg-surface-container-low border border-border-subtle/40 rounded-xl p-space-4">
+                    <h4 className="text-on-surface-variant font-label-sm text-label-sm font-medium mb-2">
+                      TỔNG SỐ HÓA ĐƠN PHÁT HIỆN
+                    </h4>
+                    <div className="font-headline-lg text-headline-lg font-mono font-bold text-on-surface">
+                      {results.summary.total.toLocaleString('vi-VN')}
                     </div>
                   </div>
 
-                  {/* Summary Card 3 */}
-                  <div className="bg-slate-900 border border-slate-700 rounded-xl p-5">
-                    <h4 className="text-slate-400 text-sm font-medium mb-4">Lệch Thuế (33311)</h4>
-                    <div className="flex items-end gap-3">
-                      <div className={`text-4xl font-bold ${results.summary.unmatched33311 > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                  <div className="bg-surface-container-low border border-border-subtle/40 rounded-xl p-space-4">
+                    <h4 className="text-on-surface-variant font-label-sm text-label-sm font-medium mb-2">
+                      LỆCH DOANH THU (511)
+                    </h4>
+                    <div className="flex items-baseline gap-2">
+                      <div
+                        className={`font-headline-lg text-headline-lg font-mono font-bold ${
+                          results.summary.unmatched511 > 0 ? 'text-error' : 'text-secondary'
+                        }`}
+                      >
+                        {results.summary.unmatched511}
+                      </div>
+                      <div className="font-label-sm text-label-sm text-outline">/ {results.report511.length} HĐ</div>
+                    </div>
+                  </div>
+
+                  <div className="bg-surface-container-low border border-border-subtle/40 rounded-xl p-space-4">
+                    <h4 className="text-on-surface-variant font-label-sm text-label-sm font-medium mb-2">
+                      LỆCH THUẾ GTGT (33311)
+                    </h4>
+                    <div className="flex items-baseline gap-2">
+                      <div
+                        className={`font-headline-lg text-headline-lg font-mono font-bold ${
+                          results.summary.unmatched33311 > 0 ? 'text-error' : 'text-secondary'
+                        }`}
+                      >
                         {results.summary.unmatched33311}
                       </div>
-                      <div className="text-slate-500 mb-1">/ {results.report33311.length} HĐ</div>
+                      <div className="font-label-sm text-label-sm text-outline">/ {results.report33311.length} HĐ</div>
                     </div>
                   </div>
                 </div>
 
-                {(results.summary.missingInBR > 0 || results.summary.missingInLedger > 0 || results.summary.needsReview > 0) && (
-                  <div className="bg-orange-950/30 border border-orange-900/50 rounded-xl p-5 flex items-start gap-4">
-                    <AlertCircle className="text-orange-500 mt-0.5" size={24} />
+                {/* Warnings banner if any discrepancies */}
+                {(results.summary.missingInBR > 0 ||
+                  results.summary.missingInLedger > 0 ||
+                  results.summary.needsReview > 0) && (
+                  <div className="bg-tertiary-container/15 border border-tertiary/30 rounded-xl p-space-4 flex items-start gap-3">
+                    <AlertCircle className="text-tertiary mt-0.5 shrink-0" size={22} />
                     <div>
-                      <h4 className="text-orange-400 font-medium text-lg">Cảnh báo thiếu sót hóa đơn</h4>
-                      <ul className="mt-2 space-y-1 text-slate-300">
+                      <h4 className="font-title-sm text-title-sm text-tertiary font-bold">Cảnh báo thiếu sót hóa đơn</h4>
+                      <ul className="mt-2 space-y-1 font-body-sm text-body-sm text-on-surface">
                         {results.summary.missingInBR > 0 && (
-                          <li>• Có <strong>{results.summary.missingInBR}</strong> hóa đơn đã hạch toán nhưng không có trên bảng kê BR.</li>
+                          <li>
+                            • Có <strong className="font-mono text-tertiary">{results.summary.missingInBR}</strong> hóa đơn đã hạch toán nhưng không có trên bảng kê BR.
+                          </li>
                         )}
                         {results.summary.missingInLedger > 0 && (
-                          <li>• Có <strong>{results.summary.missingInLedger}</strong> hóa đơn trên bảng kê BR nhưng chưa được hạch toán (hoặc hạch toán sai số HĐ).</li>
+                          <li>
+                            • Có <strong className="font-mono text-tertiary">{results.summary.missingInLedger}</strong> hóa đơn trên bảng kê BR nhưng chưa được hạch toán trong sổ cái.
+                          </li>
                         )}
                         {results.summary.needsReview > 0 && (
-                          <li>• Có <strong>{results.summary.needsReview}</strong> số hóa đơn có nhiều bản ghi BR và cần xác nhận trước khi kết luận.</li>
+                          <li>
+                            • Có <strong className="font-mono text-tertiary">{results.summary.needsReview}</strong> hóa đơn có nhiều dòng trùng số và cần kế toán xác nhận thêm.
+                          </li>
                         )}
                       </ul>
                     </div>
@@ -390,11 +556,14 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
             )}
 
             {activeTab === '511' && renderTable(results.report511, '511')}
-            
+
             {activeTab === '33311' && (
               <>
-                <div className="bg-indigo-900/20 border border-indigo-900/50 rounded-lg p-4 mb-4 text-sm text-indigo-300">
-                  <strong>Lưu ý:</strong> Cột "33311 (Tổng)" là tổng của tất cả các dòng cùng một số hóa đơn. "VAT Tặng" là phần thuế bóc tách từ các dòng có diễn giải chứa từ "tặng".
+                <div className="bg-surface-container-low border border-border-subtle/40 rounded-xl p-space-3 mb-space-4 text-body-sm text-on-surface-variant flex items-center gap-2">
+                  <AlertCircle size={16} className="text-primary-container shrink-0" />
+                  <span>
+                    <strong>Quy ước:</strong> Cột &quot;33311 (Tổng)&quot; là tổng số thuế của tất cả các dòng cùng một số hóa đơn. &quot;VAT Tặng&quot; là phần thuế bóc tách từ các dòng có diễn giải chứa từ khóa tặng/khuyến mại.
+                  </span>
                 </div>
                 {renderTable(results.report33311, '33311')}
               </>
@@ -402,6 +571,48 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
           </div>
         </div>
       )}
-    </MiniAppLayout>
+
+      {/* FOOTER KIẾN THỨC & QUY CHUẨN ĐỐI CHIẾU (3 CARDS) */}
+      <div className="pt-space-6 border-t border-border-subtle/40 mb-space-8">
+        <div className="flex items-center gap-space-2 mb-space-4">
+          <span className="material-symbols-outlined text-primary-container text-[20px]">auto_stories</span>
+          <h3 className="font-title-sm text-title-sm text-on-surface font-bold">Tiêu Chuẩn Đối Chiếu Kế Toán &amp; Bảo Mật</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-space-4">
+          {/* CARD 1 */}
+          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
+            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-primary-container mb-space-1">
+              <FileCheck className="w-5 h-5 text-primary-container" />
+            </div>
+            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">Đối Chiếu 3 Chiều Chuẩn Mực</h4>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+              So sánh chéo giữa Sổ cái Doanh thu (511), Sổ Thuế GTGT (33311) và Bảng kê Thuế (BR). Tự động tính toán dung sai làm tròn và phát hiện hóa đơn thiếu sót.
+            </p>
+          </div>
+
+          {/* CARD 2 */}
+          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
+            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-secondary mb-space-1">
+              <Lock className="w-5 h-5 text-secondary" />
+            </div>
+            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">Bảo Mật Dữ Liệu Kế Toán Tuyệt Đối</h4>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+              Dữ liệu tài chính doanh nghiệp không rời khỏi thiết bị của bạn. Xử lý in-memory với WebAssembly, tuân thủ nghiêm ngặt nguyên tắc bảo mật thông tin nội bộ.
+            </p>
+          </div>
+
+          {/* CARD 3 */}
+          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
+            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-tertiary mb-space-1">
+              <Cpu className="w-5 h-5 text-tertiary" />
+            </div>
+            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">Báo Cáo Kiểm Toán Tự Động</h4>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+              Kết xuất trực tiếp file Excel hoàn chỉnh bao gồm các sheet Đối chiếu 511, Đối chiếu 33311, Danh sách lệch và Bảng chẩn đoán kỹ thuật để giải trình cơ quan thuế.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

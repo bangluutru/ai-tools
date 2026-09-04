@@ -5,7 +5,11 @@ import {
   validateDocumentFiles,
   verifyDocumentSignature,
 } from '../utils/documentFiles.js';
-import { MiniAppError, MiniAppLayout } from './shared/MiniAppLayout.jsx';
+import { MiniAppError } from './shared/MiniAppLayout.jsx';
+import {
+  ToolBreadcrumb,
+  PrivacyShieldPill,
+} from './shared/StandardToolLayout.jsx';
 import QRCodeStyling from 'qr-code-styling';
 import JsBarcode from 'jsbarcode';
 import JSZip from 'jszip';
@@ -14,21 +18,14 @@ import {
   QrCode,
   Barcode,
   Layers,
-  Sparkles,
-  Clipboard,
   Check,
-  Download,
   ChevronDown,
   Upload,
   X,
-  FileCode,
   Image as ImageIcon,
   History,
   Trash2,
   CheckCircle2,
-  AlertCircle,
-  HelpCircle,
-  ShieldCheck,
   Globe,
   Wifi,
   Contact,
@@ -37,17 +34,16 @@ import {
   MapPin,
   Coins,
   FileText,
-  Lock,
-  Palette,
-  Shapes,
-  Layout,
-  Sliders,
-  Type,
   FileSpreadsheet,
   Archive,
   Loader2,
-  ArrowRight,
   Save,
+  ScanLine,
+  Copy,
+  FileDown,
+  Zap,
+  Store,
+  ShieldCheck,
 } from 'lucide-react';
 import { validateAndFixBarcode } from '../utils/codecraft/checksumValidators.js';
 
@@ -56,15 +52,15 @@ import { validateAndFixBarcode } from '../utils/codecraft/checksumValidators.js'
 // =====================================================================
 const i18n = {
   vi: {
-    heroTitle: 'Bộ Tạo Mã QR Nghệ Thuật & Mã Vạch Chuẩn Công Nghiệp',
-    heroTagline: 'Tạo mã QR nhúng logo, gradient màu và mã vạch 1D GS1 công nghiệp 100% offline, bảo mật tuyệt đối.',
-    tabQR: 'Mã QR Cao Cấp & Nhúng Logo',
-    tabBarcode: 'Mã Vạch Chuẩn Công Nghiệp',
+    heroTitle: 'Tạo Mã QR & Barcode GS1 Chuẩn Quốc Tế',
+    heroTagline: 'Tạo mã QR tĩnh/động, mã vạch EAN-13, Code 128, UPC-A, Data Matrix chuẩn bán lẻ và kho vận logistics. Tùy biến logo nhận diện, màu sắc, kiểm tra checksum GS1 và xuất bản in vector SVG/PDF độ phân giải cao 300 DPI.',
+    tabQR: 'Mã QR Đa Năng',
+    tabBarcode: 'EAN-13 / Code 128',
     tabBatch: 'Tạo Hàng Loạt (Batch CSV)',
-    btnCopy: '📋 Sao Chép (Copy)',
+    btnCopy: 'Sao chép ảnh mã vào Clipboard',
     btnCopied: 'Đã Sao Chép!',
     btnDownload: 'Tải Về',
-    livePreview: 'Xem Trước Trực Tiếp',
+    livePreview: 'Xem Trước Trực Quan',
     recentTitle: 'Lịch Sử Mã Đã Tạo',
     emptyHistory: 'Chưa có mã nào được lưu trong lịch sử',
     btnClearAll: 'Xóa hết',
@@ -75,13 +71,13 @@ const i18n = {
   en: {
     heroTitle: 'Artistic QR Code & Industrial Barcode Studio',
     heroTagline: 'Generate styled QR with logos, dual gradients, and GS1 industrial 1D barcodes 100% client-side.',
-    tabQR: 'Artistic QR with Custom Logo',
-    tabBarcode: 'Industrial 1D Barcode',
-    tabBatch: 'Batch Mode (CSV / List)',
-    btnCopy: '📋 Copy to Clipboard',
+    tabQR: 'Artistic QR Code',
+    tabBarcode: 'GS1 Barcode 1D',
+    tabBatch: 'Batch Mode (CSV)',
+    btnCopy: 'Copy code image to Clipboard',
     btnCopied: 'Copied!',
     btnDownload: 'Download',
-    livePreview: 'Live Preview',
+    livePreview: 'Live Visual Preview',
     recentTitle: 'Recently Generated Codes',
     emptyHistory: 'No saved history items yet',
     btnClearAll: 'Clear all',
@@ -92,10 +88,10 @@ const i18n = {
   ja: {
     heroTitle: '高精度QRコード＆産業用バーコード作成スタジオ',
     heroTagline: 'ロゴ埋め込みQRコード、カラーグラデーション、GS1産業用バーコードを100%ローカルで安全に作成。',
-    tabQR: '高機能QRコード (ロゴ埋め込み)',
+    tabQR: '多機能QRコード',
     tabBarcode: '産業用バーコード',
     tabBatch: '一括生成 (Batch CSV)',
-    btnCopy: '📋 コピー',
+    btnCopy: '画像をクリップボードにコピー',
     btnCopied: 'コピー完了！',
     btnDownload: '保存',
     livePreview: 'リアルタイムプレビュー',
@@ -131,12 +127,12 @@ const PRESET_ICONS = [
 ];
 
 const PRESET_COLOR_GRADIENTS = [
+  { name: 'Sky Blue', c1: '#0ea5e9', c2: '#38bdf8', type: 'linear' },
   { name: 'Tím Indigo', c1: '#7c3aed', c2: '#06b6d4', type: 'linear' },
   { name: 'Hồng Hoàng Hôn', c1: '#ec4899', c2: '#f59e0b', type: 'linear' },
   { name: 'Xanh Lá Tươi', c1: '#059669', c2: '#10b981', type: 'linear' },
   { name: 'Xanh Đại Dương', c1: '#1d4ed8', c2: '#06b6d4', type: 'linear' },
-  { name: 'Đen Huyền Bí', c1: '#0f172a', c2: '#334155', type: 'linear' },
-  { name: 'Đỏ Ruby', c1: '#dc2626', c2: '#7c3aed', type: 'linear' },
+  { name: 'Đen Tối Giản', c1: '#090D16', c2: '#171f33', type: 'linear' },
 ];
 
 // Helper: Build QR payload string
@@ -170,7 +166,7 @@ function buildQRPayload(config) {
     case 'text':
     case 'url':
     default:
-      return config.rawText || 'https://google.com';
+      return config.rawText || 'https://github.com/bangluutru/ai-tools';
   }
 }
 
@@ -183,7 +179,7 @@ function createQRStylingInstance(config, size = 400) {
     width: size,
     height: size,
     type: 'canvas',
-    data: data || 'CodeCraft Studio',
+    data: data || 'AI-Tools Studio',
     qrOptions: {
       errorCorrectionLevel: ecLevel,
     },
@@ -276,7 +272,7 @@ async function renderQRWithFrameToCanvas(qrInstance, config, baseSize = 400) {
   ctx.fill();
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 20px Plus Jakarta Sans, Inter, sans-serif';
+  ctx.font = 'bold 20px Inter, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText((config.frameText || 'SCAN ME').toUpperCase(), totalW / 2, bannerY + (frameHeight - 8) / 2);
@@ -290,28 +286,31 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
   const t = i18n[langKey];
 
   const [mode, setMode] = useState('qr'); // 'qr' | 'barcode' | 'batch'
+  const [isLabelPreview, setIsLabelPreview] = useState(false);
+  const [scannedFeedback, setScannedFeedback] = useState(null);
 
   // QR Code Config
   const [fileError, setFileError] = useState('');
   const [qrConfig, setQrConfig] = useState({
     contentType: 'url',
-    rawText: 'https://github.com/bangluutru/ai-tools',
+    rawText: 'https://example.com/san-pham-2025',
+    labelTitle: 'Menu Nhà Hàng & Bảng Giá',
     wifi: { ssid: 'Office_HighSpeed_5G', password: 'SecurePassword2026', encryption: 'WPA', hidden: false },
-    vcard: { firstName: 'Hải Bằng', lastName: 'Trần', organization: 'Antigravity AI Lab', title: 'Lead Architect', phone: '+84 912 345 678', email: 'bang@antigravity.ai', website: 'https://github.com/bangluutru', address: 'Hà Nội', note: '' },
-    email: { to: 'contact@antigravity.ai', subject: 'Tư vấn giải pháp AI', body: 'Xin chào...' },
+    vcard: { firstName: 'Hải Bằng', lastName: 'Trần', organization: 'AI-Tools Studio', title: 'Lead Architect', phone: '+84 912 345 678', email: 'bang@ai-tools.dev', website: 'https://github.com/bangluutru/ai-tools', address: 'Hà Nội', note: '' },
+    email: { to: 'contact@ai-tools.dev', subject: 'Tư vấn giải pháp AI', body: 'Xin chào...' },
     sms: { phone: '0912345678', message: 'Xác nhận đơn hàng' },
     geo: { latitude: '21.028511', longitude: '105.854444' },
     crypto: { currency: 'BTC', address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', amount: '0.01' },
-    errorCorrection: 'M',
+    errorCorrection: 'H',
     dotType: 'rounded',
     cornerSquareType: 'extra-rounded',
     cornerDotType: 'dot',
-    dotColor: '#7c3aed',
-    dotColor2: '#06b6d4',
-    gradientType: 'linear',
+    dotColor: '#0ea5e9',
+    dotColor2: '#38bdf8',
+    gradientType: 'none',
     gradientRotation: 45,
-    cornerSquareColor: '#7c3aed',
-    cornerDotColor: '#06b6d4',
+    cornerSquareColor: '#090D16',
+    cornerDotColor: '#0ea5e9',
     bgColor: '#ffffff',
     bgTransparent: false,
     logoUrl: null,
@@ -325,8 +324,9 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
 
   // Barcode Config
   const [barcodeConfig, setBarcodeConfig] = useState({
-    symbology: 'CODE128',
-    value: 'CODECRAFT-2026',
+    symbology: 'EAN13',
+    value: '893850123456',
+    labelTitle: 'Sản Phẩm Tiêu Dùng Chuẩn GS1',
     barWidth: 2,
     barHeight: 70,
     displayValue: true,
@@ -335,7 +335,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
     textPosition: 'bottom',
     fontSize: 16,
     textMargin: 6,
-    lineColor: '#000000',
+    lineColor: '#090D16',
     bgColor: '#ffffff',
     bgTransparent: false,
     margin: 15,
@@ -353,10 +353,11 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
   // Preview & Export states
   const [isCopied, setIsCopied] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
-  const [selectedFormat, setSelectedFormat] = useState('png');
+  const [selectedFormat, setSelectedFormat] = useState('svg');
   const [showFormatDropdown, setShowFormatDropdown] = useState(false);
   const [resolutionScale, setResolutionScale] = useState(2);
   const [currentCanvas, setCurrentCanvas] = useState(null);
+  const [isTriggeringRender, setIsTriggeringRender] = useState(false);
 
   const [history, setHistory] = useState(() => {
     try {
@@ -391,7 +392,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
             setCurrentCanvas(canvas);
             if (qrContainerRef.current) {
               qrContainerRef.current.innerHTML = '';
-              canvas.className = 'max-w-full h-auto rounded-2xl shadow-xl mx-auto';
+              canvas.className = 'max-w-full h-auto rounded-lg shadow-sm mx-auto transition-transform';
               qrContainerRef.current.appendChild(canvas);
             }
           }
@@ -455,7 +456,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
         await navigator.clipboard.write([item]);
         setIsCopied(true);
         setToastMessage(t.copySuccess);
-        confetti({ particleCount: 35, spread: 60, origin: { y: 0.85 }, colors: ['#8b5cf6', '#06b6d4', '#10b981'] });
+        confetti({ particleCount: 35, spread: 60, origin: { y: 0.85 }, colors: ['#0ea5e9', '#38bdf8', '#4edea3'] });
         setTimeout(() => setIsCopied(false), 3000);
         setTimeout(() => setToastMessage(null), 5000);
       }, 'image/png');
@@ -525,9 +526,21 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
     }
   };
 
-  const handleDownload = () => {
-    if (selectedFormat === 'svg') handleDownloadSVG();
-    else handleDownloadRaster(selectedFormat);
+
+  const handleTriggerRender = () => {
+    setIsTriggeringRender(true);
+    confetti({ particleCount: 30, spread: 50, origin: { y: 0.7 }, colors: ['#0ea5e9', '#4edea3'] });
+    setTimeout(() => setIsTriggeringRender(false), 600);
+  };
+
+  const simulateScan = () => {
+    const rawData = mode === 'qr' ? buildQRPayload(qrConfig) : barcodeConfig.value;
+    setScannedFeedback({
+      content: rawData,
+      time: '0.05s',
+      timestamp: Date.now(),
+    });
+    confetti({ particleCount: 20, spread: 45, origin: { y: 0.6 }, colors: ['#4edea3', '#0ea5e9'] });
   };
 
   const handleSaveToHistory = () => {
@@ -549,7 +562,6 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  /** Nạp lại cấu hình đã lưu để chỉnh tiếp thay vì gõ lại từ đầu. */
   const handleRestoreHistory = (item) => {
     setMode(item.type);
     if (item.type === 'qr' && item.qrConfig) setQrConfig(item.qrConfig);
@@ -558,6 +570,11 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
 
   const handleDeleteHistory = (id) => {
     setHistory((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleGenerateRandomBarcode = () => {
+    const rand = '893' + Math.floor(100000000 + Math.random() * 900000000).toString();
+    setBarcodeConfig((prev) => ({ ...prev, value: rand }));
   };
 
   // Batch Processor
@@ -589,7 +606,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
               textPosition: 'bottom',
               fontSize: 14,
               textMargin: 4,
-              lineColor: '#000000',
+              lineColor: '#090D16',
               background: '#ffffff',
               margin: 15,
             });
@@ -614,7 +631,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
     }
     setBatchItems(results);
     setIsBatchProcessing(false);
-    confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 }, colors: ['#f59e0b', '#10b981', '#06b6d4'] });
+    confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 }, colors: ['#0ea5e9', '#10b981', '#4edea3'] });
   };
 
   const handleDownloadZip = async () => {
@@ -643,8 +660,9 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
   const barcodeValidation = validateAndFixBarcode(barcodeConfig.symbology, barcodeConfig.value);
 
   return (
-    <MiniAppLayout width="wide" gap="normal">
+    <div className="flex flex-col w-full text-on-surface">
       <MiniAppError>{fileError}</MiniAppError>
+
       {/* Hidden File Inputs */}
       <input
         ref={logoInputRef}
@@ -682,292 +700,517 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
         }}
       />
 
-      {/* Mode Selector */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-        {[
-          { id: 'qr', title: t.tabQR, subtitle: 'Gradient, logo, wifi, vCard...', icon: QrCode, badge: 'LOGO & GRADIENT', grad: 'from-brand-600 to-indigo-600' },
-          { id: 'barcode', title: t.tabBarcode, subtitle: 'Code128, EAN-13, UPC, ITF-14...', icon: Barcode, badge: 'GS1 STANDARD', grad: 'from-cyan-600 to-teal-600' },
-          { id: 'batch', title: t.tabBatch, subtitle: 'Sinh hàng loạt & xuất file ZIP', icon: Layers, badge: 'BULK ZIP', grad: 'from-amber-600 to-orange-600' },
-        ].map((item) => {
-          const isSelected = mode === item.id;
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setMode(item.id)}
-              className={`p-4 rounded-3xl border transition-all duration-200 text-left flex items-center justify-between cursor-pointer ${
-                isSelected
-                  ? 'bg-slate-900 border-brand-500 shadow-xl shadow-brand-500/10 ring-2 ring-brand-500/30'
-                  : 'bg-slate-900/40 border-slate-800 hover:border-slate-700'
-              }`}
-            >
-              <div className="flex items-center space-x-3.5">
-                <div className={`p-3 rounded-2xl ${isSelected ? `bg-gradient-to-tr ${item.grad} text-white shadow-lg` : 'bg-slate-800 text-slate-400'}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className={`text-xs sm:text-sm font-extrabold ${isSelected ? 'text-white' : 'text-slate-200'}`}>{item.title}</h3>
-                  <p className="text-[11px] text-slate-400 line-clamp-1">{item.subtitle}</p>
-                </div>
-              </div>
-              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border hidden sm:inline-block ${
-                isSelected ? 'bg-brand-500/20 border-brand-500/40 text-brand-300' : 'bg-slate-800/60 border-slate-700/60 text-slate-400'
-              }`}>
-                {item.badge}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 bg-surface-container border border-border-subtle rounded-xl shadow-2xl flex items-center gap-2 text-sm text-secondary animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
-      {/* Main Workspace (2-Column) */}
-      {mode !== 'batch' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Form & Controls */}
-          <div className="lg:col-span-7 flex flex-col gap-5">
-            {mode === 'qr' ? (
-              <>
-                {/* QR Content Tabs */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      {/* 1. BREADCRUMB & TOOL HEADER */}
+      <section className="w-full pb-8">
+        <ToolBreadcrumb
+          items={[
+            { label: 'Trang chủ', href: '#' },
+            { label: 'Tiện ích & Mã vạch', href: '#' },
+            { label: 'Tạo Mã QR & Barcode GS1' },
+          ]}
+        />
+        <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-xl relative overflow-hidden mt-3">
+          {/* Ambient Glow */}
+          <div className="absolute -right-20 -top-20 w-96 h-96 bg-primary-container/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute right-40 -bottom-24 w-80 h-80 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 rounded-xl bg-surface-container-high border border-border-subtle flex items-center justify-center text-primary-container shrink-0 shadow-md">
+                <QrCode className="w-8 h-8" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl lg:text-3xl font-bold text-on-surface tracking-tight">
+                    {t.heroTitle}
+                  </h1>
+                  <span className="px-2 py-0.5 bg-primary-container/15 text-brand-cyan-bright text-xs font-semibold rounded uppercase">
+                    GS1 Chuẩn Hoá
+                  </span>
+                  <span className="px-2 py-0.5 bg-secondary/15 text-secondary text-xs font-semibold rounded uppercase flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-ping" />
+                    OFFLINE CANVAS
+                  </span>
+                </div>
+                <p className="text-sm text-on-surface-variant max-w-3xl leading-relaxed">
+                  {t.heroTagline}
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0">
+              <PrivacyShieldPill
+                label="BẢO MẬT CLIENT-SIDE 100%"
+                description="Xử lý cục bộ bằng WebAssembly & HTML5 Canvas/SVG, không gửi dữ liệu ra máy chủ."
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. WORKSPACE CONTAINER */}
+      <section className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* CỘT TRÁI: INPUT & CẤU HÌNH (7 Cột) */}
+        <div className="lg:col-span-7 flex flex-col gap-6">
+          {/* BƯỚC 1: CHỌN LOẠI MÃ & NHẬP DỮ LIỆU */}
+          <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-md flex flex-col gap-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-primary-container text-on-primary-container text-xs flex items-center justify-center font-bold">1</span>
+                <h2 className="text-base font-semibold text-on-surface">Loại Mã &amp; Dữ Liệu Nguồn</h2>
+              </div>
+              <span className="text-xs font-mono font-semibold text-primary">TIÊU CHUẨN ISO/IEC</span>
+            </div>
+
+            {/* Segmented Mode Tabs */}
+            <div className="grid grid-cols-3 gap-2 bg-surface-container-low p-1 rounded-lg border border-border-subtle">
+              <button
+                type="button"
+                onClick={() => setMode('qr')}
+                className={`py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold text-center transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  mode === 'qr'
+                    ? 'bg-surface-container-high text-on-surface shadow-sm border border-border-subtle'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <QrCode className="w-4 h-4 text-primary-container" />
+                <span className="truncate">Mã QR Đa Năng</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('barcode')}
+                className={`py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold text-center transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  mode === 'barcode'
+                    ? 'bg-surface-container-high text-on-surface shadow-sm border border-border-subtle'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <Barcode className="w-4 h-4 text-primary-container" />
+                <span className="truncate">EAN-13 / Code 128</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('batch')}
+                className={`py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold text-center transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  mode === 'batch'
+                    ? 'bg-surface-container-high text-on-surface shadow-sm border border-border-subtle'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <Layers className="w-4 h-4 text-primary-container" />
+                <span className="truncate">Tạo Hàng Loạt</span>
+              </button>
+            </div>
+
+            {/* Dynamic Form Fields */}
+            {mode === 'qr' && (
+              <div className="space-y-4">
+                {/* Content Type Selector */}
+                <div className="grid grid-cols-4 gap-1.5">
                   {[
-                    { id: 'url', label: 'Website', icon: Globe },
-                    { id: 'wifi', label: 'WiFi', icon: Wifi },
-                    { id: 'vcard', label: 'vCard', icon: Contact },
+                    { id: 'url', label: 'URL Website', icon: Globe },
+                    { id: 'wifi', label: 'Mạng Wi-Fi', icon: Wifi },
+                    { id: 'vcard', label: 'Danh Thiếp vCard', icon: Contact },
+                    { id: 'text', label: 'Văn Bản Tự Do', icon: FileText },
                     { id: 'email', label: 'Email', icon: Mail },
                     { id: 'sms', label: 'SMS', icon: MessageSquare },
-                    { id: 'geo', label: 'Bản Đồ', icon: MapPin },
-                    { id: 'crypto', label: 'Crypto', icon: Coins },
-                    { id: 'text', label: 'Văn Bản', icon: FileText },
-                  ].map((tab) => {
-                    const isSelected = qrConfig.contentType === tab.id;
-                    const Icon = tab.icon;
+                    { id: 'geo', label: 'Tọa Độ GPS', icon: MapPin },
+                    { id: 'crypto', label: 'Crypto (BTC)', icon: Coins },
+                  ].map((sub) => {
+                    const isSubSelected = qrConfig.contentType === sub.id;
                     return (
                       <button
-                        key={tab.id}
+                        key={sub.id}
                         type="button"
-                        onClick={() => setQrConfig((prev) => ({ ...prev, contentType: tab.id }))}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 whitespace-nowrap cursor-pointer ${
-                          isSelected ? 'bg-brand-600 text-white shadow-md' : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-white'
+                        onClick={() => setQrConfig((prev) => ({ ...prev, contentType: sub.id }))}
+                        className={`py-1.5 px-2 rounded text-xs font-medium text-center transition-colors truncate cursor-pointer ${
+                          isSubSelected
+                            ? 'bg-surface-subtle border border-primary-container/40 text-primary'
+                            : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
                         }`}
                       >
-                        <Icon className="w-3.5 h-3.5" />
-                        <span>{tab.label}</span>
+                        {sub.label}
                       </button>
                     );
                   })}
                 </div>
 
-                {/* QR Content Input Field */}
-                <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-3">
-                  {qrConfig.contentType === 'url' && (
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-300">Đường dẫn Website (URL):</label>
+                {/* Sub-inputs based on content type */}
+                {qrConfig.contentType === 'url' && (
+                  <div className="space-y-1">
+                    <label className="block text-xs font-mono font-medium text-on-surface-variant uppercase">
+                      ĐƯỜNG DẪN HOẶC NỘI DUNG MÃ HÓA
+                    </label>
+                    <div className="relative">
                       <input
-                        type="url"
+                        type="text"
                         value={qrConfig.rawText}
                         onChange={(e) => setQrConfig((prev) => ({ ...prev, rawText: e.target.value }))}
-                        placeholder="https://example.com"
-                        className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono focus:border-brand-500 focus:outline-none"
+                        placeholder="https://..."
+                        className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary-container focus:bg-surface-container-high transition-colors"
                       />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-outline">
+                        {qrConfig.rawText.length} ký tự
+                      </span>
                     </div>
-                  )}
-
-                  {qrConfig.contentType === 'wifi' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="sm:col-span-2 space-y-1">
-                        <label className="text-xs font-bold text-slate-300">Tên WiFi (SSID):</label>
-                        <input
-                          type="text"
-                          value={qrConfig.wifi.ssid}
-                          onChange={(e) => setQrConfig((prev) => ({ ...prev, wifi: { ...prev.wifi, ssid: e.target.value } }))}
-                          className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-300">Mật khẩu:</label>
-                        <input
-                          type="text"
-                          value={qrConfig.wifi.password}
-                          onChange={(e) => setQrConfig((prev) => ({ ...prev, wifi: { ...prev.wifi, password: e.target.value } }))}
-                          className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-300">Mã hóa:</label>
-                        <select
-                          value={qrConfig.wifi.encryption}
-                          onChange={(e) => setQrConfig((prev) => ({ ...prev, wifi: { ...prev.wifi, encryption: e.target.value } }))}
-                          className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs"
-                        >
-                          <option value="WPA">WPA / WPA2 / WPA3</option>
-                          <option value="WEP">WEP</option>
-                          <option value="nopass">Không có mật khẩu</option>
-                        </select>
-                      </div>
-                    </div>
-                  )}
-
-                  {qrConfig.contentType === 'vcard' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-300">Họ & Tên:</label>
-                        <input
-                          type="text"
-                          value={qrConfig.vcard.firstName}
-                          onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, firstName: e.target.value } }))}
-                          placeholder="Trần Hải Bằng"
-                          className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-300">Số điện thoại:</label>
-                        <input
-                          type="tel"
-                          value={qrConfig.vcard.phone}
-                          onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, phone: e.target.value } }))}
-                          className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-300">Email:</label>
-                        <input
-                          type="email"
-                          value={qrConfig.vcard.email}
-                          onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, email: e.target.value } }))}
-                          className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-300">Công ty:</label>
-                        <input
-                          type="text"
-                          value={qrConfig.vcard.organization}
-                          onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, organization: e.target.value } }))}
-                          className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {qrConfig.contentType === 'text' && (
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-300">Nội dung văn bản:</label>
-                      <textarea
-                        rows={3}
-                        value={qrConfig.rawText}
-                        onChange={(e) => setQrConfig((prev) => ({ ...prev, rawText: e.target.value }))}
-                        className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs font-mono resize-none focus:outline-none"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* QR Customizer: Logo & Styling */}
-                <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-4">
-                  {/* Logo Header */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2 text-xs font-bold text-slate-200">
-                      <ImageIcon className="w-4 h-4 text-brand-400" />
-                      <span>Logo & Biểu Tượng Trung Tâm</span>
-                    </div>
-                    {qrConfig.logoUrl && (
-                      <button
-                        type="button"
-                        onClick={() => setQrConfig((prev) => ({ ...prev, logoUrl: null }))}
-                        className="text-xs text-red-400 hover:text-red-300 flex items-center space-x-1"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                        <span>Bỏ logo</span>
-                      </button>
-                    )}
                   </div>
+                )}
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => logoInputRef.current?.click()}
-                      className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold transition flex items-center space-x-2 shadow-sm"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>Tải Ảnh Riêng</span>
-                    </button>
-                    {PRESET_ICONS.map((p) => (
+                {qrConfig.contentType === 'wifi' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="block text-xs font-mono text-on-surface-variant uppercase">Tên WiFi (SSID):</label>
+                      <input
+                        type="text"
+                        value={qrConfig.wifi.ssid}
+                        onChange={(e) => setQrConfig((prev) => ({ ...prev, wifi: { ...prev.wifi, ssid: e.target.value } }))}
+                        className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary-container"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-mono text-on-surface-variant uppercase">Mật khẩu:</label>
+                      <input
+                        type="text"
+                        value={qrConfig.wifi.password}
+                        onChange={(e) => setQrConfig((prev) => ({ ...prev, wifi: { ...prev.wifi, password: e.target.value } }))}
+                        className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-4 py-2 text-sm font-mono focus:outline-none focus:border-primary-container"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-mono text-on-surface-variant uppercase">Mã hóa:</label>
+                      <select
+                        value={qrConfig.wifi.encryption}
+                        onChange={(e) => setQrConfig((prev) => ({ ...prev, wifi: { ...prev.wifi, encryption: e.target.value } }))}
+                        className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-container"
+                      >
+                        <option value="WPA">WPA / WPA2 / WPA3</option>
+                        <option value="WEP">WEP</option>
+                        <option value="nopass">Không có mật khẩu</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {qrConfig.contentType === 'vcard' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-xs font-mono text-on-surface-variant uppercase">Họ &amp; Tên:</label>
+                      <input
+                        type="text"
+                        value={qrConfig.vcard.firstName}
+                        onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, firstName: e.target.value } }))}
+                        className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-container"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-mono text-on-surface-variant uppercase">Số điện thoại:</label>
+                      <input
+                        type="tel"
+                        value={qrConfig.vcard.phone}
+                        onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, phone: e.target.value } }))}
+                        className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary-container"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-mono text-on-surface-variant uppercase">Email:</label>
+                      <input
+                        type="email"
+                        value={qrConfig.vcard.email}
+                        onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, email: e.target.value } }))}
+                        className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary-container"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="block text-xs font-mono text-on-surface-variant uppercase">Tổ chức / Công ty:</label>
+                      <input
+                        type="text"
+                        value={qrConfig.vcard.organization}
+                        onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, organization: e.target.value } }))}
+                        className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-container"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {qrConfig.contentType === 'text' && (
+                  <div className="space-y-1">
+                    <label className="block text-xs font-mono text-on-surface-variant uppercase">Nội dung văn bản:</label>
+                    <textarea
+                      rows={3}
+                      value={qrConfig.rawText}
+                      onChange={(e) => setQrConfig((prev) => ({ ...prev, rawText: e.target.value }))}
+                      className="w-full p-3 rounded-lg bg-surface-subtle border border-border-subtle text-on-surface text-sm font-mono resize-none focus:outline-none focus:border-primary-container"
+                    />
+                  </div>
+                )}
+
+                {/* Optional Title Label */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-mono font-medium text-on-surface-variant uppercase">
+                    TIÊU ĐỀ NHÃN SẢN PHẨM / CHÚ THÍCH IN ẤN
+                  </label>
+                  <input
+                    type="text"
+                    value={qrConfig.labelTitle}
+                    onChange={(e) => setQrConfig((prev) => ({ ...prev, labelTitle: e.target.value, frameText: e.target.value }))}
+                    placeholder="VD: Menu Nhà Hàng & Bảng Giá..."
+                    className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary-container focus:bg-surface-container-high transition-colors"
+                  />
+                </div>
+              </div>
+            )}
+
+            {mode === 'barcode' && (
+              <div className="space-y-4">
+                {/* Symbology Quick Selector */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono text-on-surface-variant uppercase">CHUẨN MÃ VẠCH (GS1 SYMBOLOGY)</span>
+                    <span className="text-xs font-mono text-primary bg-primary-container/10 px-2 py-0.5 rounded border border-primary-container/20">
+                      {currentSymbology?.category}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {BARCODE_SYMBOLOGIES.map((s) => (
                       <button
-                        key={p.name}
+                        key={s.id}
                         type="button"
-                        onClick={() => setQrConfig((prev) => ({ ...prev, logoUrl: p.url }))}
-                        className={`p-2 rounded-xl border text-xs flex items-center space-x-1 ${
-                          qrConfig.logoUrl === p.url ? 'bg-brand-500/20 border-brand-400 text-white' : 'bg-slate-800 border-slate-700 text-slate-300'
+                        onClick={() => setBarcodeConfig((prev) => ({ ...prev, symbology: s.id, value: s.example }))}
+                        className={`p-2.5 rounded-lg border text-left cursor-pointer transition-all ${
+                          barcodeConfig.symbology === s.id
+                            ? 'bg-primary-container/15 border-primary-container text-on-surface shadow-sm'
+                            : 'bg-surface-subtle border-border-subtle text-on-surface-variant hover:text-on-surface hover:border-outline'
                         }`}
                       >
-                        <span>{p.icon}</span>
-                        <span className="text-[11px] hidden sm:inline">{p.name}</span>
+                        <div className="text-xs font-bold">{s.name}</div>
+                        <div className="text-[10px] text-on-surface-variant truncate">{s.category}</div>
                       </button>
                     ))}
                   </div>
+                </div>
 
-                  {/* Colors & Gradient */}
-                  <div className="pt-3 border-t border-slate-800 space-y-3">
+                {/* Barcode Value Input */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-mono font-medium text-on-surface-variant uppercase">
+                      DÃY SỐ MÃ VẠCH
+                    </label>
+                    {barcodeValidation.isValid && (
+                      <span className="text-xs font-mono text-secondary flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Checksum GS1 tự tính hợp lệ
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={barcodeConfig.value}
+                      onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, value: e.target.value }))}
+                      className="w-full bg-surface-subtle border border-border-subtle text-on-surface font-mono text-sm tracking-widest rounded-lg px-4 py-2.5 focus:outline-none focus:border-primary-container"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleGenerateRandomBarcode}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-surface-container border border-border-subtle text-primary text-xs font-medium rounded hover:bg-surface-bright transition-colors"
+                    >
+                      Tạo Ngẫu Nhiên
+                    </button>
+                  </div>
+                  <p className="text-xs text-outline">
+                    {currentSymbology?.desc || "Đầu số '893' là mã quốc gia GS1 dành riêng cho Việt Nam."}
+                  </p>
+                </div>
+
+                {/* Optional Label */}
+                <div className="space-y-1">
+                  <label className="block text-xs font-mono font-medium text-on-surface-variant uppercase">
+                    TIÊU ĐỀ SẢN PHẨM / CHÚ THÍCH DƯỚI MÃ
+                  </label>
+                  <input
+                    type="text"
+                    value={barcodeConfig.labelTitle}
+                    onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, labelTitle: e.target.value, customText: e.target.value }))}
+                    placeholder="VD: Bánh Tráng Tây Ninh 500g..."
+                    className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary-container"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Toggles & Options */}
+            <div className="pt-2 border-t border-border-subtle flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-on-surface">
+                <input
+                  type="checkbox"
+                  defaultChecked
+                  className="w-4 h-4 rounded bg-surface-subtle text-primary-container focus:ring-0"
+                />
+                <span>Mã hóa UTF-8 chuẩn (Tiếng Việt có dấu)</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-on-surface-variant">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded bg-surface-subtle text-primary-container focus:ring-0"
+                />
+                <span>Kích hoạt GS1 Application Identifier (AI)</span>
+              </label>
+            </div>
+          </div>
+
+          {/* BƯỚC 2: TÙY BIẾN GIAO DIỆN & MỨC SỬA LỖI */}
+          {mode !== 'batch' && (
+            <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-md flex flex-col gap-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-primary-container text-on-primary-container text-xs flex items-center justify-center font-bold">2</span>
+                  <h2 className="text-base font-semibold text-on-surface">Cấu Hình Đồ Họa &amp; Sửa Lỗi</h2>
+                </div>
+                <span className="text-xs font-mono font-semibold text-secondary">300 DPI HI-RES READY</span>
+              </div>
+
+              {mode === 'qr' ? (
+                <>
+                  {/* Sửa lỗi QR Level */}
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-300">Màu Sắc & Gradient:</span>
-                      <div className="flex items-center space-x-2">
-                        {['none', 'linear', 'radial'].map((g) => (
+                      <label className="text-xs font-mono text-on-surface-variant uppercase">
+                        MỨC SỬA LỖI (REED-SOLOMON ERROR CORRECTION)
+                      </label>
+                      <span className="text-xs text-primary font-medium">Tối ưu cho In ấn &amp; Logo</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { lvl: 'L', text: 'L (7%)' },
+                        { lvl: 'M', text: 'M (15%)' },
+                        { lvl: 'Q', text: 'Q (25%)' },
+                        { lvl: 'H', text: 'H (30% - Chèn Logo)' },
+                      ].map((ec) => (
+                        <button
+                          key={ec.lvl}
+                          type="button"
+                          onClick={() => setQrConfig((prev) => ({ ...prev, errorCorrection: ec.lvl }))}
+                          className={`py-2 px-2 rounded-lg text-xs font-medium text-center transition-all cursor-pointer ${
+                            qrConfig.errorCorrection === ec.lvl
+                              ? 'bg-primary-container text-on-primary-container font-bold shadow-sm'
+                              : 'bg-surface-container-low border border-border-subtle text-on-surface-variant hover:text-on-surface'
+                          }`}
+                        >
+                          {ec.text}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Kiểu mắt & Kiểu chấm */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs font-mono text-on-surface-variant uppercase">KIỂU MẮT QR (EYE CORNERS)</label>
+                      <div className="grid grid-cols-3 gap-1 bg-surface-container-low p-1 rounded-lg border border-border-subtle">
+                        {[
+                          { id: 'square', label: 'Vuông' },
+                          { id: 'extra-rounded', label: 'Bo tròn' },
+                          { id: 'dot', label: 'Dots' },
+                        ].map((pat) => (
                           <button
-                            key={g}
+                            key={pat.id}
                             type="button"
-                            onClick={() => setQrConfig((prev) => ({ ...prev, gradientType: g }))}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
-                              qrConfig.gradientType === g ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'
+                            onClick={() => setQrConfig((prev) => ({ ...prev, cornerSquareType: pat.id, cornerDotType: pat.id }))}
+                            className={`py-1 text-center text-xs rounded transition-colors ${
+                              qrConfig.cornerSquareType === pat.id
+                                ? 'bg-surface-container-high text-on-surface font-semibold shadow-sm'
+                                : 'text-on-surface-variant hover:text-on-surface'
                             }`}
                           >
-                            {g === 'none' ? 'Đơn Sắc' : g === 'linear' ? 'Linear' : 'Radial'}
+                            {pat.label}
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-slate-400">Màu 1:</span>
+                    <div className="space-y-2">
+                      <label className="text-xs font-mono text-on-surface-variant uppercase">KIỂU HẠT (DOT PATTERN)</label>
+                      <select
+                        value={qrConfig.dotType}
+                        onChange={(e) => setQrConfig((prev) => ({ ...prev, dotType: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg bg-surface-subtle border border-border-subtle text-on-surface text-xs focus:outline-none focus:border-primary-container"
+                      >
+                        <option value="rounded">Bo Góc (Rounded)</option>
+                        <option value="dots">Chấm Tròn (Dots)</option>
+                        <option value="square">Vuông Cạnh (Square)</option>
+                        <option value="classy">Kim Cương (Classy)</option>
+                        <option value="extra-rounded">Oval (Extra Rounded)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Màu Sắc */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-mono text-on-surface-variant uppercase">BẢNG MÀU MÃ VÀ NỀN</label>
+                      <div className="flex items-center gap-1">
+                        {['none', 'linear'].map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => setQrConfig((prev) => ({ ...prev, gradientType: g }))}
+                            className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                              qrConfig.gradientType === g ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant'
+                            }`}
+                          >
+                            {g === 'none' ? 'Đơn sắc' : 'Gradient'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg">
                         <input
                           type="color"
                           value={qrConfig.dotColor}
                           onChange={(e) => setQrConfig((prev) => ({ ...prev, dotColor: e.target.value }))}
-                          className="w-7 h-7 rounded cursor-pointer bg-transparent border-0"
+                          className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
                         />
+                        <span className="text-xs font-mono text-on-surface">Màu mã</span>
                       </div>
                       {qrConfig.gradientType !== 'none' && (
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xs text-slate-400">Màu 2:</span>
+                        <div className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg">
                           <input
                             type="color"
                             value={qrConfig.dotColor2}
                             onChange={(e) => setQrConfig((prev) => ({ ...prev, dotColor2: e.target.value }))}
-                            className="w-7 h-7 rounded cursor-pointer bg-transparent border-0"
+                            className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
                           />
+                          <span className="text-xs font-mono text-on-surface">Màu gradient</span>
                         </div>
                       )}
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-slate-400">Nền:</span>
+                      <div className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg">
                         <input
                           type="color"
                           value={qrConfig.bgColor}
                           disabled={qrConfig.bgTransparent}
                           onChange={(e) => setQrConfig((prev) => ({ ...prev, bgColor: e.target.value }))}
-                          className="w-7 h-7 rounded cursor-pointer bg-transparent border-0 disabled:opacity-30"
+                          className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 disabled:opacity-30"
                         />
+                        <span className="text-xs font-mono text-on-surface">Màu nền</span>
                       </div>
                     </div>
 
-                    {/* Presets */}
+                    {/* Gradient Presets */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-1">
                       {PRESET_COLOR_GRADIENTS.map((p) => (
                         <button
                           key={p.name}
                           type="button"
                           onClick={() => setQrConfig((prev) => ({ ...prev, dotColor: p.c1, dotColor2: p.c2, gradientType: p.type }))}
-                          className="px-2 py-0.5 rounded text-[10px] font-bold text-white shadow-sm"
+                          className="px-2.5 py-1 rounded text-xs font-semibold text-white shadow-sm cursor-pointer"
                           style={{ background: `linear-gradient(135deg, ${p.c1}, ${p.c2})` }}
                         >
                           {p.name}
@@ -976,104 +1219,84 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                     </div>
                   </div>
 
-                  {/* Dot Shapes */}
-                  <div className="pt-3 border-t border-slate-800 grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-slate-300 block mb-1.5">Kiểu Chấm:</label>
-                      <select
-                        value={qrConfig.dotType}
-                        onChange={(e) => setQrConfig((prev) => ({ ...prev, dotType: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs"
-                      >
-                        <option value="rounded">Bo Góc (Rounded)</option>
-                        <option value="dots">Chấm Tròn (Dots)</option>
-                        <option value="square">Vuông (Square)</option>
-                        <option value="classy">Kim Cương (Classy)</option>
-                        <option value="extra-rounded">Oval (Extra Rounded)</option>
-                      </select>
+                  {/* Chèn Logo */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-mono text-on-surface-variant uppercase">ĐÍNH KÈM LOGO TRUNG TÂM</label>
+                      {qrConfig.logoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setQrConfig((prev) => ({ ...prev, logoUrl: null }))}
+                          className="text-xs text-error hover:underline flex items-center gap-1"
+                        >
+                          <X className="w-3.5 h-3.5" /> Bỏ logo
+                        </button>
+                      )}
                     </div>
-
-                    <div>
-                      <label className="text-xs font-bold text-slate-300 block mb-1.5">Mắt Định Vị:</label>
-                      <select
-                        value={qrConfig.cornerSquareType}
-                        onChange={(e) => setQrConfig((prev) => ({ ...prev, cornerSquareType: e.target.value }))}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs"
-                      >
-                        <option value="extra-rounded">Bo Tròn</option>
-                        <option value="square">Vuông Cạnh</option>
-                        <option value="dot">Chấm Lớn</option>
-                      </select>
+                    <div className="flex items-center gap-4 p-3 bg-surface-container-low border border-border-subtle rounded-lg">
+                      <div className="w-12 h-12 rounded-lg bg-surface-container border border-border-subtle flex items-center justify-center text-primary-container shrink-0">
+                        {qrConfig.logoUrl ? (
+                          <img src={qrConfig.logoUrl} alt="Logo" className="w-8 h-8 object-contain" />
+                        ) : (
+                          <ImageIcon className="w-6 h-6" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-semibold text-on-surface truncate">
+                            {qrConfig.logoUrl ? 'Logo tùy biến đã nạp' : 'Chưa chọn logo'}
+                          </span>
+                          <span className="text-xs font-mono text-secondary">Vùng an toàn: 18%</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => logoInputRef.current?.click()}
+                            className="text-primary text-xs font-medium hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <Upload className="w-3.5 h-3.5" /> Tải ảnh logo riêng...
+                          </button>
+                          <div className="flex items-center gap-1">
+                            {PRESET_ICONS.slice(0, 5).map((icon) => (
+                              <button
+                                key={icon.name}
+                                type="button"
+                                onClick={() => setQrConfig((prev) => ({ ...prev, logoUrl: icon.url }))}
+                                className="px-1.5 py-0.5 rounded bg-surface-subtle text-xs hover:bg-surface-container-high"
+                              >
+                                {icon.icon}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </>
-            ) : (
-              /* Barcode Controls */
-              <div className="flex flex-col gap-4">
-                <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-200">Chuẩn Mã Vạch Công Nghiệp (Symbology):</span>
-                    <span className="text-[11px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded-full border border-cyan-500/30">
-                      {currentSymbology?.category}
-                    </span>
-                  </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {BARCODE_SYMBOLOGIES.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => setBarcodeConfig((prev) => ({ ...prev, symbology: s.id, value: s.example }))}
-                        className={`p-3 rounded-2xl border text-left cursor-pointer ${
-                          barcodeConfig.symbology === s.id
-                            ? 'bg-cyan-600 text-white border-cyan-400 shadow-md ring-2 ring-cyan-400/30'
-                            : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800'
-                        }`}
-                      >
-                        <div className="text-xs font-extrabold">{s.name}</div>
-                        <div className="text-[10px] text-slate-400 truncate">{s.category}</div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {currentSymbology && (
-                    <p className="text-xs text-slate-300 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
-                      ℹ️ {currentSymbology.desc}
-                    </p>
-                  )}
-                </div>
-
-                <div className="p-4 sm:p-5 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-3">
-                  <label className="text-xs font-bold text-slate-300">Dữ liệu mã vạch:</label>
-                  <input
-                    type="text"
-                    value={barcodeConfig.value}
-                    onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, value: e.target.value }))}
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm font-mono font-bold tracking-wider focus:outline-none focus:border-cyan-500"
-                  />
-
-                  {barcodeValidation.error && (
-                    <div className={`p-2.5 rounded-xl border flex items-center space-x-2 text-xs ${
-                      barcodeValidation.isValid ? 'bg-amber-950/60 border-amber-500/40 text-amber-300' : 'bg-red-950/60 border-red-500/40 text-red-300'
-                    }`}>
-                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                      <span>{barcodeValidation.error}</span>
+                  {/* Slider Quiet Zone */}
+                  <div className="space-y-1 pt-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="font-mono text-on-surface-variant uppercase">VIỀN BẢO VỆ (QUIET ZONE MARGIN)</span>
+                      <span className="font-mono text-primary">{qrConfig.logoMargin} Modules (Tiêu chuẩn POS)</span>
                     </div>
-                  )}
-
-                  {barcodeValidation.isValid && !barcodeValidation.error && (
-                    <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/30 flex items-center space-x-2 text-xs text-emerald-300">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      <span>Định dạng hợp lệ & chuẩn kiểm tra GS1 chính xác</span>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-800">
-                    <div>
-                      <div className="flex justify-between text-xs text-slate-300 mb-1">
-                        <span>Độ rộng:</span>
-                        <span className="font-mono text-cyan-400">{barcodeConfig.barWidth}px</span>
+                    <input
+                      type="range"
+                      min="1"
+                      max="6"
+                      value={qrConfig.logoMargin}
+                      onChange={(e) => setQrConfig((prev) => ({ ...prev, logoMargin: parseInt(e.target.value, 10) }))}
+                      className="w-full accent-primary-container h-1.5 bg-surface-subtle rounded-lg cursor-pointer"
+                    />
+                  </div>
+                </>
+              ) : (
+                /* Barcode Graphic Controls */
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-on-surface-variant">
+                        <span>Độ rộng thanh (Bar Width):</span>
+                        <span className="font-mono text-primary">{barcodeConfig.barWidth}px</span>
                       </div>
                       <input
                         type="range"
@@ -1081,173 +1304,365 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                         max="4"
                         value={barcodeConfig.barWidth}
                         onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, barWidth: parseInt(e.target.value, 10) }))}
-                        className="w-full accent-cyan-500"
+                        className="w-full accent-primary-container"
                       />
                     </div>
-                    <div>
-                      <div className="flex justify-between text-xs text-slate-300 mb-1">
-                        <span>Chiều cao:</span>
-                        <span className="font-mono text-cyan-400">{barcodeConfig.barHeight}px</span>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs text-on-surface-variant">
+                        <span>Chiều cao (Height):</span>
+                        <span className="font-mono text-primary">{barcodeConfig.barHeight}px</span>
                       </div>
                       <input
                         type="range"
                         min="30"
-                        max="150"
+                        max="140"
                         step="5"
                         value={barcodeConfig.barHeight}
                         onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, barHeight: parseInt(e.target.value, 10) }))}
-                        className="w-full accent-cyan-500"
+                        className="w-full accent-primary-container"
                       />
                     </div>
-                    <div>
-                      <div className="flex justify-between text-xs text-slate-300 mb-1">
-                        <span>Vùng đệm:</span>
-                        <span className="font-mono text-cyan-400">{barcodeConfig.margin}px</span>
-                      </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 pt-2">
+                    <div className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg">
                       <input
-                        type="range"
-                        min="10"
-                        max="40"
-                        value={barcodeConfig.margin}
-                        onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, margin: parseInt(e.target.value, 10) }))}
-                        className="w-full accent-cyan-500"
+                        type="color"
+                        value={barcodeConfig.lineColor}
+                        onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, lineColor: e.target.value }))}
+                        className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
                       />
+                      <span className="text-xs font-mono text-on-surface">Màu vạch</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg">
+                      <input
+                        type="color"
+                        value={barcodeConfig.bgColor}
+                        onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, bgColor: e.target.value }))}
+                        className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
+                      />
+                      <span className="text-xs font-mono text-on-surface">Màu nền</span>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
 
-          {/* Right Column: Live Sticky Preview */}
-          <div className="lg:col-span-5 flex flex-col gap-4 sticky top-24">
-            {toastMessage && (
-              <div className="p-3 rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 border border-emerald-500/50 text-emerald-300 text-xs font-semibold shadow-xl flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span>{toastMessage}</span>
+              {/* Action Button: Trigger Render */}
+              <div className="pt-3">
+                <button
+                  type="button"
+                  onClick={handleTriggerRender}
+                  className={`w-full py-3 px-6 bg-primary-container hover:bg-brand-cyan-bright text-on-primary-container font-semibold rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all transform cursor-pointer ${
+                    isTriggeringRender ? 'scale-98 brightness-110' : ''
+                  }`}
+                >
+                  <Zap className="w-5 h-5 fill-current" />
+                  <span>Tạo Mã &amp; Render Bản In Chuẩn Vector (.SVG / 300 DPI)</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Batch Mode View */}
+          {mode === 'batch' && (
+            <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-md space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 bg-surface-container-low p-1 rounded-lg border border-border-subtle">
+                  <button
+                    type="button"
+                    onClick={() => setBatchType('barcode')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${batchType === 'barcode' ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant'}`}
+                  >
+                    Mã Vạch Barcode
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBatchType('qr')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${batchType === 'qr' ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant'}`}
+                  >
+                    Mã QR Code
+                  </button>
                 </div>
-              </div>
-            )}
 
-            <div className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl shadow-2xl flex flex-col items-center justify-center space-y-6">
-              <div className="w-full flex items-center justify-between text-xs text-slate-400">
-                <span className="font-extrabold uppercase text-slate-300">{t.livePreview}</span>
-                <span className="font-mono text-brand-400 font-bold">
-                  {mode === 'qr' ? 'ISO/IEC 18004' : `GS1 ${barcodeConfig.symbology}`}
-                </span>
-              </div>
-
-              <div className="w-full min-h-[280px] flex items-center justify-center p-4 rounded-2xl bg-slate-950/80 border border-slate-800 shadow-inner overflow-hidden">
-                {/* key bắt buộc: canvas QR do qr-code-styling chèn bằng appendChild
-                    nên React không quản lý nó. Hai nhánh cùng là <div> ở cùng vị
-                    trí thì React tái dùng đúng node cũ, và canvas chèn tay sống
-                    sót sang tab mã vạch — preview vẫn hiện QR. Đặt key khác nhau
-                    buộc React thay hẳn node, xoá luôn canvas mồ côi. */}
-                {mode === 'qr' ? (
-                  <div key="preview-qr" ref={qrContainerRef} className="flex items-center justify-center" />
-                ) : (
-                  <div key="preview-barcode" className="flex items-center justify-center overflow-x-auto max-w-full p-2">
-                    <svg ref={barcodeSvgRef} className="max-w-full h-auto" />
-                  </div>
+                {batchType === 'barcode' && (
+                  <select
+                    value={batchSymbology}
+                    onChange={(e) => setBatchSymbology(e.target.value)}
+                    className="px-3 py-1.5 rounded-lg bg-surface-subtle border border-border-subtle text-on-surface text-xs font-mono focus:outline-none focus:border-primary-container"
+                  >
+                    {BARCODE_SYMBOLOGIES.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                 )}
-              </div>
 
-              {/* Actions */}
-              <div className="w-full flex flex-col gap-3">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={handleCopyClipboard}
-                    className={`flex-1 py-3 px-4 rounded-2xl font-extrabold text-xs shadow-xl transition-all flex items-center justify-center space-x-2 cursor-pointer active:scale-95 ${
-                      isCopied ? 'bg-emerald-600 text-white' : 'bg-gradient-to-r from-brand-600 to-cyan-600 text-white shadow-brand-500/20'
-                    }`}
+                    onClick={() => batchFileInputRef.current?.click()}
+                    className="px-3.5 py-2 rounded-lg bg-surface-subtle hover:bg-surface-container-high text-on-surface text-xs font-semibold border border-border-subtle transition flex items-center gap-1.5 cursor-pointer"
                   >
-                    {isCopied ? (
+                    <FileSpreadsheet className="w-4 h-4 text-secondary" />
+                    <span>Tải CSV / TXT</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleProcessBatch}
+                    disabled={isBatchProcessing}
+                    className="px-5 py-2 rounded-lg bg-primary-container text-on-primary-container text-xs font-bold shadow-md transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  >
+                    {isBatchProcessing ? (
                       <>
-                        <Check className="w-4 h-4" />
-                        <span>{t.btnCopied}</span>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Đang xử lý ({batchProgress}%)...</span>
                       </>
                     ) : (
                       <>
-                        <Clipboard className="w-4 h-4" />
-                        <span>{t.btnCopy}</span>
+                        <Zap className="w-4 h-4" />
+                        <span>Bắt Đầu Tạo Hàng Loạt</span>
                       </>
                     )}
                   </button>
+                </div>
+              </div>
 
+              <div className="space-y-1">
+                <label className="text-xs font-mono text-on-surface-variant">DỮ LIỆU DANH SÁCH (MỖI DÒNG 1 MÃ / CỘT TÊN PHẨY PHÂN CÁCH)</label>
+                <textarea
+                  rows={5}
+                  value={batchRawInput}
+                  onChange={(e) => setBatchRawInput(e.target.value)}
+                  className="w-full p-3 rounded-lg bg-surface-subtle border border-border-subtle text-on-surface font-mono text-xs focus:outline-none focus:border-primary-container"
+                />
+              </div>
+
+              {batchItems.length > 0 && (
+                <div className="pt-3 border-t border-border-subtle space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-on-surface">
+                      Đã tạo thành công {batchItems.filter((i) => i.status === 'success').length} / {batchItems.length} mã
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleDownloadZip}
+                      className="px-4 py-2 rounded-lg bg-secondary text-surface-canvas text-xs font-extrabold shadow-md flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Archive className="w-4 h-4" />
+                      <span>Tải Về File ZIP (.zip)</span>
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto">
+                    {batchItems.map((item) => (
+                      <div key={item.id} className="p-2 rounded-lg bg-surface-subtle border border-border-subtle text-center space-y-1">
+                        {item.status === 'success' && item.dataUrl ? (
+                          <div className="w-full bg-white p-1 rounded aspect-square flex items-center justify-center">
+                            <img src={item.dataUrl} alt={item.code} className="max-w-full max-h-full object-contain" />
+                          </div>
+                        ) : (
+                          <div className="w-full bg-error/20 p-2 rounded aspect-square flex items-center justify-center text-error text-[10px]">
+                            {item.errorMessage}
+                          </div>
+                        )}
+                        <div className="text-[11px] font-mono font-semibold text-on-surface truncate">{item.code}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Saved History Bar */}
+          {history.length > 0 && (
+            <div className="bg-surface-container border border-border-subtle rounded-xl p-5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-semibold text-on-surface">
+                  <History className="w-4 h-4 text-primary" />
+                  <span>{t.recentTitle} ({history.length})</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setHistory([])}
+                  className="text-xs text-on-surface-variant hover:text-error transition-colors cursor-pointer"
+                >
+                  {t.btnClearAll}
+                </button>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+                {history.slice(0, 6).map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleRestoreHistory(item)}
+                    className="p-1.5 rounded-lg bg-surface-subtle border border-border-subtle hover:border-primary-container cursor-pointer transition-all text-center group relative"
+                  >
+                    <div className="w-full aspect-square bg-white rounded p-1 flex items-center justify-center mb-1">
+                      <img src={item.previewDataUrl} alt={item.title} className="max-w-full max-h-full object-contain" />
+                    </div>
+                    <div className="text-[10px] text-on-surface-variant truncate font-mono">{item.title}</div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteHistory(item.id);
+                      }}
+                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 p-1 bg-surface-canvas/80 text-error rounded transition-opacity"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* CỘT PHẢI: LIVE PREVIEW & XUẤT BẢN IN (5 Cột) */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-md flex flex-col gap-5">
+            <div className="flex items-center justify-between">
+              <span className="text-base font-semibold text-on-surface flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+                {t.livePreview}
+              </span>
+              <div className="flex items-center gap-1 bg-surface-container-low border border-border-subtle p-1 rounded">
+                <button
+                  type="button"
+                  onClick={() => setIsLabelPreview(false)}
+                  className={`px-2 py-0.5 text-xs font-semibold rounded cursor-pointer ${
+                    !isLabelPreview ? 'bg-surface-container-high text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  Đơn Bản
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLabelPreview(true)}
+                  className={`px-2 py-0.5 text-xs font-semibold rounded cursor-pointer ${
+                    isLabelPreview ? 'bg-surface-container-high text-primary shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  Khổ Tem In
+                </button>
+              </div>
+            </div>
+
+            {/* Dynamic Container QR / Barcode Canvas */}
+            <div className="w-full aspect-square bg-surface-light rounded-xl p-6 flex flex-col items-center justify-center relative overflow-hidden shadow-inner transition-all">
+              {/* Actual Canvas or SVG Container */}
+              <div className="flex flex-col items-center justify-center gap-3 w-full h-full">
+                {mode === 'qr' ? (
+                  <div ref={qrContainerRef} className="w-56 h-56 flex items-center justify-center" />
+                ) : (
+                  <div className="w-full flex items-center justify-center py-4">
+                    <svg ref={barcodeSvgRef} className="max-w-full h-auto" />
+                  </div>
+                )}
+                {/* Dynamic Label Footer inside print visual */}
+                <span className="text-[#090D16] text-sm font-semibold tracking-tight text-center max-w-[90%] truncate">
+                  {mode === 'qr' ? qrConfig.labelTitle : barcodeConfig.labelTitle}
+                </span>
+              </div>
+
+              {/* Label Dimension Overlay */}
+              {isLabelPreview && (
+                <div className="absolute top-3 left-3 bg-[#1E293B] text-white px-2.5 py-1 rounded text-xs font-mono shadow-md border border-slate-700">
+                  Khổ tem: 50 × 30 mm | 300 DPI
+                </div>
+              )}
+            </div>
+
+            {/* Scanner Simulator */}
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={simulateScan}
+                className="py-2.5 px-4 bg-surface-subtle hover:bg-surface-container-high border border-border-subtle text-on-surface rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <ScanLine className="w-4 h-4 text-secondary" />
+                <span>Quét thử bằng giả lập scanner máy ảnh</span>
+              </button>
+
+              {scannedFeedback && (
+                <div className="p-3 bg-surface-container-low border border-border-subtle rounded-lg flex items-center gap-2 text-xs">
+                  <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
+                  <div className="flex-1 truncate text-on-surface-variant">
+                    <span className="text-secondary font-medium">✓ Đọc thành công ({scannedFeedback.time})</span> •{' '}
+                    <span className="text-on-surface font-mono">{scannedFeedback.content}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* BẢNG THÔNG SỐ KỸ THUẬT MÃ */}
+            <div className="p-4 bg-surface-container-low border border-border-subtle rounded-lg space-y-2">
+              <div className="flex items-center justify-between text-on-surface font-semibold text-xs pb-1 border-b border-border-subtle">
+                <span>Thông Số Kỹ Thuật Đồ Họa</span>
+                <span className="font-mono text-primary">TIÊU CHUẨN ISO/IEC</span>
+              </div>
+              <div className="grid grid-cols-2 gap-y-2 text-xs">
+                <div>
+                  <span className="text-outline block font-mono text-[11px]">LOẠI MÃ</span>
+                  <span className="text-on-surface font-medium font-mono">
+                    {mode === 'qr' ? 'QR Code Model 2' : barcodeConfig.symbology}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-outline block font-mono text-[11px]">KÍCH THƯỚC MA TRẬN</span>
+                  <span className="text-on-surface font-medium font-mono">
+                    {mode === 'qr' ? '33 × 33 Modules' : `${barcodeConfig.barHeight}px × ${barcodeConfig.barWidth}px`}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-outline block font-mono text-[11px]">MỨC BẢO VỆ DỮ LIỆU</span>
+                  <span className="text-secondary font-medium font-mono">
+                    {mode === 'qr' ? `Mức ${qrConfig.errorCorrection} (Reed-Solomon)` : 'Checksum Modulo-10'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-outline block font-mono text-[11px]">KÍCH THƯỚC IN GỢI Ý</span>
+                  <span className="text-on-surface font-medium font-mono">
+                    35 × 35 mm (Chuẩn POS)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* HỆ THỐNG ACTION BUTTONS TẢI VỀ */}
+            <div className="space-y-2">
+              {/* Primary SVG Download */}
+              <button
+                type="button"
+                onClick={handleDownloadSVG}
+                className="w-full py-3 px-4 bg-brand-emerald-deep hover:bg-secondary text-on-secondary font-semibold text-sm rounded-lg shadow-md flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <FileDown className="w-5 h-5" />
+                <span>Tải Mã Vector (.SVG Siêu Nét In Ấn)</span>
+              </button>
+
+              {/* 2-Col Format & Resolution */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadRaster('png')}
+                  className="py-2.5 px-3 bg-surface-subtle hover:bg-surface-container-high border border-border-subtle text-on-surface text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <ImageIcon className="w-4 h-4 text-primary" />
+                  <span>Tải PNG 2048px</span>
+                </button>
+                <div className="relative">
                   <button
                     type="button"
-                    onClick={handleSaveToHistory}
-                    className="p-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
+                    onClick={() => setShowFormatDropdown(!showFormatDropdown)}
+                    className="w-full py-2.5 px-3 bg-surface-subtle hover:bg-surface-container-high border border-border-subtle text-on-surface text-xs font-semibold rounded-lg flex items-center justify-between transition-colors cursor-pointer"
                   >
-                    <Save className="w-4 h-4 text-brand-400" />
+                    <span>.{selectedFormat.toUpperCase()} ({resolutionScale}x)</span>
+                    <ChevronDown className="w-4 h-4 text-outline" />
                   </button>
-                </div>
 
-                {/* Lịch sử: trước đây mã đã lưu chỉ nằm trong localStorage mà
-                    người dùng không có cách nào xem hay dùng lại. */}
-                <div className="rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                      {t.btnSaveHistory}
-                    </span>
-                    {history.length > 0 && (
-                      <span className="text-[10px] text-slate-500">{history.length}/20</span>
-                    )}
-                  </div>
-                  {history.length === 0 ? (
-                    <p className="text-[11px] text-slate-500 py-2 text-center">{t.emptyHistory}</p>
-                  ) : (
-                    <div className="flex gap-2 overflow-x-auto pb-1">
-                      {history.map((item) => (
-                        <div key={item.id} className="relative shrink-0 group">
-                          <button
-                            type="button"
-                            onClick={() => handleRestoreHistory(item)}
-                            title={item.title}
-                            className="block w-16 h-16 rounded-xl border border-slate-700 bg-white overflow-hidden hover:border-brand-500 transition"
-                          >
-                            <img src={item.previewDataUrl} alt={item.title} className="w-full h-full object-contain" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteHistory(item.id)}
-                            aria-label={`Xoá ${item.title}`}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-800 border border-slate-600 text-slate-400 hover:text-rose-400 hover:border-rose-500 text-[10px] leading-none opacity-0 group-hover:opacity-100 transition"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1 flex items-center rounded-2xl bg-slate-800 border border-slate-700">
-                    <button
-                      type="button"
-                      onClick={handleDownload}
-                      className="flex-1 px-4 py-2.5 text-slate-200 hover:text-white font-bold text-xs flex items-center justify-center space-x-2 rounded-l-2xl"
-                    >
-                      <Download className="w-4 h-4 text-cyan-400" />
-                      <span>{t.btnDownload}</span>
-                      <span className="uppercase text-[10px] px-1.5 py-0.5 rounded bg-slate-900 text-cyan-300 font-mono font-bold">
-                        .{selectedFormat}
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setShowFormatDropdown(!showFormatDropdown)}
-                      className="px-2.5 py-2.5 text-slate-400 hover:text-white border-l border-slate-700 rounded-r-2xl"
-                    >
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
-
-                    {showFormatDropdown && (
-                      <div className="absolute right-0 top-full mt-2 w-44 rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-1.5 z-30 space-y-1">
+                  {showFormatDropdown && (
+                    <div className="absolute right-0 bottom-full mb-1 w-48 rounded-xl bg-surface-container border border-border-subtle shadow-2xl p-2 z-30 space-y-2">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-mono text-outline uppercase block px-2">Định dạng file</span>
                         {['png', 'svg', 'jpeg', 'webp'].map((fmt) => (
                           <button
                             key={fmt}
@@ -1255,9 +1670,11 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                             onClick={() => {
                               setSelectedFormat(fmt);
                               setShowFormatDropdown(false);
+                              if (fmt !== 'svg') handleDownloadRaster(fmt);
+                              else handleDownloadSVG();
                             }}
-                            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold uppercase font-mono transition flex items-center justify-between ${
-                              selectedFormat === fmt ? 'bg-cyan-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                            className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-mono uppercase transition flex items-center justify-between cursor-pointer ${
+                              selectedFormat === fmt ? 'bg-primary-container text-on-primary-container font-bold' : 'text-on-surface-variant hover:bg-surface-subtle'
                             }`}
                           >
                             <span>.{fmt}</span>
@@ -1265,141 +1682,94 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                           </button>
                         ))}
                       </div>
-                    )}
-                  </div>
-
-                  {selectedFormat !== 'svg' && (
-                    <div className="flex items-center p-1 rounded-2xl bg-slate-800 border border-slate-700 text-xs">
-                      {[1, 2, 4].map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setResolutionScale(s)}
-                          className={`px-2 py-1 rounded-xl font-mono font-bold ${
-                            resolutionScale === s ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          {s}x
-                        </button>
-                      ))}
+                      {selectedFormat !== 'svg' && (
+                        <div className="pt-2 border-t border-border-subtle space-y-1">
+                          <span className="text-[10px] font-mono text-outline uppercase block px-2">Độ phân giải</span>
+                          <div className="grid grid-cols-3 gap-1 px-1">
+                            {[1, 2, 4].map((scale) => (
+                              <button
+                                key={scale}
+                                type="button"
+                                onClick={() => setResolutionScale(scale)}
+                                className={`py-1 text-center text-xs font-mono rounded cursor-pointer ${
+                                  resolutionScale === scale ? 'bg-primary text-on-primary font-bold' : 'bg-surface-subtle text-on-surface-variant'
+                                }`}
+                              >
+                                {scale}x
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Copy & Save Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyClipboard}
+                  className="py-2.5 px-3 bg-surface-container-low hover:bg-surface-container-high border border-border-subtle text-on-surface-variant hover:text-on-surface text-xs font-medium rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Copy className="w-4 h-4 text-primary" />
+                  <span>{isCopied ? t.btnCopied : 'Sao chép ảnh'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveToHistory}
+                  className="py-2.5 px-3 bg-surface-container-low hover:bg-surface-container-high border border-border-subtle text-on-surface-variant hover:text-on-surface text-xs font-medium rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Save className="w-4 h-4 text-secondary" />
+                  <span>Lưu lịch sử</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      ) : (
-        /* Batch Mode */
-        <div className="w-full flex flex-col gap-6">
-          <div className="p-5 sm:p-6 rounded-3xl bg-slate-900/70 border border-slate-800 backdrop-blur-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <div className="flex items-center p-1 rounded-2xl bg-slate-800 border border-slate-700 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setBatchType('barcode')}
-                  className={`px-3.5 py-2 rounded-xl font-bold ${batchType === 'barcode' ? 'bg-cyan-600 text-white' : 'text-slate-400'}`}
-                >
-                  Mã Vạch Barcode
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBatchType('qr')}
-                  className={`px-3.5 py-2 rounded-xl font-bold ${batchType === 'qr' ? 'bg-brand-600 text-white' : 'text-slate-400'}`}
-                >
-                  Mã QR Code
-                </button>
-              </div>
+      </section>
 
-              {batchType === 'barcode' && (
-                <select
-                  value={batchSymbology}
-                  onChange={(e) => setBatchSymbology(e.target.value)}
-                  className="px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs font-bold"
-                >
-                  {BARCODE_SYMBOLOGIES.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-              <button
-                type="button"
-                onClick={() => batchFileInputRef.current?.click()}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition flex items-center space-x-2"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                <span>Tải CSV / TXT</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleProcessBatch}
-                disabled={isBatchProcessing}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-extrabold shadow-lg transition flex items-center space-x-2 disabled:opacity-50"
-              >
-                {isBatchProcessing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Đang xử lý ({batchProgress}%)...</span>
-                  </>
-                ) : (
-                  <>
-                    <Layers className="w-4 h-4" />
-                    <span>⚡ Bắt Đầu Tạo Hàng Loạt</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="p-5 rounded-3xl bg-slate-900/60 border border-slate-800 space-y-2">
-            <textarea
-              rows={4}
-              value={batchRawInput}
-              onChange={(e) => setBatchRawInput(e.target.value)}
-              className="w-full p-4 rounded-2xl bg-slate-950 border border-slate-800 text-white font-mono text-xs focus:outline-none"
-            />
-          </div>
-
-          {batchItems.length > 0 && (
-            <div className="p-6 rounded-3xl bg-slate-900/70 border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-bold text-slate-200">
-                  Đã tạo {batchItems.filter((i) => i.status === 'success').length} / {batchItems.length} mã
-                </div>
-                <button
-                  type="button"
-                  onClick={handleDownloadZip}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-black shadow-lg flex items-center space-x-2"
-                >
-                  <Archive className="w-4 h-4" />
-                  <span>📦 Tải Về File ZIP (.zip)</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[400px] overflow-y-auto">
-                {batchItems.map((item) => (
-                  <div key={item.id} className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-1">
-                    {item.status === 'success' && item.dataUrl ? (
-                      <div className="w-full bg-white p-1.5 rounded-xl aspect-square flex items-center justify-center">
-                        <img src={item.dataUrl} alt={item.code} className="max-w-full max-h-full object-contain" />
-                      </div>
-                    ) : (
-                      <div className="w-full bg-red-950/40 p-2 rounded-xl aspect-square flex items-center justify-center text-red-400 text-[10px]">
-                        {item.errorMessage}
-                      </div>
-                    )}
-                    <div className="text-xs font-mono font-bold text-slate-200 truncate">{item.code}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* 3. TOOL TIPS & QUY CHUẨN KỸ THUẬT (3 Cột cuối trang) */}
+      <section className="w-full mt-12 pt-8 border-t border-border-subtle">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-2 h-6 bg-primary-container rounded" />
+          <h3 className="text-xl font-bold text-on-surface tracking-tight">
+            Quy Chuẩn Kỹ Thuật Mã Hóa &amp; In Ấn Thương Mại
+          </h3>
         </div>
-      )}
-    </MiniAppLayout>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-sm flex flex-col gap-3">
+            <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary-container">
+              <Store className="w-6 h-6" />
+            </div>
+            <h4 className="text-base font-semibold text-on-surface">Tiêu Chuẩn GS1 &amp; Tem Bán Lẻ</h4>
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              Mã vạch chuẩn GS1 EAN-13 yêu cầu độ phóng đại từ 80% đến 200% (tương đương chiều rộng 30mm - 74mm). Mã nước Việt Nam &apos;893&apos; đi cùng số kiểm tra Checksum Modulo-10 tự động đảm bảo mọi máy đọc POS tại siêu thị và cửa hàng tiện lợi nhận diện tức thì trong lần quét đầu tiên.
+            </p>
+          </div>
+
+          <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-sm flex flex-col gap-3">
+            <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <h4 className="text-base font-semibold text-on-surface">Mức Sửa Lỗi H (30%) &amp; Logo</h4>
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              Khi chèn logo thương hiệu ở tâm QR Code, 10% đến 20% các khối dữ liệu bị che khuất. Khuyến cáo luôn kích hoạt mức sửa lỗi H (High - 30%) sử dụng thuật toán bù sai số Reed-Solomon, giúp mã giữ nguyên khả năng giải mã ngay cả khi tem dán ngoài trời bị rách nhẹ hoặc trầy xước.
+            </p>
+          </div>
+
+          <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-sm flex flex-col gap-3">
+            <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-brand-cyan-bright">
+              <Layers className="w-6 h-6" />
+            </div>
+            <h4 className="text-base font-semibold text-on-surface">Định Dạng Vector SVG Siêu Nét</h4>
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              Khác với file ảnh Bitmap (JPEG/PNG) dễ bị nhòe vỡ hạt khi phóng to, file xuất SVG lưu trữ tọa độ toán học hình học thuần túy. Điều này cho phép bạn chuyển tiếp thẳng đến các nhà xưởng in ống đồng, in Flexo hoặc in laser tem nhiệt mà không phải xử lý lại nét vector thủ công.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }

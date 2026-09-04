@@ -98,155 +98,141 @@ export default function ExcelMappingView({ t: tProp }) {
             const payload = {
                 source_headers: sourceHeaders,
                 target_headers: targetHeaders,
-                samples: sourceData.slice(0, 2).map(row => sourceHeaders.map(h => row[h] ? String(row[h]) : ''))
+                sample_data: sourceData.slice(0, 3)
             };
+
             const result = await executeAutoMap(payload);
             if (result && result.mappings) {
-                const newRules = result.mappings.map(m => ({
-                    sourceCol: m.source_header,
-                    targetCol: m.target_header,
-                    type: 'auto'
-                }));
-                setMappingRules(newRules);
+                const combinedRules = targetHeaders.map(targetCol => {
+                    const found = result.mappings.find(m => m.target_col === targetCol);
+                    return {
+                        sourceCol: found ? found.source_col : '',
+                        targetCol: targetCol,
+                        type: found ? 'auto' : 'unmapped'
+                    };
+                });
+                setMappingRules(combinedRules);
+            } else {
+                setMappingRules(autoMapFields(sourceHeaders, targetHeaders));
             }
         } catch (err) {
-            console.warn("Backend auto-map failed, falling back to local heuristic", err);
+            console.warn("Backend auto-map failed, falling back to local auto-map:", err);
             setMappingRules(autoMapFields(sourceHeaders, targetHeaders));
         }
     };
 
     const handleExport = async () => {
-        if (sourceAllData.length === 0 || targetHeaders.length === 0) {
-            setError("Cannot export: missing data or template.");
-            return;
-        }
-        if (mappingRules.length === 0) {
-            setError("Cannot export: no mapping rules defined.");
-            return;
-        }
-
+        if (!sourceFile || !targetFile || mappingRules.length === 0) return;
         setIsProcessing(true);
         setError('');
 
         try {
-            await exportMappedExcel({
-                sourceAllRows: sourceAllData,
-                mappingRules,
-                targetBuffer,
+            // Build the mapping dictionary { targetCol: sourceCol }
+            const mappingDict = {};
+            mappingRules.forEach(rule => {
+                if (rule.sourceCol && rule.targetCol) {
+                    mappingDict[rule.targetCol] = rule.sourceCol;
+                }
+            });
+
+            // Use all data if available, fallback to sampleData
+            const dataToExport = sourceAllData.length > 0 ? sourceAllData : sourceData;
+
+            // Call the 3-Zone export engine
+            const outBuffer = await exportMappedExcel({
+                rawTargetBuffer: targetBuffer,
+                mappingDict,
+                sourceData: dataToExport,
                 headerRowIndex,
                 headerZone,
                 footerZone,
                 footerStartRow,
                 existingDataSlots,
-                fileName: `Mapped_${sourceFile || 'Order'}`
+                colCount
             });
+
+            // Download file
+            const blob = new Blob([outBuffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Mapped_${targetFile}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
         } catch (err) {
-            setError(`Export failed: ${err.message}`);
+            setError(`Error exporting file: ${err.message}`);
         } finally {
             setIsProcessing(false);
         }
     };
 
-    // --- Zone editing ---
-    const handleHeaderZoneChange = useCallback((rowIdx, colIdx, newValue) => {
-        setHeaderZone(prev => prev.map((row, ri) => {
-            if (ri !== rowIdx) return row;
-            return {
-                ...row,
-                cells: row.cells.map((cell, ci) => {
-                    if (ci !== colIdx) return cell;
-                    return { ...cell, value: newValue };
-                })
-            };
-        }));
+    // Callbacks for ZoneEditor cell edits
+    const handleHeaderZoneChange = useCallback((cellAddress, newValue) => {
+        setHeaderZone(prev => prev.map(row => ({
+            ...row,
+            cells: row.cells.map(cell =>
+                cell.address === cellAddress ? { ...cell, value: newValue } : cell
+            )
+        })));
     }, []);
 
-    const handleFooterZoneChange = useCallback((rowIdx, colIdx, newValue) => {
-        setFooterZone(prev => prev.map((row, ri) => {
-            if (ri !== rowIdx) return row;
-            return {
-                ...row,
-                cells: row.cells.map((cell, ci) => {
-                    if (ci !== colIdx) return cell;
-                    return { ...cell, value: newValue };
-                })
-            };
-        }));
+    const handleFooterZoneChange = useCallback((cellAddress, newValue) => {
+        setFooterZone(prev => prev.map(row => ({
+            ...row,
+            cells: row.cells.map(cell =>
+                cell.address === cellAddress ? { ...cell, value: newValue } : cell
+            )
+        })));
     }, []);
 
-    // --- Profile management ---
+    // Save profile including 3-Zone configurations
     const saveProfile = () => {
-        if (mappingRules.length === 0) return;
-        const name = window.prompt("Enter profile name:", currentProfileName === 'New Profile' ? '' : currentProfileName);
+        const name = prompt("Enter Profile Name:", currentProfileName === 'New Profile' ? '' : currentProfileName);
         if (!name) return;
 
-        // Convert buffer to base64 for storage
-        let bufferBase64 = null;
-        if (targetBuffer) {
-            const bytes = new Uint8Array(targetBuffer);
-            let binary = '';
-            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-            bufferBase64 = btoa(binary);
-        }
+        // Strip bulky raw buffers/formulas, save only structural cell overrides
+        const cleanZone = (zone) => zone.map(row => ({
+            rowIdx: row.rowIdx,
+            cells: row.cells.map(c => ({
+                address: c.address,
+                // Ensure value is a clean string/number, never serialize [object Object]
+                value: typeof c.value === 'object' && c.value !== null
+                    ? (c.value.v !== undefined ? c.value.v : '')
+                    : (c.value === '[object Object]' ? '' : c.value)
+            }))
+        }));
 
-        const profileData = {
-            mappingRules,
-            targetHeaders,
-            headerRowIndex,
-            headerZone,
-            footerZone,
-            footerStartRow,
-            existingDataSlots,
-            colCount,
-            targetBuffer: bufferBase64,
-            targetFile: targetFile || name
+        const newProfiles = {
+            ...profiles,
+            [name]: {
+                mappingRules,
+                sourceHeaders,
+                targetHeaders,
+                headerZone: cleanZone(headerZone),
+                footerZone: cleanZone(footerZone),
+                savedAt: new Date().toISOString()
+            }
         };
 
-        const newProfiles = { ...profiles, [name]: profileData };
         setProfiles(newProfiles);
         setCurrentProfileName(name);
         try {
             localStorage.setItem('docstudio_mapping_profiles', JSON.stringify(newProfiles));
         } catch {
-            // If localStorage is full (buffer too large), save without buffer
-            const lite = { ...profileData, targetBuffer: null };
-            const liteProfiles = { ...profiles, [name]: lite };
-            localStorage.setItem('docstudio_mapping_profiles', JSON.stringify(liteProfiles));
-            setError('Profile saved (without template - file too large for storage). Please re-upload template when exporting.');
+            // storage may be full
         }
     };
 
     const loadProfile = (name) => {
         const profile = profiles[name];
         if (!profile) return;
-
-        // Support legacy format (just mapping rules array)
-        if (Array.isArray(profile)) {
-            setMappingRules(profile);
-            setCurrentProfileName(name);
-            return;
-        }
-
-        setMappingRules(profile.mappingRules || []);
         setCurrentProfileName(name);
-
-        // Restore template state if available
-        if (profile.targetHeaders) setTargetHeaders(profile.targetHeaders);
-        if (profile.headerRowIndex !== undefined) setHeaderRowIndex(profile.headerRowIndex);
-        if (profile.headerZone) setHeaderZone(profile.headerZone);
-        if (profile.footerZone) setFooterZone(profile.footerZone);
-        if (profile.footerStartRow) setFooterStartRow(profile.footerStartRow);
-        if (profile.existingDataSlots !== undefined) setExistingDataSlots(profile.existingDataSlots);
-        if (profile.colCount) setColCount(profile.colCount);
-        if (profile.targetFile) setTargetFile(profile.targetFile);
-
-        // Restore buffer from base64
-        if (profile.targetBuffer) {
-            const binary = atob(profile.targetBuffer);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-            setTargetBuffer(bytes.buffer);
-        }
+        setMappingRules(profile.mappingRules || []);
 
         // Sanitize zone data: clean [object Object] from old cached profiles
         const sanitizeZone = (zone) => {
@@ -295,30 +281,34 @@ export default function ExcelMappingView({ t: tProp }) {
     };
 
     const statusColors = {
-        auto: 'bg-green-500', manual: 'bg-amber-500', unmapped: 'bg-red-500'
+        auto: 'bg-secondary',
+        manual: 'bg-tertiary',
+        unmapped: 'bg-error'
     };
     const bgColors = {
-        auto: 'bg-green-100 text-green-800 border-green-200',
-        manual: 'bg-amber-100 text-amber-800 border-amber-500/30',
-        unmapped: 'bg-red-500/10 border-red-500/30 text-red-600 border-dashed'
+        auto: 'bg-secondary-container/20 text-secondary border-secondary/30',
+        manual: 'bg-tertiary-container/20 text-tertiary border-tertiary/30',
+        unmapped: 'bg-error-container/20 border-error/30 text-error border-dashed'
     };
 
     // --- UI RENDER ---
     return (
-        <div className="flex flex-col h-[calc(100vh-8rem)] min-h-[32rem] w-full rounded-2xl border border-slate-800 bg-slate-900/60 font-sans overflow-hidden text-slate-100">
+        <div className="flex flex-col h-[calc(100vh-14rem)] min-h-[38rem] w-full rounded-xl border border-border-subtle/40 bg-surface-container font-body-md overflow-hidden text-on-surface shadow-sm">
 
             {/* 1. TOP BAR */}
-            <header className="h-14 shrink-0 bg-slate-900 border-b border-slate-800 text-slate-100 flex items-center justify-between px-6 z-10">
+            <header className="h-14 shrink-0 bg-surface-container-high border-b border-border-subtle/40 text-on-surface flex items-center justify-between px-6 z-10">
                 <div className="flex items-center gap-3">
-                    <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
-                    <h1 className="font-semibold text-base tracking-tight text-slate-100">{t.tabExcelMapping || 'Excel Order Mapping'}</h1>
+                    <FileSpreadsheet className="w-5 h-5 text-primary-container" />
+                    <h1 className="font-title-sm text-title-sm tracking-tight text-on-surface font-semibold">
+                        {t.tabExcelMapping || 'Excel Order Mapping'}
+                    </h1>
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <div className="text-sm flex items-center gap-2">
-                        <span className="text-indigo-200">Profile:</span>
+                    <div className="text-body-sm flex items-center gap-2">
+                        <span className="text-on-surface-variant">Profile:</span>
                         <select
-                            className="bg-indigo-800/50 border border-indigo-600 rounded px-2 py-1 text-sm outline-none"
+                            className="bg-surface-container-low border border-border-subtle rounded-lg px-2.5 py-1 text-xs outline-none text-on-surface cursor-pointer"
                             value={currentProfileName}
                             onChange={(e) => {
                                 if (e.target.value !== 'New Profile') loadProfile(e.target.value);
@@ -332,9 +322,10 @@ export default function ExcelMappingView({ t: tProp }) {
                         </select>
                     </div>
                     <button
+                        type="button"
                         onClick={handleExport}
                         disabled={!sourceFile || !targetFile || mappingRules.length === 0 || isProcessing}
-                        className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-1.5 rounded font-medium text-sm transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-2 bg-brand-emerald-deep hover:bg-secondary-container text-white px-4 py-1.5 rounded-lg font-title-sm text-title-sm font-semibold transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                         <Download className="w-4 h-4" />
                         {isProcessing ? 'Processing...' : (t.exportXlsx || 'Tải xuống .xlsx')}
@@ -343,7 +334,7 @@ export default function ExcelMappingView({ t: tProp }) {
             </header>
 
             {error && (
-                <div className="bg-red-500/10 text-red-600 p-2 text-center text-sm font-medium border-b border-red-100 flex items-center justify-center gap-2 shrink-0">
+                <div className="bg-error-container/20 text-error p-2 text-center text-body-sm font-medium border-b border-error/30 flex items-center justify-center gap-2 shrink-0">
                     <AlertCircle className="w-4 h-4" /> {error}
                 </div>
             )}
@@ -353,12 +344,12 @@ export default function ExcelMappingView({ t: tProp }) {
 
                 {/* LEFT COLUMN: SOURCE */}
                 <section className="flex-1 flex flex-col p-4 overflow-y-auto">
-                    <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 flex-1 flex flex-col overflow-hidden">
-                        <div className="p-3 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between shrink-0">
-                            <h2 className="font-bold text-slate-200 text-sm">{t.sourceCustomer || 'Nguồn: Đơn hàng Khách'}</h2>
+                    <div className="bg-surface-container-low rounded-xl shadow-sm border border-border-subtle/40 flex-1 flex flex-col overflow-hidden">
+                        <div className="p-3 border-b border-border-subtle/40 bg-surface-container flex items-center justify-between shrink-0">
+                            <h2 className="font-title-sm text-title-sm text-on-surface font-semibold">{t.sourceCustomer || 'Nguồn: Đơn hàng Khách'}</h2>
                             <label className="cursor-pointer">
                                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleFileUpload(e, true)} />
-                                <div className={`px-3 py-1.5 rounded text-xs font-medium border border-dashed transition-colors flex items-center gap-2 ${sourceFile ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'hover:bg-slate-800 border-slate-700 text-slate-300'}`}>
+                                <div className={`px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors flex items-center gap-2 ${sourceFile ? 'bg-primary-container/15 border-primary-container/40 text-brand-cyan-bright font-semibold' : 'hover:bg-surface-subtle border-border-subtle text-on-surface-variant'}`}>
                                     <Upload className="w-3.5 h-3.5" />
                                     {sourceFile ? `${sourceFile} ✓` : 'Upload File'}
                                 </div>
@@ -367,11 +358,11 @@ export default function ExcelMappingView({ t: tProp }) {
 
                         <div className="flex-1 overflow-auto p-3">
                             {sourceHeaders.length > 0 ? (
-                                <table className="w-full text-xs text-left border-collapse">
-                                    <thead className="bg-slate-50/80 sticky top-0 z-10 shadow-sm backdrop-blur">
+                                <table className="w-full text-xs text-left border-collapse font-body-sm">
+                                    <thead className="bg-surface-container-high sticky top-0 z-10 shadow-sm backdrop-blur">
                                         <tr>
                                             {sourceHeaders.map((header, i) => (
-                                                <th key={i} className="py-2 px-2 border-b border-slate-800 font-semibold text-slate-200 whitespace-nowrap">
+                                                <th key={i} className="py-2 px-2 border-b border-border-subtle/40 font-semibold text-on-surface whitespace-nowrap">
                                                     <div className="flex items-center gap-1.5">
                                                         {header}
                                                         <div className={`w-2 h-2 rounded-full ${statusColors[getSourceStatus(header)]}`} />
@@ -380,11 +371,11 @@ export default function ExcelMappingView({ t: tProp }) {
                                             ))}
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-border-subtle/20">
                                         {sourceData.map((row, rowIdx) => (
-                                            <tr key={rowIdx} className="hover:bg-slate-800/60 border-b border-slate-800">
+                                            <tr key={rowIdx} className="hover:bg-surface-container/50 border-b border-border-subtle/20 transition-colors">
                                                 {sourceHeaders.map((header, colIdx) => (
-                                                    <td key={colIdx} className={`py-1.5 px-2 truncate max-w-[130px] border-l-2 ${getSourceStatus(header) === 'auto' ? 'border-green-400' : getSourceStatus(header) === 'manual' ? 'border-amber-400' : 'border-transparent'}`}>
+                                                    <td key={colIdx} className={`py-1.5 px-2 truncate max-w-[130px] border-l-2 ${getSourceStatus(header) === 'auto' ? 'border-secondary' : getSourceStatus(header) === 'manual' ? 'border-tertiary' : 'border-transparent'}`}>
                                                         {row[header] !== undefined ? String(row[header]) : ''}
                                                     </td>
                                                 ))}
@@ -393,7 +384,7 @@ export default function ExcelMappingView({ t: tProp }) {
                                     </tbody>
                                 </table>
                             ) : (
-                                <div className="h-full flex items-center justify-center text-slate-400 text-sm">Upload đơn hàng để xem preview</div>
+                                <div className="h-full flex items-center justify-center text-outline text-body-sm">Upload đơn hàng để xem preview</div>
                             )}
                         </div>
                     </div>
@@ -401,27 +392,28 @@ export default function ExcelMappingView({ t: tProp }) {
 
                 {/* CENTER SMART DIVIDER */}
                 <div className="w-20 shrink-0 flex flex-col items-center justify-center z-10">
-                    <div className="flex-1 w-px bg-slate-700 my-4" />
+                    <div className="flex-1 w-px bg-border-subtle/40 my-4" />
                     <button
+                        type="button"
                         onClick={handleAutoMap}
                         disabled={!sourceFile || !targetFile || isProcessing || isMappingLoading}
-                        className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-full p-3 shadow-lg transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed group"
+                        className="bg-primary-container hover:bg-brand-cyan-bright text-on-primary-container rounded-full p-3 shadow-lg transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed group cursor-pointer"
                         title={t.autoMapBtn || 'AI Auto-Map'}
                     >
                         {isMappingLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 animate-pulse group-hover:animate-none" />}
                     </button>
-                    <div className="text-[10px] font-bold tracking-wider text-indigo-400 mt-2 uppercase">Auto-map</div>
-                    <div className="flex-1 w-px bg-slate-700 my-4" />
+                    <div className="text-[10px] font-bold tracking-wider text-brand-cyan-bright mt-2 uppercase font-mono">Auto-map</div>
+                    <div className="flex-1 w-px bg-border-subtle/40 my-4" />
                 </div>
 
                 {/* RIGHT COLUMN: TARGET with 3-Zone Layout */}
                 <section className="flex-1 flex flex-col p-4 overflow-y-auto">
-                    <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 flex-1 flex flex-col overflow-hidden">
-                        <div className="p-3 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between shrink-0">
-                            <h2 className="font-bold text-slate-200 text-sm">{t.targetSupplier || 'Đích: Mẫu Nhà cung cấp'}</h2>
+                    <div className="bg-surface-container-low rounded-xl shadow-sm border border-border-subtle/40 flex-1 flex flex-col overflow-hidden">
+                        <div className="p-3 border-b border-border-subtle/40 bg-surface-container flex items-center justify-between shrink-0">
+                            <h2 className="font-title-sm text-title-sm text-on-surface font-semibold">{t.targetSupplier || 'Đích: Mẫu Nhà cung cấp'}</h2>
                             <label className="cursor-pointer">
                                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleFileUpload(e, false)} />
-                                <div className={`px-3 py-1.5 rounded text-xs font-medium border border-dashed transition-colors flex items-center gap-2 ${targetFile ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'hover:bg-slate-800 border-slate-700 text-slate-300'}`}>
+                                <div className={`px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors flex items-center gap-2 ${targetFile ? 'bg-primary-container/15 border-primary-container/40 text-brand-cyan-bright font-semibold' : 'hover:bg-surface-subtle border-border-subtle text-on-surface-variant'}`}>
                                     <Upload className="w-3.5 h-3.5" />
                                     {targetFile ? `${targetFile} ✓` : 'Upload Template'}
                                 </div>
@@ -436,31 +428,31 @@ export default function ExcelMappingView({ t: tProp }) {
                                         zone={headerZone}
                                         onCellChange={handleHeaderZoneChange}
                                         title="Thông tin đầu mẫu (Header)"
-                                        icon={<ChevronUp className="w-3 h-3 text-blue-500" />}
+                                        icon={<ChevronUp className="w-3 h-3 text-primary-container" />}
                                     />
 
                                     {/* ZONE 2: Product Data Table */}
-                                    <div className="bg-slate-900 rounded-lg border border-green-200">
-                                        <div className="px-3 py-2 bg-green-50 border-b border-green-200 rounded-t-lg">
-                                            <span className="text-xs font-bold text-green-700 uppercase tracking-wider">
+                                    <div className="bg-surface-container-high rounded-lg border border-secondary/30 overflow-hidden">
+                                        <div className="px-3 py-2 bg-secondary-container/15 border-b border-secondary/30 rounded-t-lg">
+                                            <span className="text-xs font-bold text-secondary uppercase tracking-wider font-mono">
                                                 📦 Bảng sản phẩm ({sourceData.length} sản phẩm)
                                             </span>
                                         </div>
-                                        <table className="w-full text-xs text-left border-collapse">
-                                            <thead className="bg-slate-900/60">
+                                        <table className="w-full text-xs text-left border-collapse font-body-sm">
+                                            <thead className="bg-surface-container-low/80">
                                                 <tr>
-                                                    <th className="py-1.5 px-2 border-b border-slate-800 font-semibold text-slate-400 whitespace-nowrap text-center w-12">Row</th>
+                                                    <th className="py-1.5 px-2 border-b border-border-subtle/40 font-semibold text-outline whitespace-nowrap text-center w-12">Row</th>
                                                     {targetHeaders.map((header, i) => (
-                                                        <th key={i} className="py-1.5 px-2 border-b border-slate-800 font-semibold text-slate-200 whitespace-nowrap">
+                                                        <th key={i} className="py-1.5 px-2 border-b border-border-subtle/40 font-semibold text-on-surface whitespace-nowrap">
                                                             {header}
                                                         </th>
                                                     ))}
                                                 </tr>
                                             </thead>
-                                            <tbody>
+                                            <tbody className="divide-y divide-border-subtle/20">
                                                 {sourceData.length > 0 ? sourceData.map((_, rowIdx) => (
-                                                    <tr key={rowIdx} className="border-b border-slate-800">
-                                                        <td className="py-1 px-2 text-center text-[10px] font-mono text-slate-400 bg-slate-900/60 border-r border-slate-800">
+                                                    <tr key={rowIdx} className="border-b border-border-subtle/20">
+                                                        <td className="py-1 px-2 text-center text-[10px] font-mono text-outline bg-surface-container border-r border-border-subtle/30">
                                                             {headerRowIndex !== null ? headerRowIndex + 2 + rowIdx : rowIdx + 1}
                                                         </td>
                                                         {targetHeaders.map((header, colIdx) => {
@@ -468,7 +460,7 @@ export default function ExcelMappingView({ t: tProp }) {
                                                             const isMapped = val !== '';
                                                             return (
                                                                 <td key={colIdx} className="py-1 px-2 truncate max-w-[120px]">
-                                                                    <div className={`px-1.5 py-0.5 rounded text-xs min-h-[22px] ${isMapped ? 'bg-green-50 text-green-900 border border-green-100' : 'bg-slate-900/60 text-slate-400 border border-dashed border-slate-800'}`}>
+                                                                    <div className={`px-1.5 py-0.5 rounded text-xs min-h-[22px] ${isMapped ? 'bg-secondary-container/20 text-secondary border border-secondary/30' : 'bg-surface-container text-outline border border-dashed border-border-subtle/40'}`}>
                                                                         {val || '—'}
                                                                     </div>
                                                                 </td>
@@ -477,7 +469,7 @@ export default function ExcelMappingView({ t: tProp }) {
                                                     </tr>
                                                 )) : (
                                                     <tr>
-                                                        <td colSpan={targetHeaders.length} className="py-3 text-center text-slate-400 italic text-xs">
+                                                        <td colSpan={targetHeaders.length} className="py-3 text-center text-outline italic text-xs">
                                                             Upload đơn khách để xem sản phẩm
                                                         </td>
                                                     </tr>
@@ -491,11 +483,11 @@ export default function ExcelMappingView({ t: tProp }) {
                                         zone={footerZone}
                                         onCellChange={handleFooterZoneChange}
                                         title="Thông tin cuối mẫu (Footer)"
-                                        icon={<ChevronDown className="w-3 h-3 text-orange-500" />}
+                                        icon={<ChevronDown className="w-3 h-3 text-tertiary" />}
                                     />
                                 </div>
                             ) : (
-                                <div className="h-full flex items-center justify-center text-slate-400 text-sm">Upload mẫu NCC để xem 3 vùng</div>
+                                <div className="h-full flex items-center justify-center text-outline text-body-sm">Upload mẫu NCC để xem 3 vùng</div>
                             )}
                         </div>
                     </div>
@@ -504,24 +496,33 @@ export default function ExcelMappingView({ t: tProp }) {
             </main>
 
             {/* 3. BOTTOM PANEL: MAPPING RULES */}
-            <footer className={`bg-slate-900/80 backdrop-blur border-t border-slate-800 transition-all duration-300 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-20 ${showBottomPanel ? 'h-44' : 'h-11'}`}>
+            <footer className={`bg-surface-container-high/90 backdrop-blur border-t border-border-subtle/40 transition-all duration-300 shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] z-20 ${showBottomPanel ? 'h-44' : 'h-11'}`}>
 
-                <div className="h-11 px-6 flex items-center justify-between border-b border-slate-800">
+                <div className="h-11 px-6 flex items-center justify-between border-b border-border-subtle/30">
                     <button
+                        type="button"
                         onClick={() => setShowBottomPanel(!showBottomPanel)}
-                        className="flex items-center gap-2 font-bold text-slate-200 hover:text-indigo-600 focus:outline-none text-sm"
+                        className="flex items-center gap-2 font-bold text-on-surface hover:text-primary focus:outline-none text-body-sm cursor-pointer"
                     >
-                        {t.fieldMappingRules || 'Quy tắc khớp trường (Rules)'}
-                        <div className="bg-slate-800 p-1 rounded-full text-slate-400">
+                        <span>{t.fieldMappingRules || 'Quy tắc khớp trường (Rules)'}</span>
+                        <div className="bg-surface-subtle p-1 rounded-full text-on-surface-variant">
                             {showBottomPanel ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
                         </div>
                     </button>
 
                     <div className="flex gap-3">
-                        <button onClick={addEmptyRule} className="text-xs font-medium text-slate-300 hover:text-indigo-600 flex items-center gap-1 border border-slate-800 bg-slate-900 px-3 py-1 rounded shadow-sm hover:border-indigo-200">
+                        <button
+                            type="button"
+                            onClick={addEmptyRule}
+                            className="text-xs font-medium text-on-surface hover:text-primary flex items-center gap-1 border border-border-subtle bg-surface-container px-3 py-1 rounded-lg shadow-sm hover:border-primary-container cursor-pointer transition"
+                        >
                             <Plus size={12} /> {t.addRule || '+ Thêm Rule'}
                         </button>
-                        <button onClick={saveProfile} className="text-xs font-medium text-white hover:bg-slate-700 flex items-center gap-1 border border-slate-800 bg-slate-800 px-3 py-1 rounded shadow-sm">
+                        <button
+                            type="button"
+                            onClick={saveProfile}
+                            className="text-xs font-medium text-on-surface hover:bg-surface-container-high flex items-center gap-1 border border-border-subtle bg-surface-subtle px-3 py-1 rounded-lg shadow-sm cursor-pointer transition"
+                        >
                             <Save size={12} /> {t.saveProfile || 'Lưu Profile'}
                         </button>
                     </div>
@@ -530,19 +531,19 @@ export default function ExcelMappingView({ t: tProp }) {
                 {showBottomPanel && (
                     <div className="p-3 h-[132px] overflow-y-auto">
                         {mappingRules.length === 0 ? (
-                            <div className="h-full flex items-center justify-center text-slate-400 text-xs">Chưa có quy tắc. Bấm "Auto-Map" hoặc "+ Thêm Rule".</div>
+                            <div className="h-full flex items-center justify-center text-outline text-xs">Chưa có quy tắc. Bấm &quot;Auto-Map&quot; hoặc &quot;+ Thêm Rule&quot;.</div>
                         ) : (
                             <div className="flex flex-wrap gap-2 items-start">
                                 {mappingRules.map((rule, idx) => (
-                                    <div key={idx} className={`group flex items-center gap-2 px-2.5 py-1.5 rounded-lg border shadow-sm transition-all focus-within:ring-2 focus-within:ring-indigo-200 ${bgColors[rule.type] || bgColors.manual}`}>
+                                    <div key={idx} className={`group flex items-center gap-2 px-2.5 py-1.5 rounded-lg border shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary-container/40 ${bgColors[rule.type] || bgColors.manual}`}>
 
                                         <select
                                             className="bg-transparent border-none outline-none text-xs font-medium appearance-none cursor-pointer text-inherit max-w-[110px] truncate"
                                             value={rule.sourceCol}
                                             onChange={(e) => updateRule(idx, 'sourceCol', e.target.value)}
                                         >
-                                            <option value="">-- Source --</option>
-                                            {sourceHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                                            <option value="" className="bg-surface-container text-on-surface">-- Source --</option>
+                                            {sourceHeaders.map(h => <option key={h} value={h} className="bg-surface-container text-on-surface">{h}</option>)}
                                         </select>
 
                                         <span className="text-inherit opacity-60 text-xs">→</span>
@@ -552,13 +553,14 @@ export default function ExcelMappingView({ t: tProp }) {
                                             value={rule.targetCol}
                                             onChange={(e) => updateRule(idx, 'targetCol', e.target.value)}
                                         >
-                                            <option value="">-- Target --</option>
-                                            {targetHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                                            <option value="" className="bg-surface-container text-on-surface">-- Target --</option>
+                                            {targetHeaders.map(h => <option key={h} value={h} className="bg-surface-container text-on-surface">{h}</option>)}
                                         </select>
 
                                         <button
+                                            type="button"
                                             onClick={() => removeRule(idx)}
-                                            className="opacity-0 group-hover:opacity-100 ml-1 text-red-400 hover:text-red-700 hover:bg-white rounded p-0.5 transition-all"
+                                            className="opacity-0 group-hover:opacity-100 ml-1 text-error hover:bg-surface-container rounded p-0.5 transition-all cursor-pointer"
                                         >
                                             <Trash2 size={11} />
                                         </button>

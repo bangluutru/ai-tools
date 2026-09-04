@@ -1,48 +1,85 @@
 import React, { useState } from 'react';
-import { Sparkles, Search, Globe, Settings2 } from 'lucide-react';
+import { Sparkles, Search, Globe, Settings2, Code2, User } from 'lucide-react';
 
-export default function Navbar({ displayLang, onLangChange, onOpenSearch, onOpenSettings }) {
+export default function Navbar({
+  displayLang,
+  onLangChange,
+  onOpenSearch,
+  onOpenSettings,
+  activeCategory,
+  onSelectCategory,
+  categoryIds,
+}) {
   const [langDropdown, setLangDropdown] = useState(false);
 
+  const categoryLabels = {
+    all: { vi: 'Tất cả', en: 'All', ja: 'すべて' },
+    pdf: { vi: 'Công cụ PDF', en: 'PDF Tools', ja: 'PDF ツール' },
+    image: { vi: 'Hình ảnh & WebP', en: 'Image & WebP', ja: '画像＆WebP' },
+    office: { vi: 'Excel & Hóa đơn', en: 'Excel & Invoices', ja: 'Excel・請求書' },
+    utils: { vi: 'Tiện ích', en: 'Utilities', ja: '便利ツール' },
+    ai: { vi: 'Dịch thuật & AI', en: 'AI & Translation', ja: 'AI・翻訳' },
+    'in-development': { vi: 'Đang phát triển', en: 'In development', ja: '開発中' },
+  };
+
   return (
-    <header className="no-print bg-slate-900/90 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-50 shadow-lg shadow-black/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <header className="no-print bg-surface-canvas/90 backdrop-blur-xl border-b border-border-subtle sticky top-0 z-50 shadow-sm">
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand Logo */}
-        <div className="flex items-center gap-3 cursor-pointer select-none">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25">
-            <Sparkles size={22} className="animate-pulse" />
+        <div
+          onClick={() => {
+            if (onSelectCategory) onSelectCategory('all');
+          }}
+          className="flex items-center gap-3 cursor-pointer select-none shrink-0"
+        >
+          <div className="w-8 h-8 rounded-lg bg-surface-container border border-border-subtle flex items-center justify-center text-primary-container shadow-sm">
+            <Sparkles size={18} className="text-primary-container" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-black text-xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                AI-Tools
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-black text-emerald-400 uppercase tracking-wider">
-                HUB
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">Miniapp Hub · minh bạch nơi xử lý dữ liệu</p>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-lg tracking-tight text-on-surface">
+              AI-Tools
+            </span>
+            <span className="px-2 py-[2px] bg-primary-container text-on-primary-container font-mono text-[10px] font-bold rounded">
+              HUB
+            </span>
           </div>
         </div>
 
         {/* Center Search Bar Trigger */}
-        <button
-          onClick={onOpenSearch}
-          className="hidden md:flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-800/70 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60 text-xs font-medium w-72 lg:w-96 transition-all group shadow-inner"
-        >
-          <Search size={15} className="group-hover:text-emerald-400 transition-colors" />
-          <span className="flex-1 text-left">Tìm nhanh công cụ (PDF, Ảnh, Excel...)...</span>
-          <kbd className="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-400">
-            ⌘K
-          </kbd>
-        </button>
+        <div className="hidden md:flex items-center flex-1 max-w-sm mx-4">
+          <button
+            type="button"
+            onClick={onOpenSearch}
+            className="w-full flex items-center px-3 py-1.5 bg-surface-subtle border border-border-subtle hover:border-primary-container text-on-surface-variant rounded-lg gap-2 cursor-pointer transition-colors shadow-inner text-left"
+          >
+            <Search size={16} className="text-outline shrink-0" />
+            <span className="flex-1 text-xs text-outline font-normal truncate">
+              {displayLang === 'vi'
+                ? 'Tìm kiếm công cụ nhanh...'
+                : displayLang === 'en'
+                ? 'Quick search tools...'
+                : 'ツールを検索...'}
+            </span>
+            <kbd className="px-1.5 py-[2px] bg-surface-container border border-border-subtle text-on-surface-variant font-mono text-[10px] rounded shrink-0">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Offline/Client Processing Trust Indicator */}
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-surface-container border border-border-subtle rounded-full">
+            <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
+            <span className="font-mono text-[11px] font-semibold text-secondary">
+              Xử lý Offline/Client
+            </span>
+          </div>
+
           {/* Mobile Search Button */}
           <button
             onClick={onOpenSearch}
-            className="md:hidden p-2.5 rounded-xl bg-slate-800/70 text-slate-300 border border-slate-700/60 hover:text-white"
+            className="md:hidden p-2 rounded-lg bg-surface-subtle border border-border-subtle text-on-surface-variant hover:text-on-surface"
             aria-label="Search"
           >
             <Search size={18} />
@@ -52,31 +89,31 @@ export default function Navbar({ displayLang, onLangChange, onOpenSearch, onOpen
           <div className="relative">
             <button
               onClick={() => setLangDropdown(!langDropdown)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/70 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 text-xs font-bold transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-surface-subtle hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface rounded-lg font-mono text-xs font-semibold transition-colors"
             >
-              <Globe size={15} className="text-emerald-400" />
-              <span>{displayLang === 'vi' ? 'VI' : displayLang === 'en' ? 'EN' : 'JA'}</span>
+              <Globe size={14} className="text-brand-cyan-bright" />
+              <span>{displayLang.toUpperCase()}</span>
             </button>
 
             {langDropdown && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setLangDropdown(false)} />
-                <div className="absolute right-0 mt-2 w-36 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 p-1.5 overflow-hidden animate-in fade-in zoom-in-95">
+                <div className="absolute right-0 mt-2 w-36 bg-surface-container border border-border-subtle rounded-xl shadow-xl z-50 p-1.5 overflow-hidden">
                   <button
                     onClick={() => { onLangChange('vi'); setLangDropdown(false); }}
-                    className={`w-full text-left px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${displayLang === 'vi' ? 'bg-emerald-600/20 text-emerald-400 font-bold' : 'text-slate-300 hover:bg-slate-800'}`}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${displayLang === 'vi' ? 'bg-primary-container/20 text-primary font-bold' : 'text-on-surface-variant hover:bg-surface-subtle'}`}
                   >
                     Tiếng Việt
                   </button>
                   <button
                     onClick={() => { onLangChange('en'); setLangDropdown(false); }}
-                    className={`w-full text-left px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${displayLang === 'en' ? 'bg-emerald-600/20 text-emerald-400 font-bold' : 'text-slate-300 hover:bg-slate-800'}`}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${displayLang === 'en' ? 'bg-primary-container/20 text-primary font-bold' : 'text-on-surface-variant hover:bg-surface-subtle'}`}
                   >
                     English
                   </button>
                   <button
                     onClick={() => { onLangChange('ja'); setLangDropdown(false); }}
-                    className={`w-full text-left px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${displayLang === 'ja' ? 'bg-emerald-600/20 text-emerald-400 font-bold' : 'text-slate-300 hover:bg-slate-800'}`}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${displayLang === 'ja' ? 'bg-primary-container/20 text-primary font-bold' : 'text-on-surface-variant hover:bg-surface-subtle'}`}
                   >
                     日本語
                   </button>
@@ -85,17 +122,65 @@ export default function Navbar({ displayLang, onLangChange, onOpenSearch, onOpen
             )}
           </div>
 
+          {/* Source Code Link */}
+          <a
+            href="https://github.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center rounded"
+            title="Mã nguồn"
+            aria-label="Mã nguồn"
+          >
+            <Code2 size={18} />
+          </a>
+
+          {/* Settings Button */}
           <button
             onClick={onOpenSettings}
-            className="p-2.5 rounded-xl bg-slate-800/70 hover:bg-slate-800 text-slate-300 hover:text-emerald-400 border border-slate-700/60 transition-all"
+            className="p-2 rounded-lg bg-surface-subtle hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center"
             title="Cài đặt miniapp"
             aria-label="Cài đặt miniapp"
           >
-            <Settings2 size={17} />
+            <Settings2 size={16} />
           </button>
 
+          {/* User Profile Avatar */}
+          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary shrink-0 shadow-sm">
+            <User size={16} />
+          </div>
         </div>
       </div>
+
+      {/* Secondary Category Navigation Sub-bar */}
+      {onSelectCategory && (
+        <div className="bg-surface-dim border-t border-border-subtle/30 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+          <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
+            <nav className="flex items-center gap-6 overflow-x-auto py-1 scrollbar-none">
+              {['all', 'pdf', 'image', 'office', 'utils']
+                .filter((catId) => !categoryIds || (categoryIds.has ? categoryIds.has(catId) : categoryIds.includes(catId)))
+                .map((catId) => {
+                  const isActive = activeCategory === catId;
+                  const label = categoryLabels[catId]?.[displayLang] || catId;
+                  return (
+                    <button
+                      key={catId}
+                      type="button"
+                      onClick={() => onSelectCategory(catId)}
+                      className={`py-2 text-xs sm:text-sm whitespace-nowrap transition-colors border-b-2 font-medium ${
+                        isActive
+                          ? 'border-primary-container text-primary font-semibold'
+                          : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+            </nav>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
+

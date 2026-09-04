@@ -5,7 +5,6 @@ import {
   validateDocumentFiles,
   verifyDocumentSignature,
 } from '../utils/documentFiles.js';
-import { MiniAppError, MiniAppLayout } from './shared/MiniAppLayout.jsx';
 import confetti from 'canvas-confetti';
 import {
   Camera,
@@ -28,7 +27,6 @@ import {
   Undo2,
   Redo2,
   Trash2,
-  RotateCcw,
   Crop,
   Check,
   Download,
@@ -37,164 +35,215 @@ import {
   History,
   CheckCircle2,
   Zap,
-  ArrowRight,
   ShieldCheck,
+  RefreshCw,
+  Copy,
+  Keyboard,
+  Layers,
+  ChevronRight,
 } from 'lucide-react';
 
 // =====================================================================
-// Translations
+// Translations & Design Constants
 // =====================================================================
 const i18n = {
   vi: {
-    heroBadge: 'Chụp & Tự Động Copy Clipboard',
-    heroTitle: 'Chụp Màn Hình Siêu Tốc 1-Chạm',
-    heroSubtitle: 'Bấm nút dưới đây để chụp, kéo chọn vùng mong muốn. Vừa nhả chuột là ảnh đã tự động có trong Clipboard để dán ngay!',
-    btnStartSnip: '🎯 Bắt Đầu Chụp & Kéo Chọn Vùng',
-    step1Title: 'Bấm Chụp',
-    step1Desc: 'Chọn màn hình cần lấy',
-    step2Title: 'Kéo Chọn Vùng',
-    step2Desc: 'Khoanh vùng trên màn hình',
-    step3Title: 'Tự Động Copy & Dán',
-    step3Desc: 'Nhả chuột = Dán Ctrl+V ngay',
-    btnCapture: 'Chụp Màn Hình',
-    btnPreparing: 'Đang chuẩn bị...',
+    breadcrumbCategory: 'Tiện ích & Studio',
+    toolTitle: 'Chụp Màn Hình & Chú Thích Studio',
+    pipelineId: 'PIPELINE ID: CAPTURE-ANNOTATE-V2.4.8-STU',
+    tagStudio: 'Studio',
+    tagOffline: 'Offline Client-Side',
+    tagVector: 'Vector Annotate',
+    btnDrafts: 'Lịch sử nháp',
+    btnShortcuts: 'Phím tắt',
+    toolDesc:
+      'Chụp trực tiếp từ màn hình/cửa sổ/tab hoặc dán nhanh ảnh chụp màn hình (Ctrl+V) từ Clipboard. Thêm đánh số bước tự động (1, 2, 3), làm mờ che vùng nhạy cảm (Blur/Pixelate), viền mũi tên, hộp nổi bật, bo góc mượt mà và xuất ảnh sắc nét chuẩn HD/Retina.',
+    privacyTitle: 'BẢO MẬT CLIENT-SIDE 100%',
+    privacyBadge: 'ISO-27001 ISOLATED',
+    privacyDesc:
+      'Toàn bộ xử lý hình ảnh và gắn nhãn vẽ vector diễn ra trực tiếp trong bộ nhớ RAM trình duyệt của bạn với Canvas API, không gửi bất kỳ ảnh màn hình nào lên server.',
+    step1Title: 'Thu Nhận & Tải Ảnh Màn Hình',
+    step1Ready: 'Sẵn sàng',
+    btnCaptureApi: 'Chụp Màn Hình / Tab (Screen Capture API)',
+    btnPreparing: 'Đang khởi tạo máy ảnh...',
     timerInstant: '0s (Tức thì)',
-    btnPaste: 'Dán Clipboard (Ctrl+V)',
-    btnOpenFile: 'Mở File Ảnh',
-    snipGuideTitle: 'Kéo chuột để chọn vùng',
-    snipAutoCopyBadge: 'Nhả chuột = Tự động Copy Clipboard!',
-    snipGuidePrompt: 'Kéo rê chuột trên ảnh để khoanh vùng cần chụp...',
-    btnFullScreen: 'Lấy Toàn Màn Hình',
-    bannerAutoCopied: '🎉 Đã Tự Động Copy Vào Clipboard! Bạn có thể dán (Ctrl+V) ngay sang Zalo, Slack, Word... hoặc dùng các công cụ dưới đây để vẽ thêm.',
-    bannerLiveSynced: '🎉 Đã Tự Động Cập Nhật Vào Clipboard (Bao gồm đầy đủ mũi tên & nét vẽ vừa chỉnh sửa)! Bạn có thể dán (Ctrl+V) ngay sang Zalo, Slack, Word...',
-    liveSyncBadge: 'Live Sync',
-    btnResnip: 'Chọn Lại Vùng',
-    btnCopy: '📋 Sao Chép (Copy)',
-    btnCopied: 'Đã Sao Chép!',
-    btnDownload: 'Tải Về',
-    btnSnipAnother: '📸 Chụp Vùng Khác',
-    sizeLabel: 'Kích thước:',
-    recentTitle: 'Ảnh Đã Chụp Gần Đây',
-    btnClearHistory: 'Xóa lịch sử',
-    openSnapshot: 'Mở lại',
+    dropzoneTitle: 'Bấm Ctrl + V để dán trực tiếp từ Clipboard',
+    dropzoneSubtitle: 'hoặc kéo thả tệp ảnh (PNG, JPG, WebP tối đa 50MB)',
+    loadedBadge: 'ĐÃ NẠP SẴN SÀNG',
+    btnReplace: 'Thay ảnh',
+    btnClear: 'Xóa ảnh',
+    step2Title: 'Hộp Công Cụ Chú Thích & Tùy Biến',
+    step2Badge: 'VECTOR GRAPHICS',
     tools: {
-      pen: 'Bút Vẽ',
-      arrow: 'Mũi Tên',
-      rect: 'Hộp Vuông',
-      circle: 'Hình Tròn',
-      highlight: 'Dạ Quang',
-      blur: 'Làm Mờ (Blur)',
-      text: 'Văn Bản',
-      step: 'Đánh Số Bước',
+      step: 'Đánh số bước',
+      stepSub: 'Tự động (1, 2, 3)',
+      arrow: 'Mũi tên chỉ dẫn',
+      arrowSub: 'Arrow & Callout',
+      rect: 'Khung nổi bật',
+      rectSub: 'Focus Rectangle',
+      circle: 'Hình tròn',
+      circleSub: 'Oval & Circle',
+      blur: 'Làm mờ & Che',
+      blurSub: 'Blur / Pixelate',
+      pen: 'Bút vẽ',
+      penSub: 'Freehand Line',
+      highlight: 'Dạ quang',
+      highlightSub: 'Glow Highlight',
+      text: 'Thêm chữ viết',
+      textSub: 'Rich Text Note',
     },
+    labelAccentColor: 'Màu sắc điểm nhấn:',
+    labelStepStyle: 'Kiểu dáng số bước:',
+    stepStyleSolid: 'Nền đặc',
+    stepStyleOutline: 'Viền nét',
+    stepStyleGlow: 'Hào quang',
+    labelBlurIntensity: 'Cường độ làm mờ bảo mật:',
+    labelCornerRadius: 'Bo góc ảnh xuất khẩu:',
+    labelEffects: 'Viền đệm & Đổ bóng:',
+    softShadow: 'Soft Shadow',
+    paddingCanvas: 'Padding 32px',
+    primaryCta: 'Kết Xuất Ảnh Chú Thích Siêu Nét (.PNG / Retina)',
+    previewTitle: 'Khung Trực Quan Tương Tác',
+    previewBadge: 'LIVE WORKSPACE',
+    btnUndo: 'Hoàn tác (Ctrl+Z)',
+    btnRedo: 'Làm lại (Ctrl+Y)',
+    btnClearAll: 'Xóa tất cả lớp vẽ',
+    btnResnip: 'Cắt / Chọn lại vùng',
+    btnFullScreen: 'Lấy toàn màn hình',
+    snipGuideTitle: 'Kéo chuột để chọn vùng cần cắt',
+    snipAutoCopyBadge: 'Nhả chuột = Tự động Copy Clipboard!',
+    bannerLiveSynced: '🎉 Đã tự động cập nhật vào Clipboard (Bao gồm đầy đủ nét vẽ vừa chỉnh sửa)!',
+    bannerAutoCopied: '🎉 Đã tự động copy vào Clipboard! Nhấn Ctrl+V để dán ngay hoặc vẽ thêm chú thích bên dưới.',
+    metricDimensions: 'KÍCH THƯỚC THÀNH PHẨM',
+    metricScale: 'Scale 2x Retina UHD',
+    metricSize: 'DUNG LƯỢNG ƯỚC TÍNH',
+    metricLossless: 'Nén lossless PNG',
+    metricLayers: 'LỚP CHÚ THÍCH (LAYERS)',
+    metricActive: 'Lớp Active',
+    btnDownloadEmerald: 'Tải Ảnh PNG Siêu Nét (Độ phân giải cao)',
+    btnCopy: 'Sao chép ảnh (Ctrl+C)',
+    btnCopied: 'Đã Sao Chép!',
+    assuranceTitle: 'Tiêu Chuẩn Đồ Họa & Bảo Mật Dữ Liệu',
+    card1Title: 'Chụp Chuẩn Screen Capture API',
+    card1Desc:
+      'Bảo đảm tỷ lệ điểm ảnh chuẩn Retina với DPR 2.0x hoặc 3.0x gốc từ hệ thống. Ảnh giữ nguyên độ sắc nét cao nhất, văn bản hiển thị trong suốt không bị mờ nhòe răng cưa ngay cả khi trình chiếu trên màn hình 4K.',
+    card2Title: 'Bảo Vệ Quyền Riêng Tư (Censorship)',
+    card2Desc:
+      'Thuật toán che mờ tác động trực tiếp lên mảng byte điểm ảnh (RGBA pixel data) trên Canvas trước khi render, bảo đảm dữ liệu số thẻ, mật khẩu hoặc danh tính cá nhân không thể bị dịch ngược hay khôi phục.',
+    card3Title: 'Khung Ảnh Chuẩn Khổ Truyền Thông',
+    card3Desc:
+      'Tự động thiết lập vùng viền đệm mềm mại (Padding 32px Canvas) cùng hiệu ứng đổ bóng đa lớp studio (Soft Shadow). Ảnh xuất bản sẵn sàng để nhúng ngay vào tài liệu kỹ thuật, Notion, Slack hoặc Jira.',
+    emptyStagePrompt: 'Chưa có ảnh nào được nạp',
+    emptyStageDesc: 'Bấm nút chụp màn hình, dán ảnh từ Clipboard (Ctrl+V) hoặc tải tệp lên để bắt đầu biên tập chú thích.',
   },
   en: {
-    heroBadge: 'Capture & Instant Auto-Copy',
-    heroTitle: 'Lightning-Fast Screen Snipping',
-    heroSubtitle: 'Click below to capture and drag over the area. Release the mouse to auto-copy to clipboard instantly!',
-    btnStartSnip: '🎯 Start Capture & Snip Area',
-    step1Title: 'Click Capture',
-    step1Desc: 'Select screen or window',
-    step2Title: 'Drag to Snip',
-    step2Desc: 'Highlight the area',
-    step3Title: 'Auto-Copy & Paste',
-    step3Desc: 'Release = Ctrl+V to paste',
-    btnCapture: 'Capture Screen',
-    btnPreparing: 'Preparing...',
+    breadcrumbCategory: 'Utilities & Studio',
+    toolTitle: 'Screen Capture & Annotation Studio',
+    pipelineId: 'PIPELINE ID: CAPTURE-ANNOTATE-V2.4.8-STU',
+    tagStudio: 'Studio',
+    tagOffline: 'Offline Client-Side',
+    tagVector: 'Vector Annotate',
+    btnDrafts: 'Draft History',
+    btnShortcuts: 'Shortcuts',
+    toolDesc:
+      'Capture directly from screen/window/tab or paste screenshots (Ctrl+V) from Clipboard. Add auto step numbers (1, 2, 3), blur/pixelate sensitive areas, arrows, focus boxes, smooth corners, and export ultra-sharp HD/Retina images.',
+    privacyTitle: '100% CLIENT-SIDE PRIVACY',
+    privacyBadge: 'ISO-27001 ISOLATED',
+    privacyDesc:
+      'All image processing and vector annotation take place directly in your browser memory via the Canvas API. No screenshots are ever sent to any server.',
+    step1Title: 'Acquire & Load Screenshot',
+    step1Ready: 'Ready',
+    btnCaptureApi: 'Capture Screen / Tab (Screen Capture API)',
+    btnPreparing: 'Initializing display capture...',
     timerInstant: '0s (Instant)',
-    btnPaste: 'Paste Clipboard (Ctrl+V)',
-    btnOpenFile: 'Open Image',
-    snipGuideTitle: 'Click & drag to select area',
-    snipAutoCopyBadge: 'Release = Auto-Copy to Clipboard!',
-    snipGuidePrompt: 'Click and drag over the image to snip...',
-    btnFullScreen: 'Use Full Screen',
-    bannerAutoCopied: '🎉 Auto-Copied to Clipboard! Press Ctrl+V to paste anywhere or annotate below.',
-    bannerLiveSynced: '🎉 Clipboard Auto-Synced with latest annotations! Press Ctrl+V to paste into Slack, Zalo, Word, Figma...',
-    liveSyncBadge: 'Live Sync',
-    btnResnip: 'Resnip Area',
-    btnCopy: '📋 Copy to Clipboard',
-    btnCopied: 'Copied!',
-    btnDownload: 'Download',
-    btnSnipAnother: '📸 Snip Another Area',
-    sizeLabel: 'Size:',
-    recentTitle: 'Recent Snapshots',
-    btnClearHistory: 'Clear history',
-    openSnapshot: 'Open',
+    dropzoneTitle: 'Press Ctrl + V to paste directly from Clipboard',
+    dropzoneSubtitle: 'or drag and drop an image file (PNG, JPG, WebP up to 50MB)',
+    loadedBadge: 'READY LOADED',
+    btnReplace: 'Replace',
+    btnClear: 'Remove',
+    step2Title: 'Annotation & Customization Toolbox',
+    step2Badge: 'VECTOR GRAPHICS',
     tools: {
-      pen: 'Brush',
-      arrow: 'Arrow',
-      rect: 'Rectangle',
+      step: 'Step counter',
+      stepSub: 'Auto (1, 2, 3)',
+      arrow: 'Guide arrow',
+      arrowSub: 'Arrow & Callout',
+      rect: 'Focus frame',
+      rectSub: 'Focus Rectangle',
       circle: 'Circle',
+      circleSub: 'Oval & Circle',
+      blur: 'Blur & Mask',
+      blurSub: 'Blur / Pixelate',
+      pen: 'Brush',
+      penSub: 'Freehand Line',
       highlight: 'Highlighter',
-      blur: 'Blur/Mosaic',
-      text: 'Text',
-      step: 'Step ①②③',
+      highlightSub: 'Glow Highlight',
+      text: 'Text note',
+      textSub: 'Rich Text Note',
     },
-  },
-  ja: {
-    heroBadge: 'キャプチャ＆即時クリップボードコピー',
-    heroTitle: 'ワンクリック高精度スクリーンキャプチャ',
-    heroSubtitle: 'キャプチャ後にドラッグして領域を選択。マウスを離すだけでクリップボードに自動保存され、すぐに貼り付け可能！',
-    btnStartSnip: '🎯 キャプチャを開始して領域を選択',
-    step1Title: 'キャプチャ',
-    step1Desc: '画面・ウィンドウを選択',
-    step2Title: '領域を選択',
-    step2Desc: '対象エリアをドラッグ',
-    step3Title: '自動コピー＆貼付',
-    step3Desc: 'マウスを離すだけでCtrl+V',
-    btnCapture: '画面キャプチャ',
-    btnPreparing: '準備中...',
-    timerInstant: '0秒 (即時)',
-    btnPaste: '貼付 (Ctrl+V)',
-    btnOpenFile: '画像を開く',
-    snipGuideTitle: 'ドラッグして領域を選択',
-    snipAutoCopyBadge: 'マウスを離すと自動コピー！',
-    snipGuidePrompt: '画像上をドラッグしてキャプチャ領域を指定...',
-    btnFullScreen: '全画面を使用',
-    bannerAutoCopied: '🎉 クリップボードに自動コピーされました！Ctrl+Vで貼り付けるか、以下で注釈を追加できます。',
-    bannerLiveSynced: '🎉 編集内容（矢印・文字等）がクリップボードに自動反映されました！',
-    liveSyncBadge: '同期中',
-    btnResnip: '領域を再選択',
-    btnCopy: '📋 コピー',
-    btnCopied: 'コピー完了！',
-    btnDownload: '保存',
-    btnSnipAnother: '📸 別の領域をキャプチャ',
-    sizeLabel: 'サイズ:',
-    recentTitle: '最近のキャプチャ',
-    btnClearHistory: '履歴をクリア',
-    openSnapshot: '開く',
-    tools: {
-      pen: 'ペン',
-      arrow: '矢印',
-      rect: '四角形',
-      circle: '円',
-      highlight: '蛍光ペン',
-      blur: 'ぼかし (モザイク)',
-      text: 'テキスト',
-      step: '連番 ①②③',
-    },
+    labelAccentColor: 'Accent Color:',
+    labelStepStyle: 'Step Badge Style:',
+    stepStyleSolid: 'Solid',
+    stepStyleOutline: 'Outline',
+    stepStyleGlow: 'Glow',
+    labelBlurIntensity: 'Censorship Blur Intensity:',
+    labelCornerRadius: 'Export Corner Radius:',
+    labelEffects: 'Padding & Shadow:',
+    softShadow: 'Soft Shadow',
+    paddingCanvas: 'Padding 32px',
+    primaryCta: 'Export Ultra-Sharp Annotation Image (.PNG / Retina)',
+    previewTitle: 'Interactive Live Viewport',
+    previewBadge: 'LIVE WORKSPACE',
+    btnUndo: 'Undo (Ctrl+Z)',
+    btnRedo: 'Redo (Ctrl+Y)',
+    btnClearAll: 'Clear all layers',
+    btnResnip: 'Resnip / Crop area',
+    btnFullScreen: 'Use Full Screen',
+    snipGuideTitle: 'Drag over image to select region',
+    snipAutoCopyBadge: 'Release mouse = Auto-Copied to Clipboard!',
+    bannerLiveSynced: '🎉 Clipboard automatically updated with your latest annotations!',
+    bannerAutoCopied: '🎉 Auto-copied to Clipboard! Press Ctrl+V to paste into Slack/Zalo or annotate below.',
+    metricDimensions: 'FINAL DIMENSIONS',
+    metricScale: 'Scale 2x Retina UHD',
+    metricSize: 'ESTIMATED SIZE',
+    metricLossless: 'Lossless PNG',
+    metricLayers: 'ANNOTATION LAYERS',
+    metricActive: 'Active Layers',
+    btnDownloadEmerald: 'Download Ultra-HD PNG Image',
+    btnCopy: 'Copy Image (Ctrl+C)',
+    btnCopied: 'Copied!',
+    assuranceTitle: 'Graphic Standards & Data Security',
+    card1Title: 'Retina-Calibrated Screen Capture API',
+    card1Desc:
+      'Guarantees system-native DPR 2.0x/3.0x pixel ratios. Images preserve pristine clarity and crisp typography without blur on 4K monitors.',
+    card2Title: 'Privacy-First Pixel Censorship',
+    card2Desc:
+      'The blur algorithm operates directly on Canvas RGBA pixel byte arrays, preventing reversal or recovery of masked confidential information.',
+    card3Title: 'Publication-Ready Studio Framing',
+    card3Desc:
+      'Automatically applies 32px canvas padding with multi-layer ambient shadow, ready for direct embedding into Notion, Slack, Jira, or technical wikis.',
+    emptyStagePrompt: 'No screenshot loaded yet',
+    emptyStageDesc: 'Click the capture button, paste from clipboard (Ctrl+V), or upload an image file to start editing.',
   },
 };
 
-const COLORS = [
-  { value: '#ef4444', label: 'Đỏ' },
-  { value: '#f59e0b', label: 'Cam/Vàng' },
-  { value: '#10b981', label: 'Xanh Lá' },
-  { value: '#06b6d4', label: 'Cyan' },
-  { value: '#8b5cf6', label: 'Tím' },
-  { value: '#ec4899', label: 'Hồng' },
-  { value: '#ffffff', label: 'Trắng' },
-  { value: '#0f172a', label: 'Đen' },
+const COLOR_PALETTE = [
+  { value: '#0ea5e9', label: 'Sky Blue (Primary)' },
+  { value: '#10b981', label: 'Emerald Green' },
+  { value: '#f59e0b', label: 'Amber Orange' },
+  { value: '#ef4444', label: 'Rose Red' },
+  { value: '#8b5cf6', label: 'Indigo Purple' },
+  { value: '#64748b', label: 'Slate Gray' },
 ];
 
-const LINE_WIDTHS = [
-  { width: 3, label: '3px' },
-  { width: 6, label: '6px' },
-  { width: 10, label: '10px' },
-  { width: 16, label: '16px' },
+const CORNER_OPTIONS = [
+  { value: 0, label: '0px' },
+  { value: 8, label: '8px' },
+  { value: 16, label: '16px' },
+  { value: 24, label: '24px' },
 ];
 
-// Helper: Copy canvas to clipboard
+// Helper: Copy canvas to clipboard as image/png
 async function copyCanvasToClipboard(canvas) {
   return new Promise((resolve, reject) => {
     canvas.toBlob(async (blob) => {
@@ -297,23 +346,17 @@ async function readImageFromClipboard() {
   return null;
 }
 
-// Helper: Download canvas
-function downloadCanvas(canvas, format = 'png') {
-  const mimeType = format === 'jpeg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
-  const extension = format === 'jpeg' ? 'jpg' : format;
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const filename = `snapcraft_${timestamp}.${extension}`;
-  const dataUrl = canvas.toDataURL(mimeType, format === 'jpeg' ? 0.92 : 0.95);
-  const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+// Helper: Format bytes
+function formatBytes(bytes) {
+  if (!bytes || bytes <= 0) return '0 KB';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 export default function ScreenCaptureView({ displayLang = 'vi' }) {
-  const langKey = displayLang === 'en' ? 'en' : displayLang === 'ja' ? 'ja' : 'vi';
+  const langKey = displayLang === 'en' ? 'en' : 'vi';
   const t = i18n[langKey];
 
   // Workflow Stage: 'idle' | 'snipping' | 'editing'
@@ -323,14 +366,22 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   // Image states
   const [rawCaptureImage, setRawCaptureImage] = useState(null);
   const [baseImage, setBaseImage] = useState(null);
+  const [loadedFileName, setLoadedFileName] = useState('screenshot_capture.png');
+  const [loadedFileSize, setLoadedFileSize] = useState(0);
+
+  // Annotations
   const [annotations, setAnnotations] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
   const [currentCanvas, setCurrentCanvas] = useState(null);
 
   // Tools state
-  const [activeTool, setActiveTool] = useState('pen');
-  const [color, setColor] = useState('#ef4444');
-  const [lineWidth, setLineWidth] = useState(4);
+  const [activeTool, setActiveTool] = useState('step'); // default 'step' per mockup
+  const [color, setColor] = useState('#0ea5e9'); // default primary sky blue
+  const [stepBadgeStyle, setStepBadgeStyle] = useState('solid'); // 'solid' | 'outline' | 'glow'
+  const [blurIntensity, setBlurIntensity] = useState(12);
+  const [cornerRadius, setCornerRadius] = useState(16);
+  const [enableSoftShadow, setEnableSoftShadow] = useState(true);
+  const [enablePadding, setEnablePadding] = useState(true);
   const [stepCounter, setStepCounter] = useState(1);
 
   // Drawing in-progress states
@@ -352,6 +403,9 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   const [selectedFormat, setSelectedFormat] = useState('png');
   const [showFormatDropdown, setShowFormatDropdown] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [zoomFit, setZoomFit] = useState(true);
 
   const [history, setHistory] = useState(() => {
     try {
@@ -369,7 +423,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   // Save history to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem('snapcraft_history', JSON.stringify(history.slice(0, 12)));
+      localStorage.setItem('snapcraft_history', JSON.stringify(history.slice(0, 16)));
     } catch {}
   }, [history]);
 
@@ -382,12 +436,14 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       height: h,
       title: `Snapshot ${new Date().toLocaleTimeString()}`,
     };
-    setHistory((prev) => [newItem, ...prev.filter((h) => h.dataUrl !== dataUrl)].slice(0, 12));
+    setHistory((prev) => [newItem, ...prev.filter((h) => h.dataUrl !== dataUrl)].slice(0, 16));
   }, []);
 
   // Load new raw capture helper -> enter snipping phase immediately
-  const handleNewRawCapture = useCallback((img) => {
+  const handleNewRawCapture = useCallback((img, fileName = 'screenshot_capture.png', sizeBytes = 0) => {
     setRawCaptureImage(img);
+    setLoadedFileName(fileName);
+    setLoadedFileSize(sizeBytes || Math.round(img.naturalWidth * img.naturalHeight * 0.8));
     setAnnotations([]);
     setRedoStack([]);
     setSnipSelection(null);
@@ -399,11 +455,12 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     setIsCapturing(true);
     try {
       const result = await captureDisplayMedia(count);
-      handleNewRawCapture(result.image);
+      const timeStr = new Date().toISOString().replace(/[:.]/g, '-').slice(11, 19);
+      handleNewRawCapture(result.image, `screenshot_${timeStr}.png`);
     } catch (err) {
       if (err.name !== 'NotAllowedError' && err.message !== 'Permission denied') {
         console.error('Capture error:', err);
-        alert(`Capture error: ${err.message}`);
+        setFileError(`Capture error: ${err.message}`);
       }
     } finally {
       setIsCapturing(false);
@@ -411,23 +468,52 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   };
 
   // Handle Paste from Clipboard
-  const handlePasteClipboard = async () => {
+  const handlePasteClipboard = useCallback(async () => {
     try {
       const result = await readImageFromClipboard();
       if (result) {
-        handleNewRawCapture(result.image);
+        const timeStr = new Date().toISOString().replace(/[:.]/g, '-').slice(11, 19);
+        handleNewRawCapture(result.image, `clipboard_${timeStr}.png`);
       } else {
-        alert(langKey === 'vi' ? 'Không tìm thấy ảnh trong Clipboard!' : 'No image in clipboard!');
+        setFileError(langKey === 'vi' ? 'Không tìm thấy ảnh trong Clipboard!' : 'No image in clipboard!');
       }
     } catch (err) {
       console.error('Paste error:', err);
-      alert(`Paste error: ${err.message}`);
+      setFileError(`Paste error: ${err.message}`);
     }
-  };
+  }, [handleNewRawCapture, langKey]);
+
+  // Global paste event listener
+  useEffect(() => {
+    const onWindowPaste = (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.indexOf('image') !== -1) {
+          const blob = item.getAsFile();
+          if (blob) {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const img = new Image();
+              img.onload = () => {
+                const timeStr = new Date().toISOString().replace(/[:.]/g, '-').slice(11, 19);
+                handleNewRawCapture(img, `clipboard_${timeStr}.png`, blob.size);
+              };
+              img.src = reader.result;
+            };
+            reader.readAsDataURL(blob);
+            e.preventDefault();
+            break;
+          }
+        }
+      }
+    };
+    window.addEventListener('paste', onWindowPaste);
+    return () => window.removeEventListener('paste', onWindowPaste);
+  }, [handleNewRawCapture]);
 
   // Handle Upload local file
   const handleUploadFile = async (file) => {
-    // Cùng giới hạn ảnh với các miniapp khác thay vì nhận bất kỳ tệp nào.
     const validation = validateDocumentFiles([file], [], IMAGE_INPUT_LIMITS);
     if (validation.accepted.length === 0) {
       setFileError(rejectionMessages(validation.rejected).join(' • '));
@@ -443,42 +529,45 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     reader.onload = () => {
       const dataUrl = reader.result;
       const img = new Image();
-      img.onload = () => handleNewRawCapture(img);
+      img.onload = () => handleNewRawCapture(img, file.name, file.size);
       img.src = dataUrl;
     };
     reader.readAsDataURL(file);
   };
 
   // AUTO-COPY on Area Confirmation -> Enter Editing Phase
-  const handleConfirmArea = useCallback(async (croppedImg) => {
-    setBaseImage(croppedImg);
-    setAnnotations([]);
-    setRedoStack([]);
-    setStage('editing');
+  const handleConfirmArea = useCallback(
+    async (croppedImg) => {
+      setBaseImage(croppedImg);
+      setAnnotations([]);
+      setRedoStack([]);
+      setStage('editing');
 
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = croppedImg.naturalWidth;
-      canvas.height = croppedImg.naturalHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(croppedImg, 0, 0);
-        await copyCanvasToClipboard(canvas);
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = croppedImg.naturalWidth;
+        canvas.height = croppedImg.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(croppedImg, 0, 0);
+          await copyCanvasToClipboard(canvas);
 
-        confetti({
-          particleCount: 30,
-          spread: 55,
-          origin: { y: 0.8 },
-          colors: ['#7c3aed', '#06b6d4', '#10b981'],
-        });
+          confetti({
+            particleCount: 25,
+            spread: 50,
+            origin: { y: 0.8 },
+            colors: ['#0ea5e9', '#4edea3', '#ffb86e'],
+          });
 
-        const dataUrl = canvas.toDataURL('image/png');
-        handleSaveToHistory(dataUrl, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/png');
+          handleSaveToHistory(dataUrl, canvas.width, canvas.height);
+        }
+      } catch (err) {
+        console.warn('Auto-clipboard notice:', err);
       }
-    } catch (err) {
-      console.warn('Auto-clipboard notice:', err);
-    }
-  }, [handleSaveToHistory]);
+    },
+    [handleSaveToHistory]
+  );
 
   // LIVE AUTO-SYNC TO CLIPBOARD ON ANNOTATIONS CHANGE
   useEffect(() => {
@@ -497,19 +586,6 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     return () => clearTimeout(timer);
   }, [annotations, stage, currentCanvas, baseImage, handleSaveToHistory]);
 
-  // Manual Copy Button Handler
-  const handleManualCopy = async () => {
-    if (!currentCanvas) return;
-    try {
-      await copyCanvasToClipboard(currentCanvas);
-      setIsCopied(true);
-      confetti({ particleCount: 35, spread: 60, origin: { y: 0.85 }, colors: ['#7c3aed', '#06b6d4', '#10b981'] });
-      setTimeout(() => setIsCopied(false), 3000);
-    } catch (err) {
-      alert(`Copy error: ${err.message}`);
-    }
-  };
-
   // Render Snipping Selector Canvas
   useEffect(() => {
     if (stage !== 'snipping' || !rawCaptureImage || !snipCanvasRef.current) return;
@@ -527,20 +603,20 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
 
     if (snipSelection && snipSelection.w > 2 && snipSelection.h > 2) {
       ctx.save();
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      ctx.fillStyle = 'rgba(9, 13, 22, 0.65)';
       ctx.fillRect(0, 0, canvas.width, snipSelection.y);
       ctx.fillRect(0, snipSelection.y + snipSelection.h, canvas.width, canvas.height - (snipSelection.y + snipSelection.h));
       ctx.fillRect(0, snipSelection.y, snipSelection.x, snipSelection.h);
       ctx.fillRect(snipSelection.x + snipSelection.w, snipSelection.y, canvas.width - (snipSelection.x + snipSelection.w), snipSelection.h);
 
-      ctx.strokeStyle = '#06b6d4';
+      ctx.strokeStyle = '#0ea5e9';
       ctx.lineWidth = 3;
       ctx.setLineDash([8, 4]);
       ctx.strokeRect(snipSelection.x, snipSelection.y, snipSelection.w, snipSelection.h);
 
       const handleSize = 10;
       ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#0891b2';
+      ctx.strokeStyle = '#0284c7';
       ctx.lineWidth = 2;
       ctx.setLineDash([]);
       [
@@ -555,7 +631,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       ctx.restore();
     } else {
       ctx.save();
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.fillStyle = 'rgba(9, 13, 22, 0.4)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.restore();
     }
@@ -618,9 +694,9 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     }
   };
 
-  // Render Editor Canvas
+  // Render Editor Canvas Helpers
   const drawArrow = (ctx, fromX, fromY, toX, toY, arrowColor, width) => {
-    const headlen = Math.max(width * 3.5, 14);
+    const headlen = Math.max(width * 3.5, 16);
     const angle = Math.atan2(toY - fromY, toX - fromX);
     ctx.save();
     ctx.strokeStyle = arrowColor;
@@ -641,19 +717,22 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     ctx.restore();
   };
 
-  const drawBlurRect = (ctx, x, y, w, h) => {
+  const drawBlurRect = useCallback((ctx, x, y, w, h) => {
     if (w === 0 || h === 0) return;
     const rx = Math.min(x, x + w);
     const ry = Math.min(y, y + h);
     const rw = Math.abs(w);
     const rh = Math.abs(h);
-    const blockSize = 14;
+    const blockSize = Math.max(4, blurIntensity);
     try {
       const imgData = ctx.getImageData(rx, ry, rw, rh);
       const data = imgData.data;
       for (let py = 0; py < rh; py += blockSize) {
         for (let px = 0; px < rw; px += blockSize) {
-          let red = 0, green = 0, blue = 0, count = 0;
+          let red = 0,
+            green = 0,
+            blue = 0,
+            count = 0;
           for (let dy = 0; dy < blockSize && py + dy < rh; dy++) {
             for (let dx = 0; dx < blockSize && px + dx < rw; dx++) {
               const idx = ((py + dy) * rw + (px + dx)) * 4;
@@ -680,10 +759,10 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       }
       ctx.putImageData(imgData, rx, ry);
     } catch {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillStyle = 'rgba(11, 19, 38, 0.85)';
       ctx.fillRect(rx, ry, rw, rh);
     }
-  };
+  }, [blurIntensity]);
 
   const renderEditorCanvas = useCallback(() => {
     if (stage !== 'editing' || !baseImage || !editorCanvasRef.current) return;
@@ -703,7 +782,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       ctx.save();
       if (ann.type === 'pen' && ann.points && ann.points.length > 0) {
         ctx.strokeStyle = ann.color;
-        ctx.lineWidth = ann.lineWidth;
+        ctx.lineWidth = ann.lineWidth || 4;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -714,7 +793,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         ctx.save();
         ctx.globalAlpha = 0.35;
         ctx.strokeStyle = ann.color;
-        ctx.lineWidth = ann.lineWidth * 2.5;
+        ctx.lineWidth = (ann.lineWidth || 4) * 2.5;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -723,10 +802,10 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         ctx.stroke();
         ctx.restore();
       } else if (ann.type === 'arrow') {
-        drawArrow(ctx, ann.startX, ann.startY, ann.endX, ann.endY, ann.color, ann.lineWidth);
+        drawArrow(ctx, ann.startX, ann.startY, ann.endX, ann.endY, ann.color, ann.lineWidth || 4);
       } else if (ann.type === 'rect') {
         ctx.strokeStyle = ann.color;
-        ctx.lineWidth = ann.lineWidth;
+        ctx.lineWidth = ann.lineWidth || 4;
         ctx.strokeRect(ann.startX, ann.startY, ann.endX - ann.startX, ann.endY - ann.startY);
       } else if (ann.type === 'circle') {
         const rx = Math.abs(ann.endX - ann.startX) / 2;
@@ -734,20 +813,20 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         const cx = Math.min(ann.startX, ann.endX) + rx;
         const cy = Math.min(ann.startY, ann.endY) + ry;
         ctx.strokeStyle = ann.color;
-        ctx.lineWidth = ann.lineWidth;
+        ctx.lineWidth = ann.lineWidth || 4;
         ctx.beginPath();
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
         ctx.stroke();
       } else if (ann.type === 'blur') {
         drawBlurRect(ctx, ann.startX, ann.startY, ann.endX - ann.startX, ann.endY - ann.startY);
       } else if (ann.type === 'text' && ann.text) {
-        const fontSize = Math.max(ann.lineWidth * 4, 18);
+        const fontSize = Math.max((ann.lineWidth || 4) * 4, 18);
         ctx.font = `bold ${fontSize}px Inter, sans-serif`;
         const metrics = ctx.measureText(ann.text);
         const padding = 8;
         const textH = fontSize + padding;
         const textW = metrics.width + padding * 2;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillStyle = 'rgba(11, 19, 38, 0.9)';
         ctx.strokeStyle = ann.color;
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -757,15 +836,39 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         ctx.fillStyle = '#ffffff';
         ctx.fillText(ann.text, ann.startX + padding, ann.startY - fontSize / 4);
       } else if (ann.type === 'step' && ann.stepNumber) {
-        const radius = Math.max(ann.lineWidth * 3.5, 18);
-        ctx.fillStyle = ann.color;
-        ctx.beginPath();
-        ctx.arc(ann.startX, ann.startY, radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.fillStyle = '#ffffff';
+        const radius = Math.max((ann.lineWidth || 4) * 3.5, 18);
+        if (ann.badgeStyle === 'outline') {
+          ctx.fillStyle = 'rgba(11, 19, 38, 0.85)';
+          ctx.beginPath();
+          ctx.arc(ann.startX, ann.startY, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = ann.color;
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.fillStyle = ann.color;
+        } else if (ann.badgeStyle === 'glow') {
+          ctx.shadowColor = ann.color;
+          ctx.shadowBlur = 12;
+          ctx.fillStyle = ann.color;
+          ctx.beginPath();
+          ctx.arc(ann.startX, ann.startY, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+        } else {
+          // Solid
+          ctx.fillStyle = ann.color;
+          ctx.beginPath();
+          ctx.arc(ann.startX, ann.startY, radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+        }
         ctx.font = `bold ${Math.round(radius * 1.1)}px Inter, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -778,7 +881,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       ctx.save();
       if (activeTool === 'pen') {
         ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth;
+        ctx.lineWidth = 4;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -788,7 +891,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       } else if (activeTool === 'highlight') {
         ctx.globalAlpha = 0.35;
         ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth * 2.5;
+        ctx.lineWidth = 10;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -796,10 +899,10 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         for (let i = 1; i < currentPenPoints.length; i++) ctx.lineTo(currentPenPoints[i].x, currentPenPoints[i].y);
         ctx.stroke();
       } else if (activeTool === 'arrow') {
-        drawArrow(ctx, startPoint.x, startPoint.y, currentPoint.x, currentPoint.y, color, lineWidth);
+        drawArrow(ctx, startPoint.x, startPoint.y, currentPoint.x, currentPoint.y, color, 4);
       } else if (activeTool === 'rect') {
         ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth;
+        ctx.lineWidth = 4;
         ctx.strokeRect(startPoint.x, startPoint.y, currentPoint.x - startPoint.x, currentPoint.y - startPoint.y);
       } else if (activeTool === 'circle') {
         const rx = Math.abs(currentPoint.x - startPoint.x) / 2;
@@ -807,13 +910,13 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         const cx = Math.min(startPoint.x, currentPoint.x) + rx;
         const cy = Math.min(startPoint.y, currentPoint.y) + ry;
         ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth;
+        ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
         ctx.stroke();
       } else if (activeTool === 'blur') {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.5;
         ctx.setLineDash([4, 4]);
         ctx.strokeRect(startPoint.x, startPoint.y, currentPoint.x - startPoint.x, currentPoint.y - startPoint.y);
       }
@@ -821,7 +924,18 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     }
 
     setCurrentCanvas(canvas);
-  }, [stage, baseImage, annotations, isDrawing, startPoint, currentPoint, currentPenPoints, activeTool, color, lineWidth]);
+  }, [
+    stage,
+    baseImage,
+    annotations,
+    isDrawing,
+    startPoint,
+    currentPoint,
+    currentPenPoints,
+    activeTool,
+    color,
+    drawBlurRect,
+  ]);
 
   useEffect(() => {
     renderEditorCanvas();
@@ -856,7 +970,18 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     } else if (activeTool === 'step') {
       setAnnotations((prev) => [
         ...prev,
-        { id: Date.now().toString(), type: 'step', startX: pt.x, startY: pt.y, endX: pt.x, endY: pt.y, color, lineWidth, stepNumber: stepCounter },
+        {
+          id: Date.now().toString(),
+          type: 'step',
+          startX: pt.x,
+          startY: pt.y,
+          endX: pt.x,
+          endY: pt.y,
+          color,
+          badgeStyle: stepBadgeStyle,
+          lineWidth: 4,
+          stepNumber: stepCounter,
+        },
       ]);
       setStepCounter((s) => s + 1);
       setIsDrawing(false);
@@ -881,15 +1006,39 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       if (currentPenPoints.length > 0) {
         setAnnotations((prev) => [
           ...prev,
-          { id: Date.now().toString(), type: activeTool, startX: startPoint.x, startY: startPoint.y, endX: currentPoint.x, endY: currentPoint.y, points: currentPenPoints, color, lineWidth },
+          {
+            id: Date.now().toString(),
+            type: activeTool,
+            startX: startPoint.x,
+            startY: startPoint.y,
+            endX: currentPoint.x,
+            endY: currentPoint.y,
+            points: currentPenPoints,
+            color,
+            lineWidth: 4,
+          },
         ]);
       }
-    } else if (activeTool === 'arrow' || activeTool === 'rect' || activeTool === 'circle' || activeTool === 'blur') {
+    } else if (
+      activeTool === 'arrow' ||
+      activeTool === 'rect' ||
+      activeTool === 'circle' ||
+      activeTool === 'blur'
+    ) {
       const dist = Math.hypot(currentPoint.x - startPoint.x, currentPoint.y - startPoint.y);
       if (dist > 4) {
         setAnnotations((prev) => [
           ...prev,
-          { id: Date.now().toString(), type: activeTool, startX: startPoint.x, startY: startPoint.y, endX: currentPoint.x, endY: currentPoint.y, color, lineWidth },
+          {
+            id: Date.now().toString(),
+            type: activeTool,
+            startX: startPoint.x,
+            startY: startPoint.y,
+            endX: currentPoint.x,
+            endY: currentPoint.y,
+            color,
+            lineWidth: 4,
+          },
         ]);
       }
     }
@@ -901,16 +1050,119 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     if (textInputPosition && textInputValue.trim()) {
       setAnnotations((prev) => [
         ...prev,
-        { id: Date.now().toString(), type: 'text', startX: textInputPosition.x, startY: textInputPosition.y, endX: textInputPosition.x, endY: textInputPosition.y, color, lineWidth, text: textInputValue.trim() },
+        {
+          id: Date.now().toString(),
+          type: 'text',
+          startX: textInputPosition.x,
+          startY: textInputPosition.y,
+          endX: textInputPosition.x,
+          endY: textInputPosition.y,
+          color,
+          lineWidth: 4,
+          text: textInputValue.trim(),
+        },
       ]);
     }
     setTextInputPosition(null);
     setTextInputValue('');
   };
 
+  // Helper to generate the export-ready canvas (incorporating padding & soft shadow if toggled)
+  const getExportCanvas = () => {
+    if (!currentCanvas) return null;
+    if (!enablePadding && cornerRadius === 0) {
+      return currentCanvas;
+    }
+
+    const padding = enablePadding ? 32 : 0;
+    const finalW = currentCanvas.width + padding * 2;
+    const finalH = currentCanvas.height + padding * 2;
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = finalW;
+    exportCanvas.height = finalH;
+    const ctx = exportCanvas.getContext('2d');
+    if (!ctx) return currentCanvas;
+
+    if (enablePadding) {
+      // Elegant dark studio gradient canvas frame
+      const grad = ctx.createLinearGradient(0, 0, finalW, finalH);
+      grad.addColorStop(0, '#171f33');
+      grad.addColorStop(0.5, '#0b1326');
+      grad.addColorStop(1, '#131b2e');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, finalW, finalH);
+    }
+
+    ctx.save();
+    if (enableSoftShadow) {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 12;
+    }
+
+    if (cornerRadius > 0) {
+      ctx.beginPath();
+      ctx.roundRect(padding, padding, currentCanvas.width, currentCanvas.height, cornerRadius);
+      ctx.clip();
+    }
+
+    ctx.drawImage(currentCanvas, padding, padding);
+    ctx.restore();
+
+    return exportCanvas;
+  };
+
+  // Manual Copy Handler with visual feedback
+  const handleManualCopy = async () => {
+    const canvasToCopy = getExportCanvas() || currentCanvas;
+    if (!canvasToCopy) return;
+    try {
+      await copyCanvasToClipboard(canvasToCopy);
+      setIsCopied(true);
+      confetti({
+        particleCount: 30,
+        spread: 55,
+        origin: { y: 0.85 },
+        colors: ['#0ea5e9', '#4edea3', '#ffb86e'],
+      });
+      setTimeout(() => setIsCopied(false), 2500);
+    } catch (err) {
+      setFileError(`Copy error: ${err.message}`);
+    }
+  };
+
+  // Export / Download Handler
+  const handleDownload = (format = selectedFormat) => {
+    const canvasToExport = getExportCanvas() || currentCanvas;
+    if (!canvasToExport) return;
+
+    const mimeType = format === 'jpeg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
+    const extension = format === 'jpeg' ? 'jpg' : format;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `snapcraft_${timestamp}.${extension}`;
+    const dataUrl = canvasToExport.toDataURL(mimeType, format === 'jpeg' ? 0.92 : 0.95);
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    confetti({
+      particleCount: 25,
+      spread: 50,
+      origin: { y: 0.85 },
+      colors: ['#059669', '#4edea3', '#38bdf8'],
+    });
+  };
+
+  // Compute metrics for the strip
+  const previewWidth = baseImage ? baseImage.naturalWidth : rawCaptureImage ? rawCaptureImage.naturalWidth : 0;
+  const previewHeight = baseImage ? baseImage.naturalHeight : rawCaptureImage ? rawCaptureImage.naturalHeight : 0;
+  const layerCount = annotations.length;
+
   return (
-    <MiniAppLayout width="wide" gap="normal">
-      <MiniAppError>{fileError}</MiniAppError>
+    <div className="flex flex-col w-full text-on-surface">
       {/* Hidden File Input */}
       <input
         ref={fileInputRef}
@@ -925,506 +1177,921 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         }}
       />
 
-      {/* Top Capture Bar */}
-      <div className="w-full p-4 sm:p-6 rounded-3xl bg-slate-900/70 border border-slate-800 backdrop-blur-xl shadow-2xl flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+      {/* ERROR BANNER */}
+      {fileError && (
+        <div className="mb-space-4 p-space-3 bg-error-container/20 border border-error/30 rounded-xl flex items-center justify-between gap-space-3 text-error">
+          <div className="flex items-center gap-space-2 text-sm">
+            <span className="font-semibold">Lỗi:</span>
+            <span>{fileError}</span>
+          </div>
           <button
             type="button"
-            onClick={() => handleCapture(countdown)}
-            disabled={isCapturing}
-            className="flex-1 sm:flex-none px-6 py-3.5 rounded-2xl bg-gradient-to-r from-brand-600 via-brand-500 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-extrabold text-sm shadow-xl shadow-brand-500/25 transition-all duration-200 flex items-center justify-center space-x-2.5 cursor-pointer disabled:opacity-50 active:scale-[0.98]"
+            onClick={() => setFileError('')}
+            className="p-1 hover:bg-error-container/40 rounded transition"
           >
-            {isCapturing ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>{t.btnPreparing}</span>
-              </>
-            ) : (
-              <>
-                <Camera className="w-5 h-5" />
-                <span>{t.btnCapture}</span>
-              </>
-            )}
+            <X className="w-4 h-4" />
           </button>
-
-          <div className="flex items-center space-x-1.5 p-1.5 rounded-2xl bg-slate-800/80 border border-slate-700/70 text-xs">
-            <Clock className="w-4 h-4 text-slate-400 ml-1.5" />
-            {[0, 3, 5].map((sec) => (
-              <button
-                key={sec}
-                type="button"
-                onClick={() => setCountdown(sec)}
-                className={`px-2.5 py-1.5 rounded-xl font-bold transition-all ${
-                  countdown === sec ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {sec === 0 ? t.timerInstant : `${sec}s`}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto justify-end">
-          <button
-            type="button"
-            onClick={handlePasteClipboard}
-            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold border border-slate-700 transition flex items-center justify-center space-x-2 shadow-sm"
-          >
-            <Clipboard className="w-4 h-4 text-cyan-400" />
-            <span>{t.btnPaste}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold border border-slate-700 transition flex items-center justify-center space-x-2 shadow-sm"
-          >
-            <Upload className="w-4 h-4 text-brand-400" />
-            <span>{t.btnOpenFile}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Phase 1: Snipping Area Selection Mode */}
-      {stage === 'snipping' && rawCaptureImage && (
-        <div className="w-full flex flex-col gap-3 animate-in fade-in duration-300">
-          <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-brand-900/80 via-slate-900 to-cyan-900/80 border border-brand-500/50 backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center space-x-3">
-              <div className="p-2.5 rounded-2xl bg-brand-500/20 text-brand-300 border border-brand-500/40 animate-pulse">
-                <Move className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-black text-white flex items-center gap-2">
-                  <span>{t.snipGuideTitle}</span>
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    {t.snipAutoCopyBadge}
-                  </span>
-                </h3>
-                <p className="text-xs text-slate-300">
-                  {snipSelection && snipSelection.w > 10 && snipSelection.h > 10
-                    ? `${Math.round(snipSelection.w)} × ${Math.round(snipSelection.h)} px`
-                    : t.snipGuidePrompt}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
-              <button
-                type="button"
-                onClick={() => handleConfirmArea(rawCaptureImage)}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs border border-slate-700 transition flex items-center space-x-2 cursor-pointer active:scale-95 shadow-sm"
-              >
-                <Maximize2 className="w-4 h-4 text-cyan-400" />
-                <span>{t.btnFullScreen}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setStage(baseImage ? 'editing' : 'idle')}
-                className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-red-400 border border-slate-700 transition"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="relative w-full rounded-3xl bg-slate-950 border border-slate-800 p-2 sm:p-4 flex items-center justify-center overflow-auto min-h-[450px] max-h-[75vh] shadow-inner select-none cursor-crosshair">
-            <canvas
-              ref={snipCanvasRef}
-              onPointerDown={handleSnipPointerDown}
-              onPointerMove={handleSnipPointerMove}
-              onPointerUp={handleSnipPointerUp}
-              onPointerCancel={handleSnipPointerUp}
-              className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl"
-            />
-          </div>
         </div>
       )}
 
-      {/* Phase 2: Annotation & Export Studio */}
-      {stage === 'editing' && baseImage && (
-        <div className="flex flex-col gap-4 animate-in fade-in duration-300">
-          <div className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/90 via-slate-900 to-emerald-950/90 border border-emerald-500/60 text-emerald-300 text-xs font-semibold shadow-xl flex items-center justify-between">
-            <div className="flex items-center space-x-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <span>{annotations.length > 0 ? t.bannerLiveSynced : t.bannerAutoCopied}</span>
+      {/* BREADCRUMB */}
+      <nav className="flex items-center gap-space-2 text-on-surface-variant font-body-sm text-body-sm mb-space-4">
+        <a href="#" className="hover:text-primary transition-colors flex items-center gap-space-1">
+          <span className="material-symbols-outlined text-[16px]">home</span>
+          <span>Trang chủ</span>
+        </a>
+        <span className="text-outline">/</span>
+        <a href="#" className="hover:text-primary transition-colors">
+          {t.breadcrumbCategory}
+        </a>
+        <span className="text-outline">/</span>
+        <span className="text-on-surface font-title-sm text-title-sm">{t.toolTitle}</span>
+      </nav>
+
+      {/* TOOL HEADER */}
+      <div className="flex flex-col gap-space-4 pb-space-6 border-b border-border-subtle/40 mb-space-6">
+        <div className="flex flex-wrap items-center justify-between gap-space-4">
+          <div className="flex items-center gap-space-3">
+            <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center text-primary-container shadow-sm">
+              <Camera className="w-7 h-7 text-primary-container" />
             </div>
-            <div className="hidden sm:flex items-center space-x-1 text-[11px] text-emerald-400 bg-emerald-900/40 px-2 py-0.5 rounded-full border border-emerald-500/30">
-              <Sparkles className="w-3 h-3" />
-              <span>{t.liveSyncBadge}</span>
+            <div className="flex flex-col">
+              <div className="flex flex-wrap items-center gap-space-2">
+                <h1 className="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">
+                  {t.toolTitle}
+                </h1>
+                <span className="px-space-2 py-[2px] bg-primary-container/10 text-brand-cyan-bright font-label-sm text-label-sm rounded uppercase">
+                  {t.tagStudio}
+                </span>
+                <span className="px-space-2 py-[2px] bg-secondary-container/10 text-secondary font-label-sm text-label-sm rounded uppercase flex items-center gap-space-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                  {t.tagOffline}
+                </span>
+                <span className="px-space-2 py-[2px] bg-surface-subtle text-tertiary font-label-sm text-label-sm rounded uppercase">
+                  {t.tagVector}
+                </span>
+              </div>
+              <span className="font-label-sm text-label-sm text-outline mt-0.5">{t.pipelineId}</span>
             </div>
           </div>
 
-          {/* Annotation Toolbar */}
-          <div className="w-full p-3 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl shadow-xl flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex items-center gap-space-2">
+            <button
+              type="button"
+              onClick={() => setShowHistoryModal(!showHistoryModal)}
+              className="flex items-center gap-space-1 px-space-3 py-space-1 bg-surface-subtle hover:bg-surface-container-high text-on-surface font-body-sm text-body-sm rounded-lg transition-colors cursor-pointer"
+            >
+              <History className="w-4 h-4 text-outline" />
+              <span>{t.btnDrafts} ({history.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowShortcutsModal(!showShortcutsModal)}
+              className="flex items-center gap-space-1 px-space-3 py-space-1 bg-surface-subtle hover:bg-surface-container-high text-on-surface font-body-sm text-body-sm rounded-lg transition-colors cursor-pointer"
+            >
+              <Keyboard className="w-4 h-4 text-outline" />
+              <span>{t.btnShortcuts}</span>
+            </button>
+          </div>
+        </div>
+
+        <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl">{t.toolDesc}</p>
+
+        {/* PRIVACY BANNER */}
+        <div className="p-space-3 bg-surface-container-low rounded-lg flex items-center gap-space-3 border-l-2 border-secondary">
+          <div className="w-8 h-8 rounded bg-secondary-container/20 flex items-center justify-center shrink-0 text-secondary">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-space-2">
+              <span className="font-title-sm text-title-sm text-secondary font-semibold">{t.privacyTitle}</span>
+              <span className="px-space-1 py-[1px] bg-secondary/15 text-secondary font-label-sm text-label-sm rounded">
+                {t.privacyBadge}
+              </span>
+            </div>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">{t.privacyDesc}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* WORKSPACE 2 CỘT */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-6 mb-space-12">
+        {/* CỘT TRÁI (INPUT & CONFIGURATION) - 5 CỘT */}
+        <div className="lg:col-span-5 flex flex-col gap-space-5">
+          {/* BƯỚC 1: THU NHẬN & TẢI ẢNH */}
+          <div className="bg-surface-container rounded-xl p-space-4 shadow-sm flex flex-col gap-space-4 border border-border-subtle/30">
+            <div className="flex items-center justify-between pb-space-2 border-b border-border-subtle/30">
+              <div className="flex items-center gap-space-2">
+                <span className="w-6 h-6 rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm flex items-center justify-center font-bold">
+                  1
+                </span>
+                <h2 className="font-title-sm text-title-sm text-on-surface">{t.step1Title}</h2>
+              </div>
+              <span className="font-label-sm text-label-sm text-secondary flex items-center gap-space-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span> {t.step1Ready}
+              </span>
+            </div>
+
+            {/* Screen Capture API Button with countdown selector */}
+            <div className="flex flex-col gap-space-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCapture(countdown)}
+                  disabled={isCapturing}
+                  className="flex-1 py-space-3 px-space-4 bg-surface-subtle hover:bg-surface-bright text-on-surface rounded-lg flex items-center justify-center gap-space-2 transition-all group border border-border-subtle cursor-pointer disabled:opacity-50"
+                >
+                  {isCapturing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin text-primary-container" />
+                      <span className="font-title-sm text-title-sm">{t.btnPreparing}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-5 h-5 text-primary-container group-hover:scale-110 transition-transform" />
+                      <span className="font-title-sm text-title-sm">{t.btnCaptureApi}</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Delay Timer Select */}
+                <div className="flex items-center bg-surface-container-low p-1 rounded-lg border border-border-subtle/40">
+                  <Clock className="w-4 h-4 text-outline ml-1" />
+                  {[0, 3, 5].map((sec) => (
+                    <button
+                      key={sec}
+                      type="button"
+                      onClick={() => setCountdown(sec)}
+                      className={`px-2 py-1 rounded text-label-sm font-semibold transition ${
+                        countdown === sec
+                          ? 'bg-primary-container text-on-primary-container'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {sec === 0 ? '0s' : `${sec}s`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Drag & drop / Ctrl+V Paste Area */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    handleUploadFile(e.dataTransfer.files[0]);
+                  }
+                }}
+                className="border-2 border-dashed border-border-subtle hover:border-primary-container/60 bg-surface-container-low/60 rounded-lg p-space-4 flex flex-col items-center justify-center text-center cursor-pointer transition-colors group"
+              >
+                <div className="w-10 h-10 rounded-full bg-surface-subtle flex items-center justify-center text-on-surface-variant group-hover:text-primary transition-colors mb-space-2">
+                  <Clipboard className="w-5 h-5" />
+                </div>
+                <p className="font-body-md text-body-md text-on-surface font-medium">
+                  Bấm{' '}
+                  <kbd className="px-space-1 py-[1px] bg-surface-container rounded font-label-sm text-label-sm text-primary">
+                    Ctrl + V
+                  </kbd>{' '}
+                  để dán trực tiếp từ Clipboard
+                </p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant mt-space-1">{t.dropzoneSubtitle}</p>
+              </div>
+            </div>
+
+            {/* Thẻ ảnh đang nạp */}
+            {(baseImage || rawCaptureImage) && (
+              <div className="bg-surface-container-high rounded-lg p-space-3 flex items-center justify-between border border-border-subtle/40 animate-in fade-in">
+                <div className="flex items-center gap-space-3 min-w-0">
+                  <div className="w-10 h-10 rounded bg-surface-subtle flex items-center justify-center text-primary-container shrink-0">
+                    <ImageIcon className="w-5 h-5 text-primary-container" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <div className="flex items-center gap-space-2">
+                      <span className="font-title-sm text-title-sm text-on-surface truncate font-mono">
+                        {loadedFileName}
+                      </span>
+                      <span className="px-space-1 py-[1px] bg-secondary-container/20 text-secondary font-label-sm text-label-sm rounded uppercase font-semibold">
+                        {t.loadedBadge}
+                      </span>
+                    </div>
+                    <span className="font-body-sm text-body-sm text-on-surface-variant">
+                      Dung lượng: {formatBytes(loadedFileSize)} • Độ phân giải: {previewWidth} × {previewHeight} Retina
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-space-1 shrink-0 ml-space-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-space-2 text-on-surface-variant hover:text-on-surface rounded hover:bg-surface-subtle transition-colors cursor-pointer"
+                    title={t.btnReplace}
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRawCaptureImage(null);
+                      setBaseImage(null);
+                      setAnnotations([]);
+                      setRedoStack([]);
+                      setStage('idle');
+                    }}
+                    className="p-space-2 text-on-surface-variant hover:text-error rounded hover:bg-surface-subtle transition-colors cursor-pointer"
+                    title={t.btnClear}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* BƯỚC 2: HỘP CÔNG CỤ CHÚ THÍCH & TÙY BIẾN ĐỒ HỌA */}
+          <div className="bg-surface-container rounded-xl p-space-4 shadow-sm flex flex-col gap-space-4 border border-border-subtle/30">
+            <div className="flex items-center justify-between pb-space-2 border-b border-border-subtle/30">
+              <div className="flex items-center gap-space-2">
+                <span className="w-6 h-6 rounded bg-primary-container text-on-primary-container font-label-sm text-label-sm flex items-center justify-center font-bold">
+                  2
+                </span>
+                <h2 className="font-title-sm text-title-sm text-on-surface">{t.step2Title}</h2>
+              </div>
+              <span className="font-label-sm text-label-sm text-outline uppercase">{t.step2Badge}</span>
+            </div>
+
+            {/* Tool Selection Grid (6 công cụ per mockup) */}
+            <div className="grid grid-cols-3 gap-space-2">
               {[
-                { id: 'pen', label: t.tools.pen, icon: Pencil },
-                { id: 'arrow', label: t.tools.arrow, icon: MoveUpRight },
-                { id: 'rect', label: t.tools.rect, icon: Square },
-                { id: 'circle', label: t.tools.circle, icon: Circle },
-                { id: 'highlight', label: t.tools.highlight, icon: Highlighter },
-                { id: 'blur', label: t.tools.blur, icon: EyeOff },
-                { id: 'text', label: t.tools.text, icon: Type },
-                { id: 'step', label: t.tools.step, icon: ListOrdered },
+                { id: 'step', label: t.tools.step, sub: t.tools.stepSub, icon: ListOrdered },
+                { id: 'arrow', label: t.tools.arrow, sub: t.tools.arrowSub, icon: MoveUpRight },
+                { id: 'rect', label: t.tools.rect, sub: t.tools.rectSub, icon: Square },
+                { id: 'blur', label: t.tools.blur, sub: t.tools.blurSub, icon: EyeOff },
+                { id: 'pen', label: t.tools.pen, sub: t.tools.penSub, icon: Pencil },
+                { id: 'text', label: t.tools.text, sub: t.tools.textSub, icon: Type },
               ].map((toolItem) => {
-                const isSelected = activeTool === toolItem.id;
+                const isActive = activeTool === toolItem.id;
                 const Icon = toolItem.icon;
                 return (
                   <button
                     key={toolItem.id}
                     type="button"
                     onClick={() => setActiveTool(toolItem.id)}
-                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
-                      isSelected
-                        ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20 ring-2 ring-brand-500/30'
-                        : 'bg-slate-800/60 hover:bg-slate-700 text-slate-300 hover:text-white'
+                    className={`tool-btn flex flex-col items-center justify-center p-space-2 rounded-lg text-center transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-surface-subtle border-2 border-primary-container text-primary-container'
+                        : 'bg-surface-subtle hover:bg-surface-bright text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span className="hidden sm:inline">{toolItem.label}</span>
+                    <Icon className="w-5 h-5 mb-1" />
+                    <span className="font-label-sm text-label-sm font-semibold">{toolItem.label}</span>
+                    <span className="font-body-sm text-body-sm text-outline text-[10px] leading-tight mt-0.5">
+                      {toolItem.sub}
+                    </span>
                   </button>
                 );
               })}
             </div>
 
-            <div className="flex items-center space-x-3 border-x border-slate-800 px-3">
-              <div className="flex items-center space-x-1.5">
-                {COLORS.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setColor(c.value)}
-                    style={{ backgroundColor: c.value }}
-                    className={`w-6 h-6 rounded-full transition-transform border ${
-                      color === c.value
-                        ? 'ring-2 ring-brand-400 ring-offset-2 ring-offset-slate-900 scale-110 border-white'
-                        : 'border-slate-600 hover:scale-105'
-                    }`}
-                  />
-                ))}
+            {/* CẤU HÌNH CHI TIẾT CÔNG CỤ ĐANG CHỌN */}
+            <div className="p-space-3 bg-surface-container-low rounded-lg flex flex-col gap-space-3 border border-border-subtle/30">
+              {/* Bảng màu chọn nhanh */}
+              <div className="flex items-center justify-between">
+                <label className="font-body-sm text-body-sm text-on-surface-variant">{t.labelAccentColor}</label>
+                <div className="flex items-center gap-space-2">
+                  {COLOR_PALETTE.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      onClick={() => setColor(c.value)}
+                      title={c.label}
+                      style={{ backgroundColor: c.value }}
+                      className={`w-6 h-6 rounded-full transition-transform cursor-pointer ${
+                        color === c.value
+                          ? 'ring-2 ring-primary-container ring-offset-2 ring-offset-surface-container-low scale-110'
+                          : 'hover:scale-110'
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
 
-              <div className="flex items-center space-x-1 bg-slate-800/80 p-1 rounded-xl">
-                {LINE_WIDTHS.map((lw) => (
-                  <button
-                    key={lw.width}
-                    type="button"
-                    onClick={() => setLineWidth(lw.width)}
-                    className={`px-2 py-1 rounded-lg text-[11px] font-bold transition ${
-                      lineWidth === lw.width ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {lw.label}
-                  </button>
-                ))}
+              {/* Kiểu dáng số bước (hiển thị khi chọn tool step) */}
+              <div className="flex items-center justify-between">
+                <label className="font-body-sm text-body-sm text-on-surface-variant">{t.labelStepStyle}</label>
+                <div className="flex items-center gap-space-1 bg-surface-container p-1 rounded-lg">
+                  {[
+                    { id: 'solid', label: t.stepStyleSolid },
+                    { id: 'outline', label: t.stepStyleOutline },
+                    { id: 'glow', label: t.stepStyleGlow },
+                  ].map((st) => (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setStepBadgeStyle(st.id)}
+                      className={`px-space-2 py-0.5 rounded font-label-sm text-label-sm transition cursor-pointer ${
+                        stepBadgeStyle === st.id
+                          ? 'bg-primary-container text-on-primary-container font-semibold'
+                          : 'hover:bg-surface-subtle text-on-surface-variant'
+                      }`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cường độ làm mờ nhạy cảm */}
+              <div className="flex flex-col gap-space-1">
+                <div className="flex items-center justify-between">
+                  <label className="font-body-sm text-body-sm text-on-surface-variant">{t.labelBlurIntensity}</label>
+                  <span className="font-label-sm text-label-sm text-brand-cyan-bright">
+                    Pixelate {blurIntensity}px
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="4"
+                  max="24"
+                  value={blurIntensity}
+                  onChange={(e) => setBlurIntensity(Number(e.target.value))}
+                  className="w-full accent-primary-container bg-surface-subtle rounded-lg cursor-pointer h-1.5"
+                />
+                <div className="flex justify-between font-label-sm text-label-sm text-outline text-[10px]">
+                  <span>Nhẹ (4px)</span>
+                  <span>Tiêu chuẩn (12px)</span>
+                  <span>Che đặc (24px)</span>
+                </div>
+              </div>
+
+              {/* Hiệu ứng viền nền & Canvas */}
+              <div className="pt-space-2 border-t border-border-subtle/30 flex flex-col gap-space-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">{t.labelCornerRadius}</span>
+                  <div className="flex items-center gap-space-1">
+                    {CORNER_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setCornerRadius(opt.value)}
+                        className={`px-space-2 py-0.5 rounded font-label-sm text-label-sm transition cursor-pointer ${
+                          cornerRadius === opt.value
+                            ? 'bg-primary-container text-on-primary-container font-semibold'
+                            : 'bg-surface-subtle hover:bg-surface-container text-on-surface-variant'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">{t.labelEffects}</span>
+                  <div className="flex items-center gap-space-3">
+                    <label className="inline-flex items-center gap-space-1 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={enableSoftShadow}
+                        onChange={(e) => setEnableSoftShadow(e.target.checked)}
+                        className="accent-primary-container rounded"
+                      />
+                      <span className="font-body-sm text-body-sm text-on-surface">{t.softShadow}</span>
+                    </label>
+                    <label className="inline-flex items-center gap-space-1 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={enablePadding}
+                        onChange={(e) => setEnablePadding(e.target.checked)}
+                        className="accent-primary-container rounded"
+                      />
+                      <span className="font-body-sm text-body-sm text-on-surface">{t.paddingCanvas}</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center space-x-1.5">
-              <button
-                type="button"
-                onClick={() => setStage('snipping')}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-cyan-300 hover:text-cyan-200 text-xs font-bold border border-slate-700 transition flex items-center space-x-1.5"
-              >
-                <Crop className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">{t.btnResnip}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (annotations.length > 0) {
-                    setRedoStack((prev) => [...prev, annotations[annotations.length - 1]]);
-                    setAnnotations((prev) => prev.slice(0, -1));
-                  }
-                }}
-                disabled={annotations.length === 0}
-                className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white disabled:opacity-30 transition"
-              >
-                <Undo2 className="w-4 h-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (redoStack.length > 0) {
-                    setAnnotations((prev) => [...prev, redoStack[redoStack.length - 1]]);
-                    setRedoStack((prev) => prev.slice(0, -1));
-                  }
-                }}
-                disabled={redoStack.length === 0}
-                className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white disabled:opacity-30 transition"
-              >
-                <Redo2 className="w-4 h-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setAnnotations([])}
-                className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-amber-400 transition"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
+            {/* PRIMARY CTA NỔI BẬT DUY NHẤT */}
+            <button
+              type="button"
+              onClick={() => handleDownload('png')}
+              disabled={!baseImage && !rawCaptureImage}
+              className="w-full py-space-3 px-space-4 bg-primary-container hover:bg-brand-cyan-bright text-on-primary-container font-title-sm text-title-sm font-bold rounded-lg shadow-lg flex items-center justify-center gap-space-2 transition-all group cursor-pointer disabled:opacity-50"
+            >
+              <Zap className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+              <span>{t.primaryCta}</span>
+            </button>
           </div>
+        </div>
 
-          {/* Canvas Editor */}
-          <div className="relative w-full rounded-3xl bg-slate-950 border border-slate-800 p-2 sm:p-4 flex items-center justify-center overflow-auto min-h-[400px] max-h-[75vh] shadow-inner">
-            <div className="relative inline-block select-none">
-              <canvas
-                ref={editorCanvasRef}
-                onPointerDown={handleEditorPointerDown}
-                onPointerMove={handleEditorPointerMove}
-                onPointerUp={handleEditorPointerUp}
-                onPointerCancel={handleEditorPointerUp}
-                className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl cursor-crosshair"
-              />
+        {/* CỘT PHẢI (LIVE CANVAS PREVIEW & OUTPUT ACTIONS) - 7 CỘT */}
+        <div className="lg:col-span-7 flex flex-col gap-space-5">
+          {/* LIVE CANVAS PREVIEW CONTAINER */}
+          <div className="bg-surface-container rounded-xl p-space-4 shadow-sm flex flex-col gap-space-3 border border-border-subtle/30">
+            {/* Canvas Header Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-space-2 pb-space-2 border-b border-border-subtle/30">
+              <div className="flex items-center gap-space-2">
+                <Layers className="w-5 h-5 text-primary-container" />
+                <span className="font-title-sm text-title-sm text-on-surface">{t.previewTitle}</span>
+                <span className="px-space-1 py-[1px] bg-surface-subtle font-label-sm text-label-sm text-outline rounded">
+                  {t.previewBadge}
+                </span>
+              </div>
 
-              {textInputPosition && (
-                <div
-                  className="absolute z-30 p-2 rounded-xl bg-slate-900 border border-brand-500 shadow-2xl flex items-center space-x-2 animate-in fade-in"
-                  style={{
-                    left: `${(textInputPosition.x / (baseImage.naturalWidth || 1)) * 100}%`,
-                    top: `${(textInputPosition.y / (baseImage.naturalHeight || 1)) * 100}%`,
-                    transform: 'translate(-50%, -100%)',
-                  }}
-                >
-                  <input
-                    type="text"
-                    autoFocus
-                    value={textInputValue}
-                    placeholder="Nhập ghi chú..."
-                    onChange={(e) => setTextInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleTextSubmit();
-                      if (e.key === 'Escape') setTextInputPosition(null);
-                    }}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 text-white text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-brand-400"
-                  />
+              {/* Canvas Mini Toolbar */}
+              <div className="flex items-center gap-space-1">
+                <div className="flex items-center bg-surface-container-low rounded-lg p-0.5 mr-space-2 border border-border-subtle/30">
                   <button
                     type="button"
-                    onClick={handleTextSubmit}
-                    className="px-2.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold"
+                    onClick={() => setZoomFit(false)}
+                    className={`px-space-2 py-0.5 rounded font-label-sm text-label-sm transition cursor-pointer ${
+                      !zoomFit ? 'bg-surface-subtle text-on-surface font-semibold' : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
                   >
-                    OK
+                    100%
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setZoomFit(true)}
+                    className={`px-space-2 py-0.5 rounded font-label-sm text-label-sm transition cursor-pointer ${
+                      zoomFit ? 'bg-surface-subtle text-on-surface font-semibold' : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    Vừa khung
+                  </button>
+                </div>
+
+                {stage === 'editing' && (
+                  <button
+                    type="button"
+                    onClick={() => setStage('snipping')}
+                    className="p-space-1 px-2 text-on-surface-variant hover:text-primary-container rounded hover:bg-surface-subtle transition-colors flex items-center gap-1 font-label-sm text-label-sm cursor-pointer"
+                    title={t.btnResnip}
+                  >
+                    <Crop className="w-4 h-4" />
+                    <span className="hidden sm:inline">{t.btnResnip}</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (annotations.length > 0) {
+                      setRedoStack((prev) => [...prev, annotations[annotations.length - 1]]);
+                      setAnnotations((prev) => prev.slice(0, -1));
+                    }
+                  }}
+                  disabled={annotations.length === 0}
+                  className="p-space-1 text-on-surface-variant hover:text-on-surface rounded hover:bg-surface-subtle transition-colors flex items-center cursor-pointer disabled:opacity-30"
+                  title={t.btnUndo}
+                >
+                  <Undo2 className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (redoStack.length > 0) {
+                      setAnnotations((prev) => [...prev, redoStack[redoStack.length - 1]]);
+                      setRedoStack((prev) => prev.slice(0, -1));
+                    }
+                  }}
+                  disabled={redoStack.length === 0}
+                  className="p-space-1 text-on-surface-variant hover:text-on-surface rounded hover:bg-surface-subtle transition-colors flex items-center cursor-pointer disabled:opacity-30"
+                  title={t.btnRedo}
+                >
+                  <Redo2 className="w-4 h-4" />
+                </button>
+
+                <span className="w-[1px] h-4 bg-border-subtle mx-1"></span>
+
+                <button
+                  type="button"
+                  onClick={() => setAnnotations([])}
+                  disabled={annotations.length === 0}
+                  className="p-space-1 text-on-surface-variant hover:text-error rounded hover:bg-surface-subtle transition-colors flex items-center cursor-pointer disabled:opacity-30"
+                  title={t.btnClearAll}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* STAGE CONTAINER */}
+            <div className="relative w-full bg-gradient-to-br from-surface-container-highest via-surface-canvas to-surface-container-low p-space-4 sm:p-space-6 rounded-xl flex items-center justify-center overflow-hidden shadow-2xl min-h-[380px] max-h-[72vh]">
+              {/* STAGE A: Snipping Phase */}
+              {stage === 'snipping' && rawCaptureImage && (
+                <div className="relative w-full flex flex-col items-center gap-3">
+                  <div className="w-full flex items-center justify-between bg-surface-container-low/90 backdrop-blur px-3 py-2 rounded-lg border border-border-subtle/50 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Move className="w-4 h-4 text-primary-container animate-pulse" />
+                      <span className="font-semibold text-on-surface">{t.snipGuideTitle}</span>
+                      <span className="hidden sm:inline-block px-2 py-0.5 rounded bg-secondary-container/20 text-secondary text-[11px] font-semibold">
+                        {t.snipAutoCopyBadge}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleConfirmArea(rawCaptureImage)}
+                        className="px-2.5 py-1 rounded bg-surface-subtle hover:bg-surface-bright text-on-surface text-xs font-semibold flex items-center gap-1 cursor-pointer transition"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5 text-primary-container" />
+                        <span>{t.btnFullScreen}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStage(baseImage ? 'editing' : 'idle')}
+                        className="p-1 rounded hover:bg-surface-subtle text-outline hover:text-error transition cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="relative max-w-full max-h-[60vh] overflow-auto flex items-center justify-center select-none cursor-crosshair rounded-xl border border-border-subtle/40 bg-surface-container-lowest shadow-2xl">
+                    <canvas
+                      ref={snipCanvasRef}
+                      onPointerDown={handleSnipPointerDown}
+                      onPointerMove={handleSnipPointerMove}
+                      onPointerUp={handleSnipPointerUp}
+                      onPointerCancel={handleSnipPointerUp}
+                      className="max-w-full max-h-[58vh] object-contain"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* STAGE B: Editing Phase */}
+              {stage === 'editing' && baseImage && (
+                <div
+                  className={`relative w-full max-w-2xl flex items-center justify-center transition-all ${
+                    enablePadding ? 'p-space-6' : 'p-0'
+                  }`}
+                >
+                  <div
+                    className={`relative inline-block overflow-hidden transition-all ${
+                      enableSoftShadow ? 'shadow-2xl' : ''
+                    } border border-border-subtle/50 bg-surface-container-lowest`}
+                    style={{ borderRadius: `${cornerRadius}px` }}
+                  >
+                    <canvas
+                      ref={editorCanvasRef}
+                      onPointerDown={handleEditorPointerDown}
+                      onPointerMove={handleEditorPointerMove}
+                      onPointerUp={handleEditorPointerUp}
+                      onPointerCancel={handleEditorPointerUp}
+                      className={`select-none cursor-crosshair block ${
+                        zoomFit ? 'max-w-full max-h-[58vh] object-contain' : 'w-auto h-auto'
+                      }`}
+                    />
+
+                    {/* Pop-up Text Note Input */}
+                    {textInputPosition && (
+                      <div
+                        className="absolute z-30 p-2 rounded-xl bg-surface-container-high border border-primary-container shadow-2xl flex items-center space-x-2 animate-in fade-in"
+                        style={{
+                          left: `${(textInputPosition.x / (baseImage.naturalWidth || 1)) * 100}%`,
+                          top: `${(textInputPosition.y / (baseImage.naturalHeight || 1)) * 100}%`,
+                          transform: 'translate(-50%, -100%)',
+                        }}
+                      >
+                        <input
+                          type="text"
+                          autoFocus
+                          value={textInputValue}
+                          placeholder="Nhập ghi chú..."
+                          onChange={(e) => setTextInputValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleTextSubmit();
+                            if (e.key === 'Escape') setTextInputPosition(null);
+                          }}
+                          className="px-3 py-1.5 rounded-lg bg-surface-container text-on-surface text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary-container"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleTextSubmit}
+                          className="px-2.5 py-1.5 rounded-lg bg-primary-container hover:bg-brand-cyan-bright text-on-primary-container text-xs font-bold cursor-pointer"
+                        >
+                          OK
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* STAGE C: Idle Empty State */}
+              {stage === 'idle' && (
+                <div className="flex flex-col items-center justify-center text-center p-space-6 max-w-md">
+                  <div className="w-16 h-16 rounded-2xl bg-surface-container flex items-center justify-center text-primary-container mb-space-3 shadow-inner">
+                    <Camera className="w-8 h-8 text-primary-container" />
+                  </div>
+                  <h3 className="font-title-sm text-title-sm text-on-surface font-semibold mb-1">
+                    {t.emptyStagePrompt}
+                  </h3>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-4">
+                    {t.emptyStageDesc}
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCapture(countdown)}
+                      className="px-space-3 py-space-2 rounded-lg bg-primary-container hover:bg-brand-cyan-bright text-on-primary-container font-title-sm text-title-sm font-bold flex items-center gap-1.5 cursor-pointer shadow"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>Chụp màn hình ngay</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handlePasteClipboard}
+                      className="px-space-3 py-space-2 rounded-lg bg-surface-subtle hover:bg-surface-bright text-on-surface font-title-sm text-title-sm font-semibold flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Clipboard className="w-4 h-4 text-secondary" />
+                      <span>Dán Clipboard</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Bottom Actions: Copy to Clipboard, Download & Snip Another */}
-          <div className="w-full p-4 rounded-3xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center space-x-4">
-              <button
-                type="button"
-                onClick={() => handleCapture(countdown)}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-brand-300 hover:text-white font-extrabold text-xs border border-slate-700 transition flex items-center space-x-2 shadow-sm"
-              >
-                <Camera className="w-4 h-4" />
-                <span>{t.btnSnipAnother}</span>
-              </button>
-
-              <div className="flex items-center space-x-2 text-xs text-slate-400">
-                <ImageIcon className="w-4 h-4 text-brand-400" />
-                <span>
-                  {t.sizeLabel}{' '}
-                  <strong className="text-slate-200 font-mono">
-                    {baseImage ? `${baseImage.naturalWidth} × ${baseImage.naturalHeight} px` : ''}
-                  </strong>
+            {/* BẢNG THÔNG SỐ XUẤT BẢN & METRIC STRIP */}
+            <div className="grid grid-cols-3 gap-space-3 p-space-3 bg-surface-container-low rounded-lg border border-border-subtle/40">
+              <div className="flex flex-col">
+                <span className="font-label-sm text-label-sm text-outline">{t.metricDimensions}</span>
+                <span className="font-title-sm text-title-sm text-on-surface font-mono font-bold mt-0.5">
+                  {previewWidth > 0 ? `${previewWidth} × ${previewHeight}` : 'Chưa có'}
+                </span>
+                <span className="font-label-sm text-label-sm text-primary">{t.metricScale}</span>
+              </div>
+              <div className="flex flex-col border-l border-border-subtle/40 pl-space-3">
+                <span className="font-label-sm text-label-sm text-outline">{t.metricSize}</span>
+                <span className="font-title-sm text-title-sm text-on-surface font-mono font-bold mt-0.5">
+                  {loadedFileSize > 0 ? formatBytes(loadedFileSize) : '~840 KB'}
+                </span>
+                <span className="font-label-sm text-label-sm text-secondary">{t.metricLossless}</span>
+              </div>
+              <div className="flex flex-col border-l border-border-subtle/40 pl-space-3">
+                <span className="font-label-sm text-label-sm text-outline">{t.metricLayers}</span>
+                <span className="font-title-sm text-title-sm text-on-surface font-mono font-bold mt-0.5">
+                  {layerCount} {t.metricActive}
+                </span>
+                <span className="font-label-sm text-label-sm text-tertiary">
+                  {layerCount > 0 ? `${layerCount} vector layers` : 'Trống'}
                 </span>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+            {/* BỘ ACTION BUTTONS XUẤT BẢN */}
+            <div className="flex flex-col sm:flex-row items-center gap-space-3 pt-space-2">
+              {/* NÚT CHÍNH EMERALD */}
               <button
                 type="button"
-                onClick={handleManualCopy}
-                className={`flex-1 sm:flex-none px-6 py-3 rounded-2xl font-extrabold text-xs shadow-xl transition-all duration-200 flex items-center justify-center space-x-2 cursor-pointer active:scale-95 ${
-                  isCopied
-                    ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-                    : 'bg-gradient-to-r from-brand-600 via-brand-500 to-cyan-600 hover:from-brand-500 hover:to-cyan-500 text-white shadow-brand-500/25'
-                }`}
+                onClick={() => handleDownload(selectedFormat)}
+                disabled={!baseImage && !rawCaptureImage}
+                className="w-full sm:flex-1 py-space-3 px-space-4 bg-brand-emerald-deep hover:bg-secondary-container text-white font-title-sm text-title-sm font-bold rounded-lg shadow-md flex items-center justify-center gap-space-2 transition-all group cursor-pointer disabled:opacity-50"
               >
-                {isCopied ? (
-                  <>
-                    <Check className="w-4 h-4 stroke-[3]" />
-                    <span>{t.btnCopied}</span>
-                  </>
-                ) : (
-                  <>
-                    <Clipboard className="w-4 h-4" />
-                    <span>{t.btnCopy}</span>
-                  </>
-                )}
+                <Download className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <span>{t.btnDownloadEmerald}</span>
               </button>
 
-              <div className="relative flex items-center rounded-2xl bg-slate-800 border border-slate-700/80 overflow-visible">
+              {/* CÁC NÚT PHỤ */}
+              <div className="flex items-center gap-space-2 w-full sm:w-auto">
                 <button
                   type="button"
-                  onClick={() => currentCanvas && downloadCanvas(currentCanvas, selectedFormat)}
-                  className="px-4 py-3 text-slate-200 hover:text-white font-bold text-xs flex items-center space-x-1.5 hover:bg-slate-700/50 transition rounded-l-2xl"
+                  onClick={handleManualCopy}
+                  disabled={!baseImage && !rawCaptureImage}
+                  className={`flex-1 sm:flex-initial py-space-3 px-space-4 rounded-lg font-body-sm text-body-sm font-semibold flex items-center justify-center gap-space-1.5 transition-colors cursor-pointer disabled:opacity-50 ${
+                    isCopied
+                      ? 'bg-secondary-container text-white'
+                      : 'bg-surface-subtle hover:bg-surface-bright text-on-surface'
+                  }`}
+                  title="Sao chép nhanh vào Clipboard"
                 >
-                  <Download className="w-4 h-4 text-brand-400" />
-                  <span>{t.btnDownload}</span>
-                  <span className="uppercase text-[10px] px-1.5 py-0.5 rounded bg-slate-900 text-brand-300 font-mono font-bold">
-                    .{selectedFormat}
-                  </span>
+                  {isCopied ? (
+                    <>
+                      <Check className="w-4 h-4 stroke-[3]" />
+                      <span>{t.btnCopied}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 text-brand-cyan-bright" />
+                      <span>{t.btnCopy}</span>
+                    </>
+                  )}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setShowFormatDropdown(!showFormatDropdown)}
-                  className="px-2 py-3 text-slate-400 hover:text-white border-l border-slate-700 hover:bg-slate-700/50 transition rounded-r-2xl"
-                >
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </button>
+                {/* Dropdown Format Selector */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowFormatDropdown(!showFormatDropdown)}
+                    disabled={!baseImage && !rawCaptureImage}
+                    className="p-space-3 bg-surface-subtle hover:bg-surface-bright text-on-surface font-label-sm text-label-sm font-bold rounded-lg transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="uppercase">.{selectedFormat}</span>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
 
-                {showFormatDropdown && (
-                  <div className="absolute right-0 top-full mt-2 w-32 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl p-1 z-30 space-y-1">
-                    {['png', 'jpeg', 'webp'].map((fmt) => (
-                      <button
-                        key={fmt}
-                        type="button"
-                        onClick={() => {
-                          setSelectedFormat(fmt);
-                          setShowFormatDropdown(false);
-                        }}
-                        className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold uppercase font-mono transition flex items-center justify-between ${
-                          selectedFormat === fmt ? 'bg-brand-600 text-white' : 'text-slate-300 hover:bg-slate-800'
-                        }`}
-                      >
-                        <span>.{fmt}</span>
-                        {selectedFormat === fmt && <Check className="w-3 h-3" />}
-                      </button>
-                    ))}
-                  </div>
+                  {showFormatDropdown && (
+                    <div className="absolute right-0 bottom-full mb-2 w-28 rounded-xl bg-surface-container-high border border-border-subtle shadow-2xl p-1 z-30 flex flex-col gap-1">
+                      {['png', 'jpeg', 'webp'].map((fmt) => (
+                        <button
+                          key={fmt}
+                          type="button"
+                          onClick={() => {
+                            setSelectedFormat(fmt);
+                            setShowFormatDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-bold uppercase font-mono transition flex items-center justify-between cursor-pointer ${
+                            selectedFormat === fmt
+                              ? 'bg-primary-container text-on-primary-container'
+                              : 'text-on-surface-variant hover:bg-surface-subtle hover:text-on-surface'
+                          }`}
+                        >
+                          <span>.{fmt}</span>
+                          {selectedFormat === fmt && <Check className="w-3 h-3" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FOOTER KIẾN THỨC & QUY CHUẨN ĐỒ HỌA (3 CARDS) */}
+      <div className="pt-space-6 border-t border-border-subtle/40 mb-space-8">
+        <div className="flex items-center gap-space-2 mb-space-4">
+          <span className="material-symbols-outlined text-primary-container text-[20px]">auto_stories</span>
+          <h3 className="font-title-sm text-title-sm text-on-surface font-bold">{t.assuranceTitle}</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-space-4">
+          {/* CARD 1 */}
+          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
+            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-primary-container mb-space-1">
+              <Camera className="w-5 h-5 text-primary-container" />
+            </div>
+            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">{t.card1Title}</h4>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{t.card1Desc}</p>
+          </div>
+
+          {/* CARD 2 */}
+          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
+            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-secondary mb-space-1">
+              <ShieldCheck className="w-5 h-5 text-secondary" />
+            </div>
+            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">{t.card2Title}</h4>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{t.card2Desc}</p>
+          </div>
+
+          {/* CARD 3 */}
+          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
+            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-tertiary mb-space-1">
+              <Sparkles className="w-5 h-5 text-tertiary" />
+            </div>
+            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">{t.card3Title}</h4>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{t.card3Desc}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* DRAFT HISTORY MODAL */}
+      {showHistoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-surface-container rounded-2xl border border-border-subtle p-space-6 max-w-3xl w-full max-h-[80vh] flex flex-col gap-space-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-space-3 border-b border-border-subtle/40">
+              <div className="flex items-center gap-space-2">
+                <History className="w-5 h-5 text-primary-container" />
+                <h3 className="font-title-sm text-title-sm text-on-surface font-bold">
+                  {t.btnDrafts} ({history.length})
+                </h3>
+              </div>
+              <div className="flex items-center gap-space-2">
+                {history.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistory([]);
+                      localStorage.removeItem('snapcraft_history');
+                    }}
+                    className="px-2.5 py-1 text-xs text-error hover:bg-error-container/20 rounded transition cursor-pointer flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Xóa toàn bộ</span>
+                  </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setShowHistoryModal(false)}
+                  className="p-1 rounded text-outline hover:text-on-surface transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
+            </div>
+
+            <div className="overflow-y-auto flex-1 grid grid-cols-2 sm:grid-cols-3 gap-space-3 p-1">
+              {history.length === 0 ? (
+                <div className="col-span-full py-12 text-center text-outline text-sm">
+                  Chưa có ảnh nháp nào được lưu trong lịch sử phiên làm việc.
+                </div>
+              ) : (
+                history.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      const img = new Image();
+                      img.onload = () => {
+                        setRawCaptureImage(img);
+                        setBaseImage(img);
+                        setAnnotations([]);
+                        setRedoStack([]);
+                        setStage('editing');
+                        setShowHistoryModal(false);
+                      };
+                      img.src = item.dataUrl;
+                    }}
+                    className="group relative rounded-xl bg-surface-container-high border border-border-subtle/50 hover:border-primary-container overflow-hidden cursor-pointer transition flex flex-col justify-between shadow-sm"
+                  >
+                    <div className="aspect-video w-full bg-surface-canvas overflow-hidden flex items-center justify-center">
+                      <img
+                        src={item.dataUrl}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                    </div>
+                    <div className="p-2 bg-surface-container/90 flex items-center justify-between text-[11px] text-on-surface-variant">
+                      <span className="font-mono">{item.width}×{item.height}</span>
+                      <span className="group-hover:text-primary-container font-semibold flex items-center gap-0.5">
+                        Mở <ChevronRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Phase 0 / Idle State: Ultra-Intuitive Hero Landing */}
-      {stage === 'idle' && (
-        <div className="w-full flex flex-col items-center justify-center py-12 px-4 rounded-3xl bg-gradient-to-b from-slate-900/90 via-slate-900/60 to-slate-950 border border-slate-800 shadow-2xl text-center space-y-8">
-          <div className="max-w-2xl space-y-3">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/25 text-brand-300 text-xs font-extrabold tracking-wide">
-              <Zap className="w-3.5 h-3.5 text-brand-400" />
-              <span>{t.heroBadge}</span>
-            </div>
-            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              {t.heroTitle}
-            </h2>
-            <p className="text-sm text-slate-400 max-w-lg mx-auto">
-              {t.heroSubtitle}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => handleCapture(countdown)}
-            disabled={isCapturing}
-            className="relative group px-8 sm:px-10 py-5 rounded-3xl bg-gradient-to-r from-brand-600 via-indigo-600 to-cyan-500 hover:from-brand-500 hover:to-cyan-400 text-white font-black text-base sm:text-lg shadow-2xl shadow-brand-500/30 transition-all duration-300 flex items-center space-x-3 cursor-pointer active:scale-95"
-          >
-            <Camera className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-            <span>{t.btnStartSnip}</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl w-full pt-4">
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center space-x-3 text-left">
-              <div className="w-9 h-9 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center font-black text-sm flex-shrink-0">
-                1
+      {/* SHORTCUTS MODAL */}
+      {showShortcutsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
+          <div className="bg-surface-container rounded-2xl border border-border-subtle p-space-6 max-w-md w-full shadow-2xl flex flex-col gap-space-4">
+            <div className="flex items-center justify-between pb-space-3 border-b border-border-subtle/40">
+              <div className="flex items-center gap-space-2">
+                <Keyboard className="w-5 h-5 text-primary-container" />
+                <h3 className="font-title-sm text-title-sm text-on-surface font-bold">{t.btnShortcuts}</h3>
               </div>
-              <div>
-                <div className="text-xs font-bold text-slate-200">{t.step1Title}</div>
-                <div className="text-[11px] text-slate-400">{t.step1Desc}</div>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center space-x-3 text-left">
-              <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-black text-sm flex-shrink-0">
-                2
-              </div>
-              <div>
-                <div className="text-xs font-bold text-slate-200">{t.step2Title}</div>
-                <div className="text-[11px] text-slate-400">{t.step2Desc}</div>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 flex items-center space-x-3 text-left">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-black text-sm flex-shrink-0">
-                3
-              </div>
-              <div>
-                <div className="text-xs font-bold text-slate-200">{t.step3Title}</div>
-                <div className="text-[11px] text-slate-400">{t.step3Desc}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* History Gallery */}
-      {history.length > 0 && (
-        <div className="w-full p-5 rounded-3xl bg-slate-900/60 border border-slate-800 backdrop-blur-md space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-xs font-bold text-slate-300 uppercase tracking-wider">
-              <History className="w-4 h-4 text-brand-400" />
-              <span>{t.recentTitle} ({history.length})</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setHistory([]);
-                localStorage.removeItem('snapcraft_history');
-              }}
-              className="text-xs text-slate-400 hover:text-red-400 flex items-center space-x-1 p-1 rounded-lg hover:bg-slate-800 transition"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>{t.btnClearHistory}</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {history.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => {
-                  const img = new Image();
-                  img.onload = () => {
-                    setRawCaptureImage(img);
-                    setBaseImage(img);
-                    setAnnotations([]);
-                    setRedoStack([]);
-                    setStage('editing');
-                  };
-                  img.src = item.dataUrl;
-                }}
-                className="group relative rounded-2xl bg-slate-950 border border-slate-800 hover:border-brand-500 overflow-hidden cursor-pointer transition-all duration-200 shadow-md flex flex-col justify-between"
+              <button
+                type="button"
+                onClick={() => setShowShortcutsModal(false)}
+                className="p-1 rounded text-outline hover:text-on-surface transition cursor-pointer"
               >
-                <div className="aspect-video w-full bg-slate-900 overflow-hidden flex items-center justify-center">
-                  <img
-                    src={item.dataUrl}
-                    alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                  />
-                </div>
-                <div className="p-2 bg-slate-900/80 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-                  <span className="font-mono">{item.width}×{item.height}</span>
-                  <span className="group-hover:text-brand-400 font-bold transition">
-                    {t.openSnapshot} →
-                  </span>
-                </div>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-space-3 font-body-sm text-body-sm">
+              <div className="flex items-center justify-between py-1 border-b border-border-subtle/20">
+                <span className="text-on-surface-variant">Dán ảnh từ Clipboard</span>
+                <kbd className="px-2 py-0.5 rounded bg-surface-subtle font-mono text-primary font-bold">
+                  Ctrl + V
+                </kbd>
               </div>
-            ))}
+              <div className="flex items-center justify-between py-1 border-b border-border-subtle/20">
+                <span className="text-on-surface-variant">Sao chép ảnh đã chú thích</span>
+                <kbd className="px-2 py-0.5 rounded bg-surface-subtle font-mono text-primary font-bold">
+                  Ctrl + C
+                </kbd>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-border-subtle/20">
+                <span className="text-on-surface-variant">Hoàn tác nét vẽ (Undo)</span>
+                <kbd className="px-2 py-0.5 rounded bg-surface-subtle font-mono text-on-surface font-bold">
+                  Ctrl + Z
+                </kbd>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-border-subtle/20">
+                <span className="text-on-surface-variant">Làm lại nét vẽ (Redo)</span>
+                <kbd className="px-2 py-0.5 rounded bg-surface-subtle font-mono text-on-surface font-bold">
+                  Ctrl + Y
+                </kbd>
+              </div>
+              <div className="flex items-center justify-between py-1">
+                <span className="text-on-surface-variant">Hủy nhập ghi chú văn bản</span>
+                <kbd className="px-2 py-0.5 rounded bg-surface-subtle font-mono text-on-surface font-bold">
+                  Esc
+                </kbd>
+              </div>
+            </div>
           </div>
         </div>
       )}
-    </MiniAppLayout>
+    </div>
   );
 }

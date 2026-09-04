@@ -336,17 +336,17 @@ export default function DocStudioApp({ displayLang }) {
     };
 
     return (
-        <div className="flex flex-col md:flex-row min-h-[calc(100vh-8rem)] w-full rounded-2xl border border-slate-800 bg-slate-950 text-slate-100 font-sans overflow-hidden">
+        <div className="flex flex-col md:flex-row min-h-[calc(100vh-14rem)] min-h-[38rem] w-full rounded-xl border border-border-subtle/40 bg-surface-container text-on-surface font-body-md overflow-hidden shadow-sm">
             {/* Sidebar */}
-            <aside className="print:hidden w-full md:w-64 bg-slate-900 text-slate-200 border-r border-slate-800 shrink-0 overflow-y-auto">
-                <div className="p-5 border-b border-white/10 shrink-0">
+            <aside className="print:hidden w-full md:w-64 bg-surface-container-low text-on-surface border-r border-border-subtle/40 shrink-0 overflow-y-auto">
+                <div className="p-5 border-b border-border-subtle/30 shrink-0">
                     <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center shadow-inner">
-                            <LayoutTemplate size={18} strokeWidth={2.5} className="text-white" />
+                        <div className="w-8 h-8 bg-primary-container rounded-lg flex items-center justify-center text-on-primary-container shadow-inner">
+                            <LayoutTemplate size={18} strokeWidth={2.5} />
                         </div>
                         <div>
-                            <h1 className="text-lg font-black tracking-tight text-white m-0 leading-tight">{t.sidebarTitle}</h1>
-                            <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-widest block">
+                            <h1 className="text-lg font-black tracking-tight text-on-surface m-0 leading-tight">{t.sidebarTitle}</h1>
+                            <p className="text-[10px] text-brand-cyan-bright font-bold uppercase tracking-widest block">
                                 {t.sidebarSubtitle}
                             </p>
                         </div>
@@ -354,33 +354,35 @@ export default function DocStudioApp({ displayLang }) {
                 </div>
                 <nav className="p-3 space-y-1">
                     <button
+                        type="button"
                         onClick={() => setActiveSubTab('dashboard')}
-                        className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${activeSubTab === 'dashboard' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                        className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors cursor-pointer ${activeSubTab === 'dashboard' ? 'bg-primary-container text-on-primary-container font-bold shadow' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-subtle'}`}
                     >
                         <Layers size={16} /> {t.navDocs}
                     </button>
                     <button
+                        type="button"
                         onClick={() => setActiveSubTab('templates')}
-                        className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors ${activeSubTab === 'templates' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                        className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-semibold rounded-lg transition-colors cursor-pointer ${activeSubTab === 'templates' ? 'bg-primary-container text-on-primary-container font-bold shadow' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-subtle'}`}
                     >
                         <LayoutTemplate size={16} /> {t.navTemplates}
                     </button>
                 </nav>
-                <div className="absolute flex-col flex bottom-0 w-full p-4 border-t border-white/10 bg-slate-900/80 backdrop-blur-md">
+                <div className="absolute flex-col flex bottom-0 w-full p-4 border-t border-border-subtle/30 bg-surface-container-low/90 backdrop-blur-md">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0">
-                            <User size={14} className="text-slate-400" />
+                        <div className="w-8 h-8 rounded-full bg-surface-container border border-border-subtle flex items-center justify-center shrink-0">
+                            <User size={14} className="text-on-surface-variant" />
                         </div>
                         <div className="overflow-hidden">
-                            <p className="text-xs font-bold text-white truncate">{t.guestUser}</p>
-                            <p className="text-[10px] text-emerald-400 font-mono tracking-wider">{t.openAccess}</p>
+                            <p className="text-xs font-bold text-on-surface truncate">{t.guestUser}</p>
+                            <p className="text-[10px] text-secondary font-mono tracking-wider">{t.openAccess}</p>
                         </div>
                     </div>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto bg-slate-900/60 p-6 relative print:p-0 print:bg-white print:overflow-visible">
+            <main className="flex-1 overflow-y-auto bg-surface-canvas p-6 relative print:p-0 print:bg-white print:overflow-visible">
                 <div className="max-w-5xl mx-auto">
                     {/* ── Dashboard ── */}
                     {activeSubTab === 'dashboard' && (

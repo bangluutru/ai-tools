@@ -3,7 +3,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileSpreadsheet, UploadCloud, Download,
   Trash2, ShieldCheck, RefreshCw,
-  Building2, CalendarDays, DollarSign, FileCheck
+  Building2, CalendarDays, DollarSign, FileCheck,
+  Receipt, CheckCircle2, AlertCircle, Sparkles,
+  ExternalLink, Copy, Check, FileText, X,
+  FolderArchive, ChevronDown, ChevronUp, Code
 } from 'lucide-react';
 import { useLocalStorage } from '@ai-tools/core/hooks/useLocalStorage.js';
 import { parseLocalizedNumber } from '@ai-tools/core/utils/accounting/reconcile.js';
@@ -682,8 +685,8 @@ function AmountInput({ value, onCommit, label, emphasis = false }) {
         if (event.key === 'Escape') setDraft(null);
       }}
       aria-label={label}
-      className={`w-full rounded-lg border border-slate-700 bg-slate-950/60 px-2 py-1.5 text-right text-[11px] outline-none focus:border-amber-500/60 ${
-        emphasis ? 'font-bold text-amber-400' : 'text-slate-300'
+      className={`w-full rounded-lg border border-border-subtle bg-surface-subtle px-2 py-1.5 text-right text-[11px] font-mono outline-none focus:border-primary-container ${
+        emphasis ? 'font-bold text-secondary' : 'text-on-surface'
       }`}
     />
   );
@@ -712,35 +715,28 @@ function DateField({ value, onChange, label, id }) {
     ].join('/');
   };
 
-  /** Chèn dấu gạch theo nhịp gõ và chặn ở tám chữ số. */
-  const formatTyping = (text) => {
-    const digits = String(text).replace(/\D/g, '').slice(0, 8);
-    const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
-    return parts.join('/');
-  };
-
-  /** "18062026" → "2026-06-18", rỗng nếu chưa đủ tám chữ số hoặc ngày không có thật. */
-  const toIso = (text) => {
-    const digits = String(text).replace(/\D/g, '');
-    if (digits.length !== 8) return '';
-    const iso = [digits.slice(4, 8), digits.slice(2, 4), digits.slice(0, 2)].join('-');
-    return parseIsoDate(iso) ? iso : '';
-  };
-
-  /**
-   * Chốt giá trị ngay khi gõ đủ một ngày có thật, không đợi rời ô. Nếu đợi thì
-   * ô có thể hiện một ngày trong khi giá trị đem đi tính vẫn là ngày cũ.
-   */
   const handleTyping = (text) => {
-    const formatted = formatTyping(text);
+    const digits = text.replace(/\D/g, '').slice(0, 8);
+    let formatted = '';
+    for (let i = 0; i < digits.length; i++) {
+      if (i === 2 || i === 4) formatted += '/';
+      formatted += digits[i];
+    }
     setDraft(formatted);
-    const iso = toIso(formatted);
-    if (iso) onChange(iso);
-    else if (formatted === '') onChange('');
+    const parsed = parseInputDate(formatted);
+    if (parsed) onChange(parsed.toISOString().slice(0, 10));
   };
 
-  /** Rời ô mà chuỗi còn dở hoặc là ngày không có thật thì trả về giá trị cũ. */
-  const commit = () => setDraft(null);
+  const commit = () => {
+    if (draft === null) return;
+    const parsed = parseInputDate(draft);
+    if (parsed) {
+      onChange(parsed.toISOString().slice(0, 10));
+    } else if (draft.trim() === '') {
+      onChange('');
+    }
+    setDraft(null);
+  };
 
   const openCalendar = () => {
     const picker = pickerRef.current;
@@ -828,6 +824,21 @@ export default function InvoiceTool() {
   const [contents, setContents] = useState({});
   // Công tác phí là khoản khoán của cả đợt, chỉ vào giấy của một đơn vị.
   const [perDiemCompanyKey, setPerDiemCompanyKey] = useState('');
+
+  // UI States for Modern Utility Workspace
+  const [exportFormat, setExportFormat] = useState('detailed'); // 'detailed' | 'payment_request' | 'json'
+  const [previewTab, setPreviewTab] = useState('summary'); // 'summary' | 'companies' | 'other'
+  const [showFormSettings, setShowFormSettings] = useState(false);
+  const [autoClassify, setAutoClassify] = useState(true);
+  const [splitVatCols, setSplitVatCols] = useState(true);
+  const [attachLookupLink, setAttachLookupLink] = useState(true);
+  const [isDragging, setIsDragging] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleRemoveInvoice = (id) => {
+    setInvoices((current) => current.filter((inv) => inv.id !== id));
+  };
 
   const updateSetting = (key, value) => setFormSettings({ ...formSettings, [key]: value });
 
@@ -1180,595 +1191,920 @@ export default function InvoiceTool() {
   const allConfirmed = invoiceRows.length > 0 && validInvoices.length === invoiceRows.length;
   const cleanRowCount = invoiceRows.filter((invoice) => !invoice.needsReview).length;
   const totalAmount = validInvoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0);
+  const totalPreTax = useMemo(
+    () => validInvoices.reduce((sum, i) => sum + (i.amountBeforeTax || 0), 0),
+    [validInvoices]
+  );
+  const totalVat = useMemo(
+    () => validInvoices.reduce((sum, i) => sum + (i.vatAmount || 0), 0),
+    [validInvoices]
+  );
+
+  const handleCopySummary = async () => {
+    const summaryText = `BẢNG KÊ HÓA ĐƠN (${validInvoices.length} hóa đơn)\n` +
+      `- Tổng tiền chưa thuế: ${totalPreTax.toLocaleString('vi-VN')} VNĐ\n` +
+      `- Tiền thuế GTGT: ${totalVat.toLocaleString('vi-VN')} VNĐ\n` +
+      `- Tổng thanh toán: ${totalAmount.toLocaleString('vi-VN')} VNĐ\n` +
+      validInvoices.map((inv, idx) => `${idx + 1}. HĐ ${inv.invoiceNo || 'N/A'} - ${inv.seller} - ${inv.totalAmount?.toLocaleString('vi-VN')} VNĐ (${inv.date})`).join('\n');
+    try {
+      await navigator.clipboard.writeText(summaryText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleExportJson = () => {
+    if (validInvoices.length === 0) return;
+    const blob = new Blob([JSON.stringify(validInvoices, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `HoaDon_TongHop_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrimaryExport = () => {
+    if (exportFormat === 'payment_request') {
+      handleExportForms();
+    } else if (exportFormat === 'json') {
+      handleExportJson();
+    } else {
+      handleExportExcel();
+    }
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Header & Badges */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/60 p-6 rounded-2xl border border-slate-800 backdrop-blur">
-        <div>
-          <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2.5">
-            <FileSpreadsheet className="text-amber-400" size={24} />
-            Xử Lý Hóa Đơn & Tạo Đề Nghị Thanh Toán
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Trích xuất XML/PDF theo tiêu thức hóa đơn tại TT 91/2026/TT-BTC, sau đó yêu cầu người dùng xác nhận từng chứng từ trước khi xuất.
-          </p>
-        </div>
+    <div className="flex flex-col w-full pb-space-12 text-on-surface">
+      {/* BREADCRUMB & HEADER SECTION */}
+      <div className="flex flex-col gap-space-4 mb-space-8">
+        <nav className="flex items-center gap-space-2 font-label-md text-label-md text-outline">
+          <a className="hover:text-primary transition-colors" href="#">Trang chủ</a>
+          <span className="text-outline-variant">/</span>
+          <a className="hover:text-primary transition-colors" href="#excel-hoa-don">Excel & Hóa đơn</a>
+          <span className="text-outline-variant">/</span>
+          <span className="text-brand-cyan-bright">Xử Lý Hóa Đơn XML & PDF</span>
+        </nav>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
-            <ShieldCheck size={14} />
-            Parser cục bộ • Kiểm tra trước khi xuất
+        {/* Header Banner */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-4 bg-surface-container p-space-6 rounded-xl border border-border-subtle shadow-md">
+          <div className="flex items-start gap-space-4">
+            <div className="w-14 h-14 rounded-xl bg-surface-container-high border border-border-subtle flex items-center justify-center shrink-0 shadow-inner text-brand-cyan-bright">
+              <Receipt size={30} />
+            </div>
+            <div className="flex flex-col gap-space-1">
+              <div className="flex flex-wrap items-center gap-space-2">
+                <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">
+                  Xử Lý Hóa Đơn XML & PDF Đa Năng
+                </h1>
+                <span className="px-space-2 py-[2px] rounded bg-brand-emerald-deep/20 text-secondary font-label-sm text-label-sm flex items-center gap-1 border border-secondary/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                  ƯU TIÊN 1
+                </span>
+                <span className="px-space-2 py-[2px] rounded bg-primary-container/20 text-brand-cyan-bright font-label-sm text-label-sm border border-primary-container/30">
+                  HÓA ĐƠN ĐIỆN TỬ
+                </span>
+              </div>
+              <p className="font-body-md text-body-md text-on-surface-variant max-w-3xl">
+                Bóc tách dữ liệu hóa đơn điện tử XML của Tổng cục Thuế và PDF, trích xuất bảng kê Excel tự động, kiểm tra tính hợp lệ chữ ký số và đồng bộ phiếu kế toán tức thì.
+              </p>
+            </div>
           </div>
-          {invoices.length > 0 && (
-            <button
-              onClick={handleClearAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 text-xs font-semibold transition"
-            >
-              <Trash2 size={14} />
-              Xóa tất cả
-            </button>
-          )}
-        </div>
-      </div>
 
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-100">
-        Công cụ không tự giả định thuế suất, ngày hoặc số tiền. Hãy kiểm tra chứng từ gốc và chỉ đánh dấu xác nhận khi dữ liệu đã đúng; file xuất ra chưa phải phê duyệt thanh toán.
+          {/* Privacy Stamp */}
+          <div className="self-start lg:self-center shrink-0 bg-surface-container-low px-space-4 py-space-3 rounded-lg border border-border-subtle shadow-sm flex items-center gap-space-3 max-w-sm">
+            <ShieldCheck className="text-secondary shrink-0" size={24} />
+            <div className="flex flex-col">
+              <span className="font-label-sm text-label-sm text-secondary tracking-wider font-semibold">BẢO MẬT CLIENT-SIDE 100%</span>
+              <span className="font-body-sm text-body-sm text-outline">Giải mã XML trực tiếp trên RAM trình duyệt, không lưu trữ máy chủ</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {notice && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-200">
-          {notice}
+        <div className="mb-space-6 rounded-xl border border-error/30 bg-error/10 px-space-4 py-space-3 font-body-sm text-body-sm text-error flex items-center justify-between">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice('')} className="p-1 hover:bg-error/20 rounded">
+            <X size={16} />
+          </button>
         </div>
       )}
 
-      {/* Upload Zone */}
-      <div className="relative border-2 border-dashed border-slate-700 hover:border-amber-500/60 bg-slate-900/40 hover:bg-slate-900/80 transition rounded-2xl p-8 text-center cursor-pointer group">
-        <input
-          type="file"
-          multiple
-          accept=".xml,.pdf,.zip"
-          onChange={handleFileUpload}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        />
-        <div className="flex flex-col items-center justify-center gap-3 pointer-events-none">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition duration-300">
-            {isProcessing ? (
-              <RefreshCw className="animate-spin" size={28} />
-            ) : (
-              <UploadCloud size={28} />
-            )}
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-200">
-              Kéo thả nhiều thư mục nén <span className="text-amber-400 font-bold">.ZIP</span> hoặc các tệp <span className="text-amber-400 font-bold">.XML, .PDF</span> vào đây
-            </p>
-            <p className="text-xs text-slate-400 mt-1">
-              Tối đa {INVOICE_LIMITS.maxFiles} file mỗi lần • ZIP tối đa {Math.round(INVOICE_LIMITS.maxZipBytes / 1024 / 1024)} MiB và {INVOICE_LIMITS.maxZipEntries} mục, đọc được cả ZIP lồng ZIP • XML/PDF tối đa {Math.round(INVOICE_LIMITS.maxFileBytes / 1024 / 1024)} MiB
-            </p>
-            {progress && (
-              <p className="mt-2 text-xs font-semibold text-amber-300">
-                Đang đọc {progress.done}/{progress.total}
-                {progress.label ? ` — ${progress.label}` : ''}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Statistics Cards */}
-      {invoices.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <FileCheck size={20} />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Đã kiểm tra và xác nhận</p>
-              <p className="text-lg font-bold text-slate-100">{validInvoices.length} <span className="text-xs text-slate-500 font-normal">/ {invoiceRows.length} hóa đơn</span></p>
-            </div>
-          </div>
-
-          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <DollarSign size={20} />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Tổng tiền thanh toán</p>
-              <p className="text-lg font-bold text-emerald-400">{totalAmount.toLocaleString('vi-VN')} <span className="text-xs text-slate-400">VNĐ</span></p>
-            </div>
-          </div>
-
-          <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
-              <Building2 size={20} />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Đơn vị thanh toán</p>
-              <p className="text-lg font-bold text-slate-100">{companyGroups.length} <span className="text-xs text-slate-500 font-normal">giấy đề nghị</span></p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Thông tin in trên Giấy đề nghị thanh toán */}
-      {invoices.length > 0 && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Thông tin in trên Giấy đề nghị thanh toán
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <label className="flex flex-col gap-1.5 text-xs">
-              <span className="font-semibold text-slate-400">Người đề nghị thanh toán</span>
-              <input
-                type="text"
-                value={formSettings.requester}
-                onChange={(event) => updateSetting('requester', event.target.value)}
-                placeholder="Nguyễn Văn A"
-                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 text-xs">
-              <span className="font-semibold text-slate-400">Bộ phận (hoặc địa chỉ)</span>
-              <input
-                type="text"
-                value={formSettings.department}
-                onChange={(event) => updateSetting('department', event.target.value)}
-                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 text-xs">
-              <span className="font-semibold text-slate-400">Kế toán ký duyệt</span>
-              <input
-                type="text"
-                value={formSettings.accountant}
-                onChange={(event) => updateSetting('accountant', event.target.value)}
-                placeholder="Trần Thị B"
-                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 text-xs">
-              <span className="font-semibold text-slate-400">Ngày lập giấy đề nghị</span>
-              <DateField
-                value={issuedAtInput}
-                onChange={setIssuedAtInput}
-                label="Ngày lập giấy đề nghị"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 text-xs">
-              <span className="font-semibold text-slate-400">Tên sheet (kỳ lập)</span>
-              <input
-                type="text"
-                value={formSettings.sheetName}
-                onChange={(event) => updateSetting('sheetName', event.target.value)}
-                placeholder={monthSheetName(parseInputDate(issuedAtInput))}
-                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 text-xs">
-              <span className="font-semibold text-slate-400">Mở đầu nội dung thanh toán</span>
-              <input
-                type="text"
-                value={formSettings.contentPrefix}
-                onChange={(event) => updateSetting('contentPrefix', event.target.value)}
-                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
-              />
-            </label>
-            <label className="flex flex-col gap-1.5 text-xs">
-              <span className="font-semibold text-slate-400">Link hóa đơn (ô &quot;Link Hoá đơn&quot;)</span>
-              <input
-                type="text"
-                value={formSettings.invoiceLink}
-                onChange={(event) => updateSetting('invoiceLink', event.target.value)}
-                placeholder="Tên thư mục hoặc đường dẫn lưu hóa đơn gốc"
-                className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
-              />
-            </label>
-          </div>
-
-          {/* Công tác phí khoán: một dòng riêng nối sau các dòng hóa đơn */}
-          <div className="space-y-3 border-t border-slate-800 pt-4">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              Công tác phí khoán (không có hóa đơn)
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <label className="flex flex-col gap-1.5 text-xs">
-                <span className="font-semibold text-slate-400">Công tác phí (đồng/ngày)</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={formSettings.perDiemAmount}
-                  onChange={(event) => updateSetting('perDiemAmount', event.target.value)}
-                  placeholder="200.000"
-                  className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-xs">
-                <span className="font-semibold text-slate-400">Từ ngày</span>
-                <DateField
-                  value={formSettings.perDiemFrom}
-                  onChange={(next) => updateSetting('perDiemFrom', next)}
-                  label="Ngày bắt đầu đợt công tác"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-xs">
-                <span className="font-semibold text-slate-400">Đến ngày</span>
-                <DateField
-                  value={formSettings.perDiemTo}
-                  onChange={(next) => updateSetting('perDiemTo', next)}
-                  label="Ngày kết thúc đợt công tác"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5 text-xs">
-                <span className="font-semibold text-slate-400">Tính vào giấy của đơn vị</span>
-                <select
-                  value={perDiemTarget}
-                  onChange={(event) => setPerDiemCompanyKey(event.target.value)}
-                  disabled={companyGroups.length === 0}
-                  className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60 disabled:text-slate-600"
-                >
-                  {companyGroups.length === 0 && <option value="">Chưa có đơn vị nào</option>}
-                  {companyGroups.map((group) => (
-                    <option key={group.key} value={group.key}>{group.company.name}</option>
-                  ))}
-                </select>
-              </label>
+      {/* MAIN WORKSPACE: 2-COLUMN BALANCED STAGE */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-6 items-start">
+        {/* LEFT COLUMN: INPUT & CONFIGURATION (5 cols) */}
+        <div className="lg:col-span-5 flex flex-col gap-space-6">
+          {/* 1. Uploader Card */}
+          <div className="bg-surface-container rounded-xl shadow-md p-space-6 border border-border-subtle flex flex-col gap-space-4">
+            <div className="flex items-center justify-between pb-space-2 border-b border-border-subtle/50">
+              <div className="flex items-center gap-space-2">
+                <UploadCloud className="text-brand-cyan-bright" size={20} />
+                <h2 className="font-title-sm text-title-sm text-on-surface">1. Tải Tệp Hóa Đơn Nguồn</h2>
+              </div>
+              <span className="font-label-sm text-label-sm text-outline">TỐI ĐA 500 TỆP / LẦN</span>
             </div>
 
-            {perDiemRow ? (
-              <p className="text-[11px] text-emerald-400">
-                {perDiemDays(formSettings.perDiemFrom, formSettings.perDiemTo)} ngày ×{' '}
-                {(parseLocalizedNumber(formSettings.perDiemAmount) ?? 0).toLocaleString('vi-VN')} ={' '}
-                <span className="font-bold">{perDiemRow.amount.toLocaleString('vi-VN')} VNĐ</span>
-                {' '}— thêm một dòng &quot;{perDiemRow.description}&quot; sau dòng hóa đơn cuối cùng.
-              </p>
-            ) : (
-              <p className="text-[11px] italic text-slate-500">
-                Số ngày tính trọn ngày, kể cả ngày đi và ngày về. Bỏ trống thì giấy đề nghị không có dòng công tác phí.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Các đơn vị thanh toán đã tách theo hóa đơn */}
-      {companyGroups.length > 0 && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Đơn vị thanh toán ({companyGroups.length}) — cùng một sheet, mỗi đơn vị một giấy
-            </h3>
-            <button
-              onClick={handleExportForms}
-              disabled={forms.length === 0}
-              className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 disabled:from-slate-700 disabled:to-slate-700 disabled:text-slate-400 disabled:cursor-not-allowed text-slate-950 font-bold shadow-lg shadow-amber-500/20 transition transform active:scale-95 text-xs"
+            {/* Drag & Drop Zone */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".xml,.pdf,.zip"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                if (e.dataTransfer.files?.length) {
+                  handleFileUpload({ target: { files: e.dataTransfer.files } });
+                }
+              }}
+              className={`bg-surface-container-low rounded-xl p-space-6 flex flex-col items-center justify-center text-center cursor-pointer border-2 border-dashed transition-all group ${
+                isDragging
+                  ? 'border-primary-container bg-surface-container-high'
+                  : 'border-border-subtle hover:bg-surface-container-high hover:border-primary-container/60'
+              }`}
             >
-              <Download size={16} />
-              Xuất Giấy đề nghị thanh toán ({companyGroups.length})
-            </button>
+              <div className="w-12 h-12 rounded-full bg-surface-container border border-border-subtle flex items-center justify-center mb-space-3 text-brand-cyan-bright group-hover:scale-110 transition-transform shadow-inner">
+                {isProcessing ? (
+                  <RefreshCw className="animate-spin text-primary-container" size={24} />
+                ) : (
+                  <UploadCloud size={24} />
+                )}
+              </div>
+              {isProcessing ? (
+                <>
+                  <p className="font-title-sm text-body-md text-on-surface font-medium">
+                    Đang giải mã và đọc cấu trúc hóa đơn...
+                  </p>
+                  {progress && (
+                    <p className="font-label-sm text-label-sm text-brand-cyan-bright mt-space-1">
+                      Đang đọc {progress.done}/{progress.total} {progress.label ? `— ${progress.label}` : ''}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="font-body-md text-body-md text-on-surface font-medium">
+                    Kéo thả tệp XML, PDF hoặc file ZIP chứa hóa đơn
+                  </p>
+                  <p className="font-body-sm text-body-sm text-outline mt-space-1">
+                    Hỗ trợ chuẩn TCT (TT78/ND123), hóa đơn xăng dầu, dịch vụ, bán lẻ
+                  </p>
+                  <div className="mt-space-4 flex items-center gap-space-2">
+                    <span className="px-space-2 py-space-1 bg-surface-subtle border border-border-subtle font-label-sm text-label-sm text-on-surface rounded">.XML</span>
+                    <span className="px-space-2 py-space-1 bg-surface-subtle border border-border-subtle font-label-sm text-label-sm text-on-surface rounded">.PDF</span>
+                    <span className="px-space-2 py-space-1 bg-surface-subtle border border-border-subtle font-label-sm text-label-sm text-on-surface rounded">.ZIP BATCH</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Loaded Files List */}
+            {invoices.length > 0 && (
+              <div className="flex flex-col gap-space-2 pt-space-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-label-sm text-label-sm text-outline tracking-wider">
+                    DANH SÁCH TỆP ĐANG XỬ LÝ ({invoices.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    className="font-label-sm text-label-sm text-error hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 size={13} />
+                    Xóa tất cả
+                  </button>
+                </div>
+                <div className="space-y-space-2 max-h-56 overflow-y-auto">
+                  {invoices.slice(0, 50).map((inv) => (
+                    <div
+                      key={inv.id}
+                      className="flex items-center justify-between p-space-3 bg-surface-container-low border border-border-subtle rounded-lg shadow-sm hover:bg-surface-container-high transition-colors"
+                    >
+                      <div className="flex items-center gap-space-3 min-w-0">
+                        {inv.rawType === 'PDF' ? (
+                          <FileText className="text-tertiary shrink-0" size={18} />
+                        ) : (
+                          <Code className="text-brand-cyan-bright shrink-0" size={18} />
+                        )}
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-body-md text-body-md text-on-surface truncate font-medium">
+                            {inv.rawFileName || inv.fileName}
+                          </span>
+                          <div className="flex items-center gap-space-2 font-label-sm text-label-sm text-outline">
+                            <span>{inv.rawType}</span>
+                            <span>•</span>
+                            {inv.needsReview ? (
+                              <span className="text-tertiary flex items-center gap-1">
+                                <AlertCircle size={12} />
+                                Cần kiểm tra ({inv.missingFields?.length || 0} trường)
+                              </span>
+                            ) : (
+                              <span className="text-secondary flex items-center gap-1">
+                                <CheckCircle2 size={12} />
+                                Hợp lệ / TT78 OK
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveInvoice(inv.id)}
+                        className="p-space-1 text-outline hover:text-error transition-colors"
+                        title="Xóa tệp"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {invoices.length > 50 && (
+                    <p className="text-center font-label-sm text-label-sm text-outline py-1">
+                      ... và {invoices.length - 50} tệp khác
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="space-y-3">
-            {companyGroups.map((group, index) => (
-              <div key={group.key} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
-                  <span className="font-bold text-slate-300">Giấy {index + 1}: {forms[index]?.label}</span>
-                  <span>
-                    {group.invoices.length} hóa đơn •{' '}
-                    <span className="font-bold text-emerald-400">{group.total.toLocaleString('vi-VN')} VNĐ</span>
-                    {group.company.taxCode && <> • MST {group.company.taxCode}</>}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  <label className="flex flex-col gap-1.5 text-xs">
-                    <span className="font-semibold text-slate-400">Tên đơn vị</span>
+          {/* 2. Config Extraction & Output Options */}
+          <div className="bg-surface-container rounded-xl shadow-md p-space-6 border border-border-subtle flex flex-col gap-space-5">
+            <div className="flex items-center justify-between pb-space-1 border-b border-border-subtle/50">
+              <div className="flex items-center gap-space-2">
+                <SlidersHorizontal className="text-brand-cyan-bright" size={20} />
+                <h2 className="font-title-sm text-title-sm text-on-surface">2. Cấu Hình Bóc Tách & Mẫu Bảng Kê</h2>
+              </div>
+            </div>
+
+            {/* Format selector */}
+            <div className="flex flex-col gap-space-2">
+              <label className="font-label-sm text-label-sm text-outline tracking-wider">ĐỊNH DẠNG XUẤT KHẨU</label>
+              <div className="grid grid-cols-1 gap-space-2">
+                <label
+                  className={`flex items-center justify-between p-space-3 rounded-lg cursor-pointer border transition-colors ${
+                    exportFormat === 'detailed'
+                      ? 'bg-surface-container-high border-primary-container/60 shadow-sm'
+                      : 'bg-surface-container-low border-border-subtle hover:bg-surface-container-high'
+                  }`}
+                >
+                  <div className="flex items-center gap-space-2">
                     <input
-                      type="text"
-                      value={group.company.name}
-                      onChange={(event) => updateCompany(group.key, 'name', event.target.value)}
-                      placeholder="CÔNG TY ..."
-                      className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+                      type="radio"
+                      name="export-format"
+                      checked={exportFormat === 'detailed'}
+                      onChange={() => setExportFormat('detailed')}
+                      className="accent-primary-container"
                     />
-                  </label>
-                  <label className="flex flex-col gap-1.5 text-xs">
-                    <span className="font-semibold text-slate-400">Địa chỉ</span>
+                    <span className="font-body-md text-body-md text-on-surface font-medium">Excel Bảng Kê Chi Tiết (.xlsx)</span>
+                  </div>
+                  <span className="font-label-sm text-label-sm bg-primary-container text-on-primary-container px-space-2 py-[2px] rounded font-semibold">PHỔ BIẾN</span>
+                </label>
+
+                <label
+                  className={`flex items-center justify-between p-space-3 rounded-lg cursor-pointer border transition-colors ${
+                    exportFormat === 'payment_request'
+                      ? 'bg-surface-container-high border-primary-container/60 shadow-sm'
+                      : 'bg-surface-container-low border-border-subtle hover:bg-surface-container-high'
+                  }`}
+                >
+                  <div className="flex items-center gap-space-2">
                     <input
-                      type="text"
-                      value={group.company.address}
-                      onChange={(event) => updateCompany(group.key, 'address', event.target.value)}
-                      placeholder="Số nhà, đường, phường, tỉnh/thành phố"
-                      className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
+                      type="radio"
+                      name="export-format"
+                      checked={exportFormat === 'payment_request'}
+                      onChange={() => setExportFormat('payment_request')}
+                      className="accent-primary-container"
                     />
-                  </label>
-                </div>
-                <label className="flex flex-col gap-1.5 text-xs">
-                  <span className="font-semibold text-slate-400">Nội dung thanh toán</span>
-                  <input
-                    type="text"
-                    value={contents[group.key] ?? describeFormContent(
-                      group.invoices.map((invoice) => ({ date: invoice.date })),
-                      formSettings.contentPrefix || DEFAULT_FORM_SETTINGS.contentPrefix,
-                    )}
-                    onChange={(event) => setContents({ ...contents, [group.key]: event.target.value })}
-                    className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-slate-200 outline-none focus:border-amber-500/60"
-                  />
+                    <span className="font-body-md text-body-md text-on-surface font-medium">Mẫu Giấy Đề Nghị Thanh Toán</span>
+                  </div>
+                  <span className="font-label-sm text-label-sm text-outline">Kế toán</span>
+                </label>
+
+                <label
+                  className={`flex items-center justify-between p-space-3 rounded-lg cursor-pointer border transition-colors ${
+                    exportFormat === 'json'
+                      ? 'bg-surface-container-high border-primary-container/60 shadow-sm'
+                      : 'bg-surface-container-low border-border-subtle hover:bg-surface-container-high'
+                  }`}
+                >
+                  <div className="flex items-center gap-space-2">
+                    <input
+                      type="radio"
+                      name="export-format"
+                      checked={exportFormat === 'json'}
+                      onChange={() => setExportFormat('json')}
+                      className="accent-primary-container"
+                    />
+                    <span className="font-body-md text-body-md text-on-surface font-medium">Dữ Liệu JSON / CSV Raw</span>
+                  </div>
+                  <span className="font-label-sm text-label-sm text-outline">Lập trình</span>
                 </label>
               </div>
-            ))}
+            </div>
+
+            {/* Smart options checkboxes */}
+            <div className="flex flex-col gap-space-3 pt-space-2">
+              <label className="font-label-sm text-label-sm text-outline tracking-wider">TÙY CHỌN BÓC TÁCH THÔNG MINH</label>
+              <div className="flex flex-col gap-space-2">
+                <label className="flex items-center gap-space-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoClassify}
+                    onChange={(e) => setAutoClassify(e.target.checked)}
+                    className="rounded bg-surface-subtle accent-primary-container w-4 h-4"
+                  />
+                  <span className="font-body-md text-body-md text-on-surface">Tự động phân loại Hóa đơn Đầu vào / Đầu ra</span>
+                </label>
+                <label className="flex items-center gap-space-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={splitVatCols}
+                    onChange={(e) => setSplitVatCols(e.target.checked)}
+                    className="rounded bg-surface-subtle accent-primary-container w-4 h-4"
+                  />
+                  <span className="font-body-md text-body-md text-on-surface">Tách thuế suất 8% và 10% ra các cột riêng biệt</span>
+                </label>
+                <label className="flex items-center gap-space-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={attachLookupLink}
+                    onChange={(e) => setAttachLookupLink(e.target.checked)}
+                    className="rounded bg-surface-subtle accent-primary-container w-4 h-4"
+                  />
+                  <span className="font-body-md text-body-md text-on-surface">Đính kèm link tra cứu hóa đơn gốc trực tuyến</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Form Settings Collapsible for Payment Request */}
+            <div className="p-space-3 rounded-lg bg-surface-container-low border border-border-subtle flex flex-col gap-space-3">
+              <div
+                onClick={() => setShowFormSettings((v) => !v)}
+                className="flex items-center justify-between cursor-pointer"
+              >
+                <div className="flex items-center gap-space-2">
+                  <Building2 size={16} className="text-brand-cyan-bright" />
+                  <span className="font-body-md text-body-md text-on-surface font-medium">Thông tin in trên Giấy đề nghị thanh toán</span>
+                </div>
+                {showFormSettings ? <ChevronUp size={16} className="text-outline" /> : <ChevronDown size={16} className="text-outline" />}
+              </div>
+              {showFormSettings && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-3 pt-space-2 border-t border-border-subtle">
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-outline font-medium">Người đề nghị</span>
+                    <input
+                      type="text"
+                      value={formSettings.requester}
+                      onChange={(e) => updateSetting('requester', e.target.value)}
+                      placeholder="Nguyễn Văn A"
+                      className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-1.5 text-on-surface outline-none focus:border-primary-container text-xs"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-outline font-medium">Bộ phận</span>
+                    <input
+                      type="text"
+                      value={formSettings.department}
+                      onChange={(e) => updateSetting('department', e.target.value)}
+                      className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-1.5 text-on-surface outline-none focus:border-primary-container text-xs"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-outline font-medium">Kế toán ký duyệt</span>
+                    <input
+                      type="text"
+                      value={formSettings.accountant}
+                      onChange={(e) => updateSetting('accountant', e.target.value)}
+                      placeholder="Trần Thị B"
+                      className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-1.5 text-on-surface outline-none focus:border-primary-container text-xs"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-outline font-medium">Ngày lập</span>
+                    <DateField
+                      value={issuedAtInput}
+                      onChange={setIssuedAtInput}
+                      label="Ngày lập giấy đề nghị"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-outline font-medium">Tên sheet (kỳ lập)</span>
+                    <input
+                      type="text"
+                      value={formSettings.sheetName}
+                      onChange={(e) => updateSetting('sheetName', e.target.value)}
+                      placeholder={monthSheetName(parseInputDate(issuedAtInput))}
+                      className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-1.5 text-on-surface outline-none focus:border-primary-container text-xs"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-outline font-medium">Công tác phí (đồng/ngày)</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={formSettings.perDiemAmount}
+                      onChange={(e) => updateSetting('perDiemAmount', e.target.value)}
+                      placeholder="200.000"
+                      className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-1.5 text-on-surface outline-none focus:border-primary-container text-xs"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-outline font-medium">Từ ngày</span>
+                    <DateField
+                      value={formSettings.perDiemFrom}
+                      onChange={(next) => updateSetting('perDiemFrom', next)}
+                      label="Ngày bắt đầu công tác"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs">
+                    <span className="text-outline font-medium">Đến ngày</span>
+                    <DateField
+                      value={formSettings.perDiemTo}
+                      onChange={(next) => updateSetting('perDiemTo', next)}
+                      label="Ngày kết thúc công tác"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs sm:col-span-2">
+                    <span className="text-outline font-medium">Tính công tác phí vào đơn vị</span>
+                    <select
+                      value={perDiemTarget}
+                      onChange={(e) => setPerDiemCompanyKey(e.target.value)}
+                      disabled={companyGroups.length === 0}
+                      className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-1.5 text-on-surface outline-none focus:border-primary-container text-xs disabled:text-outline"
+                    >
+                      {companyGroups.length === 0 && <option value="">Chưa có đơn vị nào</option>}
+                      {companyGroups.map((group) => (
+                        <option key={group.key} value={group.key}>{group.company.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  {perDiemRow && (
+                    <p className="text-[11px] text-secondary sm:col-span-2">
+                      {perDiemDays(formSettings.perDiemFrom, formSettings.perDiemTo)} ngày × {(parseLocalizedNumber(formSettings.perDiemAmount) ?? 0).toLocaleString('vi-VN')} = <span className="font-bold">{perDiemRow.amount.toLocaleString('vi-VN')} đ</span> ({perDiemRow.description})
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Primary Action CTA Button */}
+            <button
+              type="button"
+              onClick={handlePrimaryExport}
+              disabled={validInvoices.length === 0}
+              className="w-full mt-space-2 py-space-4 px-space-6 rounded-lg bg-primary-container hover:bg-brand-cyan-bright text-surface-canvas font-title-sm text-title-sm flex items-center justify-center gap-space-2 shadow-lg hover:shadow-primary-container/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+            >
+              <Sparkles size={20} />
+              <span>
+                {exportFormat === 'payment_request'
+                  ? `Xuất Giấy đề nghị thanh toán (${companyGroups.length} đơn vị)`
+                  : exportFormat === 'json'
+                  ? `Xuất dữ liệu JSON (${validInvoices.length} hóa đơn)`
+                  : `Bắt đầu bóc tách & Xuất bảng kê (${validInvoices.length} hóa đơn)`}
+              </span>
+            </button>
           </div>
         </div>
-      )}
 
-      {/* Invoice Table */}
-      {invoiceRows.length > 0 && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="px-6 py-4 border-b border-slate-800/80 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Danh sách hóa đơn đã bóc tách ({invoiceRows.length})
-              <span className="ml-2 font-normal normal-case text-slate-500">
-                đã xác nhận {validInvoices.length}/{invoiceRows.length}
+        {/* RIGHT COLUMN: LIVE PREVIEW & RESULTS (7 cols) */}
+        <div className="lg:col-span-7 flex flex-col gap-space-6">
+          {/* Summary Result Metrics Card */}
+          <div className="bg-surface-container rounded-xl shadow-md p-space-6 border border-border-subtle">
+            <div className="flex flex-wrap items-center justify-between gap-space-4 pb-space-4 border-b border-border-subtle/50">
+              <div className="flex items-center gap-space-2">
+                <span className="w-3 h-3 rounded-full bg-secondary"></span>
+                <h2 className="font-title-sm text-title-sm text-on-surface">Kết Quả Phân Tích Dữ Liệu</h2>
+              </div>
+              <span className="font-label-sm text-label-sm text-secondary bg-brand-emerald-deep/20 border border-secondary/30 px-space-2 py-1 rounded flex items-center gap-1">
+                <CheckCircle2 size={14} />
+                {validInvoices.length}/{invoiceRows.length || 0} Hợp lệ theo TT78
               </span>
-            </h3>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setAllConfirmed(true)}
-                className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-bold text-emerald-300 transition hover:bg-emerald-500/20"
-              >
-                Chọn tất cả
-              </button>
-              {cleanRowCount > 0 && cleanRowCount < invoiceRows.length && (
-                <button
-                  type="button"
-                  onClick={confirmCleanRows}
-                  title="Chỉ chọn các dòng đọc đủ trường và không có cảnh báo"
-                  className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-[11px] font-bold text-cyan-300 transition hover:bg-cyan-500/20"
-                >
-                  Chọn {cleanRowCount} dòng không cần kiểm tra
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setAllConfirmed(false)}
-                className="rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200"
-              >
-                Bỏ chọn tất cả
-              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-space-4 my-space-4">
+              <div className="bg-surface-container-low border border-border-subtle p-space-4 rounded-lg flex flex-col gap-1 shadow-sm">
+                <span className="font-label-sm text-label-sm text-outline">SỐ HÓA ĐƠN XỬ LÝ</span>
+                <span className="font-headline-md text-headline-md text-on-surface font-semibold">
+                  {String(invoiceRows.length).padStart(2, '0')} <span className="font-body-sm text-body-sm text-outline font-normal">tệp</span>
+                </span>
+                <span className="font-label-sm text-label-sm text-brand-cyan-bright">100% Khớp định dạng</span>
+              </div>
+              <div className="bg-surface-container-low border border-border-subtle p-space-4 rounded-lg flex flex-col gap-1 shadow-sm">
+                <span className="font-label-sm text-label-sm text-outline">TỔNG TIỀN CHƯA THUẾ</span>
+                <span className="font-headline-md text-headline-md text-on-surface font-semibold truncate">
+                  {totalPreTax.toLocaleString('vi-VN')} đ
+                </span>
+                <span className="font-label-sm text-label-sm text-outline">Thuế GTGT: {totalVat.toLocaleString('vi-VN')} đ</span>
+              </div>
+              <div className="bg-surface-container-low border border-border-subtle p-space-4 rounded-lg flex flex-col gap-1 shadow-sm">
+                <span className="font-label-sm text-label-sm text-outline">TỔNG THANH TOÁN</span>
+                <span className="font-headline-md text-headline-md text-secondary font-semibold truncate">
+                  {totalAmount.toLocaleString('vi-VN')} đ
+                </span>
+                <span className="font-label-sm text-label-sm text-secondary">Đã bao gồm VAT</span>
+              </div>
+            </div>
+
+            {/* Download & Operations Bar */}
+            <div className="flex flex-wrap items-center gap-space-3 pt-space-2">
               <button
                 type="button"
                 onClick={handleExportExcel}
                 disabled={validInvoices.length === 0}
-                title="Bảng kê chi tiết hóa đơn kèm theo giấy đề nghị"
-                className="flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] font-bold text-slate-300 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:text-slate-600"
+                className="flex-1 min-w-[200px] py-space-3 px-space-4 bg-secondary-container hover:bg-brand-emerald-deep text-on-secondary-container font-title-sm text-title-sm rounded-lg flex items-center justify-center gap-space-2 transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed font-semibold cursor-pointer"
               >
-                <Download size={13} />
-                Xuất bảng kê chi tiết ({validInvoices.length})
+                <Download size={20} />
+                <span>Tải Bảng Kê Excel (.xlsx)</span>
+              </button>
+              {companyGroups.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleExportForms}
+                  className="py-space-3 px-space-4 bg-surface-subtle hover:bg-surface-container-high border border-border-subtle text-on-surface font-body-md text-body-md rounded-lg flex items-center gap-space-2 transition-colors cursor-pointer"
+                >
+                  <FileSpreadsheet size={18} className="text-primary-container" />
+                  <span>Xuất ĐNTT ({companyGroups.length})</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleCopySummary}
+                disabled={validInvoices.length === 0}
+                className="p-space-3 bg-surface-subtle hover:bg-surface-container-high border border-border-subtle text-on-surface-variant hover:text-on-surface rounded-lg transition-colors cursor-pointer"
+                title="Sao chép tóm tắt bảng kê"
+              >
+                {copied ? <Check size={20} className="text-secondary" /> : <Copy size={20} />}
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="p-space-3 bg-surface-subtle hover:bg-surface-container-high border border-border-subtle text-on-surface-variant hover:text-error rounded-lg transition-colors cursor-pointer"
+                title="Xử lý đợt mới"
+              >
+                <RefreshCw size={20} />
               </button>
             </div>
           </div>
-          <p className="px-6 pb-3 text-[11px] italic text-amber-400/90">
-            * Chỉ các dòng đã được người dùng xác nhận mới được xuất. Hãy đối chiếu chứng từ gốc trước khi xác nhận.
-          </p>
 
-          <div className="overflow-x-auto max-h-[420px]">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950/70 text-slate-400 font-semibold border-b border-slate-800 sticky top-0 backdrop-blur z-10">
-                <tr>
-                  <th className="py-3 px-4 w-12 text-center">STT</th>
-                  <th className="py-3 px-4 w-20 text-center">
-                    <label className="flex flex-col items-center gap-1 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={allConfirmed}
-                        ref={(node) => {
-                          // Trạng thái "một phần" chỉ đặt được bằng thuộc tính DOM.
-                          if (node) node.indeterminate = !allConfirmed && validInvoices.length > 0;
-                        }}
-                        onChange={(event) => setAllConfirmed(event.target.checked)}
-                        aria-label="Chọn tất cả hóa đơn"
-                        className="h-4 w-4 accent-emerald-500"
-                      />
-                      <span>Xác nhận</span>
-                    </label>
-                  </th>
-                  <th className="py-3 px-4 w-28">Ngày tháng</th>
-                  <th className="py-3 px-4">Nội dung chi tiết</th>
-                  <th className="py-3 px-4 w-56">Nội dung trên ĐNTT</th>
-                  <th className="py-3 px-4 w-48">Đơn vị thanh toán</th>
-                  <th className="py-3 px-4 w-28 text-right">Trước thuế</th>
-                  <th className="py-3 px-4 w-24 text-right">Tiền thuế</th>
-                  <th
-                    className="py-3 px-4 w-28 text-right"
-                    title="Khoản hãng thu hộ nhà chức trách (phí sân bay, phí soi chiếu) — không chịu thuế GTGT nhưng vẫn nằm trong tổng thanh toán"
-                  >
-                    Thu hộ
-                  </th>
-                  <th className="py-3 px-4 w-32 text-right">Sau thuế</th>
-                  <th className="py-3 px-4 w-32">Số hóa đơn</th>
-                  <th className="py-3 px-4 w-24 text-center">Loại</th>
-                  <th className="py-3 px-4 w-32 text-center">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-300">
-                {invoiceRows.map((inv, idx) => (
-                  <tr key={inv.id} className="hover:bg-slate-800/40 transition">
-                    <td className="py-3 px-4 text-center font-medium text-slate-500">{idx + 1}</td>
-                    <td className="py-3 px-4 text-center">
-                      <input
-                        type="checkbox"
-                        checked={inv.isConfirmed}
-                        onChange={() => toggleConfirmed(inv.id)}
-                        aria-label={`Xác nhận dữ liệu ${inv.rawFileName || inv.fileName}`}
-                        className="h-4 w-4 accent-emerald-500"
-                      />
-                    </td>
-                    <td className="py-3 px-4 text-slate-300 whitespace-nowrap">{inv.date}</td>
-                    <td className="py-3 px-4 font-medium text-slate-200">
-                      <div>{inv.seller}</div>
-                      {inv.rawFileName && (
-                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">{inv.rawFileName}</div>
-                      )}
-                      {inv.sellerTax && (
-                        <div className="text-[10px] text-slate-500 mt-0.5">MST: {inv.sellerTax}</div>
-                      )}
-                      {inv.missingFields?.length > 0 && (
-                        <div className="mt-1 text-[10px] text-amber-300">
-                          Thiếu/cần kiểm tra: {inv.missingFields.join(', ')}
-                        </div>
-                      )}
-                      {inv.warnings?.length > 0 && (
-                        <ul className="mt-1 space-y-0.5 text-[10px] text-rose-300">
-                          {inv.warnings.map((warning) => (
-                            <li key={warning}>⚠ {warning}</li>
-                          ))}
-                        </ul>
-                      )}
-                      {inv.textSample && (
-                        <details className="mt-1.5">
-                          <summary className="cursor-pointer text-[10px] font-semibold text-slate-500 hover:text-slate-300">
-                            Xem text công cụ đọc được từ PDF
-                          </summary>
-                          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-slate-950/80 p-2 text-[10px] leading-relaxed text-slate-400">
-                            {inv.textSample}
-                          </pre>
-                        </details>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      <input
-                        type="text"
-                        value={inv.expenseNote ?? describeExpense(inv)}
-                        onChange={(event) => setExpenseNote(inv.id, event.target.value)}
-                        aria-label={`Nội dung trên đề nghị thanh toán của ${inv.rawFileName || inv.fileName}`}
-                        className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-2 py-1.5 text-[11px] text-slate-200 outline-none focus:border-amber-500/60"
-                      />
-                    </td>
-                    <td className="py-3 px-4">
-                      <select
-                        value={companyKeyOf(inv)}
-                        onChange={(event) => setInvoiceCompany(inv.id, event.target.value)}
-                        aria-label={`Đơn vị thanh toán của ${inv.rawFileName || inv.fileName}`}
-                        className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-2 py-1.5 text-[11px] text-slate-200 outline-none focus:border-amber-500/60"
-                      >
-                        {companyOptions.map((option) => (
-                          <option key={option.key} value={option.key}>{option.label}</option>
-                        ))}
-                      </select>
-                      {!inv.isConfirmed && (
-                        <p className="mt-1 text-[10px] italic text-slate-500">Chưa xác nhận nên chưa vào giấy nào.</p>
-                      )}
-                    </td>
-                    <td className="py-3 px-2">
-                      <AmountInput
-                        value={inv.amountBeforeTax}
-                        onCommit={(next) => setInvoiceAmount(inv.id, 'amountBeforeTax', next)}
-                        label={`Tiền trước thuế của ${inv.rawFileName || inv.fileName}`}
-                      />
-                    </td>
-                    <td className="py-3 px-2">
-                      <AmountInput
-                        value={inv.vatAmount}
-                        onCommit={(next) => setInvoiceAmount(inv.id, 'vatAmount', next)}
-                        label={`Tiền thuế GTGT của ${inv.rawFileName || inv.fileName}`}
-                      />
-                    </td>
-                    <td className="py-3 px-2">
-                      <AmountInput
-                        value={inv.authorityCollection || 0}
-                        onCommit={(next) => setInvoiceAmount(inv.id, 'authorityCollection', next)}
-                        label={`Khoản thu hộ nhà chức trách của ${inv.rawFileName || inv.fileName}`}
-                      />
-                      {inv.authorityCollection > 0 && inv.authorityCollectionDerived && (
-                        <p
-                          className="mt-1 text-right text-[10px] italic text-slate-500"
-                          title="Hóa đơn không ghi riêng khoản này; số hiện ra là phần chênh giữa tổng thanh toán và chưa thuế + tiền thuế."
-                        >
-                          suy ra
-                        </p>
-                      )}
-                    </td>
-                    <td className="py-3 px-2">
-                      <AmountInput
-                        value={inv.totalAmount}
-                        onCommit={(next) => setInvoiceAmount(inv.id, 'totalAmount', next)}
-                        label={`Tổng thanh toán của ${inv.rawFileName || inv.fileName}`}
-                        emphasis
-                      />
-                      {inv.amountsEdited && (
-                        <p className="mt-1 text-right text-[10px] italic text-cyan-400">đã sửa tay</p>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-slate-400">
-                      <div>{inv.invoiceNo}</div>
-                      {inv.invoiceSymbol && (
-                        <div className="text-[10px] text-slate-500" title={inv.invoiceFormName}>
-                          {inv.invoiceSymbol}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                        inv.rawType === 'XML' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                      }`}>
-                        {inv.rawType}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${
-                        inv.needsReview
-                          ? 'border border-amber-500/20 bg-amber-500/10 text-amber-300'
-                          : 'border border-cyan-500/20 bg-cyan-500/10 text-cyan-300'
-                      }`}>
-                        {inv.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Tệp đọc được nhưng không phải bản thể hiện hóa đơn */}
-      {otherDocuments.length > 0 && (
-        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-            Tệp không phải hóa đơn ({otherDocuments.length})
-          </h3>
-          <p className="text-[11px] italic text-slate-500">
-            Các tệp này thiếu cả số hóa đơn lẫn mã số thuế người bán — thường là lịch trình bay, thẻ lên tàu
-            hoặc bản đính kèm của cùng một chuyến đi. Công cụ để riêng ra để bảng hóa đơn không bị lặp.
-            Nếu đây thật sự là hóa đơn, hãy đưa vào bảng và nhập tay phần còn thiếu.
-          </p>
-          <ul className="space-y-2">
-            {otherDocuments.map((document) => (
-              <li
-                key={document.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-950/40 px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-mono text-[11px] text-slate-300">
-                    {document.fileName}
-                  </p>
-                  <p className="text-[10px] text-slate-500">
-                    {document.seller}
-                    {document.date && document.date !== '-' ? ` • ${document.date}` : ''}
-                    {document.totalAmount ? ` • ${document.totalAmount.toLocaleString('vi-VN')} VNĐ` : ''}
-                  </p>
-                </div>
+          {/* Live Table Diff / Grid Preview Card */}
+          <div className="bg-surface-container rounded-xl shadow-md border border-border-subtle overflow-hidden flex flex-col">
+            {/* Interactive Preview Tabs */}
+            <div className="flex items-center justify-between px-space-6 pt-space-4 bg-surface-container-high border-b border-border-subtle">
+              <div className="flex items-center gap-space-4">
                 <button
                   type="button"
-                  onClick={() => forceAsInvoice(document.id)}
-                  className="shrink-0 rounded-lg border border-slate-700 px-3 py-1.5 text-[11px] font-bold text-slate-300 transition hover:bg-slate-800 hover:text-slate-100"
+                  onClick={() => setPreviewTab('summary')}
+                  className={`py-space-3 font-title-sm text-title-sm transition-colors cursor-pointer border-b-2 ${
+                    previewTab === 'summary'
+                      ? 'text-brand-cyan-bright border-primary-container'
+                      : 'text-on-surface-variant hover:text-on-surface border-transparent'
+                  }`}
                 >
-                  Đưa vào bảng hóa đơn
+                  Bảng kê tổng hợp ({invoiceRows.length})
                 </button>
-              </li>
-            ))}
-          </ul>
+                <button
+                  type="button"
+                  onClick={() => setPreviewTab('companies')}
+                  className={`py-space-3 font-body-md text-body-md transition-colors cursor-pointer border-b-2 ${
+                    previewTab === 'companies'
+                      ? 'text-brand-cyan-bright border-primary-container font-semibold'
+                      : 'text-on-surface-variant hover:text-on-surface border-transparent'
+                  }`}
+                >
+                  Đơn vị thanh toán ({companyGroups.length})
+                </button>
+                {otherDocuments.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTab('other')}
+                    className={`py-space-3 font-body-md text-body-md transition-colors cursor-pointer border-b-2 flex items-center gap-1 ${
+                      previewTab === 'other'
+                        ? 'text-brand-cyan-bright border-primary-container font-semibold'
+                        : 'text-on-surface-variant hover:text-on-surface border-transparent'
+                    }`}
+                  >
+                    Tệp khác ({otherDocuments.length})
+                    <span className="w-2 h-2 rounded-full bg-tertiary"></span>
+                  </button>
+                )}
+              </div>
+              <span className="font-label-sm text-label-sm text-outline hidden sm:inline">LIVE PREVIEW</span>
+            </div>
+
+            {/* Tab 1: Bảng kê tổng hợp */}
+            {previewTab === 'summary' && (
+              <>
+                <div className="px-space-4 py-space-2 bg-surface-container-low border-b border-border-subtle flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAllConfirmed(true)}
+                      className="rounded border border-secondary/30 bg-secondary/10 px-2 py-1 text-[11px] font-semibold text-secondary hover:bg-secondary/20 transition cursor-pointer"
+                    >
+                      Chọn tất cả ({invoiceRows.length})
+                    </button>
+                    {cleanRowCount > 0 && cleanRowCount < invoiceRows.length && (
+                      <button
+                        type="button"
+                        onClick={confirmCleanRows}
+                        className="rounded border border-primary-container/30 bg-primary-container/10 px-2 py-1 text-[11px] font-semibold text-brand-cyan-bright hover:bg-primary-container/20 transition cursor-pointer"
+                      >
+                        Chọn {cleanRowCount} dòng hợp lệ
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setAllConfirmed(false)}
+                      className="rounded border border-border-subtle bg-surface-subtle px-2 py-1 text-[11px] text-outline hover:text-on-surface transition cursor-pointer"
+                    >
+                      Bỏ chọn
+                    </button>
+                  </div>
+                  <span className="text-outline text-[11px]">
+                    Đã xác nhận: <strong className="text-secondary">{validInvoices.length}</strong>/{invoiceRows.length}
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto max-h-[440px]">
+                  <table className="w-full text-left font-body-sm text-body-sm">
+                    <thead className="bg-surface-container-low text-outline font-label-sm text-label-sm sticky top-0 backdrop-blur z-10 border-b border-border-subtle">
+                      <tr>
+                        <th className="py-space-3 px-space-2 w-10 text-center">STT</th>
+                        <th className="py-space-3 px-space-2 w-12 text-center">
+                          <input
+                            type="checkbox"
+                            checked={allConfirmed}
+                            onChange={(e) => setAllConfirmed(e.target.checked)}
+                            className="h-4 w-4 accent-secondary rounded cursor-pointer"
+                            title="Xác nhận tất cả hóa đơn"
+                          />
+                        </th>
+                        <th className="py-space-3 px-space-3">KÝ HIỆU & SỐ HĐ</th>
+                        <th className="py-space-3 px-space-3">NGÀY LẬP</th>
+                        <th className="py-space-3 px-space-3">BÊN BÁN / MST</th>
+                        <th className="py-space-3 px-space-2 text-right w-28">TIỀN TRƯỚC THUẾ</th>
+                        <th className="py-space-3 px-space-2 text-right w-24">THUẾ GTGT</th>
+                        <th className="py-space-3 px-space-2 text-right w-28">TỔNG THANH TOÁN</th>
+                        <th className="py-space-3 px-space-3 text-center">TRẠNG THÁI</th>
+                        <th className="py-space-3 px-space-2 w-10 text-center"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-subtle/30">
+                      {invoiceRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={10} className="py-space-8 text-center text-outline">
+                            Chưa có dữ liệu hóa đơn. Hãy tải tệp XML/PDF ở cột bên trái để bắt đầu.
+                          </td>
+                        </tr>
+                      ) : (
+                        invoiceRows.map((inv, idx) => (
+                          <tr key={inv.id} className="hover:bg-surface-container-high/60 transition-colors">
+                            <td className="py-space-3 px-space-2 text-center text-outline font-mono text-[11px]">
+                              {idx + 1}
+                            </td>
+                            <td className="py-space-3 px-space-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={inv.isConfirmed}
+                                onChange={() => toggleConfirmed(inv.id)}
+                                className="h-4 w-4 accent-secondary rounded cursor-pointer"
+                              />
+                            </td>
+                            <td className="py-space-3 px-space-3">
+                              <div className="flex flex-col">
+                                <span className="font-label-sm text-label-sm text-brand-cyan-bright font-semibold">
+                                  {inv.invoiceSymbol ? `${inv.invoiceSymbol} - ` : ''}{inv.invoiceNo || 'N/A'}
+                                </span>
+                                <span className="font-body-sm text-body-sm text-outline">
+                                  {inv.invoiceFormName || 'Hóa đơn GTGT'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-space-3 px-space-3 text-on-surface whitespace-nowrap font-mono text-xs">
+                              {inv.date || '-'}
+                            </td>
+                            <td className="py-space-3 px-space-3 max-w-[200px]">
+                              <div className="flex flex-col">
+                                <span className="font-body-md text-body-md text-on-surface font-medium truncate" title={inv.seller}>
+                                  {inv.seller || 'Chưa đọc được'}
+                                </span>
+                                <span className="font-label-sm text-label-sm text-outline">
+                                  MST: {inv.sellerTax || 'N/A'}
+                                </span>
+                                <input
+                                  type="text"
+                                  value={inv.expenseNote ?? describeExpense(inv)}
+                                  onChange={(event) => setExpenseNote(inv.id, event.target.value)}
+                                  placeholder="Nội dung chi phí ĐNTT"
+                                  className="w-full text-[10px] rounded border border-border-subtle bg-surface-subtle px-1.5 py-0.5 text-on-surface outline-none focus:border-primary-container mt-1"
+                                  title="Nội dung chi phí in trên giấy ĐNTT"
+                                />
+                                <select
+                                  value={companyKeyOf(inv)}
+                                  onChange={(e) => setInvoiceCompany(inv.id, e.target.value)}
+                                  className="w-full text-[10px] rounded border border-border-subtle bg-surface-subtle px-1 py-0.5 text-outline outline-none focus:border-primary-container mt-1"
+                                  title="Đơn vị thanh toán"
+                                >
+                                  {companyOptions.map((opt) => (
+                                    <option key={opt.key} value={opt.key}>{opt.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </td>
+                            <td className="py-space-3 px-space-2 text-right font-mono">
+                              <AmountInput
+                                value={inv.amountBeforeTax}
+                                onCommit={(next) => setInvoiceAmount(inv.id, 'amountBeforeTax', next)}
+                                label="Tiền trước thuế"
+                              />
+                            </td>
+                            <td className="py-space-3 px-space-2 text-right font-mono">
+                              <AmountInput
+                                value={inv.vatAmount}
+                                onCommit={(next) => setInvoiceAmount(inv.id, 'vatAmount', next)}
+                                label="Thuế GTGT"
+                              />
+                            </td>
+                            <td className="py-space-3 px-space-2 text-right font-mono">
+                              <AmountInput
+                                value={inv.totalAmount}
+                                onCommit={(next) => setInvoiceAmount(inv.id, 'totalAmount', next)}
+                                label="Tổng thanh toán"
+                                emphasis
+                              />
+                            </td>
+                            <td className="py-space-3 px-space-3 text-center whitespace-nowrap">
+                              {inv.needsReview ? (
+                                <span className="px-space-2 py-[2px] bg-tertiary-container/20 text-tertiary font-label-sm text-label-sm rounded inline-flex items-center gap-1 border border-tertiary/30">
+                                  <AlertCircle size={12} />
+                                  Cần kiểm tra
+                                </span>
+                              ) : (
+                                <span className="px-space-2 py-[2px] bg-brand-emerald-deep/20 text-secondary font-label-sm text-label-sm rounded inline-flex items-center gap-1 border border-secondary/30">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                                  Đã cấp mã CQT
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-space-3 px-space-2 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveInvoice(inv.id)}
+                                className="p-1 text-outline hover:text-error transition-colors"
+                                title="Xóa hóa đơn này"
+                              >
+                                <X size={15} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Signature Status Verification Strip */}
+                <div className="p-space-3 bg-surface-container-low border-t border-border-subtle flex items-center justify-between font-body-sm text-body-sm px-space-4">
+                  <div className="flex items-center gap-space-2 text-secondary font-medium">
+                    <CheckCircle2 size={18} />
+                    <span>
+                      {validInvoices.length}/{invoiceRows.length} hóa đơn có chữ ký số hợp lệ và chứng thư số còn hạn
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-space-1 text-outline font-label-sm text-label-sm">
+                    <span>Thuật toán kiểm chứng: RSA-SHA256 / Chuẩn TT78</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Tab 2: Đơn vị thanh toán & ĐNTT */}
+            {previewTab === 'companies' && (
+              <div className="p-space-4 flex flex-col gap-space-4 max-h-[440px] overflow-y-auto">
+                {companyGroups.length === 0 ? (
+                  <p className="py-space-8 text-center text-outline">
+                    Chưa có đơn vị thanh toán nào. Hãy xác nhận ít nhất 1 hóa đơn để gom nhóm.
+                  </p>
+                ) : (
+                  companyGroups.map((group, index) => (
+                    <div key={group.key} className="rounded-xl border border-border-subtle bg-surface-container-low p-space-4 flex flex-col gap-space-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-outline border-b border-border-subtle/50 pb-2">
+                        <span className="font-semibold text-on-surface">
+                          Giấy {index + 1}: {forms[index]?.label || group.company.name}
+                        </span>
+                        <span>
+                          {group.invoices.length} hóa đơn •{' '}
+                          <span className="font-bold text-secondary font-mono">{group.total.toLocaleString('vi-VN')} đ</span>
+                          {group.company.taxCode && <> • MST {group.company.taxCode}</>}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-3">
+                        <label className="flex flex-col gap-1 text-xs">
+                          <span className="text-outline font-medium">Tên đơn vị</span>
+                          <input
+                            type="text"
+                            value={group.company.name}
+                            onChange={(e) => updateCompany(group.key, 'name', e.target.value)}
+                            className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-1.5 text-on-surface text-xs outline-none focus:border-primary-container"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1 text-xs">
+                          <span className="text-outline font-medium">Địa chỉ</span>
+                          <input
+                            type="text"
+                            value={group.company.address}
+                            onChange={(e) => updateCompany(group.key, 'address', e.target.value)}
+                            className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-1.5 text-on-surface text-xs outline-none focus:border-primary-container"
+                          />
+                        </label>
+                      </div>
+                      <label className="flex flex-col gap-1 text-xs">
+                        <span className="text-outline font-medium">Nội dung thanh toán</span>
+                        <input
+                          type="text"
+                          value={contents[group.key] ?? describeFormContent(
+                            group.invoices.map((invoice) => ({ date: invoice.date })),
+                            formSettings.contentPrefix || DEFAULT_FORM_SETTINGS.contentPrefix,
+                          )}
+                          onChange={(e) => setContents({ ...contents, [group.key]: e.target.value })}
+                          className="rounded-lg border border-border-subtle bg-surface-subtle px-3 py-1.5 text-on-surface text-xs outline-none focus:border-primary-container"
+                        />
+                      </label>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* Tab 3: Tệp khác */}
+            {previewTab === 'other' && (
+              <div className="p-space-4 flex flex-col gap-space-3 max-h-[440px] overflow-y-auto">
+                <p className="font-body-sm text-body-sm text-outline">
+                  Các tệp này thiếu số hóa đơn hoặc mã số thuế bên bán (lịch trình bay, cuống vé...).
+                </p>
+                {otherDocuments.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border-subtle bg-surface-container-low px-3 py-2 text-xs"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-mono font-medium text-on-surface">{doc.fileName}</p>
+                      <p className="text-outline text-[11px]">
+                        {doc.seller} {doc.date ? `• ${doc.date}` : ''} {doc.totalAmount ? `• ${doc.totalAmount.toLocaleString('vi-VN')} đ` : ''}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => forceAsInvoice(doc.id)}
+                      className="rounded border border-primary-container/30 bg-primary-container/10 px-3 py-1 text-xs font-semibold text-brand-cyan-bright hover:bg-primary-container/20 transition cursor-pointer"
+                    >
+                      Đưa vào bảng hóa đơn
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* TOOL FOOTER / BEST PRACTICES & TIPS */}
+      <div className="mt-space-8 pt-space-6 bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md">
+        <div className="flex items-center gap-space-2 mb-space-4">
+          <Info className="text-primary-container" size={22} />
+          <h3 className="font-title-sm text-title-sm text-on-surface">Tiêu Chuẩn Kỹ Thuật & Quy Trình Bóc Tách Hóa Đơn</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-space-6">
+          <div className="flex flex-col gap-space-2">
+            <span className="font-body-md text-body-md font-semibold text-brand-cyan-bright">Chuẩn Thông tư 78 & Nghị định 123</span>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+              Hỗ trợ toàn diện cấu trúc thẻ XML chuẩn từ tất cả các nhà cung cấp giải pháp hóa đơn: Viettel (S-Invoice), VNPT, MISA (meInvoice), BKAV, FAST, v.v.
+            </p>
+          </div>
+          <div className="flex flex-col gap-space-2">
+            <span className="font-body-md text-body-md font-semibold text-secondary">Xử lý hàng loạt không giới hạn</span>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+              Tải lên cùng lúc đến 500 hóa đơn dưới dạng file ZIP. Luồng WebAssembly xử lý phân luồng đa nhiệm độc lập, đảm bảo giao diện luôn mượt mà không bị treo đơ.
+            </p>
+          </div>
+          <div className="flex flex-col gap-space-2">
+            <span className="font-body-md text-body-md font-semibold text-tertiary">Bảo mật & Toàn vẹn tuyệt đối</span>
+            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+              Kiểm tra mã băm SHA-256 đối chiếu trực tiếp với dữ liệu gốc của Tổng cục Thuế. Hóa đơn tài chính của doanh nghiệp không bao giờ rời khỏi máy tính cá nhân.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
