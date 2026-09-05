@@ -17,6 +17,7 @@ export const CardCanvas = ({
   onUpdateElements,
   onUndo,
   onRedo,
+  onCommitHistory,
   canUndo = false,
   canRedo = false,
   scale,
@@ -36,6 +37,10 @@ export const CardCanvas = ({
   const safeMargin = dim.safeMarginMm;
   const mmToPx = 3.7795275591 * scale;
   const [isFlipping, setIsFlipping] = useState(false);
+
+  // Movement & Resize change tracking for clean single-step Undo/Redo commits
+  const hasMovedRef = useRef(false);
+  const hasResizedRef = useRef(false);
 
   // Normalize selected IDs
   const effectiveSelectedIds = Array.isArray(selectedElementIds) && selectedElementIds.length > 0
@@ -60,6 +65,7 @@ export const CardCanvas = ({
   // Mouse Down to start moving an element (or multi-selection group)
   const handleMouseDownOnElement = (el, e) => {
     e.stopPropagation();
+    hasMovedRef.current = false;
     const isMultiModifier = e.shiftKey || e.metaKey || e.ctrlKey;
     const isAlreadySelected = effectiveSelectedIds.includes(el.id);
 
@@ -143,6 +149,7 @@ export const CardCanvas = ({
   const handleStartResize = useCallback(
     (el, handle, e) => {
       e.stopPropagation();
+      hasResizedRef.current = false;
       onSelectElement?.(el.id);
       onSelectElements?.([el.id]);
       setResizingState({
@@ -203,7 +210,8 @@ export const CardCanvas = ({
             };
           });
 
-          onUpdateElements?.(updatedElements);
+          hasMovedRef.current = true;
+          onUpdateElements?.(updatedElements, false);
           return;
         }
 
@@ -224,11 +232,12 @@ export const CardCanvas = ({
         });
 
         setActiveGuides(snapped.guides);
+        hasMovedRef.current = true;
         onUpdateElement?.({
           ...activeEl,
           xMm: snapped.xMm,
           yMm: snapped.yMm,
-        });
+        }, false);
         return;
       }
 
@@ -250,10 +259,11 @@ export const CardCanvas = ({
 
         const activeEl = sideData.elements.find((el) => el.id === resizingState.elId);
         if (activeEl) {
+          hasResizedRef.current = true;
           onUpdateElement?.({
             ...activeEl,
             ...resized,
-          });
+          }, false);
         }
         return;
       }
@@ -298,6 +308,11 @@ export const CardCanvas = ({
     };
 
     const handleMouseUp = () => {
+      if (hasMovedRef.current || hasResizedRef.current) {
+        onCommitHistory?.();
+        hasMovedRef.current = false;
+        hasResizedRef.current = false;
+      }
       setDraggingElId(null);
       setDragStartPos(null);
       setResizingState(null);
@@ -326,6 +341,7 @@ export const CardCanvas = ({
     onUpdateElement,
     onUpdateElements,
     onSelectElements,
+    onCommitHistory,
     sideData.elements,
   ]);
 
@@ -378,9 +394,9 @@ export const CardCanvas = ({
       className="w-full h-full min-h-[520px] bg-surface-canvas overflow-auto flex items-center justify-center p-8 relative select-none"
     >
       {/* 1. TOP FLOATING QUICK-FLIP & UNDO/REDO TOOLBAR */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-surface-container/95 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-lg border border-border-subtle">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3 bg-surface-container/95 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-border-subtle shrink-0 whitespace-nowrap min-w-max">
         {/* Undo / Redo Group */}
-        <div className="flex items-center gap-0.5 bg-surface-subtle p-0.5 rounded-full border border-border-subtle">
+        <div className="flex items-center gap-1 bg-surface-subtle p-1 rounded-lg border border-border-subtle shrink-0">
           <button
             type="button"
             id="btn-canvas-undo"
@@ -389,7 +405,7 @@ export const CardCanvas = ({
               onUndo?.();
             }}
             disabled={!canUndo}
-            className={`p-1.5 rounded-full transition-all ${
+            className={`p-1.5 rounded-md transition-all shrink-0 ${
               canUndo
                 ? "text-on-surface hover:bg-surface-container hover:text-primary cursor-pointer shadow-xs"
                 : "text-outline/40 cursor-not-allowed opacity-50"
@@ -406,7 +422,7 @@ export const CardCanvas = ({
               onRedo?.();
             }}
             disabled={!canRedo}
-            className={`p-1.5 rounded-full transition-all ${
+            className={`p-1.5 rounded-md transition-all shrink-0 ${
               canRedo
                 ? "text-on-surface hover:bg-surface-container hover:text-primary cursor-pointer shadow-xs"
                 : "text-outline/40 cursor-not-allowed opacity-50"
@@ -417,10 +433,10 @@ export const CardCanvas = ({
           </button>
         </div>
 
-        <div className="h-4 w-px bg-border-subtle" />
+        <div className="h-5 w-px bg-border-subtle shrink-0" />
 
         {/* Front / Back Toggle Buttons */}
-        <div className="flex items-center gap-1 bg-surface-subtle p-0.5 rounded-full border border-border-subtle">
+        <div className="flex items-center gap-1 bg-surface-subtle p-1 rounded-lg border border-border-subtle shrink-0">
           <button
             type="button"
             id="btn-canvas-side-front"
@@ -428,9 +444,9 @@ export const CardCanvas = ({
               e.stopPropagation();
               onChangeSide?.("front");
             }}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-md text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
               activeSide === "front"
-                ? "bg-surface-container text-primary shadow-xs"
+                ? "bg-surface-container text-primary shadow-xs border border-border-subtle/50"
                 : "text-on-surface-variant hover:text-on-surface"
             }`}
           >
@@ -443,9 +459,9 @@ export const CardCanvas = ({
               e.stopPropagation();
               onChangeSide?.("back");
             }}
-            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-md text-xs font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
               activeSide === "back"
-                ? "bg-surface-container text-primary shadow-xs"
+                ? "bg-surface-container text-primary shadow-xs border border-border-subtle/50"
                 : "text-on-surface-variant hover:text-on-surface"
             }`}
           >
@@ -461,17 +477,17 @@ export const CardCanvas = ({
             e.stopPropagation();
             onToggleSide?.();
           }}
-          className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white rounded-full text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer group"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer group shrink-0 whitespace-nowrap"
           title={t("flipCard")}
         >
-          <RotateCw className="w-3.5 h-3.5 transition-transform duration-300 group-hover:rotate-180" />
-          <span>{t("flipCard")}</span>
+          <RotateCw className="w-3.5 h-3.5 transition-transform duration-300 group-hover:rotate-180 shrink-0" />
+          <span className="whitespace-nowrap">{t("flipCard")}</span>
         </button>
 
         {/* Card Side Indicator Badge */}
-        <div className="hidden sm:flex items-center gap-1 text-[11px] text-on-surface-variant font-medium pl-1.5 border-l border-border-subtle">
-          <Layers className="w-3.5 h-3.5 text-outline" />
-          <span>{activeSide === "front" ? t("currentSideFront") : t("currentSideBack")}</span>
+        <div className="hidden sm:flex items-center gap-1.5 text-xs text-on-surface-variant font-medium pl-2.5 border-l border-border-subtle shrink-0 whitespace-nowrap">
+          <Layers className="w-3.5 h-3.5 text-outline shrink-0" />
+          <span className="whitespace-nowrap">{activeSide === "front" ? t("currentSideFront") : t("currentSideBack")}</span>
         </div>
       </div>
 

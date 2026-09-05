@@ -230,18 +230,115 @@ async function runE2E() {
 
     // 1. Verify Canvas Floating Toolbar Controls (Undo, Redo, Front, Back, Quick Flip)
     const toolbarMetrics = await page.evaluate(() => {
+      const undoBtn = document.querySelector('#btn-canvas-undo');
+      const redoBtn = document.querySelector('#btn-canvas-redo');
+      const sideFrontBtn = document.querySelector('#btn-canvas-side-front');
+      const sideBackBtn = document.querySelector('#btn-canvas-side-back');
+      const quickFlipBtn = document.querySelector('#btn-canvas-quick-flip');
+      const toolbarDiv = undoBtn?.closest('.absolute.top-4');
+
       return {
-        hasUndo: !!document.querySelector('#btn-canvas-undo'),
-        hasRedo: !!document.querySelector('#btn-canvas-redo'),
-        hasSideFront: !!document.querySelector('#btn-canvas-side-front'),
-        hasSideBack: !!document.querySelector('#btn-canvas-side-back'),
-        hasQuickFlip: !!document.querySelector('#btn-canvas-quick-flip'),
+        hasUndo: !!undoBtn,
+        hasRedo: !!redoBtn,
+        hasSideFront: !!sideFrontBtn,
+        hasSideBack: !!sideBackBtn,
+        hasQuickFlip: !!quickFlipBtn,
+        // Check rounded-xl class and no-wrap
+        isRoundedXl: toolbarDiv ? toolbarDiv.className.includes('rounded-xl') : false,
+        isNotRoundedFull: toolbarDiv ? !toolbarDiv.className.includes('rounded-full') : false,
+        frontHeight: sideFrontBtn ? sideFrontBtn.getBoundingClientRect().height : 0,
+        flipHeight: quickFlipBtn ? quickFlipBtn.getBoundingClientRect().height : 0,
         // Verify print guides checkboxes in top bar
         hasBleedGuideCheckbox: Array.from(document.querySelectorAll('input[type="checkbox"]')).length >= 3,
       };
     });
-    console.log(`   ✔ Canvas Floating Toolbar: Undo=${toolbarMetrics.hasUndo}, Redo=${toolbarMetrics.hasRedo}, Front=${toolbarMetrics.hasSideFront}, Back=${toolbarMetrics.hasSideBack}, Flip=${toolbarMetrics.hasQuickFlip}`);
-    console.log(`   ✔ Print Guides in Top Bar: GuidesCheckboxes=${toolbarMetrics.hasBleedGuideCheckbox}`);
+    console.log(`   ✔ Canvas Floating Toolbar: RoundedXL=${toolbarMetrics.isRoundedXl}, NotPill=${toolbarMetrics.isNotRoundedFull}, FrontBtnHeight=${toolbarMetrics.frontHeight}px (single line), FlipBtnHeight=${toolbarMetrics.flipHeight}px (single line)`);
+    console.log(`   ✔ Canvas Controls Present: Undo=${toolbarMetrics.hasUndo}, Redo=${toolbarMetrics.hasRedo}, Front=${toolbarMetrics.hasSideFront}, Back=${toolbarMetrics.hasSideBack}, Flip=${toolbarMetrics.hasQuickFlip}`);
+
+    // Take a dedicated close-up screenshot of the updated toolbar directly using element.screenshot
+    const undoBtnEl = await page.$('#btn-canvas-undo');
+    if (undoBtnEl) {
+      const toolbarHandle = await page.evaluateHandle((btn) => btn.closest('.absolute.top-4'), undoBtnEl);
+      const toolbarElement = toolbarHandle?.asElement();
+      if (toolbarElement) {
+        const p1 = path.join(screenshotsDir, 'e2e_bcard_03e_canvas_toolbar_fixed.png');
+        const p2 = path.join(artifactScreenshotsDir, 'e2e_bcard_03e_canvas_toolbar_fixed.png');
+        await Promise.all([
+          toolbarElement.screenshot({ path: p1 }),
+          toolbarElement.screenshot({ path: p2 })
+        ]);
+        console.log(`   📸 Saved close-up screenshot: e2e_bcard_03e_canvas_toolbar_fixed.png`);
+      }
+    }
+
+    // --- PHASE 3D: Dedicated Interactive Drag-and-Undo/Redo Functional Verification ---
+    console.log('▶ [PHASE 3D] Verifying Undo/Redo Element Position Restoration Logic...');
+    const testEl = await page.$('div.group.select-none');
+    if (testEl) {
+      const initialBox = await testEl.boundingBox();
+      console.log(`   Initial Element Box: x=${Math.round(initialBox.x)}, y=${Math.round(initialBox.y)}`);
+
+      // Drag element by +40px X and +20px Y
+      await page.mouse.move(initialBox.x + initialBox.width / 2, initialBox.y + initialBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(initialBox.x + initialBox.width / 2 + 40, initialBox.y + initialBox.height / 2 + 20, { steps: 5 });
+      await page.mouse.up();
+      await new Promise((r) => setTimeout(r, 400));
+
+      const draggedBox = await testEl.boundingBox();
+      console.log(`   Dragged Element Box: x=${Math.round(draggedBox.x)}, y=${Math.round(draggedBox.y)}`);
+      if (Math.abs(draggedBox.x - initialBox.x) < 5) {
+        throw new Error('Element did not move on drag!');
+      }
+
+      // Check undo button is enabled
+      const canUndoState = await page.evaluate(() => {
+        const btn = document.querySelector('#btn-canvas-undo');
+        return btn ? !btn.disabled : false;
+      });
+      console.log(`   ✔ Undo Button Enabled after drag: ${canUndoState}`);
+      if (!canUndoState) throw new Error('Undo button must be enabled after drag!');
+
+      // Click Undo button
+      const undoBtn = await page.$('#btn-canvas-undo');
+      await undoBtn.click();
+      await new Promise((r) => setTimeout(r, 500));
+
+      const undoneBox = await testEl.boundingBox();
+      console.log(`   Undone Element Box: x=${Math.round(undoneBox.x)}, y=${Math.round(undoneBox.y)}`);
+      const diffX = Math.abs(undoneBox.x - initialBox.x);
+      const diffY = Math.abs(undoneBox.y - initialBox.y);
+      console.log(`   ✔ Element position restored! Diff from initial: dx=${diffX.toFixed(1)}px, dy=${diffY.toFixed(1)}px`);
+      if (diffX > 2 || diffY > 2) {
+        throw new Error(`Undo did not restore position! diffX=${diffX}, diffY=${diffY}`);
+      }
+
+      // Check redo button is enabled
+      const canRedoState = await page.evaluate(() => {
+        const btn = document.querySelector('#btn-canvas-redo');
+        return btn ? !btn.disabled : false;
+      });
+      console.log(`   ✔ Redo Button Enabled after undo: ${canRedoState}`);
+      if (!canRedoState) throw new Error('Redo button must be enabled after undo!');
+
+      // Click Redo button
+      const redoBtn = await page.$('#btn-canvas-redo');
+      await redoBtn.click();
+      await new Promise((r) => setTimeout(r, 500));
+
+      const redoneBox = await testEl.boundingBox();
+      console.log(`   Redone Element Box: x=${Math.round(redoneBox.x)}, y=${Math.round(redoneBox.y)}`);
+      const redoDiffX = Math.abs(redoneBox.x - draggedBox.x);
+      console.log(`   ✔ Redo moved element back forward! Diff from dragged: dx=${redoDiffX.toFixed(1)}px`);
+      if (redoDiffX > 2) {
+        throw new Error(`Redo did not restore dragged position! diffX=${redoDiffX}`);
+      }
+
+      // Undo once more to return to clean state
+      await undoBtn.click();
+      await new Promise((r) => setTimeout(r, 400));
+      console.log('   ✔ Successfully verified Undo and Redo lifecycle end-to-end!');
+    }
 
     // 2. Test Shift+Click Multi-Selection
     const canvasElements = await page.$$('div[data-element-id]');

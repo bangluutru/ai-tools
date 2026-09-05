@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Undo2,
   Redo2,
@@ -25,32 +25,84 @@ export const EditorStep = ({
   const [showBleedGuide, setShowBleedGuide] = useState(true);
   const [showTrimGuide, setShowTrimGuide] = useState(true);
   const [showSafeGuide, setShowSafeGuide] = useState(true);
-  const [history, setHistory] = useState([project]);
+
+  // Robust Deep-Cloned Undo/Redo History Stack
+  const projectRef = useRef(project);
+  projectRef.current = project;
+  const pendingProjectRef = useRef(null);
+
+  const [history, setHistory] = useState([JSON.parse(JSON.stringify(project))]);
   const [historyIdx, setHistoryIdx] = useState(0);
+  const historyIdxRef = useRef(historyIdx);
+  historyIdxRef.current = historyIdx;
 
   const pushHistory = (newProject) => {
-    const updatedHistory = history.slice(0, historyIdx + 1);
-    updatedHistory.push(newProject);
-    setHistory(updatedHistory);
-    setHistoryIdx(updatedHistory.length - 1);
-    onUpdateProject(newProject);
+    const deepCloned = JSON.parse(JSON.stringify(newProject));
+    setHistory((prev) => {
+      const updated = prev.slice(0, historyIdxRef.current + 1);
+      updated.push(deepCloned);
+      return updated;
+    });
+    setHistoryIdx((prev) => prev + 1);
+    pendingProjectRef.current = null;
+    onUpdateProject(deepCloned);
+  };
+
+  const handleCommitHistory = () => {
+    const toCommit = pendingProjectRef.current || projectRef.current;
+    pendingProjectRef.current = null;
+    const deepCloned = JSON.parse(JSON.stringify(toCommit));
+    setHistory((prev) => {
+      const updated = prev.slice(0, historyIdxRef.current + 1);
+      updated.push(deepCloned);
+      return updated;
+    });
+    setHistoryIdx((prev) => prev + 1);
   };
 
   const handleUndo = () => {
-    if (historyIdx > 0) {
-      const target = history[historyIdx - 1];
-      setHistoryIdx(historyIdx - 1);
-      onUpdateProject(target);
+    if (historyIdxRef.current > 0) {
+      const newIdx = historyIdxRef.current - 1;
+      const target = history[newIdx];
+      setHistoryIdx(newIdx);
+      pendingProjectRef.current = null;
+      onUpdateProject(JSON.parse(JSON.stringify(target)));
     }
   };
 
   const handleRedo = () => {
-    if (historyIdx < history.length - 1) {
-      const target = history[historyIdx + 1];
-      setHistoryIdx(historyIdx + 1);
-      onUpdateProject(target);
+    if (historyIdxRef.current < history.length - 1) {
+      const newIdx = historyIdxRef.current + 1;
+      const target = history[newIdx];
+      setHistoryIdx(newIdx);
+      pendingProjectRef.current = null;
+      onUpdateProject(JSON.parse(JSON.stringify(target)));
     }
   };
+
+  // Keyboard shortcut listener for Undo (Ctrl/Cmd+Z) and Redo (Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(e.target?.tagName)) return;
+      const isMac = typeof navigator !== "undefined" && navigator.platform?.toUpperCase().indexOf("MAC") >= 0;
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+      if (!modifier) return;
+
+      if (e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      } else if (e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [history]);
 
   const currentSideData = activeSide === "front" ? project.front : project.back;
 
@@ -72,29 +124,43 @@ export const EditorStep = ({
     setSelectedElementIds(ids);
   };
 
-  const handleUpdateElement = (updated) => {
-    const newElements = currentSideData.elements.map((el) => (el.id === updated.id ? updated : el));
+  const handleUpdateElement = (updated, commit = true) => {
+    const currentProj = pendingProjectRef.current || projectRef.current;
+    const currentSide = currentProj[activeSide];
+    const newElements = currentSide.elements.map((el) => (el.id === updated.id ? updated : el));
     const updatedProject = {
-      ...project,
+      ...currentProj,
       [activeSide]: {
-        ...currentSideData,
+        ...currentSide,
         elements: newElements,
       },
     };
-    pushHistory(updatedProject);
+    if (commit) {
+      pushHistory(updatedProject);
+    } else {
+      pendingProjectRef.current = updatedProject;
+      onUpdateProject(updatedProject);
+    }
   };
 
-  const handleUpdateElements = (updatedList) => {
+  const handleUpdateElements = (updatedList, commit = true) => {
+    const currentProj = pendingProjectRef.current || projectRef.current;
+    const currentSide = currentProj[activeSide];
     const map = new Map(updatedList.map((e) => [e.id, e]));
-    const newElements = currentSideData.elements.map((el) => map.get(el.id) || el);
+    const newElements = currentSide.elements.map((el) => map.get(el.id) || el);
     const updatedProject = {
-      ...project,
+      ...currentProj,
       [activeSide]: {
-        ...currentSideData,
+        ...currentSide,
         elements: newElements,
       },
     };
-    pushHistory(updatedProject);
+    if (commit) {
+      pushHistory(updatedProject);
+    } else {
+      pendingProjectRef.current = updatedProject;
+      onUpdateProject(updatedProject);
+    }
   };
 
   const handleAddElement = (newEl) => {
@@ -318,6 +384,7 @@ export const EditorStep = ({
             onUpdateElements={handleUpdateElements}
             onUndo={handleUndo}
             onRedo={handleRedo}
+            onCommitHistory={handleCommitHistory}
             canUndo={historyIdx > 0}
             canRedo={historyIdx < history.length - 1}
             scale={scale}

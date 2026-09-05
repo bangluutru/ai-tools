@@ -181,3 +181,77 @@ test('translations for business-card studio do not contain "miễn phí" or "無
   assert.equal(serialized.includes('無料'), false, 'Translations must not contain "無料"');
 });
 
+test('undo/redo history stack correctly restores previous states across drag-and-drop operations', () => {
+  // Simulating the state machine in EditorStep
+  const state0 = {
+    id: 'proj-1',
+    front: {
+      elements: [{ id: 'el-name', xMm: 12, yMm: 24, content: 'Taro Yamada' }]
+    }
+  };
+
+  let history = [JSON.parse(JSON.stringify(state0))];
+  let historyIdx = 0;
+
+  const pushHistory = (newState) => {
+    const cloned = JSON.parse(JSON.stringify(newState));
+    history = [...history.slice(0, historyIdx + 1), cloned];
+    historyIdx++;
+  };
+
+  const undo = () => {
+    if (historyIdx > 0) {
+      historyIdx--;
+      return JSON.parse(JSON.stringify(history[historyIdx]));
+    }
+    return null;
+  };
+
+  const redo = () => {
+    if (historyIdx < history.length - 1) {
+      historyIdx++;
+      return JSON.parse(JSON.stringify(history[historyIdx]));
+    }
+    return null;
+  };
+
+  // 1. User drags element from xMm=12 to xMm=45. During drag, live preview changes, but history is committed ONCE on mouseup.
+  const state1 = {
+    id: 'proj-1',
+    front: {
+      elements: [{ id: 'el-name', xMm: 45, yMm: 30, content: 'Taro Yamada' }]
+    }
+  };
+  pushHistory(state1);
+
+  assert.equal(history.length, 2);
+  assert.equal(historyIdx, 1);
+  assert.equal(history[historyIdx].front.elements[0].xMm, 45);
+
+  // 2. User clicks Undo -> should restore state0 (xMm=12)
+  const undoneState = undo();
+  assert.equal(historyIdx, 0);
+  assert.equal(undoneState.front.elements[0].xMm, 12, 'Undo must restore original coordinate 12mm');
+
+  // 3. User clicks Redo -> should restore state1 (xMm=45)
+  const redoneState = redo();
+  assert.equal(historyIdx, 1);
+  assert.equal(redoneState.front.elements[0].xMm, 45, 'Redo must restore dragged coordinate 45mm');
+
+  // 4. From state0, if user performs another action, future redo history is truncated
+  undo();
+  assert.equal(historyIdx, 0);
+  const state2 = {
+    id: 'proj-1',
+    front: {
+      elements: [{ id: 'el-name', xMm: 80, yMm: 10, content: 'Taro Yamada' }]
+    }
+  };
+  pushHistory(state2);
+  assert.equal(history.length, 2);
+  assert.equal(historyIdx, 1);
+  assert.equal(history[1].front.elements[0].xMm, 80);
+  assert.equal(redo(), null, 'Cannot redo after a new branch action');
+});
+
+
