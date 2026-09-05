@@ -338,7 +338,7 @@ export default function DocStudioApp({ displayLang }) {
     return (
         <div className="flex flex-col md:flex-row min-h-[calc(100vh-14rem)] min-h-[38rem] w-full rounded-xl border border-border-subtle/40 bg-surface-container text-on-surface font-body-md overflow-hidden shadow-sm">
             {/* Sidebar */}
-            <aside className="print:hidden w-full md:w-64 bg-surface-container-low text-on-surface border-r border-border-subtle/40 shrink-0 overflow-y-auto">
+            <aside className="print:hidden relative w-full md:w-64 bg-surface-container-low text-on-surface border-r border-border-subtle/40 shrink-0 overflow-y-auto flex flex-col">
                 <div className="p-5 border-b border-border-subtle/30 shrink-0">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-8 h-8 bg-primary-container rounded-lg flex items-center justify-center text-on-primary-container shadow-inner">
@@ -368,7 +368,7 @@ export default function DocStudioApp({ displayLang }) {
                         <LayoutTemplate size={16} /> {t.navTemplates}
                     </button>
                 </nav>
-                <div className="absolute flex-col flex bottom-0 w-full p-4 border-t border-border-subtle/30 bg-surface-container-low/90 backdrop-blur-md">
+                <div className="mt-auto md:absolute md:bottom-0 left-0 right-0 p-4 border-t border-border-subtle/30 bg-surface-container-low/90 backdrop-blur-md">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-surface-container border border-border-subtle flex items-center justify-center shrink-0">
                             <User size={14} className="text-on-surface-variant" />

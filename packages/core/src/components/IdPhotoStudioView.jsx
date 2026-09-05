@@ -226,7 +226,9 @@ function IdPhotoAppContent() {
 export default function IdPhotoStudioView({ displayLang = 'vi' }) {
   return (
     <I18nProvider forcedLang={displayLang}>
-      <IdPhotoAppContent />
+      <div className="max-w-[1240px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col text-on-surface">
+        <IdPhotoAppContent />
+      </div>
     </I18nProvider>
   );
 }

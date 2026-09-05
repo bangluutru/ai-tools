@@ -41,3 +41,4 @@ Thumbs.db
 scratch/
 fixtures/generated/
 populate_part1.mjs
+docs/reports/screenshots/*.png

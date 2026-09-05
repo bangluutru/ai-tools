@@ -26,10 +26,14 @@
     "golden:accounting": "node packages/core/scripts/accounting-golden.mjs",
     "lint": "eslint eslint.config.js scripts --config eslint.config.js --no-error-on-unmatched-pattern && npm run lint --workspaces --if-present",
     "lint:critical": "eslint --config eslint.config.js hub/src/App.jsx hub/src/components/CommandPalette.jsx hub/src/components/ToolCard.jsx hub/src/components/ToolContainer.jsx hub/src/config/toolsRegistry.js hub/src/tools/image-convert/ImageConvertTool.jsx hub/src/tools/invoice-studio/InvoiceTool.jsx packages/core/src/hooks/useAntigravityAgent.js packages/core/src/utils/accounting/reconcile.js packages/core/src/utils/image/converter.js packages/core/src/utils/image/limits.js packages/core/src/utils/image/zipExporter.js packages/core/src/components/AccountingReconcileView.jsx packages/core/src/components/LegalDocumentView.jsx packages/core/src/components/LongDocTranslatorView.jsx",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "audit:miniapps": "node scripts/audit-miniapp.mjs --all",
+    "test:browser": "node scripts/verify-miniapp-browser.mjs --all",
+    "test:browser:tool": "node scripts/verify-miniapp-browser.mjs --tool"
   },
   "devDependencies": {
-    "concurrently": "^10.0.4"
+    "concurrently": "^10.0.4",
+    "puppeteer-core": "^25.10.0"
   },
   "overrides": {
     "pdfjs-dist": "6.2.108",

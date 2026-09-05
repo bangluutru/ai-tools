@@ -1237,7 +1237,7 @@ export default function InvoiceTool() {
   };
 
   return (
-    <div className="flex flex-col w-full pb-space-12 text-on-surface">
+    <div className="max-w-[1240px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col pb-space-12 text-on-surface">
       {/* BREADCRUMB & HEADER SECTION */}
       <div className="flex flex-col gap-space-4 mb-space-8">
         <nav className="flex items-center gap-space-2 font-label-md text-label-md text-outline">

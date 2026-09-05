@@ -42,30 +42,30 @@ export default function Navbar({
 
   return (
     <header className="no-print bg-surface-canvas/95 backdrop-blur-xl border-b border-border-subtle sticky top-0 z-50 shadow-sm">
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-3">
         {/* Brand Logo */}
         <div
           onClick={() => {
             if (onSelectCategory) onSelectCategory('all');
             if (onSearchChange) onSearchChange('');
           }}
-          className="flex items-center gap-2.5 cursor-pointer select-none shrink-0"
+          className="flex items-center gap-2 cursor-pointer select-none shrink-0"
         >
           <div className="w-8 h-8 rounded-lg bg-surface-container border border-border-subtle flex items-center justify-center text-primary-container shadow-sm">
             <Sparkles size={18} className="text-primary-container" />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-lg tracking-tight text-on-surface">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-base sm:text-lg tracking-tight text-on-surface">
               AI-Tools
             </span>
-            <span className="px-1.5 py-[2px] bg-primary-container text-on-primary-container font-mono text-[10px] font-bold rounded">
+            <span className="hidden sm:inline-block px-1.5 py-[2px] bg-primary-container text-on-primary-container font-mono text-[10px] font-bold rounded">
               HUB
             </span>
           </div>
         </div>
 
         {/* Global Live Search Bar */}
-        <div className="flex-1 max-w-md mx-2 sm:mx-6">
+        <div className="flex-1 min-w-0 max-w-md mx-1 sm:mx-6">
           <div className="relative flex items-center w-full">
             <Search size={15} className="absolute left-3 text-outline pointer-events-none shrink-0" />
             <input
@@ -75,12 +75,12 @@ export default function Navbar({
               onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
               placeholder={
                 displayLang === 'vi'
-                  ? 'Tìm kiếm công cụ nhanh (nhấn / để tìm)...'
+                  ? 'Tìm kiếm...'
                   : displayLang === 'en'
-                  ? 'Search tools (/ to focus)...'
-                  : 'ツールを検索 (/)...'
+                  ? 'Search tools...'
+                  : 'ツールを検索...'
               }
-              className="w-full pl-9 pr-14 py-1.5 bg-surface-subtle/80 hover:bg-surface-subtle focus:bg-surface-container border border-border-subtle focus:border-primary-container text-on-surface placeholder:text-outline text-xs rounded-lg transition-colors outline-none shadow-inner"
+              className="w-full min-w-0 pl-9 pr-8 sm:pr-14 py-1.5 bg-surface-subtle/80 hover:bg-surface-subtle focus:bg-surface-container border border-border-subtle focus:border-primary-container text-on-surface placeholder:text-outline text-xs rounded-lg transition-colors outline-none shadow-inner"
             />
             {searchQuery ? (
               <button
@@ -103,7 +103,7 @@ export default function Navbar({
         </div>
 
         {/* Essential Right Controls */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Theme Selector (Light/Dark/System) */}
           <ThemeToggle displayLang={displayLang} />
 
@@ -111,7 +111,7 @@ export default function Navbar({
           <div className="relative">
             <button
               onClick={() => setLangDropdown(!langDropdown)}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-surface-subtle hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface rounded-lg font-mono text-xs font-semibold transition-colors"
+              className="flex items-center gap-1 px-2 sm:px-2.5 py-1.5 bg-surface-subtle hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface rounded-lg font-mono text-xs font-semibold transition-colors"
               aria-label="Chọn ngôn ngữ"
             >
               <Globe size={14} className="text-brand-cyan-bright" />
@@ -148,7 +148,7 @@ export default function Navbar({
           {/* Settings Button */}
           <button
             onClick={onOpenSettings}
-            className="p-2 rounded-lg bg-surface-subtle hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center"
+            className="p-1.5 sm:p-2 rounded-lg bg-surface-subtle hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center"
             title="Cài đặt miniapp ẩn/hiện"
             aria-label="Cài đặt miniapp"
           >
@@ -160,7 +160,7 @@ export default function Navbar({
             href="https://github.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center rounded"
+            className="hidden sm:flex p-2 text-on-surface-variant hover:text-on-surface transition-colors items-center justify-center rounded"
             title="Mã nguồn"
             aria-label="Mã nguồn"
           >

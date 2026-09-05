@@ -8,5 +8,9 @@ import React from 'react';
 import WatermarkStudioView from '@ai-tools/core/components/WatermarkStudioView';
 
 export default function WatermarkStudioTool({ displayLang }) {
-  return <WatermarkStudioView displayLang={displayLang} />;
+  return (
+    <div className="max-w-[1240px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col text-on-surface">
+      <WatermarkStudioView displayLang={displayLang} />
+    </div>
+  );
 }
