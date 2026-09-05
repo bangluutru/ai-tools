@@ -29,7 +29,9 @@
     "test": "npm run test --workspaces --if-present",
     "audit:miniapps": "node scripts/audit-miniapp.mjs --all",
     "test:browser": "node scripts/verify-miniapp-browser.mjs --all",
-    "test:browser:tool": "node scripts/verify-miniapp-browser.mjs --tool"
+    "test:browser:tool": "node scripts/verify-miniapp-browser.mjs --tool",
+    "create:miniapp": "node scripts/scaffold-miniapp.mjs",
+    "port:miniapp": "node scripts/scaffold-miniapp.mjs --mode=external"
   },
   "devDependencies": {
     "concurrently": "^10.0.4",

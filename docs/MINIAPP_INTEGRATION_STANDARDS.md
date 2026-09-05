@@ -12,6 +12,11 @@ AI-Tools Master Hub được xây dựng theo triết lý **Modern Utility Works
 
 Mọi miniapp được tích hợp vào Hub phải hoạt động như **một bộ phận gắn kết hữu cơ của một sản phẩm thống nhất**, không phải là các ứng dụng rời rạc chắp vá. Đồng thời, hệ thống phải đảm bảo **nguyên tắc cô lập lỗi tuyệt đối (Fault Isolation)**: Một miniapp gặp sự cố bất ngờ **không bao giờ** được phép làm sập thanh điều hướng, shell chính, hay ảnh hưởng đến bất kỳ miniapp nào khác.
 
+### 📚 TÀI LIỆU HƯỚNG DẪN & THAM CHIẾU LIÊN QUAN
+- **Cẩm Nang Phát Triển & Chuyển Đổi (In-Hub vs External Porting):** [docs/MINIAPP_DEV_GUIDE.md](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/ai-tools/docs/MINIAPP_DEV_GUIDE.md)
+- **Bảng Tham Chiếu Thiết Kế & Kho Mẫu Component (Pattern Book):** [docs/DESIGN_SYSTEM_REFERENCE.md](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/ai-tools/docs/DESIGN_SYSTEM_REFERENCE.md)
+- **Công Cụ Tự Động Hóa Sinh Mã & Quét Khoảng Cách (CLI):** `npm run create:miniapp` và `npm run port:miniapp`
+
 ---
 
 ## 🎨 2. TIÊU CHUẨN NGÔN NGỮ THIẾT KẾ & GIAO DIỆN (UI/UX STANDARDS)
