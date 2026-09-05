@@ -83,7 +83,7 @@ const Step2Background = ({
     return () => {
       isMounted = false;
     };
-  }, [originalImage, engine, retryCount, t.loadingModel]);
+  }, [originalImage, engine, retryCount, threshold, t.loadingModel, t.extractingSubject, format]);
   useEffect(() => {
     if (!maskCanvas || !previewCanvasRef.current) return;
     const composite = renderCompositeImage(

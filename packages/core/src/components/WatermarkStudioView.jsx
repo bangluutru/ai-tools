@@ -925,7 +925,7 @@ export default function WatermarkStudioView() {
 
     if (config.type === 'text') drawTextWatermark(ctx, width, height, config);
     else if (config.type === 'image') drawImageWatermark(ctx, width, height, config);
-  }, [config, bgImage, showGrid, contrastMode]);
+  }, [config, bgImage, showGrid, contrastMode, activeFile]);
 
   const handleFilesAdded = useCallback(function (newItems) {
     setFileItems(function (prev) { return prev.concat(newItems); });
