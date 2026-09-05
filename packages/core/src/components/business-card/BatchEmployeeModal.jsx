@@ -241,51 +241,52 @@ export const BatchEmployeeModal = ({
                     </td>
                     <td className="p-2">
                       <input
-    type="text"
-    value={emp.fullName}
-    onChange={(e) => handleUpdateEmp(idx, "fullName", e.target.value)}
-    className="w-full px-2 py-1 rounded border border-border-subtle focus:outline-none focus:ring-1 focus:ring-primary"
-  />
+                        type="text"
+                        value={emp.fullName}
+                        onChange={(e) => handleUpdateEmp(idx, "fullName", e.target.value)}
+                        className="w-full px-2 py-1 rounded border border-border-subtle bg-surface-canvas text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
                     </td>
                     <td className="p-2">
                       <input
-    type="text"
-    value={emp.fullNameEn || ""}
-    onChange={(e) => handleUpdateEmp(idx, "fullNameEn", e.target.value)}
-    className="w-full px-2 py-1 rounded border border-border-subtle focus:outline-none focus:ring-1 focus:ring-primary"
-  />
+                        type="text"
+                        value={emp.fullNameEn || ""}
+                        onChange={(e) => handleUpdateEmp(idx, "fullNameEn", e.target.value)}
+                        className="w-full px-2 py-1 rounded border border-border-subtle bg-surface-canvas text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
                     </td>
                     <td className="p-2">
                       <input
-    type="text"
-    value={emp.jobTitle}
-    onChange={(e) => handleUpdateEmp(idx, "jobTitle", e.target.value)}
-    className="w-full px-2 py-1 rounded border border-border-subtle focus:outline-none focus:ring-1 focus:ring-primary"
-  />
+                        type="text"
+                        value={emp.jobTitle}
+                        onChange={(e) => handleUpdateEmp(idx, "jobTitle", e.target.value)}
+                        className="w-full px-2 py-1 rounded border border-border-subtle bg-surface-canvas text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
                     </td>
                     <td className="p-2">
                       <input
-    type="email"
-    value={emp.email}
-    onChange={(e) => handleUpdateEmp(idx, "email", e.target.value)}
-    className="w-full px-2 py-1 rounded border border-border-subtle focus:outline-none focus:ring-1 focus:ring-primary"
-  />
+                        type="email"
+                        value={emp.email}
+                        onChange={(e) => handleUpdateEmp(idx, "email", e.target.value)}
+                        className="w-full px-2 py-1 rounded border border-border-subtle bg-surface-canvas text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
                     </td>
                     <td className="p-2">
                       <input
-    type="text"
-    value={emp.phone}
-    onChange={(e) => handleUpdateEmp(idx, "phone", e.target.value)}
-    className="w-full px-2 py-1 rounded border border-border-subtle focus:outline-none focus:ring-1 focus:ring-primary"
-  />
+                        type="text"
+                        value={emp.phone}
+                        onChange={(e) => handleUpdateEmp(idx, "phone", e.target.value)}
+                        className="w-full px-2 py-1 rounded border border-border-subtle bg-surface-canvas text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
                     </td>
                     <td className="p-2 text-center">
                       <button
-    onClick={() => handleRemoveRow(idx)}
-    disabled={employees.length <= 1}
-    className="text-outline hover:text-red-600 disabled:opacity-20 p-1"
-  >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        onClick={() => handleRemoveRow(idx)}
+                        disabled={employees.length <= 1}
+                        className="p-1 rounded text-outline hover:text-error transition-colors disabled:opacity-30 cursor-pointer"
+                        title={t("btnDeleteRow") || "Xóa dòng"}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>)}
@@ -294,18 +295,16 @@ export const BatchEmployeeModal = ({
           </div>
         </div>
 
-        {
-    /* Modal Footer */
-  }
+        {/* Modal Footer */}
         <div className="px-6 py-3 border-t border-border-subtle bg-surface-canvas flex items-center justify-between text-xs">
           <span className="text-on-surface-variant">
-            {t("totalStaff")} <span className="font-bold text-on-surface">{employees.length} {language === "vi" ? "ng\u01B0\u1EDDi" : language === "en" ? "members" : "\u540D"}</span>
+            {t("totalStaff")} <span className="font-bold text-on-surface">{employees.length} {language === "vi" ? "người" : language === "en" ? "members" : "名"}</span>
           </span>
           <button
-    onClick={onClose}
-    className="px-5 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 text-white transition-colors"
-  >
-            {t("btnClose")}
+            onClick={onClose}
+            className="px-5 py-2 text-xs font-bold rounded-xl bg-surface-container-highest hover:bg-surface-subtle border border-border-strong text-on-surface transition-colors cursor-pointer"
+          >
+            {t("btnClose") || "Đóng"}
           </button>
         </div>
       </div>

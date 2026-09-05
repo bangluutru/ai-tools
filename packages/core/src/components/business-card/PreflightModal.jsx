@@ -103,45 +103,71 @@ export const PreflightModal = ({
               <p className="text-xs text-on-surface-variant mt-1">
                 {t("pfNoIssuesSub")}
               </p>
-            </div> : preflight.issues.map((issue) => <div
-    key={issue.id}
-    className={`p-3.5 rounded-2xl border flex items-start justify-between gap-3 text-xs transition-all ${issue.severity === "critical" ? "bg-red-50/60 border-red-200 text-red-900" : issue.severity === "warning" ? "bg-amber-50/60 border-amber-200 text-amber-900" : "bg-blue-50/60 border-blue-200 text-blue-900"}`}
-  >
-                <div className="flex items-start gap-2.5">
-                  {issue.severity === "critical" ? <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" /> : <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />}
-                  <div>
-                    <div className="font-bold text-on-surface flex items-center gap-2">
-                      <span>{language === "en" ? issue.title : issue.titleJp}</span>
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-surface-container-high/80 border text-on-surface-variant">
-                        {issue.side === "front" ? t("frontSide") : t("backSide")}
-                      </span>
-                    </div>
-                    <p className="text-on-surface-variant text-[11px] mt-0.5 leading-normal">
-                      {language === "en" ? issue.description : issue.descriptionJp}
-                    </p>
-                  </div>
-                </div>
+            </div> : preflight.issues.map((issue) => {
+                const issueTitle = language === "vi"
+                  ? (issue.titleVi || issue.title)
+                  : language === "en"
+                  ? (issue.titleEn || issue.title)
+                  : (issue.titleJp || issue.title);
 
-                {issue.autoFixAvailable && <button
-    onClick={() => handleFixIssue(issue)}
-    className="flex-shrink-0 flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-surface-container-high border border-border-subtle hover:bg-primary/10 hover:border-brand-300 hover:text-primary text-on-surface-variant shadow-xs transition-colors"
-  >
-                    <Wrench className="w-3 h-3" />
-                    <span>{t("btnAutoFix")}</span>
-                  </button>}
-              </div>)}
+                const issueDesc = language === "vi"
+                  ? (issue.descriptionVi || issue.description)
+                  : language === "en"
+                  ? (issue.descriptionEn || issue.description)
+                  : (issue.descriptionJp || issue.description);
+
+                return (
+                  <div
+                    key={issue.id}
+                    className={`p-3.5 rounded-2xl border flex items-start justify-between gap-3 text-xs transition-all ${
+                      issue.severity === "critical"
+                        ? "bg-error/10 border-error/30 text-on-surface"
+                        : issue.severity === "warning"
+                        ? "bg-warning/10 border-warning/30 text-on-surface"
+                        : "bg-info/10 border-info/30 text-on-surface"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      {issue.severity === "critical" ? (
+                        <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-amber-500 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                      )}
+                      <div>
+                        <div className="font-bold text-on-surface flex items-center gap-2">
+                          <span>{issueTitle}</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-container-high border border-border-subtle text-on-surface-variant">
+                            {issue.side === "front" ? (t("frontSide") || "Mặt trước") : (t("backSide") || "Mặt sau")}
+                          </span>
+                        </div>
+                        <p className="text-on-surface-variant text-[11px] mt-0.5 leading-normal">
+                          {issueDesc}
+                        </p>
+                      </div>
+                    </div>
+
+                    {issue.autoFixAvailable && (
+                      <button
+                        onClick={() => handleFixIssue(issue)}
+                        className="flex-shrink-0 flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-surface-container-high border border-border-subtle hover:bg-primary/10 hover:border-brand-300 hover:text-primary text-on-surface-variant shadow-xs transition-colors cursor-pointer"
+                      >
+                        <Wrench className="w-3 h-3" />
+                        <span>{t("btnAutoFix")}</span>
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
         </div>
 
-        {
-    /* Modal Footer */
-  }
+        {/* Modal Footer */}
         <div className="px-6 py-3 border-t border-border-subtle bg-surface-canvas flex items-center justify-end">
           <button
-    id="btn-close-preflight"
-    onClick={onClose}
-    className="px-5 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 text-white transition-colors"
-  >
-            {t("btnClose")}
+            id="btn-close-preflight"
+            onClick={onClose}
+            className="px-5 py-2 text-xs font-bold rounded-xl bg-surface-container-highest hover:bg-surface-subtle border border-border-strong text-on-surface transition-colors cursor-pointer"
+          >
+            {t("btnClose") || "Đóng"}
           </button>
         </div>
       </div>

@@ -213,23 +213,14 @@ function BusinessCardStudioContent({ onBackToHub }) {
           <div className="absolute right-40 -bottom-24 w-80 h-80 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-xl bg-surface-container-high border border-border-subtle flex items-center justify-center text-primary shrink-0 shadow-md">
-                <Contact className="w-8 h-8" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-surface-container-high border border-border-subtle flex items-center justify-center text-primary shrink-0 shadow-md">
+                <Contact className="w-7 h-7" />
               </div>
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl lg:text-3xl font-bold text-on-surface tracking-tight">
-                    {t('brandTitle') || 'Tạo Danh Thiếp & Namecard AI'}
-                  </h1>
-                  <span className="text-[11px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md bg-secondary/10 text-secondary border border-secondary/20">
-                    {t('freeAppBadge') || '100% Client-Side'}
-                  </span>
-                </div>
-                <p className="text-sm text-on-surface-variant max-w-3xl leading-relaxed">
-                  {t('heroSub') ||
-                    'Thiết kế và xuất file in danh thiếp thương mại 300 DPI kèm bù xén (Bleed 3mm) và dấu xén chuẩn Nhật (Tonbo). Tự động trích xuất màu sắc & thông tin từ ảnh chụp cũ bằng AI OCR, hỗ trợ 28 phong cách và in hàng loạt nhân viên.'}
-                </p>
+              <div>
+                <h1 className="text-2xl font-bold text-on-surface tracking-tight font-display">
+                  {t('brandTitle') || 'MEISHI STUDIO'}
+                </h1>
               </div>
             </div>
 

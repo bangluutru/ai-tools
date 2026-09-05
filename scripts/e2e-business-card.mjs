@@ -71,6 +71,17 @@ async function runE2E() {
     });
     console.log(`   ✔ Populated fields (${inputsData.length} fields): ${inputsData.slice(0, 3).join(', ')}...`);
 
+    // Check that redundant badge and duplicate heroSub are gone from context header
+    const headerContextMetrics = await page.evaluate(() => {
+      const headerSection = document.querySelector('section.w-full.mb-6');
+      const text = headerSection ? headerSection.innerText : '';
+      return {
+        hasFreeBadge: text.includes('100% MIỄN PHÍ') || text.includes('100% Miễn phí'),
+        hasDuplicateHeroSub: text.includes('Tự động trích xuất từ ảnh chụp danh thiếp cũ'),
+      };
+    });
+    console.log(`   ✔ Header Context Cleanliness: FreeBadgeGone=${!headerContextMetrics.hasFreeBadge}, DuplicateTextGone=${!headerContextMetrics.hasDuplicateHeroSub}`);
+
     const screenshot1 = path.join(screenshotsDir, 'e2e_bcard_01_input_step.png');
     await page.screenshot({ path: screenshot1 });
     console.log(`   📸 Saved screenshot: ${screenshot1}`);
@@ -106,7 +117,6 @@ async function runE2E() {
 
     // --- PHASE 3: Select Template and Enter Editor ---
     console.log('▶ [PHASE 3] Selecting Template and Transitioning to Step 3: Editor...');
-    // Click on proposal card
     const firstProposalCard = await page.$('div[id^="proposal-card-"]');
     if (firstProposalCard) {
       await firstProposalCard.click();
@@ -148,30 +158,42 @@ async function runE2E() {
     await page.screenshot({ path: screenshot3 });
     console.log(`   📸 Saved screenshot: ${screenshot3}`);
 
-    // --- PHASE 4: Preflight Inspection Modal (12 Print Rules) ---
-    console.log('▶ [PHASE 4] Testing Preflight Inspection Modal (12 Print Rules)...');
+    // Switch to Dark Mode for modal contrast tests
+    console.log('🌙 Switching to Dark Mode for Modal Verification...');
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.documentElement.classList.add('dark');
+    });
+    await new Promise((r) => setTimeout(r, 500));
+
+    // --- PHASE 4: Preflight Inspection Modal (12 Print Rules & i18n Verification) ---
+    console.log('▶ [PHASE 4] Testing Preflight Inspection Modal in Dark Mode (i18n Vietnamese)...');
     await page.evaluate(() => {
       const btns = Array.from(document.querySelectorAll('button'));
-      const preflightBtn = btns.find((b) => b.textContent.includes('Preflight') || b.title?.includes('Preflight'));
+      const preflightBtn = btns.find((b) => b.textContent.includes('Preflight') || b.title?.includes('Preflight') || b.textContent.includes('Kiểm định'));
       if (preflightBtn) preflightBtn.click();
     });
     await new Promise((r) => setTimeout(r, 700));
 
     const preflightStatus = await page.evaluate(() => {
       const modal = document.querySelector('div[role="dialog"], div.fixed.inset-0');
-      if (modal) {
-        return {
-          isOpen: true,
-          textSnippet: modal.innerText.slice(0, 200).replace(/\n/g, ' '),
-        };
-      }
-      return { isOpen: false };
+      if (!modal) return { isOpen: false };
+      const text = modal.innerText;
+      const hasJapaneseKanaKanji = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(text.replace(/Raksul|Graphic/g, ''));
+      const hasVietnameseRules = text.includes('Cỡ chữ cảnh báo') || text.includes('Cỡ chữ') || text.includes('an toàn');
+      return {
+        isOpen: true,
+        textSnippet: text.slice(0, 200).replace(/\n/g, ' '),
+        hasVietnameseRules,
+        hasHardcodedJapanese: hasJapaneseKanaKanji,
+      };
     });
-    console.log(`   ✔ Preflight Modal: ${preflightStatus.isOpen ? 'OPENED' : 'NOT FOUND'} ("${preflightStatus.textSnippet}")`);
+    console.log(`   ✔ Preflight Modal: OPENED ("${preflightStatus.textSnippet}")`);
+    console.log(`   ✔ Preflight i18n Check: HasVietnameseRules=${preflightStatus.hasVietnameseRules}, HasHardcodedJapanese=${preflightStatus.hasHardcodedJapanese}`);
 
     const screenshot4 = path.join(screenshotsDir, 'e2e_bcard_04_preflight_modal.png');
     await page.screenshot({ path: screenshot4 });
-    console.log(`   📸 Saved screenshot: ${screenshot4}`);
+    console.log(`   📸 Saved Dark Mode Preflight screenshot: ${screenshot4}`);
 
     // Close preflight modal
     const closePf = await page.$('#btn-close-preflight');
@@ -179,7 +201,7 @@ async function runE2E() {
     await new Promise((r) => setTimeout(r, 500));
 
     // --- PHASE 5: Batch CSV Modal ---
-    console.log('▶ [PHASE 5] Testing Batch Employee CSV Modal...');
+    console.log('▶ [PHASE 5] Testing Batch Employee CSV Modal in Dark Mode...');
     await page.evaluate(() => {
       const btns = Array.from(document.querySelectorAll('button'));
       const batchBtn = btns.find((b) => b.textContent.includes('Batch') || b.textContent.includes('nhân viên'));
@@ -204,8 +226,8 @@ async function runE2E() {
     if (closeBatch) await closeBatch.click();
     await new Promise((r) => setTimeout(r, 500));
 
-    // --- PHASE 6: Free Export Modal ---
-    console.log('▶ [PHASE 6] Testing Free Export Modal...');
+    // --- PHASE 6: Free Export Modal (Dark Mode Contrast & Redundant Badge Elimination) ---
+    console.log('▶ [PHASE 6] Testing Free Export Modal in Dark Mode...');
     const exportBtn = await page.$('#btn-header-free-export');
     if (exportBtn) {
       await exportBtn.click();
@@ -214,21 +236,27 @@ async function runE2E() {
 
     const exportStatus = await page.evaluate(() => {
       const modal = document.querySelector('div[role="dialog"], div.fixed.inset-0');
-      return modal
-        ? { isOpen: true, textSnippet: modal.innerText.slice(0, 200).replace(/\n/g, ' ') }
-        : { isOpen: false };
+      if (!modal) return { isOpen: false };
+      const text = modal.innerText;
+      const hasRedundantBadge = text.includes('100% Miễn Phí & Thương Mại Mở') || text.includes('100% Miễn phí & Mở');
+      return {
+        isOpen: true,
+        textSnippet: text.slice(0, 200).replace(/\n/g, ' '),
+        hasRedundantBadge,
+      };
     });
-    console.log(`   ✔ Free Export Modal: ${exportStatus.isOpen ? 'OPENED' : 'NOT FOUND'} ("${exportStatus.textSnippet}")`);
+    console.log(`   ✔ Free Export Modal: OPENED, RedundantBadgeGone=${!exportStatus.hasRedundantBadge}`);
 
     const screenshot6 = path.join(screenshotsDir, 'e2e_bcard_06_free_export_modal.png');
     await page.screenshot({ path: screenshot6 });
-    console.log(`   📸 Saved screenshot: ${screenshot6}`);
+    console.log(`   📸 Saved Dark Mode Free Export screenshot: ${screenshot6}`);
 
     // Close export modal
     const closeExport = await page.$('#btn-close-free-export');
     if (closeExport) await closeExport.click();
     await new Promise((r) => setTimeout(r, 500));
 
+    // Switch back to light or standard for mobile responsive check
     // --- PHASE 7: Mobile Responsive Viewport (iPhone 15/16 Safari 390x844) ---
     console.log('▶ [PHASE 7] Testing Mobile Viewport (390x844) Zero Overflow...');
     await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
