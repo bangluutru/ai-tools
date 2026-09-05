@@ -33,7 +33,6 @@ const colors = {
   gray: '\x1b[90m',
 };
 
-const pass = (msg) => `${colors.green}✔ PASS${colors.reset} ${msg}`;
 const warn = (msg) => `${colors.yellow}⚠ WARN${colors.reset} ${msg}`;
 const fail = (msg) => `${colors.red}✖ FAIL${colors.reset} ${msg}`;
 
