@@ -27,16 +27,30 @@ import {
   Archive, FileCode2, Home, CheckSquare, Layers2
 } from 'lucide-react';
 
+let pdfJsPromise = null;
+function loadPdfJs() {
+  if (!pdfJsPromise) {
+    pdfJsPromise = Promise.all([
+      import('pdfjs-dist'),
+      import('pdfjs-dist/build/pdf.worker.min.mjs?url')
+    ]).then(function ([pdfjsLib, workerModule]) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+      return pdfjsLib;
+    });
+  }
+  return pdfJsPromise;
+}
+
 // ========================================================================
 // CONSTANTS & PRESETS
 // ========================================================================
 
 const DEFAULT_WATERMARK_CONFIG = {
   type: 'text',
-  text: 'BẢN QUYỀN THUỘC AI-TOOLS • KHÔNG SAO CHÉP • NỘI BỘ',
+  text: 'BẢO MẬT NỘI BỘ • KHÔNG SAO CHÉP',
   fontFamily: 'Inter, sans-serif',
   fontSize: 28,
-  color: '#FFFFFF',
+  color: '#EF4444',
   bold: true,
   italic: false,
   allCaps: true,
@@ -44,7 +58,7 @@ const DEFAULT_WATERMARK_CONFIG = {
   imageDataUrl: null,
   imageScale: 0.4,
   removeWhiteBg: true,
-  opacity: 0.22,
+  opacity: 0.28,
   rotation: -45,
   blendMode: 'normal',
   layoutMode: 'tiled',
@@ -104,13 +118,13 @@ const WATERMARK_PRESETS = [
 ];
 
 const COLOR_PALETTES = [
-  { name: 'Trắng mờ', hex: '#FFFFFF' },
-  { name: 'Xám khói', hex: '#94A3B8' },
   { name: 'Đỏ bảo mật', hex: '#EF4444' },
+  { name: 'Xám khói', hex: '#64748B' },
   { name: 'Xanh Navy', hex: '#0EA5E9' },
-  { name: 'Xanh ngọc', hex: '#4EDEA3' },
   { name: 'Hổ phách', hex: '#F59E0B' },
-  { name: 'Đen tuyền', hex: '#000000' }
+  { name: 'Xanh lục', hex: '#10B981' },
+  { name: 'Đen tuyền', hex: '#000000' },
+  { name: 'Trắng mờ (cho ảnh tối)', hex: '#FFFFFF' }
 ];
 
 const FONT_OPTIONS = [
@@ -259,13 +273,19 @@ async function drawTextWatermark(ctx, width, height, config) {
     const coords = getAnchorCoordinates(config.position, width, height, computedFontSize);
     ctx.save(); ctx.translate(coords.x, coords.y); ctx.rotate(angleRad); ctx.fillText(text, 0, 0); ctx.restore();
   } else {
-    const gapX = Math.max(80, config.tileGapX * baseScale);
-    const gapY = Math.max(60, config.tileGapY * baseScale);
+    const textMetrics = ctx.measureText(text);
+    const textW = textMetrics.width;
+    const textH = computedFontSize;
+    const gapX = Math.max(textW + 60, (config.tileGapX * width) / 500);
+    const gapY = Math.max(textH * 3 + 40, (config.tileGapY * height) / 500);
     const diagonal = Math.sqrt(width * width + height * height);
-    for (let x = -diagonal / 2; x < width + diagonal / 2; x += gapX) {
-      for (let y = -diagonal / 2; y < height + diagonal / 2; y += gapY) {
-        ctx.save(); ctx.translate(x, y); ctx.rotate(angleRad); ctx.fillText(text, 0, 0); ctx.restore();
+    let row = 0;
+    for (let y = -diagonal / 2; y < height + diagonal / 2; y += gapY) {
+      const offsetX = (row % 2 === 1) ? gapX / 2 : 0;
+      for (let x = -diagonal / 2 - gapX; x < width + diagonal / 2 + gapX; x += gapX) {
+        ctx.save(); ctx.translate(x + offsetX, y); ctx.rotate(angleRad); ctx.fillText(text, 0, 0); ctx.restore();
       }
+      row++;
     }
   }
   ctx.restore();
@@ -377,18 +397,18 @@ async function generateWatermarkImage(config, targetWidth, targetHeight) {
   return { dataUrl: canvas.toDataURL('image/png'), width: targetWidth, height: targetHeight };
 }
 
-function getPdfAnchorCoordinates(pos, pageWidth, pageHeight, stampWidth, stampHeight) {
-  const pad = 40;
+function getPdfAnchorCoordinates(pos, pageWidth, pageHeight) {
+  const pad = 60;
   switch (pos) {
-    case 'top-left': return { x: pad, y: pageHeight - stampHeight - pad };
-    case 'top-center': return { x: (pageWidth - stampWidth) / 2, y: pageHeight - stampHeight - pad };
-    case 'top-right': return { x: pageWidth - stampWidth - pad, y: pageHeight - stampHeight - pad };
-    case 'middle-left': return { x: pad, y: (pageHeight - stampHeight) / 2 };
-    case 'middle-right': return { x: pageWidth - stampWidth - pad, y: (pageHeight - stampHeight) / 2 };
+    case 'top-left': return { x: pad, y: pageHeight - pad };
+    case 'top-center': return { x: pageWidth / 2, y: pageHeight - pad };
+    case 'top-right': return { x: pageWidth - pad, y: pageHeight - pad };
+    case 'middle-left': return { x: pad, y: pageHeight / 2 };
+    case 'middle-right': return { x: pageWidth - pad, y: pageHeight / 2 };
     case 'bottom-left': return { x: pad, y: pad };
-    case 'bottom-center': return { x: (pageWidth - stampWidth) / 2, y: pad };
-    case 'bottom-right': return { x: pageWidth - stampWidth - pad, y: pad };
-    case 'center': default: return { x: (pageWidth - stampWidth) / 2, y: (pageHeight - stampHeight) / 2 };
+    case 'bottom-center': return { x: pageWidth / 2, y: pad };
+    case 'bottom-right': return { x: pageWidth - pad, y: pad };
+    case 'center': default: return { x: pageWidth / 2, y: pageHeight / 2 };
   }
 }
 
@@ -404,21 +424,44 @@ async function processPdfWatermark(pdfFile, config, onProgress) {
   const pngBytes = await pngResponse.arrayBuffer();
   const embeddedPng = await pdfDoc.embedPng(pngBytes);
   const stampW = watermarkStamp.width, stampH = watermarkStamp.height;
-  const rotationAngle = config.rotation;
+  const rotationAngle = -config.rotation;
+  const rad = (rotationAngle * Math.PI) / 180;
+  const cosA = Math.cos(rad);
+  const sinA = Math.sin(rad);
+  const centerOffsetX = (stampW / 2) * cosA - (stampH / 2) * sinA;
+  const centerOffsetY = (stampW / 2) * sinA + (stampH / 2) * cosA;
+
   for (let i = 0; i < pageCount; i++) {
     const page = pages[i];
     const pgSize = page.getSize();
     if (config.layoutMode === 'single') {
-      const coords = getPdfAnchorCoordinates(config.position, pgSize.width, pgSize.height, stampW, stampH);
-      page.drawImage(embeddedPng, { x: coords.x, y: coords.y, width: stampW, height: stampH, rotate: degrees(rotationAngle), opacity: config.opacity });
+      const center = getPdfAnchorCoordinates(config.position, pgSize.width, pgSize.height);
+      page.drawImage(embeddedPng, {
+        x: center.x - centerOffsetX,
+        y: center.y - centerOffsetY,
+        width: stampW,
+        height: stampH,
+        rotate: degrees(rotationAngle),
+        opacity: config.opacity
+      });
     } else {
-      const gapX = Math.max(stampW + 60, config.tileGapX);
-      const gapY = Math.max(stampH + 60, config.tileGapY);
+      const gapX = Math.max(stampW + 60, (config.tileGapX * pgSize.width) / 500);
+      const gapY = Math.max(stampH * 2 + 40, (config.tileGapY * pgSize.height) / 500);
       const diagonal = Math.sqrt(pgSize.width * pgSize.width + pgSize.height * pgSize.height);
-      for (let x = -diagonal / 2; x < pgSize.width + diagonal / 2; x += gapX) {
-        for (let y = -diagonal / 2; y < pgSize.height + diagonal / 2; y += gapY) {
-          page.drawImage(embeddedPng, { x: x, y: y, width: stampW, height: stampH, rotate: degrees(rotationAngle), opacity: config.opacity });
+      let row = 0;
+      for (let y = -diagonal / 2; y < pgSize.height + diagonal / 2; y += gapY) {
+        const offsetX = (row % 2 === 1) ? gapX / 2 : 0;
+        for (let x = -diagonal / 2 - gapX; x < pgSize.width + diagonal / 2 + gapX; x += gapX) {
+          page.drawImage(embeddedPng, {
+            x: (x + offsetX) - centerOffsetX,
+            y: y - centerOffsetY,
+            width: stampW,
+            height: stampH,
+            rotate: degrees(rotationAngle),
+            opacity: config.opacity
+          });
         }
+        row++;
       }
     }
     if (onProgress) onProgress(Math.round(((i + 1) / pageCount) * 100));
@@ -790,7 +833,40 @@ export default function WatermarkStudioView() {
       readFileAsDataURL(activeFile.file).then(function (url) {
         const img = new Image(); img.crossOrigin = 'anonymous';
         img.onload = function () { if (isMounted) setBgImage(img); };
+        img.onerror = function () { if (isMounted) setBgImage(null); };
         img.src = url;
+      }).catch(function () {
+        if (isMounted) setBgImage(null);
+      });
+    } else if (activeFile && activeFile.category === 'pdf') {
+      readFileAsArrayBuffer(activeFile.file).then(async function (buffer) {
+        try {
+          const pdfjsLib = await loadPdfJs();
+          const loadingTask = pdfjsLib.getDocument({ data: buffer.slice(0) });
+          const pdf = await loadingTask.promise;
+          const page = await pdf.getPage(1);
+          const viewport = page.getViewport({ scale: 1.5 });
+          const offscreenCanvas = document.createElement('canvas');
+          offscreenCanvas.width = viewport.width;
+          offscreenCanvas.height = viewport.height;
+          const offscreenCtx = offscreenCanvas.getContext('2d');
+          if (offscreenCtx) {
+            await page.render({ canvasContext: offscreenCtx, viewport }).promise;
+            const dataUrl = offscreenCanvas.toDataURL('image/png');
+            const img = new Image();
+            img.onload = function () { if (isMounted) setBgImage(img); };
+            img.onerror = function () { if (isMounted) setBgImage(null); };
+            img.src = dataUrl;
+          }
+          page.cleanup();
+          await loadingTask.destroy();
+        } catch (err) {
+          console.warn('PDF preview render error, using document mockup fallback:', err);
+          if (isMounted) setBgImage(null);
+        }
+      }).catch(function (err) {
+        console.warn('Error reading PDF file for preview:', err);
+        if (isMounted) setBgImage(null);
       });
     } else {
       Promise.resolve().then(function () {
@@ -834,7 +910,8 @@ export default function WatermarkStudioView() {
 
       ctx.fillStyle = contrastMode ? '#64748b' : '#94a3b8';
       ctx.font = '11px Inter, sans-serif';
-      ctx.fillText('Watermark Studio — AI-Tools Master Hub', 40, height - 30);
+      const docLabel = activeFile ? (activeFile.name + ' (' + activeFile.category.toUpperCase() + ')') : 'Watermark Studio — AI-Tools Master Hub';
+      ctx.fillText(docLabel, 40, height - 30);
     }
 
     if (showGrid) {
