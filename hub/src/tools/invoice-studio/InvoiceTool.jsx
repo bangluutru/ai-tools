@@ -1255,31 +1255,19 @@ export default function InvoiceTool() {
               <Receipt size={30} />
             </div>
             <div className="flex flex-col gap-space-1">
-              <div className="flex flex-wrap items-center gap-space-2">
-                <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">
-                  Xử Lý Hóa Đơn XML & PDF Đa Năng
-                </h1>
-                <span className="px-space-2 py-[2px] rounded bg-brand-emerald-deep/20 text-secondary font-label-sm text-label-sm flex items-center gap-1 border border-secondary/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-                  ƯU TIÊN 1
-                </span>
-                <span className="px-space-2 py-[2px] rounded bg-primary-container/20 text-brand-cyan-bright font-label-sm text-label-sm border border-primary-container/30">
-                  HÓA ĐƠN ĐIỆN TỬ
-                </span>
-              </div>
-              <p className="font-body-md text-body-md text-on-surface-variant max-w-3xl">
+              <h1 className="font-headline-lg text-xl sm:text-2xl text-on-surface tracking-tight font-semibold">
+                Xử Lý Hóa Đơn XML &amp; PDF Đa Năng
+              </h1>
+              <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant max-w-3xl leading-relaxed">
                 Bóc tách dữ liệu hóa đơn điện tử XML của Tổng cục Thuế và PDF, trích xuất bảng kê Excel tự động, kiểm tra tính hợp lệ chữ ký số và đồng bộ phiếu kế toán tức thì.
               </p>
             </div>
           </div>
 
-          {/* Privacy Stamp */}
-          <div className="self-start lg:self-center shrink-0 bg-surface-container-low px-space-4 py-space-3 rounded-lg border border-border-subtle shadow-sm flex items-center gap-space-3 max-w-sm">
-            <ShieldCheck className="text-secondary shrink-0" size={24} />
-            <div className="flex flex-col">
-              <span className="font-label-sm text-label-sm text-secondary tracking-wider font-semibold">BẢO MẬT CLIENT-SIDE 100%</span>
-              <span className="font-body-sm text-body-sm text-outline">Giải mã XML trực tiếp trên RAM trình duyệt, không lưu trữ máy chủ</span>
-            </div>
+          {/* Subtle Privacy Note */}
+          <div className="self-start lg:self-center flex items-center gap-1.5 text-xs text-outline shrink-0">
+            <ShieldCheck size={15} className="text-secondary shrink-0" />
+            <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
           </div>
         </div>
       </div>
@@ -2078,33 +2066,6 @@ export default function InvoiceTool() {
         </div>
       </div>
 
-      {/* TOOL FOOTER / BEST PRACTICES & TIPS */}
-      <div className="mt-space-8 pt-space-6 bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md">
-        <div className="flex items-center gap-space-2 mb-space-4">
-          <Info className="text-primary-container" size={22} />
-          <h3 className="font-title-sm text-title-sm text-on-surface">Tiêu Chuẩn Kỹ Thuật & Quy Trình Bóc Tách Hóa Đơn</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-space-6">
-          <div className="flex flex-col gap-space-2">
-            <span className="font-body-md text-body-md font-semibold text-brand-cyan-bright">Chuẩn Thông tư 78 & Nghị định 123</span>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              Hỗ trợ toàn diện cấu trúc thẻ XML chuẩn từ tất cả các nhà cung cấp giải pháp hóa đơn: Viettel (S-Invoice), VNPT, MISA (meInvoice), BKAV, FAST, v.v.
-            </p>
-          </div>
-          <div className="flex flex-col gap-space-2">
-            <span className="font-body-md text-body-md font-semibold text-secondary">Xử lý hàng loạt không giới hạn</span>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              Tải lên cùng lúc đến 500 hóa đơn dưới dạng file ZIP. Luồng WebAssembly xử lý phân luồng đa nhiệm độc lập, đảm bảo giao diện luôn mượt mà không bị treo đơ.
-            </p>
-          </div>
-          <div className="flex flex-col gap-space-2">
-            <span className="font-body-md text-body-md font-semibold text-tertiary">Bảo mật & Toàn vẹn tuyệt đối</span>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              Kiểm tra mã băm SHA-256 đối chiếu trực tiếp với dữ liệu gốc của Tổng cục Thuế. Hóa đơn tài chính của doanh nghiệp không bao giờ rời khỏi máy tính cá nhân.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

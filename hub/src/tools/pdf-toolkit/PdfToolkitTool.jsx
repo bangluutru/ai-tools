@@ -375,38 +375,20 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
             <div className="w-14 h-14 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-primary-container shrink-0 shadow-sm">
               <FileText size={30} className="text-primary-container" />
             </div>
-            <div className="space-y-space-2">
-              <div className="flex flex-wrap items-center gap-space-2">
-                <h1 className="font-headline-lg text-headline-lg text-on-surface font-semibold tracking-tight">
-                  Công Cụ PDF Đa Năng & Biên Tập Trang
-                </h1>
-                <span className="px-space-2 py-[2px] bg-secondary-container/20 text-secondary font-label-sm text-label-sm rounded flex items-center gap-1 border border-secondary/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-                  ƯU TIÊN 1
-                </span>
-                <span className="px-space-2 py-[2px] bg-primary-container/20 text-brand-cyan-bright font-label-sm text-label-sm rounded border border-primary-container/30">
-                  PDF-LIB WASM
-                </span>
-              </div>
-              <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-                Gộp nhiều tệp PDF, tách trang lẻ theo dải tùy chọn, nén giảm dung lượng và xoay/sắp xếp thứ tự trang trực tiếp trong trình duyệt bằng WebAssembly với tốc độ xử lý siêu tốc.
+            <div className="space-y-1">
+              <h1 className="font-headline-lg text-xl sm:text-2xl text-on-surface font-semibold tracking-tight">
+                Công Cụ PDF Đa Năng &amp; Biên Tập Trang
+              </h1>
+              <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+                Gộp nhiều tệp PDF, tách trang lẻ theo dải tùy chọn, nén giảm dung lượng và xoay/sắp xếp thứ tự trang trực tiếp trong trình duyệt.
               </p>
             </div>
           </div>
 
-          {/* Privacy Shield Pill */}
-          <div className="self-start lg:self-center px-space-4 py-space-3 bg-surface-subtle rounded-xl flex items-center gap-space-3 max-w-md shrink-0 border border-border-subtle shadow-sm">
-            <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary shrink-0">
-              <ShieldCheck size={20} />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">
-                Bảo mật Client-Side 100%
-              </span>
-              <span className="font-body-sm text-body-sm text-on-surface-variant">
-                Xử lý PDF in-memory, không tải tệp lên server hay lưu trữ đám mây
-              </span>
-            </div>
+          {/* Subtle Privacy Note */}
+          <div className="self-start lg:self-center flex items-center gap-1.5 text-xs text-outline shrink-0">
+            <ShieldCheck size={15} className="text-secondary shrink-0" />
+            <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
           </div>
         </div>
       </section>
@@ -971,36 +953,6 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
         </div>
       </div>
 
-      {/* 4. BOTTOM GUIDE & FEATURE EXPLANATIONS (3-COLUMN GRID) */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-space-6 mb-space-8">
-        <div className="bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md flex flex-col gap-space-3">
-          <div className="w-10 h-10 rounded-lg bg-primary-container/20 text-brand-cyan-bright flex items-center justify-center">
-            <Zap size={22} />
-          </div>
-          <h3 className="font-title-sm text-title-sm text-on-surface font-semibold">Công Nghệ PDF-Lib WebAssembly</h3>
-          <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-            Xử lý nhị phân trực tiếp trên engine biên dịch sang WASM. Tốc độ nén và gộp hàng trăm trang diễn ra chưa đầy 1 giây mà không tiêu hao tài nguyên mạng.
-          </p>
-        </div>
-        <div className="bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md flex flex-col gap-space-3">
-          <div className="w-10 h-10 rounded-lg bg-secondary-container/20 text-secondary flex items-center justify-center">
-            <ShieldCheck size={22} />
-          </div>
-          <h3 className="font-title-sm text-title-sm text-on-surface font-semibold">Không Giới Hạn & Riêng Tư Tuyệt Đối</h3>
-          <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-            Không giới hạn số lần gộp, số trang hay dung lượng mỗi ngày. Toàn bộ chu trình đọc tệp diễn ra trong bộ nhớ RAM trình duyệt, không để lại vết lưu trữ ngoại vi.
-          </p>
-        </div>
-        <div className="bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md flex flex-col gap-space-3">
-          <div className="w-10 h-10 rounded-lg bg-tertiary-container/20 text-tertiary flex items-center justify-center">
-            <FileCheck size={22} />
-          </div>
-          <h3 className="font-title-sm text-title-sm text-on-surface font-semibold">Bảo Toàn Siêu Dữ Liệu & Form Chữ</h3>
-          <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-            Giữ nguyên 100% định dạng font chữ nhúng (embedded fonts), các bảng tính phức tạp, siêu liên kết nội bộ, outline cây mục lục và chữ ký số nếu có trong tài liệu.
-          </p>
-        </div>
-      </section>
     </div>
   );
 }

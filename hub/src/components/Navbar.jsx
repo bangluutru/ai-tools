@@ -1,20 +1,22 @@
-import React, { useState } from 'react';
-import { Sparkles, Search, Globe, Settings2, Code2, User } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Sparkles, Search, Globe, Settings2, Code2, X } from 'lucide-react';
 
 export default function Navbar({
   displayLang,
   onLangChange,
-  onOpenSearch,
   onOpenSettings,
   activeCategory,
   onSelectCategory,
   categoryIds,
+  searchQuery = '',
+  onSearchChange,
 }) {
   const [langDropdown, setLangDropdown] = useState(false);
+  const searchInputRef = useRef(null);
 
   const categoryLabels = {
     all: { vi: 'Tất cả', en: 'All', ja: 'すべて' },
-    pdf: { vi: 'Công cụ PDF', en: 'PDF Tools', ja: 'PDF ツール' },
+    pdf: { vi: 'PDF', en: 'PDF', ja: 'PDF' },
     image: { vi: 'Hình ảnh & WebP', en: 'Image & WebP', ja: '画像＆WebP' },
     office: { vi: 'Excel & Hóa đơn', en: 'Excel & Invoices', ja: 'Excel・請求書' },
     utils: { vi: 'Tiện ích', en: 'Utilities', ja: '便利ツール' },
@@ -22,15 +24,31 @@ export default function Navbar({
     'in-development': { vi: 'Đang phát triển', en: 'In development', ja: '開発中' },
   };
 
+  // Keyboard shortcut: pressing / or ⌘K focuses search
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (
+        (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') ||
+        ((e.metaKey || e.ctrlKey) && e.key === 'k')
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
-    <header className="no-print bg-surface-canvas/90 backdrop-blur-xl border-b border-border-subtle sticky top-0 z-50 shadow-sm">
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+    <header className="no-print bg-surface-canvas/95 backdrop-blur-xl border-b border-border-subtle sticky top-0 z-50 shadow-sm">
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
         {/* Brand Logo */}
         <div
           onClick={() => {
             if (onSelectCategory) onSelectCategory('all');
+            if (onSearchChange) onSearchChange('');
           }}
-          className="flex items-center gap-3 cursor-pointer select-none shrink-0"
+          className="flex items-center gap-2.5 cursor-pointer select-none shrink-0"
         >
           <div className="w-8 h-8 rounded-lg bg-surface-container border border-border-subtle flex items-center justify-center text-primary-container shadow-sm">
             <Sparkles size={18} className="text-primary-container" />
@@ -39,57 +57,58 @@ export default function Navbar({
             <span className="font-bold text-lg tracking-tight text-on-surface">
               AI-Tools
             </span>
-            <span className="px-2 py-[2px] bg-primary-container text-on-primary-container font-mono text-[10px] font-bold rounded">
+            <span className="px-1.5 py-[2px] bg-primary-container text-on-primary-container font-mono text-[10px] font-bold rounded">
               HUB
             </span>
           </div>
         </div>
 
-        {/* Center Search Bar Trigger */}
-        <div className="hidden md:flex items-center flex-1 max-w-sm mx-4">
-          <button
-            type="button"
-            onClick={onOpenSearch}
-            className="w-full flex items-center px-3 py-1.5 bg-surface-subtle border border-border-subtle hover:border-primary-container text-on-surface-variant rounded-lg gap-2 cursor-pointer transition-colors shadow-inner text-left"
-          >
-            <Search size={16} className="text-outline shrink-0" />
-            <span className="flex-1 text-xs text-outline font-normal truncate">
-              {displayLang === 'vi'
-                ? 'Tìm kiếm công cụ nhanh...'
-                : displayLang === 'en'
-                ? 'Quick search tools...'
-                : 'ツールを検索...'}
-            </span>
-            <kbd className="px-1.5 py-[2px] bg-surface-container border border-border-subtle text-on-surface-variant font-mono text-[10px] rounded shrink-0">
-              ⌘K
-            </kbd>
-          </button>
+        {/* Global Live Search Bar */}
+        <div className="flex-1 max-w-md mx-2 sm:mx-6">
+          <div className="relative flex items-center w-full">
+            <Search size={15} className="absolute left-3 text-outline pointer-events-none shrink-0" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
+              placeholder={
+                displayLang === 'vi'
+                  ? 'Tìm kiếm công cụ nhanh (nhấn / để tìm)...'
+                  : displayLang === 'en'
+                  ? 'Search tools (/ to focus)...'
+                  : 'ツールを検索 (/)...'
+              }
+              className="w-full pl-9 pr-14 py-1.5 bg-surface-subtle/80 hover:bg-surface-subtle focus:bg-surface-container border border-border-subtle focus:border-primary-container text-on-surface placeholder:text-outline text-xs rounded-lg transition-colors outline-none shadow-inner"
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (onSearchChange) onSearchChange('');
+                  searchInputRef.current?.focus();
+                }}
+                className="absolute right-2.5 p-1 text-outline hover:text-on-surface transition-colors"
+                title="Xóa tìm kiếm"
+              >
+                <X size={14} />
+              </button>
+            ) : (
+              <kbd className="hidden sm:inline-block absolute right-2.5 px-1.5 py-[2px] bg-surface-container border border-border-subtle/80 text-outline font-mono text-[10px] rounded pointer-events-none">
+                /
+              </kbd>
+            )}
+          </div>
         </div>
 
-        {/* Right Actions */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* Offline/Client Processing Trust Indicator */}
-          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-surface-container border border-border-subtle rounded-full">
-            <span className="w-2 h-2 rounded-full bg-secondary animate-pulse" />
-            <span className="font-mono text-[11px] font-semibold text-secondary">
-              Xử lý Offline/Client
-            </span>
-          </div>
-
-          {/* Mobile Search Button */}
-          <button
-            onClick={onOpenSearch}
-            className="md:hidden p-2 rounded-lg bg-surface-subtle border border-border-subtle text-on-surface-variant hover:text-on-surface"
-            aria-label="Search"
-          >
-            <Search size={18} />
-          </button>
-
+        {/* Essential Right Controls */}
+        <div className="flex items-center gap-2 shrink-0">
           {/* Language Selector */}
           <div className="relative">
             <button
               onClick={() => setLangDropdown(!langDropdown)}
               className="flex items-center gap-1 px-2.5 py-1.5 bg-surface-subtle hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface rounded-lg font-mono text-xs font-semibold transition-colors"
+              aria-label="Chọn ngôn ngữ"
             >
               <Globe size={14} className="text-brand-cyan-bright" />
               <span>{displayLang.toUpperCase()}</span>
@@ -122,6 +141,16 @@ export default function Navbar({
             )}
           </div>
 
+          {/* Settings Button */}
+          <button
+            onClick={onOpenSettings}
+            className="p-2 rounded-lg bg-surface-subtle hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center"
+            title="Cài đặt miniapp ẩn/hiện"
+            aria-label="Cài đặt miniapp"
+          >
+            <Settings2 size={16} />
+          </button>
+
           {/* Source Code Link */}
           <a
             href="https://github.com"
@@ -131,29 +160,14 @@ export default function Navbar({
             title="Mã nguồn"
             aria-label="Mã nguồn"
           >
-            <Code2 size={18} />
+            <Code2 size={17} />
           </a>
-
-          {/* Settings Button */}
-          <button
-            onClick={onOpenSettings}
-            className="p-2 rounded-lg bg-surface-subtle hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center"
-            title="Cài đặt miniapp"
-            aria-label="Cài đặt miniapp"
-          >
-            <Settings2 size={16} />
-          </button>
-
-          {/* User Profile Avatar */}
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary shrink-0 shadow-sm">
-            <User size={16} />
-          </div>
         </div>
       </div>
 
-      {/* Secondary Category Navigation Sub-bar */}
+      {/* Primary Category Navigation Sub-bar */}
       {onSelectCategory && (
-        <div className="bg-surface-dim border-t border-border-subtle/30 shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+        <div className="bg-surface-dim/70 border-t border-border-subtle/40">
           <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
             <nav className="flex items-center gap-6 overflow-x-auto py-1 scrollbar-none">
               {['all', 'pdf', 'image', 'office', 'utils']

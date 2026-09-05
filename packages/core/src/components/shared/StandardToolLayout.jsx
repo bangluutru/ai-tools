@@ -63,27 +63,20 @@ export function StatusBadge({ children, variant = 'default', className = '' }) {
 }
 
 /**
- * Standard Privacy & Security Shield Pill
+ * Standard Privacy & Security Shield Pill (Subtle 1-line indicator)
  */
 export function PrivacyShieldPill({
-  title = 'Bảo mật Client-Side 100%',
-  subtitle = 'Xử lý in-memory trên trình duyệt, không tải tệp lên server hay lưu trữ đám mây',
+  title,
+  subtitle,
+  message,
   icon = ShieldCheck,
 }) {
   const Icon = icon;
+  const text = message || (title && subtitle ? `${title} — ${subtitle}` : title || subtitle || 'Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.');
   return (
-    <div className="self-start lg:self-center px-space-4 py-space-3 bg-surface-subtle rounded-xl flex items-center gap-space-3 max-w-md shrink-0 border border-border-subtle shadow-sm">
-      <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary shrink-0">
-        <Icon className="w-5 h-5" />
-      </div>
-      <div className="flex flex-col">
-        <span className="font-label-sm text-label-sm text-secondary uppercase tracking-wider font-semibold">
-          {title}
-        </span>
-        <span className="font-body-sm text-body-sm text-on-surface-variant leading-snug">
-          {subtitle}
-        </span>
-      </div>
+    <div className="self-start lg:self-center flex items-center gap-1.5 text-xs text-outline shrink-0">
+      <Icon className="w-4 h-4 text-secondary shrink-0" />
+      <span>{text}</span>
     </div>
   );
 }
@@ -96,23 +89,25 @@ export function ToolHeader({
   title,
   badges = [],
   description,
+  showPrivacy = true,
   privacyTitle,
   privacySubtitle,
+  privacyMessage,
   privacyIcon,
 }) {
   const Icon = icon;
   return (
-    <section className="bg-surface-container rounded-xl p-space-6 mb-space-6 border border-border-subtle shadow-md relative overflow-hidden">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-5 relative z-10">
-        <div className="flex items-start gap-space-4 max-w-3xl">
+    <section className="bg-surface-container rounded-xl p-space-5 mb-space-5 border border-border-subtle shadow-sm relative overflow-hidden">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-4 relative z-10">
+        <div className="flex items-start gap-space-3.5 max-w-3xl">
           {Icon && (
-            <div className="w-14 h-14 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-primary-container shrink-0 shadow-sm">
-              <Icon className="w-8 h-8" />
+            <div className="w-12 h-12 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-primary-container shrink-0 shadow-sm">
+              <Icon className="w-6 h-6" />
             </div>
           )}
-          <div className="space-y-space-2">
+          <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-space-2">
-              <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight font-semibold">
+              <h1 className="font-headline-lg text-xl sm:text-2xl text-on-surface tracking-tight font-semibold">
                 {title}
               </h1>
               {badges.map((b, i) => (
@@ -122,18 +117,21 @@ export function ToolHeader({
               ))}
             </div>
             {description && (
-              <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+              <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant leading-relaxed">
                 {description}
               </p>
             )}
           </div>
         </div>
 
-        <PrivacyShieldPill
-          title={privacyTitle}
-          subtitle={privacySubtitle}
-          icon={privacyIcon}
-        />
+        {showPrivacy && (
+          <PrivacyShieldPill
+            title={privacyTitle}
+            subtitle={privacySubtitle}
+            message={privacyMessage}
+            icon={privacyIcon}
+          />
+        )}
       </div>
     </section>
   );
@@ -486,7 +484,7 @@ export function StandardToolLayout({
   breadcrumb,
   header,
   children,
-  assuranceCards,
+  assuranceCards = false,
   className = '',
 }) {
   return (
@@ -494,7 +492,8 @@ export function StandardToolLayout({
       {breadcrumb && <ToolBreadcrumb {...breadcrumb} />}
       {header && <ToolHeader {...header} />}
       <main className="flex-1 w-full">{children}</main>
-      {assuranceCards !== false && <AssuranceCards {...(typeof assuranceCards === 'object' ? assuranceCards : {})} />}
+      {assuranceCards === true && <AssuranceCards />}
+      {typeof assuranceCards === 'object' && assuranceCards !== null && <AssuranceCards {...assuranceCards} />}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronRight, ShieldCheck, Cpu, HardDrive, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { categories } from '../config/toolsRegistry';
 
 export default function ToolContainer({ currentTool, onBackToHub, onSelectTool, displayLang, tools, children }) {
@@ -20,27 +20,8 @@ export default function ToolContainer({ currentTool, onBackToHub, onSelectTool, 
     return cat.label_vn;
   };
 
+  // Subtle privacy note
   const isClientSide = currentTool.processing === 'browser';
-  const isHybrid = currentTool.processing === 'hybrid';
-
-  const processingBadge = isClientSide ? {
-    label: 'Client-side Safe',
-    detail: 'WebAssembly / Trình duyệt',
-    icon: ShieldCheck,
-    color: 'text-secondary border-secondary/20 bg-secondary/10'
-  } : isHybrid ? {
-    label: 'Hybrid Processing',
-    detail: 'Xử lý hỗn hợp',
-    icon: HardDrive,
-    color: 'text-brand-cyan-bright border-primary-container/20 bg-primary-container/10'
-  } : {
-    label: 'Antigravity AI',
-    detail: 'Cloud Computation',
-    icon: Cpu,
-    color: 'text-primary border-primary/20 bg-primary/10'
-  };
-
-  const BadgeIcon = processingBadge.icon;
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-canvas text-on-surface">
@@ -118,13 +99,12 @@ export default function ToolContainer({ currentTool, onBackToHub, onSelectTool, 
           </div>
         </div>
 
-        {/* Right Header Status / Privacy Pill */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-label-sm text-label-sm ${processingBadge.color}`}>
-            <BadgeIcon size={14} className="shrink-0" />
-            <span className="font-semibold">{processingBadge.label}</span>
-            <span className="hidden sm:inline text-[10px] text-outline font-normal">({processingBadge.detail})</span>
-          </div>
+        {/* Right Header: Subtle Privacy Note */}
+        <div className="flex items-center gap-1.5 shrink-0 text-xs text-outline">
+          <ShieldCheck size={14} className="text-secondary shrink-0" />
+          <span className="hidden sm:inline">
+            {isClientSide ? 'Xử lý trực tiếp trên trình duyệt' : 'Xử lý bảo mật'}
+          </span>
         </div>
       </header>
 

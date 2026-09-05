@@ -378,24 +378,13 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 tracking-tight">
                   Chuyển Đổi OmniConvert — Office sang PDF & Markdown
                 </h1>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-primary-container/15 text-primary-container font-mono text-[11px] font-semibold">
-                    DOCS WASM
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-secondary font-mono text-[11px] font-semibold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                    OFFLINE CLIENT-SIDE
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-surface-container text-slate-300 font-mono text-[11px]">
-                    CHUẨN GỐC FORMAT
-                  </span>
-                  <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 font-mono text-[11px]">
-                    LLM READY
-                  </span>
-                </div>
                 <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
                   Chuyển đổi tức thì tài liệu văn phòng Office (Word .docx, Excel .xlsx, PowerPoint .pptx, TXT, HTML) sang PDF chuẩn in ấn hoặc Markdown / Clean HTML tối ưu cho LLM/AI prompt mà không làm mất định dạng bảng biểu hay tiêu đề.
                 </p>
+                <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
+                  <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
+                </div>
               </div>
             </div>
 
@@ -408,19 +397,6 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 <Sliders className="w-4 h-4 text-primary-container" />
                 <span>Cài đặt xuất</span>
               </button>
-            </div>
-          </div>
-
-          {/* Security & Offline Banner */}
-          <div className="mt-5 p-3 bg-surface/80 border border-emerald-500/20 rounded-lg flex items-start sm:items-center gap-3 text-xs">
-            <div className="w-7 h-7 rounded bg-emerald-500/15 text-secondary flex items-center justify-center shrink-0 border border-emerald-500/30">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div className="flex-1 text-slate-300 leading-relaxed">
-              <span className="text-secondary font-bold font-mono uppercase tracking-wide mr-1.5">
-                BẢO MẬT CLIENT-SIDE 100% — XỬ LÝ NỘI BỘ BẰNG WEBASSEMBLY:
-              </span>
-              Toàn bộ quá trình parse tài liệu diễn ra trực tiếp trong RAM trình duyệt, bảo vệ 100% bí mật kinh doanh và dữ liệu hợp đồng nội bộ.
             </div>
           </div>
         </div>

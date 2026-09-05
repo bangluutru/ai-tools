@@ -728,28 +728,17 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                 <QrCode className="w-8 h-8" />
               </div>
               <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl lg:text-3xl font-bold text-on-surface tracking-tight">
-                    {t.heroTitle}
-                  </h1>
-                  <span className="px-2 py-0.5 bg-primary-container/15 text-brand-cyan-bright text-xs font-semibold rounded uppercase">
-                    GS1 Chuẩn Hoá
-                  </span>
-                  <span className="px-2 py-0.5 bg-secondary/15 text-secondary text-xs font-semibold rounded uppercase flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-ping" />
-                    OFFLINE CANVAS
-                  </span>
-                </div>
-                <p className="text-sm text-on-surface-variant max-w-3xl leading-relaxed">
+                <h1 className="text-xl sm:text-2xl font-bold text-on-surface tracking-tight">
+                  {t.heroTitle}
+                </h1>
+                <p className="text-xs sm:text-sm text-on-surface-variant max-w-3xl leading-relaxed">
                   {t.heroTagline}
                 </p>
               </div>
             </div>
-            <div className="shrink-0">
-              <PrivacyShieldPill
-                label="BẢO MẬT CLIENT-SIDE 100%"
-                description="Xử lý cục bộ bằng WebAssembly & HTML5 Canvas/SVG, không gửi dữ liệu ra máy chủ."
-              />
+            <div className="shrink-0 flex items-center gap-1.5 text-xs text-outline">
+              <ShieldCheck size={15} className="text-secondary shrink-0" />
+              <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
             </div>
           </div>
         </div>
@@ -1730,46 +1719,6 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
         </div>
       </section>
 
-      {/* 3. TOOL TIPS & QUY CHUẨN KỸ THUẬT (3 Cột cuối trang) */}
-      <section className="w-full mt-12 pt-8 border-t border-border-subtle">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-2 h-6 bg-primary-container rounded" />
-          <h3 className="text-xl font-bold text-on-surface tracking-tight">
-            Quy Chuẩn Kỹ Thuật Mã Hóa &amp; In Ấn Thương Mại
-          </h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-sm flex flex-col gap-3">
-            <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-primary-container">
-              <Store className="w-6 h-6" />
-            </div>
-            <h4 className="text-base font-semibold text-on-surface">Tiêu Chuẩn GS1 &amp; Tem Bán Lẻ</h4>
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              Mã vạch chuẩn GS1 EAN-13 yêu cầu độ phóng đại từ 80% đến 200% (tương đương chiều rộng 30mm - 74mm). Mã nước Việt Nam &apos;893&apos; đi cùng số kiểm tra Checksum Modulo-10 tự động đảm bảo mọi máy đọc POS tại siêu thị và cửa hàng tiện lợi nhận diện tức thì trong lần quét đầu tiên.
-            </p>
-          </div>
-
-          <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-sm flex flex-col gap-3">
-            <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <h4 className="text-base font-semibold text-on-surface">Mức Sửa Lỗi H (30%) &amp; Logo</h4>
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              Khi chèn logo thương hiệu ở tâm QR Code, 10% đến 20% các khối dữ liệu bị che khuất. Khuyến cáo luôn kích hoạt mức sửa lỗi H (High - 30%) sử dụng thuật toán bù sai số Reed-Solomon, giúp mã giữ nguyên khả năng giải mã ngay cả khi tem dán ngoài trời bị rách nhẹ hoặc trầy xước.
-            </p>
-          </div>
-
-          <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-sm flex flex-col gap-3">
-            <div className="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-brand-cyan-bright">
-              <Layers className="w-6 h-6" />
-            </div>
-            <h4 className="text-base font-semibold text-on-surface">Định Dạng Vector SVG Siêu Nét</h4>
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              Khác với file ảnh Bitmap (JPEG/PNG) dễ bị nhòe vỡ hạt khi phóng to, file xuất SVG lưu trữ tọa độ toán học hình học thuần túy. Điều này cho phép bạn chuyển tiếp thẳng đến các nhà xưởng in ống đồng, in Flexo hoặc in laser tem nhiệt mà không phải xử lý lại nét vector thủ công.
-            </p>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

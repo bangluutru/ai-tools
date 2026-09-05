@@ -230,41 +230,20 @@ export default function ImageConvertTool() {
             <ImageIcon size={30} className="text-surface-canvas" />
           </div>
           <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-space-2">
-              <h1 className="font-headline-lg text-headline-lg text-on-surface font-semibold tracking-tight">
-                WebP Master & Nén Ảnh Đa Năng
-              </h1>
-              <span className="px-space-2 py-[2px] bg-primary/10 text-brand-cyan-bright font-label-sm text-label-sm rounded uppercase border border-primary/20">
-                WASM ENGINE
-              </span>
-              <span className="flex items-center gap-1 px-space-2 py-[2px] bg-secondary/10 text-secondary font-label-sm text-label-sm rounded uppercase border border-secondary/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-                ƯU TIÊN
-              </span>
-            </div>
-            <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl leading-relaxed">
-              Chuyển đổi định dạng PNG, JPG sang WebP thế hệ mới và nén tối ưu dung lượng hàng loạt trực tiếp trong trình duyệt với engine WASM đa luồng.
+            <h1 className="font-headline-lg text-xl sm:text-2xl text-on-surface font-semibold tracking-tight">
+              WebP Master &amp; Nén Ảnh Đa Năng
+            </h1>
+            <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant max-w-2xl leading-relaxed">
+              Chuyển đổi định dạng PNG, JPG sang WebP thế hệ mới và nén tối ưu dung lượng hàng loạt trực tiếp trong trình duyệt.
             </p>
           </div>
         </div>
 
-        {/* Privacy Metric Badge */}
-        <div className="z-10 bg-surface-subtle border border-border-subtle px-space-4 py-space-3 rounded-xl flex items-center gap-space-3 shrink-0 shadow-sm">
-          <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary shrink-0">
-            <ShieldCheck size={20} />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-label-sm text-label-sm text-secondary uppercase font-semibold">
-              Bảo mật Client-side 100%
-            </span>
-            <span className="font-body-sm text-body-sm text-on-surface-variant">
-              Ảnh không gửi lên server, xử lý nội bộ
-            </span>
-          </div>
+        {/* Subtle Privacy Note */}
+        <div className="z-10 flex items-center gap-1.5 text-xs text-outline shrink-0">
+          <ShieldCheck size={15} className="text-secondary shrink-0" />
+          <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
         </div>
-
-        {/* Ambient Subtle Glow */}
-        <div className="absolute -right-16 -top-16 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
       </section>
 
       {notice && (
@@ -724,44 +703,6 @@ export default function ImageConvertTool() {
         </div>
       </div>
 
-      {/* 4. Bottom Section: Tips & Technical SEO Knowledge Accordion */}
-      <section className="bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md space-y-space-4">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-6 bg-primary-container rounded" />
-          <h3 className="font-headline-md text-headline-md text-on-surface font-semibold">
-            Hướng dẫn tối ưu WebP & Điểm số Google Core Web Vitals
-          </h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-space-4 pt-space-2">
-          <div className="p-space-4 bg-surface-subtle border border-border-subtle rounded-lg space-y-space-2">
-            <div className="flex items-center gap-2 text-secondary font-title-sm text-title-sm">
-              <Zap size={18} />
-              <h4>Tăng điểm LCP (Largest Contentful Paint)</h4>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              Giảm dung lượng ảnh Hero xuống dưới 200KB bằng WebP giúp khung hình nội dung lớn nhất hiển thị nhanh hơn 1.8s trên kết nối di động 4G.
-            </p>
-          </div>
-          <div className="p-space-4 bg-surface-subtle border border-border-subtle rounded-lg space-y-space-2">
-            <div className="flex items-center gap-2 text-primary font-title-sm text-title-sm">
-              <Layers size={18} />
-              <h4>Hỗ trợ kênh Alpha trong suốt</h4>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              WebP giữ trọn vẹn lớp nền trong suốt (Transparency) như PNG-24 nhưng nén nhẹ hơn từ 60% đến 80%, lý tưởng cho logo, icon và banner vector.
-            </p>
-          </div>
-          <div className="p-space-4 bg-surface-subtle border border-border-subtle rounded-lg space-y-space-2">
-            <div className="flex items-center gap-2 text-brand-cyan-bright font-title-sm text-title-sm">
-              <ShieldCheck size={18} />
-              <h4>Độ tương thích trình duyệt</h4>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              Định dạng WebP hiện được hỗ trợ trên 97.4% trình duyệt toàn cầu (bao gồm Safari iOS, Chrome, Edge và Firefox hiện đại).
-            </p>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

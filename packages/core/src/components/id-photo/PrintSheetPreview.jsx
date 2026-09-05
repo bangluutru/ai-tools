@@ -26,24 +26,22 @@ const PrintSheetPreview = ({
     style={{
       aspectRatio: `${tiling.paperWidthMm} / ${tiling.paperHeightMm}`
     }}
-    className="relative w-full max-w-[360px] overflow-hidden rounded-xl border-2 border-slate-300 bg-white shadow-2xl ring-4 ring-slate-900/5 sm:max-w-[420px]"
+    className="relative w-full max-w-[360px] overflow-hidden rounded-xl border-2 border-border-subtle bg-surface-subtle shadow-2xl ring-4 ring-primary-container/10 sm:max-w-[420px]"
   >
         <canvas
     ref={canvasRef}
     className="h-full w-full object-contain select-none"
   />
 
-        {
-    /* Paper & Count Badge */
-  }
+        {/* Paper & Count Badge */}
         <div className="pointer-events-none absolute bottom-2.5 right-2.5 flex items-center gap-1.5 rounded-lg bg-slate-900/85 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm backdrop-blur-xs">
           <span>{tiling.paperWidthMm} × {tiling.paperHeightMm} mm</span>
-          <span className="rounded bg-blue-600 px-1 py-0.2 text-[10px] font-bold">
+          <span className="rounded bg-primary-container text-on-primary-container px-1 py-0.2 text-[10px] font-bold">
             {isSingle ? t.singleCount : format(t.sheetCount, { count: tiling.totalPhotos })}
           </span>
         </div>
       </div>
-      <p className="mt-2 text-[11px] text-slate-500">
+      <p className="mt-2 text-[11px] text-on-surface-variant">
         {t.printExactTip}
       </p>
     </div>;

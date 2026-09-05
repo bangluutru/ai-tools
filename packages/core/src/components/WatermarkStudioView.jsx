@@ -987,55 +987,16 @@ export default function WatermarkStudioView() {
         {/* Header Content & Badges */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2 py-0.5 bg-primary-container/15 text-primary-container font-mono text-[11px] font-semibold rounded uppercase tracking-wider">
-                Tiện ích bảo mật
-              </span>
-              <span className="px-2 py-0.5 bg-emerald-500/15 text-secondary font-mono text-[11px] font-semibold rounded uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-                Offline Client-Side
-              </span>
-              <span className="px-2 py-0.5 bg-surface-container text-slate-400 font-mono text-[11px] font-semibold rounded uppercase tracking-wider">
-                Batch Processing
-              </span>
-              <span className="px-2 py-0.5 bg-amber-500/15 text-amber-300 font-mono text-[11px] font-semibold rounded uppercase tracking-wider">
-                Multi-Format (PDF & Ảnh & Office)
-              </span>
-            </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 tracking-tight flex items-center gap-3">
               <span>Watermark Studio — Đóng Dấu Bản Quyền & Tài Liệu</span>
             </h1>
             <p className="text-sm text-slate-400 max-w-4xl leading-relaxed">
               Đóng dấu văn bản (Text) hoặc logo hình ảnh bản quyền lên hàng loạt tệp ảnh (PNG, JPG, WebP), tài liệu PDF và Microsoft Office (DOCX, XLSX, PPTX). Tự động tính toán góc xoay, độ trong suốt (opacity), lặp ma trận (tile grid) hoặc dấu chìm chống sao chép trái phép hoàn toàn trong trình duyệt.
             </p>
-          </div>
-
-          {/* Quick Metrics Ribbon */}
-          <div className="hidden xl:flex items-center gap-3 bg-surface-container/60 border border-border-subtle/50 px-4 py-3 rounded-xl shrink-0">
-            <div className="flex flex-col text-right">
-              <span className="font-mono text-[10px] text-slate-400 uppercase tracking-wider">Bộ nhớ đệm WASM</span>
-              <span className="font-mono text-xs text-secondary font-bold">100% In-Memory</span>
+            <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
+              <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
             </div>
-            <div className="w-px h-8 bg-border-subtle" />
-            <div className="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary-container">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-          </div>
-        </div>
-
-        {/* Privacy Banner */}
-        <div className="flex items-start gap-3 p-4 bg-surface-container/40 border border-emerald-500/20 rounded-xl">
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-secondary flex items-center justify-center shrink-0 mt-0.5 border border-emerald-500/20">
-            <Lock className="w-4 h-4" />
-          </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-secondary tracking-wide uppercase">BẢO MẬT CLIENT-SIDE 100% — ZERO DATA LEAKAGE</span>
-              <span className="px-1.5 py-0.5 bg-emerald-500/15 text-secondary font-mono text-[10px] font-semibold rounded uppercase">Zero Network Traffic</span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Toàn bộ quá trình đóng dấu ảnh và tài liệu PDF, DOCX, XLSX diễn ra trực tiếp trong RAM trình duyệt thông qua Canvas API & PDF-Lib WebAssembly. Không tải tệp lên máy chủ bên ngoài.
-            </p>
           </div>
         </div>
       </section>
@@ -1881,66 +1842,7 @@ export default function WatermarkStudioView() {
       {/* ==================================================================== */}
       {/* 3. FOOTER KIẾN THỨC & TIÊU CHUẨN KỸ THUẬT                            */}
       {/* ==================================================================== */}
-      <section className="space-y-4 pt-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-slate-100 tracking-tight">Tiêu chuẩn kỹ thuật & Công nghệ bảo vệ tài liệu</span>
-          <div className="flex-1 h-px bg-border-subtle" />
-          <span className="font-mono text-xs text-slate-400">ENGINE v3.1 WASM</span>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Card 1 */}
-          <div className="p-5 bg-surface-container/60 border border-border-subtle/70 rounded-xl space-y-2 flex flex-col justify-between">
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-primary-container/15 text-primary-container flex items-center justify-center border border-primary-container/20">
-                <Cpu className="w-5 h-5" />
-              </div>
-              <h4 className="text-sm font-semibold text-slate-100">Canvas & PDF-Lib WebAssembly</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Thao tác trực tiếp trên byte stream PDF và Canvas buffer mà không giải mã lại toàn bộ tệp, duy trì 100% độ nét của text và hình ảnh gốc với tốc độ xử lý hàng trăm trang mỗi giây.
-              </p>
-            </div>
-            <div className="pt-3 flex items-center gap-1.5 font-mono text-[11px] text-primary-container">
-              <Zap className="w-3.5 h-3.5" />
-              <span>Zero Re-compression Lag</span>
-            </div>
-          </div>
-
-          {/* Card 2 */}
-          <div className="p-5 bg-surface-container/60 border border-border-subtle/70 rounded-xl space-y-2 flex flex-col justify-between">
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/15 text-secondary flex items-center justify-center border border-emerald-500/20">
-                <Shield className="w-5 h-5" />
-              </div>
-              <h4 className="text-sm font-semibold text-slate-100">Bảo Mật Sở Hữu Trí Tuệ (Anti-Tamper)</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Kỹ thuật đóng dấu lặp ma trận nghiêng 45° phủ đều trang khiến việc sử dụng AI tẩy watermark (Inpainting) trở nên bất khả thi mà không làm hỏng dữ liệu gốc của biểu bảng và hợp đồng.
-              </p>
-            </div>
-            <div className="pt-3 flex items-center gap-1.5 font-mono text-[11px] text-secondary">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Anti-AI Inpainting Resistant</span>
-            </div>
-          </div>
-
-          {/* Card 3 */}
-          <div className="p-5 bg-surface-container/60 border border-border-subtle/70 rounded-xl space-y-2 flex flex-col justify-between">
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/15 text-amber-300 flex items-center justify-center border border-amber-500/20">
-                <Layers2 className="w-5 h-5" />
-              </div>
-              <h4 className="text-sm font-semibold text-slate-100">Flattening & Chống Rò Rỉ Nội Bộ</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Lớp dấu được hòa trộn (flattened) vĩnh viễn vào layer pixel/vector của tài liệu, ngăn chặn hoàn toàn việc bấm chọn và xóa layer watermark trong các trình đọc PDF Acrobat hoặc Illustrator thông thường.
-              </p>
-            </div>
-            <div className="pt-3 flex items-center gap-1.5 font-mono text-[11px] text-amber-300">
-              <Lock className="w-3.5 h-3.5" />
-              <span>Non-removable Metadata Stamp</span>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ==================================================================== */}
       {/* 4. EXPORT MODAL                                                      */}

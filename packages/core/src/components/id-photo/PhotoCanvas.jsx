@@ -153,21 +153,19 @@ const PhotoCanvas = ({
     }}
     onTouchEnd={handlePointerUp}
     style={{ aspectRatio: `${standard.widthMm} / ${standard.heightMm}` }}
-    className="relative w-full max-w-[320px] cursor-grab active:cursor-grabbing overflow-hidden rounded-xl border-2 border-blue-500/80 bg-white shadow-xl ring-4 ring-blue-500/10 sm:max-w-[360px]"
+    className="relative w-full max-w-[320px] cursor-grab active:cursor-grabbing overflow-hidden rounded-xl border-2 border-primary-container/80 bg-surface-subtle shadow-xl ring-4 ring-primary-container/10 sm:max-w-[360px]"
   >
         <canvas
     ref={canvasRef}
     className="h-full w-full object-cover select-none pointer-events-none"
   />
 
-        {
-    /* Dimension indicator badge */
-  }
+        {/* Dimension indicator badge */}
         <div className="pointer-events-none absolute bottom-2.5 right-2.5 rounded-md bg-slate-900/85 px-2 py-1 font-mono text-[11px] font-medium text-white shadow-sm backdrop-blur-xs">
           {standard.widthMm} × {standard.heightMm} mm
         </div>
       </div>
-      <p className="mt-2 text-[11px] text-slate-500">
+      <p className="mt-2 text-[11px] text-on-surface-variant">
         {t.dragTip}
       </p>
     </div>;

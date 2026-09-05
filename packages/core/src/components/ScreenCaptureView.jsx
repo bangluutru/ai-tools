@@ -1216,22 +1216,11 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
               <Camera className="w-7 h-7 text-primary-container" />
             </div>
             <div className="flex flex-col">
-              <div className="flex flex-wrap items-center gap-space-2">
+              <div className="flex items-center gap-space-2 flex-wrap">
                 <h1 className="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">
                   {t.toolTitle}
                 </h1>
-                <span className="px-space-2 py-[2px] bg-primary-container/10 text-brand-cyan-bright font-label-sm text-label-sm rounded uppercase">
-                  {t.tagStudio}
-                </span>
-                <span className="px-space-2 py-[2px] bg-secondary-container/10 text-secondary font-label-sm text-label-sm rounded uppercase flex items-center gap-space-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-                  {t.tagOffline}
-                </span>
-                <span className="px-space-2 py-[2px] bg-surface-subtle text-tertiary font-label-sm text-label-sm rounded uppercase">
-                  {t.tagVector}
-                </span>
               </div>
-              <span className="font-label-sm text-label-sm text-outline mt-0.5">{t.pipelineId}</span>
             </div>
           </div>
 
@@ -1256,21 +1245,9 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         </div>
 
         <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl">{t.toolDesc}</p>
-
-        {/* PRIVACY BANNER */}
-        <div className="p-space-3 bg-surface-container-low rounded-lg flex items-center gap-space-3 border-l-2 border-secondary">
-          <div className="w-8 h-8 rounded bg-secondary-container/20 flex items-center justify-center shrink-0 text-secondary">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-space-2">
-              <span className="font-title-sm text-title-sm text-secondary font-semibold">{t.privacyTitle}</span>
-              <span className="px-space-1 py-[1px] bg-secondary/15 text-secondary font-label-sm text-label-sm rounded">
-                {t.privacyBadge}
-              </span>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant">{t.privacyDesc}</p>
-          </div>
+        <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
+          <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
+          <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
         </div>
       </div>
 
@@ -1924,41 +1901,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         </div>
       </div>
 
-      {/* FOOTER KIẾN THỨC & QUY CHUẨN ĐỒ HỌA (3 CARDS) */}
-      <div className="pt-space-6 border-t border-border-subtle/40 mb-space-8">
-        <div className="flex items-center gap-space-2 mb-space-4">
-          <span className="material-symbols-outlined text-primary-container text-[20px]">auto_stories</span>
-          <h3 className="font-title-sm text-title-sm text-on-surface font-bold">{t.assuranceTitle}</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-space-4">
-          {/* CARD 1 */}
-          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
-            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-primary-container mb-space-1">
-              <Camera className="w-5 h-5 text-primary-container" />
-            </div>
-            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">{t.card1Title}</h4>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{t.card1Desc}</p>
-          </div>
 
-          {/* CARD 2 */}
-          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
-            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-secondary mb-space-1">
-              <ShieldCheck className="w-5 h-5 text-secondary" />
-            </div>
-            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">{t.card2Title}</h4>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{t.card2Desc}</p>
-          </div>
-
-          {/* CARD 3 */}
-          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
-            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-tertiary mb-space-1">
-              <Sparkles className="w-5 h-5 text-tertiary" />
-            </div>
-            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">{t.card3Title}</h4>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">{t.card3Desc}</p>
-          </div>
-        </div>
-      </div>
 
       {/* DRAFT HISTORY MODAL */}
       {showHistoryModal && (

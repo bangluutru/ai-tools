@@ -6,22 +6,57 @@
 
 ## 1. Design Philosophy
 
-The AI-Tools Master Hub operates on the **Modern Utility Workspace** design philosophy. It fuses the task-oriented speed and functional clarity of high-efficiency utility suites (e.g., iLovePDF) with the rigorous precision and restrained aesthetic of modern developer platforms (e.g., Linear, Cloudflare Radar).
+The AI-Tools Master Hub operates on the **Modern Utility Workspace** design philosophy. It is a **Tool-First, Public Utility Workspace** built for immediate speed, functional clarity, and zero cognitive friction:
 
-### 1.1 Core Principles
+> **Find tool → Open → Process file → Download result.**
+
+The interface is strictly **TOOL-FIRST**, NOT architecture-first or marketing-first. Users come to get work done, not to read about backend architecture or feature marketing.
+
+---
+
+### 1.1 The 6 Mandatory Design Rules
+
+Every page, tool, execution state, and future mini-app MUST adhere to these six unbreakable rules:
+
+1. **Rule 1: Tool-First UX (Task Speed over Architecture)**
+   - Prioritize immediate utility above all else.
+   - The primary interactive workspace (upload, dropzone, editor, or canvas) must be immediately visible and operable above the fold without scrolling past promotional banners or architecture explanations.
+
+2. **Rule 2: No Duplicate Discovery Controls**
+   - The application has exactly **ONE primary live search** in the global Header (`⌘K` or `/` shortcut, with clear `✕` button).
+   - In-page duplicate search inputs, redundant category bars, and separate "Quick Access" sections are strictly prohibited.
+   - Category filtering is unified into a single persistent subnav bar directly below the header.
+
+3. **Rule 3: Minimal Architecture Messaging**
+   - Eliminate architecture diagrams, metrics ribbons (e.g., "10/12 Chạy Offline", "0 KB Server", "<50ms Độ Trễ"), engine implementation tags (Wasm/native JS), and internal diagnostics (`PIPELINE ID: ...`).
+   - Privacy assurance is communicated solely via a subtle, non-intrusive 1-line note:
+     > *"Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ."*
+
+4. **Rule 4: Execution-State Normalization**
+   - ALL execution states, step wizards, options forms, dropzones, modals, comparison sliders, and result lists MUST follow the exact same dark design tokens (`#090D16` canvas, `#171f33` containers, `#334155` borders, `#0ea5e9` cyan, `#4edea3` emerald).
+   - Lingering light mode classes (`bg-white`, `border-slate-200`, `text-slate-900`, `bg-blue-50`, bright blue unstyled buttons) in inner components or dialogs are strictly prohibited.
+
+5. **Rule 5: No Isolated Tool Themes**
+   - Tools are parts of a single unified suite, not isolated third-party embeds.
+   - All tools share identical surface luminance, border radii (`rounded-xl` / `rounded-lg`), font hierarchies, and icon styling (`lucide-react`). Custom unshared color palettes per tool are prohibited.
+
+6. **Rule 6: Screen-Space Maximization**
+   - Maximize screen real estate for the actual workspace, canvas, and file processing stages.
+   - Non-functional marketing cards, SEO guide paragraphs, and "Assurance Guarantee" cards at the bottom of tools are prohibited.
+
+---
+
+### 1.2 Core Principles
 1. **USABILITY > CONSISTENCY > CLARITY > VISUAL DECORATION**:
    - Every pixel, border, and badge must serve an operational purpose. Decorative elements (glows, scrims) must remain subtle, low-opacity, and non-distracting (`pointer-events-none`).
 2. **Transparent Data Architecture (Zero-Inference Privacy)**:
-   - The user must never guess where their sensitive documents, photos, or invoices are processed.
-   - Processing classification is visually declared on every card, header, and badge:
-     - **Client-Side Safe**: 100% in-browser computation using WebAssembly (Wasm) and native Canvas/JS. Zero server storage, zero network payload leaks, full offline capability.
-     - **Hybrid Engine**: Local preprocessing with optional, explicit backend integration.
-     - **Antigravity AI / Cloud Engine**: Ephemeral serverless execution with TLS 1.3 encryption and instant session teardown. No data is retained for model training.
+   - 100% in-browser computation using WebAssembly (Wasm) and native Canvas/JS. Zero server storage, zero network payload leaks, full offline capability.
+   - Communicated cleanly without visual noise.
 3. **Frictionless Tool Discovery**:
-   - Zero-click search accessibility (global `⌘K`, home search bar with `ESC` clear).
-   - Fast priority paths for high-frequency workflows (Top 3 Priority Actions).
+   - Instant search accessibility (`⌘K` or `/`, with `ESC` to clear).
+   - Instant category filtering with clear item counts.
 4. **Predictable Workspace Mental Model**:
-   - Every single tool follows an identical 4-tier structural rhythm: *Context Header → Input Workspace → Result Stage → Assurance Guarantee*.
+   - Every tool follows a streamlined 3-tier structural rhythm: *Context Header → Input & Config Workspace → Result Stage*.
 
 ---
 
@@ -71,39 +106,19 @@ Rather than using heavy drop shadows, depth is achieved through **luminance step
 ```
 +-----------------------------------------------------------------------------------+
 |  NAVBAR (h-16, fixed, backdrop-blur-xl, max-w-[1240px])                           |
-|  [Logo: AI-Tools HUB]  [Search ⌘K]  [Client Safe Pill]  [Language]  [Settings]   |
+|  [Logo: AI-Tools HUB]  [Search input: ⌘K or / (Clear ✕)]  [Lang] [Settings]       |
 +-----------------------------------------------------------------------------------+
 |  CATEGORY SUBNAV BAR (Tất cả | Công cụ PDF | Hình ảnh | Excel | Tiện ích)         |
 +-----------------------------------------------------------------------------------+
 |                                                                                   |
-|  SECTION 1: HERO BANNER                                                           |
-|  - Micro-Engine v2.4 Tag | Zero Server Storage Guarantee                          |
-|  - Display Headline: "Bộ Công Cụ Xử Lý PDF, Ảnh & Dữ Liệu Thông Minh"             |
-|  - Trust Badges: [100% Riêng tư] [Không giới hạn] [Mã nguồn mở]                   |
-|                                                                                   |
-|  INTEGRATED SEARCH & FILTER ROW                                                   |
-|  [ Search input: "Tìm nhanh theo tác vụ..." (ESC) ]  [ Filter Tabs & Counts ]     |
-|                                                                                   |
-|  SECTION 2: TRUY CẬP NHANH & ƯU TIÊN CAO (Top 3 Priority Workspace Cards)         |
-|  +-----------------------+ +-----------------------+ +--------------------------+ |
-|  | 1. WebP Master        | | 2. Đối Chiếu Kế Toán  | | 3. Xử Lý Hóa Đơn & TT    | |
-|  | Ưu tiên 1 • Wasm Safe | | Chuyên môn • Local    | | Phổ biến • Trình duyệt   | |
-|  +-----------------------+ +-----------------------+ +--------------------------+ |
-|                                                                                   |
-|  SECTION 3: TOÀN BỘ HỆ THỐNG CÔNG CỤ (12-Tool Catalog Grid)                       |
-|  +--------------+ +--------------+ +--------------+ +--------------+              |
-|  | Card: Ảnh Thẻ| | Card: WebP   | | Card: Chụp MH| | Card: Barcode|              |
-|  +--------------+ +--------------+ +--------------+ +--------------+              |
-|  | Card: PDF Kit| | Card: Omni   | | Card: Excel  | | Card: Soạn Thảo|            |
-|  +--------------+ +--------------+ +--------------+ +--------------+              |
-|  | Card: Hóa Đơn| | Card: Auto-BI| | Card: Kế Toán| | Card: Watermark|           |
-|  +--------------+ +--------------+ +--------------+ +--------------+              |
-|                                                                                   |
-|  SECTION 4: MINH BẠCH KIẾN TRÚC DỮ LIỆU                                           |
-|  - Metrics Ribbon: [10/12 Chạy Offline]  [0 KB Server]  [<50ms Độ Trễ]            |
-|  - Dual Architecture Comparison:                                                  |
-|    * Client-Side Safe (WebAssembly / Native JS)                                   |
-|    * Antigravity AI & Cloud Engine                                                |
+|  TOOL CATALOG GRID (Immediate 12-Tool Catalog Grid — Above the fold)              |
+|  +--------------------+ +--------------------+ +--------------------+             |
+|  | [Icon] Card Title  | | [Icon] Card Title  | | [Icon] Card Title  |             |
+|  | Category Tag       | | Category Tag       | | Category Tag       |             |
+|  | Description        | | Description        | | Description        |             |
+|  | [Mở công cụ →]     | | [Mở công cụ →]     | | [Mở công cụ →]     |             |
+|  +--------------------+ +--------------------+ +--------------------+             |
+|  (All 12 tools instantly accessible without scrolling past promotional banners)   |
 |                                                                                   |
 |  FOOTER (max-w-[1240px], border-t, build info, data policy modal link)            |
 +-----------------------------------------------------------------------------------+
@@ -115,10 +130,10 @@ Rather than using heavy drop shadows, depth is achieved through **luminance step
 
 | Breakpoint | Width | Grid System | Navigation Behavior | Key Adaptations |
 | :--- | :--- | :--- | :--- | :--- |
-| **Mobile** | `<768px` (375–390px) | 1 column (`grid-cols-1`) | Compact header, full-width search, drawer navigation | 44px touch targets, action buttons sticky at bottom, breadcrumb truncated to current tool |
-| **Tablet** | `768px–1023px` | 2 columns (`grid-cols-2`) | Condensed navbar, scrollable category pills | Dual-pane split views stack vertically when needed, compact metrics ribbon |
+| **Mobile** | `<768px` (375–390px) | 1 column (`grid-cols-1`) | Compact header, full-width search, horizontal subnav | 44px touch targets, action buttons sticky at bottom, breadcrumb truncated to current tool |
+| **Tablet** | `768px–1023px` | 2 columns (`grid-cols-2`) | Condensed navbar, scrollable category pills | Dual-pane split views stack vertically when needed |
 | **Desktop** | `1024px–1239px` | 3 columns (`grid-cols-3`) | Full horizontal navbar, inline ⌘K search bar | Side-by-side workspace panels, expanded table headers |
-| **Wide Desktop**| `>=1240px` | 4 columns (`grid-cols-4`) | Standard 1240px centered container | Complete 4-tier workspace with side-by-side live previews |
+| **Wide Desktop**| `>=1240px` | 3 or 4 columns | Standard 1240px centered container | Complete workspace with side-by-side live previews |
 
 ---
 
@@ -199,20 +214,17 @@ The application is structured into a modular monorepo:
 ```
 hub/src/App.jsx
 │
-├── Navbar.jsx (Global bar, ⌘K trigger, offline indicator, language switcher)
+├── Navbar.jsx (Global bar, Live Search ⌘K or /, Language Switcher, Settings)
+├── CategorySubnav (Tất cả, PDF, Hình ảnh, Excel, Tiện ích)
 │
 ├── Case 1: Active Tool View
-│   └── ToolContainer.jsx (Breadcrumb, tool switcher dropdown, privacy pill)
+│   └── ToolContainer.jsx (Breadcrumb, tool switcher dropdown, subtle privacy note)
 │       └── ToolErrorBoundary.jsx
 │           └── Suspense Fallback
-│               └── [ActiveToolComponent] (Wrapped in StandardToolLayout / MiniAppLayout)
+│               └── [ActiveToolComponent] (Wrapped in StandardToolLayout)
 │
 └── Case 2: Main Hub Dashboard
-    ├── HeroBanner.jsx (Micro-engine badge, headline, trust pills)
-    ├── CategoryTabs.jsx (Integrated search input, filter count, category tabs)
-    ├── Featured Cards (Top 3 priority workstation cards)
-    ├── Tool Catalog Grid (12 dynamic ToolCards)
-    ├── Transparency Section (Metrics ribbon & dual comparison panels)
+    ├── Tool Catalog Grid (Immediate 12 dynamic ToolCards above the fold)
     └── Footer (Build info, status, data policy link)
 ```
 
@@ -222,53 +234,49 @@ hub/src/App.jsx
 
 ### 8.1 Universal App Bar (Navbar)
 - **Height**: 64px (`h-16`), fixed at top with `backdrop-blur-xl bg-surface-canvas/90`.
-- **Command Trigger**: Inline search field triggering Command Palette (`⌘K` / `Ctrl+K`).
-- **Offline / Client Indicator**: Animated emerald pulsing dot declaring client-side security.
-- **Language Switcher**: Cycling or dropdown between Vietnamese (`VI`), English (`EN`), and Japanese (`JA`).
+- **Unified Live Search**: Real-time filter input with auto-focus shortcut (`/` or `⌘K`), clear button (`✕` or `ESC`), and active match count.
+- **Language Switcher**: Cycling between Vietnamese (`VI`), English (`EN`), and Japanese (`JA`).
 
-### 8.2 Tool Container Navigation
+### 8.2 Category Subnav Bar
+- Positioned directly beneath the Header.
+- Clean category pills with item count badges (`Tất cả (12)`, `Công cụ PDF (2)`, `Hình ảnh & WebP (3)`, `Excel & Hóa đơn (3)`, `Tiện ích (4)`).
+- Instant filtering with zero page reload.
+
+### 8.3 Tool Container Navigation
 When a user launches any tool:
-- **Back Navigation**: "Về Trung Tâm" button with arrow icon.
+- **Back Navigation**: "Về Trang Chủ" button with back arrow.
 - **Breadcrumb**: Clickable trail: `AI-Tools Hub` > `[Danh Mục]` > `[Tên Công Cụ]`.
 - **Quick Switcher Dropdown**: Allows instant switching between any of the 12 active tools without returning to the home screen.
-- **Privacy Badge**: Dynamic indicator showing `Client-side Safe`, `Hybrid`, or `Antigravity AI`.
+- **Subtle Privacy Note**: Minimal 1-line reassurance: *"Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ."*
 
 ---
 
 ## 9. Tool Page Standard Layout
 
-All active tools share the standardized **4-Tier Workspace Architecture**:
+All active tools share the standardized **Streamlined 3-Tier Workspace Architecture**:
 
 ```
 +-------------------------------------------------------------------------------+
-| TIER 1: BREADCRUMB & CONTEXT HEADER                                           |
+| TIER 1: CONTEXT HEADER & PRIVACY STATUS                                       |
 | [ Trang chủ > Danh mục > Tên Tool ]                                           |
 |                                                                               |
 | +---------------------------------------------------------------------------+ |
-| | [Icon] Tool Title                   [BETA] [ƯU TIÊN 1]                     | |
-| |        Comprehensive description...                                       | |
-| |                                     +-----------------------------------+ | |
-| |                                     | [ShieldCheck] Client-Side 100%    | | |
-| |                                     | Zero server storage guarantee     | | |
-| |                                     +-----------------------------------+ | |
+| | [Icon] Tool Title                                                         | |
+| |        Concise tool description (1-2 lines)...                             | |
+| |        • Xử lý trực tiếp trên trình duyệt — tệp không tải lên máy chủ.     | |
 | +---------------------------------------------------------------------------+ |
 +-------------------------------------------------------------------------------+
-| TIER 2: INPUT & CONFIGURATION WORKSPACE                                       |
+| TIER 2: INPUT & CONFIGURATION WORKSPACE (Maximum Screen Real Estate)          |
 | +------------------------------------+ +------------------------------------+ |
 | | [DropZone: Drag & Drop Files]      | | [Parameters & Settings Panel]      | |
-| | Max size limits, format tags       | | Sliders, checkboxes, dimension pick| |
+| | Max size limits, format tags       | | Sliders, checkboxes, options       | |
 | +------------------------------------+ +------------------------------------+ |
 +-------------------------------------------------------------------------------+
 | TIER 3: PROCESSING & RESULTS STAGE                                            |
 | +---------------------------------------------------------------------------+ |
-| | [Status: 12/12 Hoàn tất]            [Nút Tải Tất Cả (.ZIP)] [Xóa Tất Cả]  | |
+| | [Status: Hoàn tất]                  [Nút Tải Tất Cả] [Xóa/Làm lại]         | |
 | | Grid of Processed Items with Preview, Diff, Compare, and Download triggers | |
 | +---------------------------------------------------------------------------+ |
-+-------------------------------------------------------------------------------+
-| TIER 4: TECHNICAL ASSURANCE & PRIVACY GUARANTEES                              |
-| +-------------------------+ +-------------------------+ +-------------------+ |
-| | 100% In-Memory Wasm     | | Zero Tracing / Storage  | | Client Encryption | |
-| +-------------------------+ +-------------------------+ +-------------------+ |
 +-------------------------------------------------------------------------------+
 ```
 
@@ -279,8 +287,7 @@ import {
   ToolHeader,
   SectionCard,
   FileUploader,
-  ResultCard,
-  AssuranceCards
+  ResultCard
 } from '@ai-tools/core/components/shared/StandardToolLayout.jsx';
 
 export default function ExampleTool() {
@@ -292,8 +299,7 @@ export default function ExampleTool() {
       <ToolHeader
         icon={ImageIcon}
         title="WebP Master & Nén Ảnh"
-        badges={[{ text: 'ƯU TIÊN 1', variant: 'priority' }]}
-        description="Nén ảnh hàng loạt không giới hạn dung lượng với WebAssembly."
+        description="Nén ảnh hàng loạt với WebAssembly trực tiếp trên trình duyệt."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -305,7 +311,7 @@ export default function ExampleTool() {
         </SectionCard>
       </div>
 
-      <AssuranceCards />
+      {/* Results rendered dynamically when processed */}
     </StandardToolLayout>
   );
 }
@@ -466,3 +472,15 @@ The portal supports three operating languages:
 4. **PROHIBITED: Distracting Visual Decoration**
    - *Violation*: Intense neon glows, large spinning animations, and obstructive banners.
    - *Standard*: Subtle 1px borders, gentle 200ms transitions, and subdued background scrims.
+5. **PROHIBITED: Duplicate Discovery Controls**
+   - *Violation*: Adding in-page search bars, duplicate category dropdowns, or "Quick Access" sections when Header search and Category Subnav already exist.
+   - *Standard*: Rely strictly on the unified Header Search (`⌘K` / `/`) and the Category Subnav.
+6. **PROHIBITED: Non-Functional Assurance & Marketing Cards Pushing Tools Below the Fold**
+   - *Violation*: Adding 3-column SEO/Assurance footer cards, large 3-line privacy callouts, or hero banners inside tool workspaces.
+   - *Standard*: Tool workspace must start immediately above the fold with a 1-line subtle privacy note.
+7. **PROHIBITED: Exposing Engine Internals & Diagnostics**
+   - *Violation*: Displaying `PIPELINE ID: ...`, `Wasm Engine`, `Native JS`, or metrics ribbons (`10/12 Offline`, `0 KB Server`).
+   - *Standard*: Users care about task completion; hide internal telemetry and pipeline architecture.
+8. **PROHIBITED: Lingering Light-Mode Tokens in Execution States**
+   - *Violation*: Using `bg-white`, `border-slate-200`, `text-slate-900`, `bg-blue-50`, or bright unstyled buttons in inner execution components, step wizards, or modals.
+   - *Standard*: Every single inner screen, dropzone, slider, table, modal, and badge MUST use the shared dark utility design tokens (`bg-surface-container`, `border-border-subtle`, `text-on-surface`, `bg-surface-subtle`, `text-on-surface-variant`).

@@ -198,20 +198,7 @@ export default function AutoBiView() {
                 <h1 className="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">
                   Phân Tích Dữ Liệu &amp; Báo Cáo Thông Minh (Auto-BI)
                 </h1>
-                <span className="px-space-2 py-[2px] bg-primary-container/10 text-brand-cyan-bright font-label-sm text-label-sm rounded uppercase">
-                  Business Intelligence
-                </span>
-                <span className="px-space-2 py-[2px] bg-secondary-container/10 text-secondary font-label-sm text-label-sm rounded uppercase flex items-center gap-space-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
-                  Offline Client-Side
-                </span>
-                <span className="px-space-2 py-[2px] bg-surface-subtle text-tertiary font-label-sm text-label-sm rounded uppercase">
-                  Instant Executive Insights
-                </span>
               </div>
-              <span className="font-label-sm text-label-sm text-outline mt-0.5">
-                PIPELINE ID: BI-ANALYTICS-ENGINE-V2.0
-              </span>
             </div>
           </div>
         </div>
@@ -219,23 +206,11 @@ export default function AutoBiView() {
         <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl">
           Nạp file Excel hoặc CSV dữ liệu thô, thuật toán tự động phân loại cột phân tích (Dimension) và chỉ số tính toán (Metric), trực quan hóa biểu đồ xếp hạng đóng góp và sinh báo cáo tóm tắt điều hành chỉ trong vài giây.
         </p>
-
-        {/* PRIVACY BANNER */}
-        <div className="p-space-3 bg-surface-container-low rounded-lg flex items-center gap-space-3 border-l-2 border-secondary">
-          <div className="w-8 h-8 rounded bg-secondary-container/20 flex items-center justify-center shrink-0 text-secondary">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-space-2">
-              <span className="font-title-sm text-title-sm text-secondary font-semibold">BẢO MẬT CLIENT-SIDE 100%</span>
-              <span className="px-space-1 py-[1px] bg-secondary/15 text-secondary font-label-sm text-label-sm rounded">
-                ISO-27001 ISOLATED
-              </span>
-            </div>
-            <p className="font-body-sm text-body-sm text-on-surface-variant">
-              Mọi phép tính tổng hợp dữ liệu số, phân loại chỉ số và dựng biểu đồ diễn ra trực tiếp trong bộ nhớ RAM trình duyệt của bạn với WebAssembly, tuyệt đối không gửi tệp dữ liệu lên server.
-            </p>
-          </div>
+        
+        {/* PRIVACY NOTE */}
+        <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
+          <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
+          <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
         </div>
       </div>
 
@@ -422,47 +397,7 @@ export default function AutoBiView() {
         </div>
       )}
 
-      {/* FOOTER KIẾN THỨC & QUY CHUẨN ĐỒ HỌA (3 CARDS) */}
-      <div className="pt-space-6 border-t border-border-subtle/40 mb-space-8">
-        <div className="flex items-center gap-space-2 mb-space-4">
-          <span className="material-symbols-outlined text-primary-container text-[20px]">auto_stories</span>
-          <h3 className="font-title-sm text-title-sm text-on-surface font-bold">Tiêu Chuẩn Phân Tích Dữ Liệu &amp; Báo Cáo</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-space-4">
-          {/* CARD 1 */}
-          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
-            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-primary-container mb-space-1">
-              <Cpu className="w-5 h-5 text-primary-container" />
-            </div>
-            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">Nhận Diện Chỉ Số Thông Minh</h4>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              Tự động phân tích kiểu dữ liệu từng cột (chuỗi danh mục hay giá trị số), đề xuất ngay trục phân tích Dimension và Metric phù hợp mà không cần cấu hình thủ công.
-            </p>
-          </div>
 
-          {/* CARD 2 */}
-          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
-            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-secondary mb-space-1">
-              <Layers className="w-5 h-5 text-secondary" />
-            </div>
-            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">Phân Tích Thống Kê In-Memory</h4>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              Tính toán quy mô tổng, trung bình, phân bổ tỷ trọng phần trăm và xếp hạng top đóng góp tức thì trên RAM máy khách, hỗ trợ mượt mà các tệp lên đến 50.000 dòng.
-            </p>
-          </div>
-
-          {/* CARD 3 */}
-          <div className="bg-surface-container rounded-xl p-space-4 flex flex-col gap-space-2 hover:bg-surface-container-high transition-colors border border-border-subtle/20">
-            <div className="w-10 h-10 rounded-lg bg-surface-subtle flex items-center justify-center text-tertiary mb-space-1">
-              <FileCheck className="w-5 h-5 text-tertiary" />
-            </div>
-            <h4 className="font-title-sm text-title-sm text-on-surface font-semibold">Xuất Bản Báo Cáo Điều Hành Excel</h4>
-            <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
-              Một chạm để xuất bản tệp Excel hoàn chỉnh bao gồm bảng tổng quan chỉ số, nhận xét điều hành và chi tiết tỷ trọng theo cấu trúc chuyên nghiệp sẵn sàng thuyết trình.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
