@@ -1,6 +1,7 @@
 export const ElementRenderer = ({
   element,
   isSelected,
+  showHandles = true,
   onSelect,
   onStartResize,
   scale
@@ -30,11 +31,8 @@ export const ElementRenderer = ({
   ];
 
   return <div
+    data-element-id={element.id}
     style={style}
-    onClick={(e) => {
-      e.stopPropagation();
-      onSelect(e);
-    }}
     className={`group select-none ${isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-surface-canvas" : "hover:ring-1 hover:ring-brand-300/70"}`}
   >
       {
@@ -115,7 +113,7 @@ export const ElementRenderer = ({
       {
     /* Interactive 8-point Selection & Resize Handles */
   }
-      {isSelected && RESIZE_HANDLES.map(({ handle, cursor, pos }) => (
+      {isSelected && showHandles && RESIZE_HANDLES.map(({ handle, cursor, pos }) => (
         <div
           key={handle}
           data-handle={handle}

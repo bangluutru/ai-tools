@@ -217,17 +217,13 @@ export const FreeExportModal = ({
         </div>
 
         {
-    /* Footer note */
+    /* Footer */
   }
-        <div className="px-6 py-3 bg-surface-canvas border-t border-border-subtle/50 flex items-center justify-between text-xs text-on-surface-variant">
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>{t("freeAppNotice")}</span>
-          </div>
+        <div className="px-6 py-3 bg-surface-canvas border-t border-border-subtle/50 flex items-center justify-end text-xs text-on-surface-variant">
           <button
-    onClick={onClose}
-    className="font-semibold text-on-surface-variant hover:text-on-surface cursor-pointer"
-  >
+            onClick={onClose}
+            className="px-4 py-1.5 rounded-lg border border-border-subtle bg-surface-subtle hover:bg-surface-container-high font-semibold text-on-surface transition cursor-pointer"
+          >
             {t("freeClose")}
           </button>
         </div>

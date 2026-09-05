@@ -236,3 +236,77 @@ export function alignElementToCard(el, alignment, { cardW = 91, cardH = 55, safe
     yMm: Math.round(newY * 10) / 10
   };
 }
+
+/**
+ * Align multiple elements relative to their mutual bounding box.
+ * @param {Array<Object>} elements - Array of element objects with xMm, yMm, widthMm, heightMm
+ * @param {'left'|'center-h'|'right'|'top'|'center-v'|'bottom'|'distribute-h'|'distribute-v'} alignment
+ * @returns {Array<Object>}
+ */
+export function alignMultipleElements(elements, alignment) {
+  if (!elements || elements.length <= 1) return elements;
+
+  const minX = Math.min(...elements.map((e) => e.xMm));
+  const maxX = Math.max(...elements.map((e) => e.xMm + e.widthMm));
+  const minY = Math.min(...elements.map((e) => e.yMm));
+  const maxY = Math.max(...elements.map((e) => e.yMm + e.heightMm));
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+
+  switch (alignment) {
+    case 'left':
+      return elements.map((e) => ({ ...e, xMm: Math.round(minX * 10) / 10 }));
+    case 'center-h':
+      return elements.map((e) => ({
+        ...e,
+        xMm: Math.round((centerX - e.widthMm / 2) * 10) / 10
+      }));
+    case 'right':
+      return elements.map((e) => ({
+        ...e,
+        xMm: Math.round((maxX - e.widthMm) * 10) / 10
+      }));
+    case 'top':
+      return elements.map((e) => ({ ...e, yMm: Math.round(minY * 10) / 10 }));
+    case 'center-v':
+      return elements.map((e) => ({
+        ...e,
+        yMm: Math.round((centerY - e.heightMm / 2) * 10) / 10
+      }));
+    case 'bottom':
+      return elements.map((e) => ({
+        ...e,
+        yMm: Math.round((maxY - e.heightMm) * 10) / 10
+      }));
+    case 'distribute-h': {
+      if (elements.length < 3) return elements;
+      const sorted = [...elements].sort((a, b) => a.xMm - b.xMm);
+      const totalWidths = sorted.reduce((sum, e) => sum + e.widthMm, 0);
+      const span = maxX - minX;
+      const totalGap = span - totalWidths;
+      const gap = totalGap / (sorted.length - 1);
+      let currentX = minX;
+      return sorted.map((e, idx) => {
+        if (idx === 0) return { ...e, xMm: Math.round(minX * 10) / 10 };
+        currentX += sorted[idx - 1].widthMm + gap;
+        return { ...e, xMm: Math.round(currentX * 10) / 10 };
+      });
+    }
+    case 'distribute-v': {
+      if (elements.length < 3) return elements;
+      const sorted = [...elements].sort((a, b) => a.yMm - b.yMm);
+      const totalHeights = sorted.reduce((sum, e) => sum + e.heightMm, 0);
+      const span = maxY - minY;
+      const totalGap = span - totalHeights;
+      const gap = totalGap / (sorted.length - 1);
+      let currentY = minY;
+      return sorted.map((e, idx) => {
+        if (idx === 0) return { ...e, yMm: Math.round(minY * 10) / 10 };
+        currentY += sorted[idx - 1].heightMm + gap;
+        return { ...e, yMm: Math.round(currentY * 10) / 10 };
+      });
+    }
+    default:
+      return elements;
+  }
+}

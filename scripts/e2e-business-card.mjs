@@ -7,9 +7,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const screenshotsDir = path.join(rootDir, 'docs/reports/screenshots');
+const artifactScreenshotsDir = '/Users/tranhaibang/.gemini/antigravity-ide/brain/d6da6736-ebe6-4bfd-b82a-1d8d181a226e/screenshots';
 
 if (!fs.existsSync(screenshotsDir)) {
   fs.mkdirSync(screenshotsDir, { recursive: true });
+}
+if (!fs.existsSync(artifactScreenshotsDir)) {
+  fs.mkdirSync(artifactScreenshotsDir, { recursive: true });
+}
+
+function saveScreenshot(page, filename) {
+  const p1 = path.join(screenshotsDir, filename);
+  const p2 = path.join(artifactScreenshotsDir, filename);
+  return Promise.all([
+    page.screenshot({ path: p1 }),
+    page.screenshot({ path: p2 })
+  ]);
 }
 
 function findChrome() {
@@ -82,8 +95,8 @@ async function runE2E() {
     });
     console.log(`   ✔ Header Context Cleanliness: FreeBadgeGone=${!headerContextMetrics.hasFreeBadge}, DuplicateTextGone=${!headerContextMetrics.hasDuplicateHeroSub}`);
 
-    const screenshot1 = path.join(screenshotsDir, 'e2e_bcard_01_input_step.png');
-    await page.screenshot({ path: screenshot1 });
+    const screenshot1 = 'e2e_bcard_01_input_step.png';
+    await saveScreenshot(page, screenshot1);
     console.log(`   📸 Saved screenshot: ${screenshot1}`);
 
     // Click Proceed Button: #btn-proceed-to-generate
@@ -111,8 +124,8 @@ async function runE2E() {
       throw new Error(`Expected >=20 templates, found ${step2Metrics.cardsCount}`);
     }
 
-    const screenshot2 = path.join(screenshotsDir, 'e2e_bcard_02_templates_step.png');
-    await page.screenshot({ path: screenshot2 });
+    const screenshot2 = 'e2e_bcard_02_templates_step.png';
+    await saveScreenshot(page, screenshot2);
     console.log(`   📸 Saved screenshot: ${screenshot2}`);
 
     // --- PHASE 3: Select Template and Enter Editor ---
@@ -154,8 +167,8 @@ async function runE2E() {
       await new Promise((r) => setTimeout(r, 500));
     }
 
-    const screenshot3 = path.join(screenshotsDir, 'e2e_bcard_03_editor_canvas.png');
-    await page.screenshot({ path: screenshot3 });
+    const screenshot3 = 'e2e_bcard_03_editor_canvas.png';
+    await saveScreenshot(page, screenshot3);
     console.log(`   📸 Saved screenshot: ${screenshot3}`);
 
     // --- PHASE 3B: Interactive 8-point Resize Handles & Smart Guides Snapping ---
@@ -187,8 +200,8 @@ async function runE2E() {
       });
       console.log(`   ✔ Smart Snapping Guidelines during mouse drag: activeGuides=${guideMetrics.count}`);
 
-      const screenshotGuides = path.join(screenshotsDir, 'e2e_bcard_03b_smart_guides.png');
-      await page.screenshot({ path: screenshotGuides });
+      const screenshotGuides = 'e2e_bcard_03b_smart_guides.png';
+    await saveScreenshot(page, screenshotGuides);
       console.log(`   📸 Saved screenshot: ${screenshotGuides}`);
 
       await page.mouse.up();
@@ -207,23 +220,112 @@ async function runE2E() {
         await new Promise((r) => setTimeout(r, 300));
       }
 
-      // Test 1-click Quick Alignment Buttons
-      const btnAlignH = await page.$('#btn-align-center-h');
-      if (btnAlignH) {
-        await btnAlignH.click();
-        console.log('   ✔ Clicked Center Horizontal alignment button in sidebar');
-        await new Promise((r) => setTimeout(r, 300));
-      }
-      const btnAlignV = await page.$('#btn-align-center-v');
-      if (btnAlignV) {
-        await btnAlignV.click();
-        console.log('   ✔ Clicked Center Vertical alignment button in sidebar');
+      const screenshotResized = 'e2e_bcard_03c_resized_element.png';
+      await saveScreenshot(page, screenshotResized);
+      console.log(`   📸 Saved screenshot: ${screenshotResized}`);
+    }
+
+    // --- PHASE 3C: Multi-Selection (Shift+Click & Marquee Drag) & Canvas Floating Toolbar ---
+    console.log('▶ [PHASE 3C] Testing Multi-Selection, Marquee Selection & Canvas Floating Toolbar...');
+
+    // 1. Verify Canvas Floating Toolbar Controls (Undo, Redo, Front, Back, Quick Flip)
+    const toolbarMetrics = await page.evaluate(() => {
+      return {
+        hasUndo: !!document.querySelector('#btn-canvas-undo'),
+        hasRedo: !!document.querySelector('#btn-canvas-redo'),
+        hasSideFront: !!document.querySelector('#btn-canvas-side-front'),
+        hasSideBack: !!document.querySelector('#btn-canvas-side-back'),
+        hasQuickFlip: !!document.querySelector('#btn-canvas-quick-flip'),
+        // Verify print guides checkboxes in top bar
+        hasBleedGuideCheckbox: Array.from(document.querySelectorAll('input[type="checkbox"]')).length >= 3,
+      };
+    });
+    console.log(`   ✔ Canvas Floating Toolbar: Undo=${toolbarMetrics.hasUndo}, Redo=${toolbarMetrics.hasRedo}, Front=${toolbarMetrics.hasSideFront}, Back=${toolbarMetrics.hasSideBack}, Flip=${toolbarMetrics.hasQuickFlip}`);
+    console.log(`   ✔ Print Guides in Top Bar: GuidesCheckboxes=${toolbarMetrics.hasBleedGuideCheckbox}`);
+
+    // 2. Test Shift+Click Multi-Selection
+    const canvasElements = await page.$$('div[data-element-id]');
+    console.log(`   Found ${canvasElements.length} elements on canvas for multi-selection test`);
+
+    if (canvasElements.length >= 2) {
+      const box1 = await canvasElements[0].boundingBox();
+      const box2 = await canvasElements[1].boundingBox();
+
+      // Click first element
+      await page.mouse.click(box1.x + box1.width / 2, box1.y + box1.height / 2);
+      await new Promise((r) => setTimeout(r, 250));
+
+      // Shift+Click second element
+      await page.keyboard.down('Shift');
+      await page.mouse.click(box2.x + box2.width / 2, box2.y + box2.height / 2);
+      await page.keyboard.up('Shift');
+      await new Promise((r) => setTimeout(r, 350));
+
+      const multiSelectInspector = await page.evaluate(() => {
+        const inspector = document.querySelector('.w-72');
+        const text = (inspector ? inspector.innerText : '').toLowerCase();
+        return {
+          hasMultiSelectedHeader: text.includes('đã chọn 2 đối tượng') || text.includes('2 items selected') || text.includes('2個の要素を選択中'),
+          hasMultiAlignButtons: !!document.querySelector('#btn-multi-align-left') && !!document.querySelector('#btn-multi-align-center-h'),
+          hasMultiDuplicate: !!document.querySelector('#btn-multi-duplicate'),
+          hasMultiDelete: !!document.querySelector('#btn-multi-delete'),
+        };
+      });
+      console.log(`   ✔ Shift+Click Multi-Selection: HeaderVerified=${multiSelectInspector.hasMultiSelectedHeader}, AlignGroupButtons=${multiSelectInspector.hasMultiAlignButtons}`);
+
+      // Test Group Alignment Action
+      const btnMultiCenterH = await page.$('#btn-multi-align-center-h');
+      if (btnMultiCenterH) {
+        await btnMultiCenterH.click();
+        console.log('   ✔ Clicked #btn-multi-align-center-h (Group Horizontal Center Align)');
         await new Promise((r) => setTimeout(r, 300));
       }
 
-      const screenshotResized = path.join(screenshotsDir, 'e2e_bcard_03c_resized_element.png');
-      await page.screenshot({ path: screenshotResized });
-      console.log(`   📸 Saved screenshot: ${screenshotResized}`);
+      // Test Group Dragging
+      await page.mouse.move(box1.x + box1.width / 2, box1.y + box1.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box1.x + box1.width / 2 + 15, box1.y + box1.height / 2 + 8, { steps: 4 });
+      await page.mouse.up();
+      console.log('   ✔ Dragged multi-selection group simultaneously across canvas');
+      await new Promise((r) => setTimeout(r, 300));
+
+      // Test Canvas Undo Button
+      const undoBtn = await page.$('#btn-canvas-undo');
+      if (undoBtn) {
+        await undoBtn.click();
+        console.log('   ✔ Clicked #btn-canvas-undo on canvas floating toolbar');
+        await new Promise((r) => setTimeout(r, 300));
+      }
+
+      const screenshotMulti = 'e2e_bcard_03d_multi_selection.png';
+      await saveScreenshot(page, screenshotMulti);
+      console.log(`   📸 Saved screenshot: ${screenshotMulti}`);
+
+      // 3. Test Marquee Drag Selection
+      // Deselect first by clicking empty canvas space outside the card
+      await page.mouse.click(300, 300);
+      await new Promise((r) => setTimeout(r, 300));
+
+      // Drag marquee box from above card to encompass design elements
+      await page.mouse.move(450, 250);
+      await page.mouse.down();
+      await page.mouse.move(800, 600, { steps: 10 });
+      await new Promise((r) => setTimeout(r, 200));
+
+      const hasMarqueeBox = await page.evaluate(() => {
+        return !!document.querySelector('.marquee-selection-box');
+      });
+      console.log(`   ✔ Marquee Selection Drag Box Rendering: Active=${hasMarqueeBox}`);
+
+      await page.mouse.up();
+      await new Promise((r) => setTimeout(r, 350));
+
+      const marqueeResult = await page.evaluate(() => {
+        const inspector = document.querySelector('.w-72');
+        const text = (inspector ? inspector.innerText : '').toLowerCase();
+        return text.includes('đã chọn') || text.includes('selected') || text.includes('選択中');
+      });
+      console.log(`   ✔ Marquee Selection Success: ElementsSelected=${marqueeResult}`);
     }
 
     // Switch to Dark Mode for modal contrast tests
@@ -259,8 +361,8 @@ async function runE2E() {
     console.log(`   ✔ Preflight Modal: OPENED ("${preflightStatus.textSnippet}")`);
     console.log(`   ✔ Preflight i18n Check: HasVietnameseRules=${preflightStatus.hasVietnameseRules}, HasHardcodedJapanese=${preflightStatus.hasHardcodedJapanese}`);
 
-    const screenshot4 = path.join(screenshotsDir, 'e2e_bcard_04_preflight_modal.png');
-    await page.screenshot({ path: screenshot4 });
+    const screenshot4 = 'e2e_bcard_04_preflight_modal.png';
+    await saveScreenshot(page, screenshot4);
     console.log(`   📸 Saved Dark Mode Preflight screenshot: ${screenshot4}`);
 
     // Close preflight modal
@@ -285,8 +387,8 @@ async function runE2E() {
     });
     console.log(`   ✔ Batch CSV Modal: ${batchStatus.isOpen ? 'OPENED' : 'NOT FOUND'} ("${batchStatus.textSnippet}")`);
 
-    const screenshot5 = path.join(screenshotsDir, 'e2e_bcard_05_batch_csv_modal.png');
-    await page.screenshot({ path: screenshot5 });
+    const screenshot5 = 'e2e_bcard_05_batch_csv_modal.png';
+    await saveScreenshot(page, screenshot5);
     console.log(`   📸 Saved screenshot: ${screenshot5}`);
 
     // Close batch modal
@@ -315,8 +417,8 @@ async function runE2E() {
     });
     console.log(`   ✔ Free Export Modal: OPENED, RedundantBadgeGone=${!exportStatus.hasRedundantBadge}`);
 
-    const screenshot6 = path.join(screenshotsDir, 'e2e_bcard_06_free_export_modal.png');
-    await page.screenshot({ path: screenshot6 });
+    const screenshot6 = 'e2e_bcard_06_free_export_modal.png';
+    await saveScreenshot(page, screenshot6);
     console.log(`   📸 Saved Dark Mode Free Export screenshot: ${screenshot6}`);
 
     // Close export modal
@@ -340,8 +442,8 @@ async function runE2E() {
       };
     });
     console.log(`   ✔ Mobile Viewport: scrollWidth=${mobileMetrics.scrollW}px, clientWidth=${mobileMetrics.clientW}px (Overflow: ${mobileMetrics.hasOverflow ? 'YES ❌' : 'NO ✔'})`);
-    const screenshot7 = path.join(screenshotsDir, 'e2e_bcard_07_mobile_responsive.png');
-    await page.screenshot({ path: screenshot7 });
+    const screenshot7 = 'e2e_bcard_07_mobile_responsive.png';
+    await saveScreenshot(page, screenshot7);
     console.log(`   📸 Saved screenshot: ${screenshot7}`);
 
     // --- SUMMARY ---

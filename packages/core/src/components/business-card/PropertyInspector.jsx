@@ -6,20 +6,223 @@ import {
   AlignRight,
   Type,
   Sliders,
-  ShieldCheck
+  ShieldCheck,
+  Layers
 } from "lucide-react";
 import { FONT_OPTIONS, JAPANESE_PALETTE } from "../../utils/business-card/fonts.js";
 import { useLanguage } from "../../utils/business-card/LanguageContext.jsx";
 import { getLocalizedCardDimension } from "../../utils/business-card/translations.js";
-import { alignElementToCard } from "../../utils/business-card/alignmentSnapper.js";
+import { alignElementToCard, alignMultipleElements } from "../../utils/business-card/alignmentSnapper.js";
+
 export const PropertyInspector = ({
+  selectedElements = [],
   selectedElement,
   onUpdateElement,
+  onUpdateElements,
   onDeleteElement,
+  onDeleteElements,
   onDuplicateElement,
+  onDuplicateElements,
   project
 }) => {
   const { t, language } = useLanguage();
+
+  // Multi-Selection Panel
+  if (selectedElements && selectedElements.length > 1) {
+    const minX = Math.min(...selectedElements.map((e) => e.xMm));
+    const maxX = Math.max(...selectedElements.map((e) => e.xMm + e.widthMm));
+    const minY = Math.min(...selectedElements.map((e) => e.yMm));
+    const maxY = Math.max(...selectedElements.map((e) => e.yMm + e.heightMm));
+    const groupW = Math.round((maxX - minX) * 10) / 10;
+    const groupH = Math.round((maxY - minY) * 10) / 10;
+
+    const handleAlignGroup = (alignment) => {
+      const aligned = alignMultipleElements(selectedElements, alignment);
+      onUpdateElements?.(aligned);
+    };
+
+    return (
+      <div className="w-72 bg-surface-container border-l border-border-subtle h-full p-4 overflow-y-auto select-none space-y-5">
+        {/* Multi-Selection Header */}
+        <div className="flex items-center justify-between pb-2 border-b border-border-subtle/50">
+          <div className="flex items-center gap-1.5">
+            <Layers className="w-4 h-4 text-primary" />
+            <span className="text-xs font-bold text-on-surface uppercase tracking-wider">
+              {language === "ja"
+                ? `${selectedElements.length}個の要素を選択中`
+                : language === "en"
+                ? `${selectedElements.length} Items Selected`
+                : `Đã chọn ${selectedElements.length} đối tượng`}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              id="btn-multi-duplicate"
+              onClick={() => onDuplicateElements?.(selectedElements)}
+              className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-subtle rounded transition-colors cursor-pointer"
+              title={t("btnDuplicate") || "Nhân bản nhóm"}
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              id="btn-multi-delete"
+              onClick={() => onDeleteElements?.(selectedElements.map((e) => e.id))}
+              className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors cursor-pointer"
+              title={t("btnDelete") || "Xóa nhóm"}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Group Alignment Bar */}
+        <div>
+          <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+            {t("piAlignQuick")} (Nhóm)
+          </label>
+          <div className="grid grid-cols-3 gap-1.5">
+            <button
+              type="button"
+              id="btn-multi-align-left"
+              onClick={() => handleAlignGroup("left")}
+              className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+              title={t("piAlignLeft")}
+            >
+              {t("piAlignLeft")}
+            </button>
+            <button
+              type="button"
+              id="btn-multi-align-center-h"
+              onClick={() => handleAlignGroup("center-h")}
+              className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+              title={t("piAlignCenterH")}
+            >
+              {t("piAlignCenterH")}
+            </button>
+            <button
+              type="button"
+              id="btn-multi-align-right"
+              onClick={() => handleAlignGroup("right")}
+              className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+              title={t("piAlignRight")}
+            >
+              {t("piAlignRight")}
+            </button>
+            <button
+              type="button"
+              id="btn-multi-align-top"
+              onClick={() => handleAlignGroup("top")}
+              className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+              title={t("piAlignTop")}
+            >
+              {t("piAlignTop")}
+            </button>
+            <button
+              type="button"
+              id="btn-multi-align-center-v"
+              onClick={() => handleAlignGroup("center-v")}
+              className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+              title={t("piAlignCenterV")}
+            >
+              {t("piAlignCenterV")}
+            </button>
+            <button
+              type="button"
+              id="btn-multi-align-bottom"
+              onClick={() => handleAlignGroup("bottom")}
+              className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+              title={t("piAlignBottom")}
+            >
+              {t("piAlignBottom")}
+            </button>
+          </div>
+        </div>
+
+        {/* Even Distribution (if 3+ items) */}
+        {selectedElements.length >= 3 && (
+          <div>
+            <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+              Dãn cách đều
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                id="btn-multi-distribute-h"
+                onClick={() => handleAlignGroup("distribute-h")}
+                className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+              >
+                Dãn đều ngang
+              </button>
+              <button
+                type="button"
+                id="btn-multi-distribute-v"
+                onClick={() => handleAlignGroup("distribute-v")}
+                className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+              >
+                Dãn đều dọc
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Group Geometry Info */}
+        <div className="pt-3 border-t border-border-subtle/50">
+          <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+            Khung bao nhóm
+          </label>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="p-2 rounded bg-surface-canvas border border-border-subtle">
+              <span className="text-outline text-[10px] block">Rộng × Cao</span>
+              <span className="font-bold text-on-surface">{groupW} × {groupH} mm</span>
+            </div>
+            <div className="p-2 rounded bg-surface-canvas border border-border-subtle">
+              <span className="text-outline text-[10px] block">Vị trí (X, Y)</span>
+              <span className="font-bold text-on-surface">{minX}, {minY} mm</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Selected Elements List */}
+        <div className="pt-3 border-t border-border-subtle/50">
+          <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+            Danh sách ({selectedElements.length})
+          </label>
+          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            {selectedElements.map((el, i) => (
+              <div
+                key={el.id}
+                className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-surface-canvas border border-border-subtle text-xs"
+              >
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="w-4 h-4 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
+                    {i + 1}
+                  </span>
+                  <span className="truncate text-on-surface font-medium">
+                    {el.type === "text"
+                      ? el.content?.slice(0, 18) || "Văn bản"
+                      : el.type === "shape"
+                      ? `Hình khối (${el.shapeType || "rect"})`
+                      : el.type === "qr"
+                      ? "Mã QR"
+                      : el.type === "image"
+                      ? "Hình ảnh / Logo"
+                      : "Đối tượng"}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-outline shrink-0">
+                  {el.widthMm}×{el.heightMm}mm
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!selectedElement) {
     return <div className="w-72 bg-surface-container border-l border-border-subtle h-full p-5 overflow-y-auto select-none space-y-5">
         <div className="flex items-center gap-1.5 pb-2 border-b border-border-subtle/50">

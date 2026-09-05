@@ -140,3 +140,44 @@ test('alignElementToCard aligns element to center and margins accurately', async
   assert.equal(rightSafe.xMm, 57); // 91 - 3 - 31 = 57mm
 });
 
+test('alignMultipleElements aligns group of elements and distributes spacing evenly', async () => {
+  const { alignMultipleElements } = await import('../../../packages/core/src/utils/business-card/alignmentSnapper.js');
+
+  const elements = [
+    { id: 'el-1', xMm: 10, yMm: 10, widthMm: 20, heightMm: 10 },
+    { id: 'el-2', xMm: 40, yMm: 25, widthMm: 30, heightMm: 15 },
+    { id: 'el-3', xMm: 80, yMm: 45, widthMm: 10, heightMm: 5 },
+  ];
+
+  // Align Left -> all xMm become minX = 10
+  const alignedLeft = alignMultipleElements(elements, 'left');
+  assert.equal(alignedLeft[0].xMm, 10);
+  assert.equal(alignedLeft[1].xMm, 10);
+  assert.equal(alignedLeft[2].xMm, 10);
+
+  // Align Center-H -> bounding box minX = 10, maxX = 90, centerX = 50
+  const alignedCenterH = alignMultipleElements(elements, 'center-h');
+  assert.equal(alignedCenterH[0].xMm, 40); // 50 - 10
+  assert.equal(alignedCenterH[1].xMm, 35); // 50 - 15
+  assert.equal(alignedCenterH[2].xMm, 45); // 50 - 5
+
+  // Distribute Horizontal -> span from 10 to 90 (total = 80mm). Total widths = 20 + 30 + 10 = 60mm.
+  // Gap = (80 - 60) / 2 = 10mm.
+  // el-1: x=10, width=20 -> right=30.
+  // el-2: x=30 + 10 = 40, width=30 -> right=70.
+  // el-3: x=70 + 10 = 80.
+  const distributedH = alignMultipleElements(elements, 'distribute-h');
+  assert.equal(distributedH[0].xMm, 10);
+  assert.equal(distributedH[1].xMm, 40);
+  assert.equal(distributedH[2].xMm, 80);
+});
+
+test('translations for business-card studio do not contain "miễn phí" or "無料"', async () => {
+  const { TRANSLATIONS } = await import('../../../packages/core/src/utils/business-card/translations.js');
+  const serialized = JSON.stringify(TRANSLATIONS);
+
+  assert.equal(serialized.includes('miễn phí'), false, 'Translations must not contain "miễn phí"');
+  assert.equal(serialized.includes('Miễn phí'), false, 'Translations must not contain "Miễn phí"');
+  assert.equal(serialized.includes('無料'), false, 'Translations must not contain "無料"');
+});
+

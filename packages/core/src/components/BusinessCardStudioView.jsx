@@ -221,15 +221,14 @@ function BusinessCardStudioContent({ onBackToHub }) {
                 <h1 className="text-2xl font-bold text-on-surface tracking-tight font-display">
                   {t('brandTitle') || 'MEISHI STUDIO'}
                 </h1>
+                <div className="flex items-center gap-1.5 text-xs text-secondary font-medium mt-1">
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                  <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-3 shrink-0">
-              <div className="flex items-center gap-1.5 text-xs text-on-surface-variant">
-                <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
-                <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
                 {/* Preflight Badge Button */}
                 <button
                   type="button"
@@ -309,7 +308,6 @@ function BusinessCardStudioContent({ onBackToHub }) {
               </div>
             </div>
           </div>
-        </div>
       </section>
 
       {/* WORKFLOW STEPS INDICATOR */}
