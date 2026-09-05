@@ -11,6 +11,7 @@ import {
 import { FONT_OPTIONS, JAPANESE_PALETTE } from "../../utils/business-card/fonts.js";
 import { useLanguage } from "../../utils/business-card/LanguageContext.jsx";
 import { getLocalizedCardDimension } from "../../utils/business-card/translations.js";
+import { alignElementToCard } from "../../utils/business-card/alignmentSnapper.js";
 export const PropertyInspector = ({
   selectedElement,
   onUpdateElement,
@@ -299,7 +300,132 @@ export const PropertyInspector = ({
         </div>}
 
       {
-    /* 4. PRECISE MILLIMETER COORDINATES */
+    /* 4. QUICK ALIGNMENT TOOLBAR */
+  }
+      <div className="pt-3 border-t border-border-subtle/50">
+        <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+          {t("piAlignQuick")}
+        </label>
+        <div className="grid grid-cols-2 gap-1.5 text-xs">
+          <button
+            type="button"
+            id="btn-align-center-h"
+            onClick={() => {
+              const isHoriz = project.orientation === "horizontal";
+              const cardW = isHoriz ? project.dimension.widthMm : project.dimension.heightMm;
+              const cardH = isHoriz ? project.dimension.heightMm : project.dimension.widthMm;
+              const updated = alignElementToCard(selectedElement, 'center-h', {
+                cardW,
+                cardH,
+                safeMargin: project.dimension.safeMarginMm
+              });
+              onUpdateElement(updated);
+            }}
+            className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+            title={t("piAlignCenterH")}
+          >
+            {t("piAlignCenterH")}
+          </button>
+          <button
+            type="button"
+            id="btn-align-center-v"
+            onClick={() => {
+              const isHoriz = project.orientation === "horizontal";
+              const cardW = isHoriz ? project.dimension.widthMm : project.dimension.heightMm;
+              const cardH = isHoriz ? project.dimension.heightMm : project.dimension.widthMm;
+              const updated = alignElementToCard(selectedElement, 'center-v', {
+                cardW,
+                cardH,
+                safeMargin: project.dimension.safeMarginMm
+              });
+              onUpdateElement(updated);
+            }}
+            className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+            title={t("piAlignCenterV")}
+          >
+            {t("piAlignCenterV")}
+          </button>
+          <button
+            type="button"
+            id="btn-align-left"
+            onClick={() => {
+              const isHoriz = project.orientation === "horizontal";
+              const cardW = isHoriz ? project.dimension.widthMm : project.dimension.heightMm;
+              const cardH = isHoriz ? project.dimension.heightMm : project.dimension.widthMm;
+              const updated = alignElementToCard(selectedElement, 'left', {
+                cardW,
+                cardH,
+                safeMargin: project.dimension.safeMarginMm
+              });
+              onUpdateElement(updated);
+            }}
+            className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+            title={t("piAlignLeft")}
+          >
+            {t("piAlignLeft")}
+          </button>
+          <button
+            type="button"
+            id="btn-align-right"
+            onClick={() => {
+              const isHoriz = project.orientation === "horizontal";
+              const cardW = isHoriz ? project.dimension.widthMm : project.dimension.heightMm;
+              const cardH = isHoriz ? project.dimension.heightMm : project.dimension.widthMm;
+              const updated = alignElementToCard(selectedElement, 'right', {
+                cardW,
+                cardH,
+                safeMargin: project.dimension.safeMarginMm
+              });
+              onUpdateElement(updated);
+            }}
+            className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+            title={t("piAlignRight")}
+          >
+            {t("piAlignRight")}
+          </button>
+          <button
+            type="button"
+            id="btn-align-top"
+            onClick={() => {
+              const isHoriz = project.orientation === "horizontal";
+              const cardW = isHoriz ? project.dimension.widthMm : project.dimension.heightMm;
+              const cardH = isHoriz ? project.dimension.heightMm : project.dimension.widthMm;
+              const updated = alignElementToCard(selectedElement, 'top', {
+                cardW,
+                cardH,
+                safeMargin: project.dimension.safeMarginMm
+              });
+              onUpdateElement(updated);
+            }}
+            className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+            title={t("piAlignTop")}
+          >
+            {t("piAlignTop")}
+          </button>
+          <button
+            type="button"
+            id="btn-align-bottom"
+            onClick={() => {
+              const isHoriz = project.orientation === "horizontal";
+              const cardW = isHoriz ? project.dimension.widthMm : project.dimension.heightMm;
+              const cardH = isHoriz ? project.dimension.heightMm : project.dimension.widthMm;
+              const updated = alignElementToCard(selectedElement, 'bottom', {
+                cardW,
+                cardH,
+                safeMargin: project.dimension.safeMarginMm
+              });
+              onUpdateElement(updated);
+            }}
+            className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
+            title={t("piAlignBottom")}
+          >
+            {t("piAlignBottom")}
+          </button>
+        </div>
+      </div>
+
+      {
+    /* 5. PRECISE MILLIMETER COORDINATES */
   }
       <div className="pt-3 border-t border-border-subtle/50">
         <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">

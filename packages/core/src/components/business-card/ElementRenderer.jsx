@@ -2,6 +2,7 @@ export const ElementRenderer = ({
   element,
   isSelected,
   onSelect,
+  onStartResize,
   scale
 }) => {
   const mmToPx = 3.7795275591 * scale;
@@ -16,13 +17,25 @@ export const ElementRenderer = ({
     cursor: "move",
     transform: element.rotation ? `rotate(${element.rotation}deg)` : void 0
   };
+
+  const RESIZE_HANDLES = [
+    { handle: "nw", cursor: "cursor-nwse-resize", pos: "-top-1.5 -left-1.5" },
+    { handle: "n", cursor: "cursor-ns-resize", pos: "-top-1.5 left-1/2 -translate-x-1/2" },
+    { handle: "ne", cursor: "cursor-nesw-resize", pos: "-top-1.5 -right-1.5" },
+    { handle: "e", cursor: "cursor-ew-resize", pos: "-right-1.5 top-1/2 -translate-y-1/2" },
+    { handle: "se", cursor: "cursor-nwse-resize", pos: "-bottom-1.5 -right-1.5" },
+    { handle: "s", cursor: "cursor-ns-resize", pos: "-bottom-1.5 left-1/2 -translate-x-1/2" },
+    { handle: "sw", cursor: "cursor-nesw-resize", pos: "-bottom-1.5 -left-1.5" },
+    { handle: "w", cursor: "cursor-ew-resize", pos: "-left-1.5 top-1/2 -translate-y-1/2" }
+  ];
+
   return <div
     style={style}
     onClick={(e) => {
       e.stopPropagation();
       onSelect(e);
     }}
-    className={`group select-none ${isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-white" : "hover:ring-1 hover:ring-brand-300/70"}`}
+    className={`group select-none ${isSelected ? "ring-2 ring-primary ring-offset-1 ring-offset-surface-canvas" : "hover:ring-1 hover:ring-brand-300/70"}`}
   >
       {
     /* 1. TEXT ELEMENT */
@@ -100,13 +113,19 @@ export const ElementRenderer = ({
   />}
 
       {
-    /* Selection Handles (Resize anchors) */
+    /* Interactive 8-point Selection & Resize Handles */
   }
-      {isSelected && <>
-          <div className="absolute -top-1 -left-1 w-2 h-2 bg-brand-500 border border-white rounded-full shadow-xs" />
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-brand-500 border border-white rounded-full shadow-xs" />
-          <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-brand-500 border border-white rounded-full shadow-xs" />
-          <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-brand-500 border border-white rounded-full shadow-xs" />
-        </>}
+      {isSelected && RESIZE_HANDLES.map(({ handle, cursor, pos }) => (
+        <div
+          key={handle}
+          data-handle={handle}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onStartResize?.(element, handle, e);
+          }}
+          className={`absolute w-2.5 h-2.5 bg-primary border border-white dark:border-surface-canvas rounded-xs shadow-xs hover:scale-125 transition-transform z-30 ${cursor} ${pos}`}
+          title={`Co giãn (${handle.toUpperCase()})`}
+        />
+      ))}
     </div>;
 };

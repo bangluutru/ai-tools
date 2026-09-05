@@ -72,3 +72,71 @@ test('vCard formatter creates valid vCard 3.0 string', () => {
   assert.ok(vcard.includes(`ORG:${sampleProfile.companyName}`));
   assert.ok(vcard.endsWith('END:VCARD'));
 });
+
+test('calculateSnap correctly snaps element to card center and generates active guides', async () => {
+  const { calculateSnap } = await import('../../../packages/core/src/utils/business-card/alignmentSnapper.js');
+  
+  // Element near horizontal center (cardW = 91mm -> center = 45.5mm)
+  // Element width = 20mm -> element center is at xMm + 10mm
+  // If xMm = 35.2mm, element center is 45.2mm (0.3mm away from 45.5mm, within 1.0mm threshold)
+  const movingEl = { id: 'el-1', xMm: 35.2, yMm: 10, widthMm: 20, heightMm: 10 };
+  const snapResult = calculateSnap({
+    movingEl,
+    allElements: [],
+    cardW: 91,
+    cardH: 55,
+    safeMargin: 3,
+    thresholdMm: 1.0
+  });
+
+  // Snapped center should be 45.5 - 10 = 35.5mm
+  assert.equal(snapResult.xMm, 35.5, 'xMm should snap to center 35.5mm');
+  assert.ok(snapResult.guides.length > 0, 'Should return active guides');
+  assert.equal(snapResult.guides[0].posMm, 45.5, 'Guide line position should be at card center 45.5mm');
+});
+
+test('calculateResize resizes element dimensions correctly across 8 handles and locks 1:1 for QR', async () => {
+  const { calculateResize } = await import('../../../packages/core/src/utils/business-card/alignmentSnapper.js');
+
+  const startEl = { id: 'text-1', type: 'text', xMm: 10, yMm: 10, widthMm: 30, heightMm: 15 };
+
+  // Drag 'se' handle by +5mm X and +3mm Y
+  const resizeSe = calculateResize({ startEl, handle: 'se', deltaXMm: 5, deltaYMm: 3 });
+  assert.equal(resizeSe.widthMm, 35);
+  assert.equal(resizeSe.heightMm, 18);
+  assert.equal(resizeSe.xMm, 10);
+  assert.equal(resizeSe.yMm, 10);
+
+  // Drag 'nw' handle by +2mm X and +2mm Y (shrinks width/height, increases x/y)
+  const resizeNw = calculateResize({ startEl, handle: 'nw', deltaXMm: 2, deltaYMm: 2 });
+  assert.equal(resizeNw.widthMm, 28);
+  assert.equal(resizeNw.heightMm, 13);
+  assert.equal(resizeNw.xMm, 12);
+  assert.equal(resizeNw.yMm, 12);
+
+  // QR Code element must stay 1:1 square
+  const qrEl = { id: 'qr-1', type: 'qr', xMm: 10, yMm: 10, widthMm: 15, heightMm: 15 };
+  const resizeQr = calculateResize({ startEl: qrEl, handle: 'se', deltaXMm: 5, deltaYMm: 1 });
+  assert.equal(resizeQr.widthMm, 20);
+  assert.equal(resizeQr.heightMm, 20, 'QR height must match width for 1:1 square ratio');
+});
+
+test('alignElementToCard aligns element to center and margins accurately', async () => {
+  const { alignElementToCard } = await import('../../../packages/core/src/utils/business-card/alignmentSnapper.js');
+
+  const el = { id: 'el-1', xMm: 10, yMm: 10, widthMm: 31, heightMm: 15 };
+  const cardConfig = { cardW: 91, cardH: 55, safeMargin: 3 };
+
+  const centerH = alignElementToCard(el, 'center-h', cardConfig);
+  assert.equal(centerH.xMm, 30); // (91 - 31) / 2 = 30mm
+
+  const centerV = alignElementToCard(el, 'center-v', cardConfig);
+  assert.equal(centerV.yMm, 20); // (55 - 15) / 2 = 20mm
+
+  const leftSafe = alignElementToCard(el, 'left', cardConfig);
+  assert.equal(leftSafe.xMm, 3); // safe margin 3mm
+
+  const rightSafe = alignElementToCard(el, 'right', cardConfig);
+  assert.equal(rightSafe.xMm, 57); // 91 - 3 - 31 = 57mm
+});
+

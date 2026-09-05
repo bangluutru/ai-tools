@@ -1,7 +1,9 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { RotateCw, Layers } from "lucide-react";
 import { ElementRenderer } from "./ElementRenderer.jsx";
 import { useLanguage } from "../../utils/business-card/LanguageContext.jsx";
+import { calculateSnap, calculateResize } from "../../utils/business-card/alignmentSnapper.js";
+
 export const CardCanvas = ({
   project,
   activeSide,
@@ -26,13 +28,19 @@ export const CardCanvas = ({
   const safeMargin = dim.safeMarginMm;
   const mmToPx = 3.7795275591 * scale;
   const [isFlipping, setIsFlipping] = useState(false);
+
   useEffect(() => {
     setIsFlipping(true);
     const timer = setTimeout(() => setIsFlipping(false), 300);
     return () => clearTimeout(timer);
   }, [activeSide]);
+
   const [draggingElId, setDraggingElId] = useState(null);
   const [dragStartPos, setDragStartPos] = useState(null);
+  const [resizingState, setResizingState] = useState(null);
+  const [activeGuides, setActiveGuides] = useState([]);
+
+  // Mouse Down to start moving an element
   const handleMouseDownOnElement = (el, e) => {
     e.stopPropagation();
     onSelectElement(el.id);
@@ -44,30 +52,87 @@ export const CardCanvas = ({
       elY: el.yMm
     });
   };
+
+  // Mouse Down on a resize handle
+  const handleStartResize = useCallback((el, handle, e) => {
+    e.stopPropagation();
+    onSelectElement(el.id);
+    setResizingState({
+      elId: el.id,
+      handle,
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      startEl: { ...el }
+    });
+  }, [onSelectElement]);
+
+  // Unified Mouse Move & Up handlers
   useEffect(() => {
     const handleMouseMove = (e) => {
-      if (!draggingElId || !dragStartPos) return;
-      const deltaXPx = e.clientX - dragStartPos.mouseX;
-      const deltaYPx = e.clientY - dragStartPos.mouseY;
-      const deltaXMm = deltaXPx / mmToPx;
-      const deltaYMm = deltaYPx / mmToPx;
-      const activeEl = sideData.elements.find((el) => el.id === draggingElId);
-      if (!activeEl) return;
-      const rawX = dragStartPos.elX + deltaXMm;
-      const rawY = dragStartPos.elY + deltaYMm;
-      const newX = Math.round(rawX * 2) / 2;
-      const newY = Math.round(rawY * 2) / 2;
-      onUpdateElement({
-        ...activeEl,
-        xMm: newX,
-        yMm: newY
-      });
+      // 1. Moving Element with Smart Snapping
+      if (draggingElId && dragStartPos) {
+        const deltaXPx = e.clientX - dragStartPos.mouseX;
+        const deltaYPx = e.clientY - dragStartPos.mouseY;
+        const deltaXMm = deltaXPx / mmToPx;
+        const deltaYMm = deltaYPx / mmToPx;
+        const activeEl = sideData.elements.find((el) => el.id === draggingElId);
+        if (!activeEl) return;
+
+        const rawX = dragStartPos.elX + deltaXMm;
+        const rawY = dragStartPos.elY + deltaYMm;
+
+        const snapped = calculateSnap({
+          movingEl: { ...activeEl, xMm: rawX, yMm: rawY },
+          allElements: sideData.elements,
+          cardW,
+          cardH,
+          safeMargin,
+          thresholdMm: 1.2
+        });
+
+        setActiveGuides(snapped.guides);
+        onUpdateElement({
+          ...activeEl,
+          xMm: snapped.xMm,
+          yMm: snapped.yMm
+        });
+        return;
+      }
+
+      // 2. Resizing Element via Handle
+      if (resizingState) {
+        const deltaXPx = e.clientX - resizingState.startMouseX;
+        const deltaYPx = e.clientY - resizingState.startMouseY;
+        const deltaXMm = deltaXPx / mmToPx;
+        const deltaYMm = deltaYPx / mmToPx;
+
+        const resized = calculateResize({
+          startEl: resizingState.startEl,
+          handle: resizingState.handle,
+          deltaXMm,
+          deltaYMm,
+          minW: 3,
+          minH: 2
+        });
+
+        const activeEl = sideData.elements.find((el) => el.id === resizingState.elId);
+        if (activeEl) {
+          onUpdateElement({
+            ...activeEl,
+            ...resized
+          });
+        }
+      }
     };
+
     const handleMouseUp = () => {
       setDraggingElId(null);
       setDragStartPos(null);
+      setResizingState(null);
+      setActiveGuides([]);
     };
-    if (draggingElId) {
+
+    if (draggingElId || resizingState) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
     }
@@ -75,7 +140,46 @@ export const CardCanvas = ({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [draggingElId, dragStartPos, mmToPx, onUpdateElement, sideData.elements]);
+  }, [
+    draggingElId,
+    dragStartPos,
+    resizingState,
+    mmToPx,
+    cardW,
+    cardH,
+    safeMargin,
+    onUpdateElement,
+    sideData.elements
+  ]);
+
+  // Keyboard Nudge (Arrow Keys) & Precision Navigation
+  useEffect(() => {
+    if (!selectedElementId) return;
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) return;
+      const activeEl = sideData.elements.find((el) => el.id === selectedElementId);
+      if (!activeEl) return;
+
+      const stepMm = e.shiftKey ? 0.1 : 0.5;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        onUpdateElement({ ...activeEl, xMm: Math.round((activeEl.xMm - stepMm) * 10) / 10 });
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        onUpdateElement({ ...activeEl, xMm: Math.round((activeEl.xMm + stepMm) * 10) / 10 });
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        onUpdateElement({ ...activeEl, yMm: Math.round((activeEl.yMm - stepMm) * 10) / 10 });
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        onUpdateElement({ ...activeEl, yMm: Math.round((activeEl.yMm + stepMm) * 10) / 10 });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedElementId, sideData.elements, onUpdateElement]);
+
   return <div
     ref={containerRef}
     onClick={() => onSelectElement(null)}
@@ -218,6 +322,41 @@ export const CardCanvas = ({
             </div>}
 
           {
+    /* 3. SMART ALIGNMENT GUIDELINES OVERLAY */
+  }
+          {activeGuides.map((guide, idx) => {
+            if (guide.axis === "x") {
+              return (
+                <div
+                  key={`guide-x-${idx}`}
+                  className="smart-guide-line smart-guide-x absolute top-0 bottom-0 pointer-events-none z-30 flex flex-col items-center"
+                  style={{ left: `${guide.posMm * mmToPx}px` }}
+                >
+                  <div className="w-[1px] h-full bg-cyan-500 shadow-[0_0_4px_rgba(6,182,212,0.9)]" />
+                  <span className="absolute top-1 -translate-x-1/2 bg-cyan-600 text-white text-[9px] font-mono px-1 py-0.5 rounded shadow-xs whitespace-nowrap">
+                    {guide.posMm}mm
+                  </span>
+                </div>
+              );
+            }
+            if (guide.axis === "y") {
+              return (
+                <div
+                  key={`guide-y-${idx}`}
+                  className="smart-guide-line smart-guide-y absolute left-0 right-0 pointer-events-none z-30 flex items-center"
+                  style={{ top: `${guide.posMm * mmToPx}px` }}
+                >
+                  <div className="h-[1px] w-full bg-cyan-500 shadow-[0_0_4px_rgba(6,182,212,0.9)]" />
+                  <span className="absolute left-1 -translate-y-1/2 bg-cyan-600 text-white text-[9px] font-mono px-1 py-0.5 rounded shadow-xs whitespace-nowrap">
+                    {guide.posMm}mm
+                  </span>
+                </div>
+              );
+            }
+            return null;
+          })}
+
+          {
     /* RENDER ACTIVE SIDE DESIGN ELEMENTS */
   }
           {sideData.elements.map((el) => <div
@@ -228,6 +367,7 @@ export const CardCanvas = ({
     element={el}
     isSelected={el.id === selectedElementId}
     onSelect={() => onSelectElement(el.id)}
+    onStartResize={handleStartResize}
     scale={scale}
   />
             </div>)}

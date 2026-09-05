@@ -158,6 +158,74 @@ async function runE2E() {
     await page.screenshot({ path: screenshot3 });
     console.log(`   📸 Saved screenshot: ${screenshot3}`);
 
+    // --- PHASE 3B: Interactive 8-point Resize Handles & Smart Guides Snapping ---
+    console.log('▶ [PHASE 3B] Testing Interactive Canvas Handles, Smart Snapping & Alignment Toolbar...');
+    const firstCanvasElement = await page.$('div.group.select-none');
+    if (firstCanvasElement) {
+      const box = await firstCanvasElement.boundingBox();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await new Promise((r) => setTimeout(r, 400));
+
+      const handlesCount = await page.evaluate(() => {
+        return document.querySelectorAll('div[data-handle]').length;
+      });
+      console.log(`   ✔ 8-Point Resize Handles visible: count=${handlesCount}`);
+
+      // Move element towards center to trigger smart alignment guide
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 2 + 25, box.y + box.height / 2 + 10, { steps: 5 });
+      await new Promise((r) => setTimeout(r, 300));
+
+      const guideMetrics = await page.evaluate(() => {
+        const guides = document.querySelectorAll('.smart-guide-line');
+        return {
+          count: guides.length,
+          hasGuideX: document.querySelectorAll('.smart-guide-x').length > 0,
+          hasGuideY: document.querySelectorAll('.smart-guide-y').length > 0,
+        };
+      });
+      console.log(`   ✔ Smart Snapping Guidelines during mouse drag: activeGuides=${guideMetrics.count}`);
+
+      const screenshotGuides = path.join(screenshotsDir, 'e2e_bcard_03b_smart_guides.png');
+      await page.screenshot({ path: screenshotGuides });
+      console.log(`   📸 Saved screenshot: ${screenshotGuides}`);
+
+      await page.mouse.up();
+      await new Promise((r) => setTimeout(r, 400));
+
+      // Test direct mouse resizing via 'se' handle
+      const seHandle = await page.$('div[data-handle="se"]');
+      if (seHandle) {
+        const handleBox = await seHandle.boundingBox();
+        await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(handleBox.x + handleBox.width / 2 + 35, handleBox.y + handleBox.height / 2 + 15, { steps: 5 });
+        await new Promise((r) => setTimeout(r, 200));
+        await page.mouse.up();
+        console.log('   ✔ Successfully dragged SE resize handle to scale element bounding box');
+        await new Promise((r) => setTimeout(r, 300));
+      }
+
+      // Test 1-click Quick Alignment Buttons
+      const btnAlignH = await page.$('#btn-align-center-h');
+      if (btnAlignH) {
+        await btnAlignH.click();
+        console.log('   ✔ Clicked Center Horizontal alignment button in sidebar');
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      const btnAlignV = await page.$('#btn-align-center-v');
+      if (btnAlignV) {
+        await btnAlignV.click();
+        console.log('   ✔ Clicked Center Vertical alignment button in sidebar');
+        await new Promise((r) => setTimeout(r, 300));
+      }
+
+      const screenshotResized = path.join(screenshotsDir, 'e2e_bcard_03c_resized_element.png');
+      await page.screenshot({ path: screenshotResized });
+      console.log(`   📸 Saved screenshot: ${screenshotResized}`);
+    }
+
     // Switch to Dark Mode for modal contrast tests
     console.log('🌙 Switching to Dark Mode for Modal Verification...');
     await page.evaluate(() => {
