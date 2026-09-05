@@ -56,13 +56,17 @@ async function generateSubjectMask(source, options = {}) {
   if (requestedEngine === "imgly_hd") {
     try {
       if (options.onProgress) options.onProgress(15, "Loading AI model...");
-      const imglyResult = await runImglySegmentation(source, options);
+      const imglyPromise = runImglySegmentation(source, options);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Imgly timeout")), 15000)
+      );
+      const imglyResult = await Promise.race([imglyPromise, timeoutPromise]);
       if (imglyResult) {
         despeckleMask(imglyResult.maskCanvas);
         return { ...imglyResult, engineUsed: "imgly_hd" };
       }
     } catch (err) {
-      console.warn("@imgly HD segmentation failed, falling back to MediaPipe:", err);
+      console.warn("@imgly HD segmentation timed out/failed, falling back to MediaPipe:", err);
     }
   }
   try {

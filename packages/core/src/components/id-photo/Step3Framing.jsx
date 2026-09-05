@@ -32,20 +32,42 @@ const Step3Framing = ({
   const [customH, setCustomH] = useState(45);
   const [showGuides, setShowGuides] = useState(true);
   const [face, setFace] = useState(initialFace);
-  const [transform, setTransform] = useState({
-    scale: 1,
-    offsetX: 0,
-    offsetY: 0,
-    rotation: 0,
-    brightness: 0,
-    contrast: 0,
-    saturation: 0,
-    sharpness: 15
+  const [transform, setTransform] = useState(() => {
+    if (initialFace && compositeImage) {
+      const auto = computeAutoFraming(
+        initialFace,
+        compositeImage.width,
+        compositeImage.height,
+        ID_STANDARDS[0]
+      );
+      return {
+        scale: auto.scale || 1,
+        offsetX: auto.offsetX || 0,
+        offsetY: auto.offsetY || 0,
+        rotation: auto.rotation || 0,
+        brightness: 0,
+        contrast: 0,
+        saturation: 0,
+        sharpness: 15
+      };
+    }
+    return {
+      scale: 1,
+      offsetX: 0,
+      offsetY: 0,
+      rotation: 0,
+      brightness: 0,
+      contrast: 0,
+      saturation: 0,
+      sharpness: 15
+    };
   });
+
   useEffect(() => {
     if (!face && compositeImage) {
+      let isMounted = true;
       detectFace(compositeImage).then((detected) => {
-        if (detected) {
+        if (isMounted && detected) {
           setFace(detected);
           const auto = computeAutoFraming(
             detected,
@@ -59,6 +81,9 @@ const Step3Framing = ({
           }));
         }
       });
+      return () => {
+        isMounted = false;
+      };
     }
   }, [compositeImage, face, selectedStandard]);
   const handleAutoAlign = () => {
@@ -274,28 +299,24 @@ const Step3Framing = ({
               </button>
             </div>
 
-            {
-    /* Zoom Slider */
-  }
+            {/* Zoom Slider */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-on-surface">
                 <span className="font-medium">{t.zoom}</span>
                 <span className="font-mono text-on-surface-variant">{Math.round(transform.scale * 100)}%</span>
               </div>
               <input
-    type="range"
-    min="0.5"
-    max="2.5"
-    step="0.05"
-    value={transform.scale}
-    onChange={(e) => setTransform({ ...transform, scale: Number(e.target.value) })}
-    className="h-1.5 w-full cursor-pointer accent-brand-cyan-bright"
-  />
+                type="range"
+                min="0.3"
+                max="3.5"
+                step="0.02"
+                value={transform.scale}
+                onChange={(e) => setTransform({ ...transform, scale: Number(e.target.value) })}
+                className="h-1.5 w-full cursor-pointer accent-brand-cyan-bright"
+              />
             </div>
 
-            {
-    /* Rotation / Straighten Slider */
-  }
+            {/* Rotation / Straighten Slider */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-on-surface">
                 <div className="flex items-center gap-1">
@@ -305,33 +326,48 @@ const Step3Framing = ({
                 <span className="font-mono text-on-surface-variant">{transform.rotation}°</span>
               </div>
               <input
-    type="range"
-    min="-15"
-    max="15"
-    step="0.2"
-    value={transform.rotation}
-    onChange={(e) => setTransform({ ...transform, rotation: Number(e.target.value) })}
-    className="h-1.5 w-full cursor-pointer accent-brand-cyan-bright"
-  />
+                type="range"
+                min="-15"
+                max="15"
+                step="0.2"
+                value={transform.rotation}
+                onChange={(e) => setTransform({ ...transform, rotation: Number(e.target.value) })}
+                className="h-1.5 w-full cursor-pointer accent-brand-cyan-bright"
+              />
             </div>
 
-            {
-    /* Pan Vertical Slider */
-  }
+            {/* Pan Horizontal Slider */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs text-on-surface">
+                <span className="font-medium">{t.panX || 'Dịch chuyển ngang'}</span>
+                <span className="font-mono text-on-surface-variant">{transform.offsetX}px</span>
+              </div>
+              <input
+                type="range"
+                min="-300"
+                max="300"
+                step="1"
+                value={transform.offsetX}
+                onChange={(e) => setTransform({ ...transform, offsetX: Number(e.target.value) })}
+                className="h-1.5 w-full cursor-pointer accent-brand-cyan-bright"
+              />
+            </div>
+
+            {/* Pan Vertical Slider */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-on-surface">
                 <span className="font-medium">{t.panY}</span>
                 <span className="font-mono text-on-surface-variant">{transform.offsetY}px</span>
               </div>
               <input
-    type="range"
-    min="-150"
-    max="150"
-    step="1"
-    value={transform.offsetY}
-    onChange={(e) => setTransform({ ...transform, offsetY: Number(e.target.value) })}
-    className="h-1.5 w-full cursor-pointer accent-brand-cyan-bright"
-  />
+                type="range"
+                min="-300"
+                max="300"
+                step="1"
+                value={transform.offsetY}
+                onChange={(e) => setTransform({ ...transform, offsetY: Number(e.target.value) })}
+                className="h-1.5 w-full cursor-pointer accent-brand-cyan-bright"
+              />
             </div>
 
             {

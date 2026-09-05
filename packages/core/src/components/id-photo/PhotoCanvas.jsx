@@ -95,9 +95,10 @@ const PhotoCanvas = ({
     ctx.beginPath();
     ctx.rect(0, 0, targetW, targetH);
     ctx.clip();
-    const scale = transform.scale;
-    const drawW = srcW * scale;
-    const drawH = srcH * scale;
+    const baseScale = Math.max(targetW / srcW, targetH / srcH);
+    const totalScale = baseScale * transform.scale;
+    const drawW = srcW * totalScale;
+    const drawH = srcH * totalScale;
     const drawX = targetW / 2 + transform.offsetX;
     const drawY = targetH / 2 + transform.offsetY;
     ctx.translate(drawX, drawY);
@@ -134,6 +135,15 @@ const PhotoCanvas = ({
   const handlePointerUp = () => {
     isDraggingRef.current = false;
   };
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const zoomDelta = -e.deltaY * 0.001;
+    const newScale = Math.max(0.3, Math.min(3.5, transform.scale + zoomDelta));
+    onTransformChange({
+      ...transform,
+      scale: Math.round(newScale * 100) / 100
+    });
+  };
   return <div className="flex flex-col items-center">
       <div
     ref={containerRef}
@@ -141,6 +151,7 @@ const PhotoCanvas = ({
     onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
     onMouseUp={handlePointerUp}
     onMouseLeave={handlePointerUp}
+    onWheel={handleWheel}
     onTouchStart={(e) => {
       if (e.touches.length === 1) {
         handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);

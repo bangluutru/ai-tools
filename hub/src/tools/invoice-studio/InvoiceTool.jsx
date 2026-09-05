@@ -6,7 +6,7 @@ import {
   Building2, CalendarDays, DollarSign, FileCheck,
   Receipt, CheckCircle2, AlertCircle, Sparkles,
   ExternalLink, Copy, Check, FileText, X,
-  FolderArchive, ChevronDown, ChevronUp, Code
+  FolderArchive, ChevronDown, ChevronUp, Code, SlidersHorizontal
 } from 'lucide-react';
 import { useLocalStorage } from '@ai-tools/core/hooks/useLocalStorage.js';
 import { parseLocalizedNumber } from '@ai-tools/core/utils/accounting/reconcile.js';
