@@ -11,6 +11,7 @@ export { default as AutoBiView } from './components/AutoBiView.jsx';
 export { default as BarcodeQrStudioView } from './components/BarcodeQrStudioView.jsx';
 export { default as ExcelMappingView } from './components/ExcelMappingView.jsx';
 export { default as IdPhotoStudioView } from './components/IdPhotoStudioView.jsx';
+export { default as BusinessCardStudioView } from './components/BusinessCardStudioView.jsx';
 export { default as OmniConvertView } from './components/OmniConvertView.jsx';
 export { default as ScreenCaptureView } from './components/ScreenCaptureView.jsx';
 export { default as WatermarkStudioView } from './components/WatermarkStudioView.jsx';

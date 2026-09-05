@@ -36,6 +36,7 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "6.2.108",
     "qr-code-styling": "^1.8.4",
+    "qrcode": "^1.5.4",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"

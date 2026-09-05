@@ -98,10 +98,31 @@ const toolGovernance = {
     readiness: 'beta',
     processing: 'browser',
     outputPurpose: 'utility'
+  },
+  'business-card-studio': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility'
   }
 };
 
 const toolDefinitions = [
+  {
+    id: 'business-card-studio',
+    name_vn: 'Tạo Danh Thiếp & Namecard AI',
+    name_en: 'AI Business Card & Meishi Studio',
+    name_ja: '名刺作成＆ビジネスカードスタジオ',
+    desc_vn: 'Thiết kế danh thiếp chuẩn in 300 DPI kèm bù xén 3mm & dấu Tonbo. Quét AI OCR từ ảnh danh thiếp cũ, 28 phong cách và in hàng loạt nhân viên.',
+    desc_en: 'Commercial 300 DPI business card maker with 3mm bleed & Japanese Tonbo marks. AI OCR old cards, 28 templates & CSV batch employee generator.',
+    desc_ja: '塗り足し3mm・トンボ付き300 DPI印刷用名刺ジェネレーター。名刺写真からのAI OCR認識、28種類のテンプレート、CSV社員一括作成対応。',
+    category: 'image',
+    icon: 'Contact',
+    gradient: 'from-blue-600 via-indigo-600 to-amber-500',
+    color: '#3b82f6',
+    badge: 'PRINT READY',
+    popular: true,
+    tags: ['business card', 'namecard', 'danh thiếp', 'meishi', '名刺', 'in ấn', 'tonbo', 'トンボ', 'ocr', 'vcard', 'qr', 'print']
+  },
   {
     id: 'id-photo-studio',
     name_vn: 'Tạo Ảnh Thẻ & Hộ Chiếu Chuẩn',
