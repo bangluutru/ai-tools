@@ -1081,14 +1081,14 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   <Sliders className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Cài Đặt Chuyển Đổi Nâng Cao</h3>
-                  <p className="text-xs text-slate-400">Tùy chỉnh khổ giấy, chất lượng và độ phân giải xuất</p>
+                  <h3 className="text-sm font-bold text-on-surface">Cài Đặt Chuyển Đổi Nâng Cao</h3>
+                  <p className="text-xs text-on-surface-variant">Tùy chỉnh khổ giấy, chất lượng và độ phân giải xuất</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-container transition-colors"
+                className="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-subtle transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1200,7 +1200,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
           <div className="relative w-full max-w-4xl h-[85vh] bg-surface border border-border-subtle rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface-container/60">
               <div className="truncate">
-                <h3 className="text-sm font-bold text-white truncate">
+                <h3 className="text-sm font-bold text-on-surface truncate">
                   {previewItem.result?.filename || previewItem.file?.name}
                 </h3>
               </div>
@@ -1209,7 +1209,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   <button
                     type="button"
                     onClick={() => handleDownloadSingle(previewItem)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-md transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-emerald-400 text-white text-xs font-bold shadow-md transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Tải về</span>
@@ -1218,7 +1218,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 <button
                   type="button"
                   onClick={closePreview}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-container transition-colors"
+                  className="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-subtle transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1236,14 +1236,14 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                     return <iframe src={previewUrl} title="PDF Preview" className="w-full h-full rounded-lg border border-border-subtle bg-white" />;
                   }
                   if (previewText !== null) {
-                    return <pre className="w-full h-full p-4 rounded-xl bg-surface border border-border-subtle text-xs font-mono text-slate-200 overflow-auto whitespace-pre-wrap">{previewText}</pre>;
+                    return <pre className="w-full h-full p-4 rounded-xl bg-surface border border-border-subtle text-xs font-mono text-on-surface overflow-auto whitespace-pre-wrap">{previewText}</pre>;
                   }
                   return (
                     <div className="text-center p-8 space-y-3">
-                      <div className="w-16 h-16 rounded-2xl bg-primary-container/20 text-primary-container border border-primary-container/30 flex items-center justify-center mx-auto">
+                      <div className="w-16 h-16 rounded-2xl bg-primary-container/20 text-primary border border-primary-container/30 flex items-center justify-center mx-auto">
                         <FileText className="w-8 h-8" />
                       </div>
-                      <h4 className="text-base font-bold text-white">Tệp đã sẵn sàng tải về</h4>
+                      <h4 className="text-base font-bold text-on-surface">Tệp đã sẵn sàng tải về</h4>
                       {previewItem.result && (
                         <button
                           type="button"

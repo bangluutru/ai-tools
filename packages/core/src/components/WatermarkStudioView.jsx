@@ -1941,8 +1941,8 @@ export default function WatermarkStudioView() {
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">Đóng Dấu Hoàn Tất!</h3>
-                  <p className="text-xs text-slate-400">{successfulItems.length} tệp đã xử lý thành công 100%</p>
+                  <h3 className="text-base font-bold text-on-surface">Đóng Dấu Hoàn Tất!</h3>
+                  <p className="text-xs text-on-surface-variant">{successfulItems.length} tệp đã xử lý thành công 100%</p>
                 </div>
               </div>
 
@@ -1953,14 +1953,14 @@ export default function WatermarkStudioView() {
                       <div className="flex items-center gap-2.5 min-w-0">
                         <FileCheck className="w-4 h-4 text-secondary shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-xs font-medium text-slate-200 truncate">{item.name}</p>
-                          <p className="text-[11px] font-mono text-slate-400">{formatFileSize(item.size)}</p>
+                          <p className="text-xs font-medium text-on-surface truncate">{item.name}</p>
+                          <p className="text-[11px] font-mono text-outline">{formatFileSize(item.size)}</p>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={function () { downloadBlob(item.resultBlob, 'watermarked_' + item.name); }}
-                        className="px-2.5 py-1.5 rounded-lg bg-surface hover:bg-surface-bright border border-border-subtle text-slate-200 text-xs font-medium flex items-center gap-1 transition-colors shrink-0"
+                        className="px-2.5 py-1.5 rounded-lg bg-surface hover:bg-surface-bright border border-border-subtle text-on-surface text-xs font-medium flex items-center gap-1 transition-colors shrink-0"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>Tải</span>
@@ -1974,7 +1974,7 @@ export default function WatermarkStudioView() {
                 <button
                   type="button"
                   onClick={handleDownloadZip}
-                  className="flex-1 py-3 px-4 rounded-xl bg-secondary hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                  className="flex-1 py-3 px-4 rounded-xl bg-secondary hover:bg-emerald-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
                 >
                   <Package className="w-4 h-4" />
                   <span>Tải Về Gói ZIP ({successfulItems.length})</span>
@@ -1982,7 +1982,7 @@ export default function WatermarkStudioView() {
                 <button
                   type="button"
                   onClick={function () { setIsExportOpen(false); }}
-                  className="py-3 px-4 rounded-xl bg-surface hover:bg-surface-container border border-border-subtle text-slate-300 text-xs font-medium transition-colors"
+                  className="py-3 px-4 rounded-xl bg-surface hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface text-xs font-medium transition-colors"
                 >
                   Đóng
                 </button>
@@ -1997,31 +1997,31 @@ export default function WatermarkStudioView() {
       {/* ==================================================================== */}
       {isHelpOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-surface border border-border-subtle rounded-2xl max-w-xl w-full p-6 shadow-2xl relative text-slate-100 flex flex-col max-h-[90vh]">
+          <div className="bg-surface border border-border-subtle rounded-2xl max-w-xl w-full p-6 shadow-2xl relative text-on-surface flex flex-col max-h-[90vh]">
             <button
               type="button"
               onClick={function () { setIsHelpOpen(false); }}
-              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-container transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-primary-container/20 border border-primary-container/30 flex items-center justify-center text-primary-container">
+              <div className="w-10 h-10 rounded-xl bg-primary-container/20 border border-primary-container/30 flex items-center justify-center text-primary">
                 <Zap className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Hướng Dẫn Sử Dụng Watermark Studio</h3>
-                <p className="text-xs text-slate-400">Công nghệ đóng dấu bảo mật đa định dạng v3.1</p>
+                <h3 className="text-base font-bold text-on-surface">Hướng Dẫn Sử Dụng Watermark Studio</h3>
+                <p className="text-xs text-on-surface-variant">Công nghệ đóng dấu bảo mật đa định dạng v3.1</p>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-xs text-slate-300">
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-xs text-on-surface-variant">
               <div className="p-3.5 rounded-xl bg-surface-container/60 border border-border-subtle">
-                <h4 className="font-semibold text-slate-100 flex items-center gap-1.5 mb-1.5">
+                <h4 className="font-semibold text-on-surface flex items-center gap-1.5 mb-1.5">
                   <ShieldCheck className="w-4 h-4 text-secondary" />
                   <span>100% An Toàn & Client-Side</span>
                 </h4>
-                <p className="leading-relaxed text-slate-400">
+                <p className="leading-relaxed text-outline">
                   Tất cả tệp dữ liệu được xử lý trong RAM máy của bạn thông qua Canvas API và PDF-Lib WebAssembly. Tuyệt đối không gửi dữ liệu ra máy chủ ngoại biên.
                 </p>
               </div>

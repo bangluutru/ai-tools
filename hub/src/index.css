@@ -5,11 +5,53 @@
 /* ==========================================================================
    AI-Tools Hub Design Tokens & Global Styles
    ========================================================================== */
-:root {
+:root,
+[data-theme="dark"] {
+  /* RGB channels for Tailwind alpha opacity support */
+  --surface-canvas-rgb: 9 13 22;
+  --surface-dim-rgb: 11 19 38;
+  --surface-rgb: 11 19 38;
+  --surface-bright-rgb: 49 57 77;
+  --surface-subtle-rgb: 30 41 59;
+  --surface-container-lowest-rgb: 6 14 32;
+  --surface-container-low-rgb: 19 27 46;
+  --surface-container-rgb: 23 31 51;
+  --surface-container-high-rgb: 34 42 61;
+  --surface-container-highest-rgb: 45 52 73;
+  --surface-variant-rgb: 45 52 73;
+  --border-subtle-rgb: 51 65 85;
+  --border-card-rgb: 30 41 59;
+  --outline-rgb: 136 146 155;
+  --outline-variant-rgb: 62 72 80;
+  --on-surface-rgb: 218 226 253;
+  --on-surface-variant-rgb: 190 200 210;
+  --inverse-surface-rgb: 218 226 253;
+  --inverse-on-surface-rgb: 40 48 68;
+  --primary-rgb: 137 206 255;
+  --on-primary-rgb: 0 52 77;
+  --primary-container-rgb: 14 165 233;
+  --on-primary-container-rgb: 0 55 81;
+  --brand-cyan-bright-rgb: 56 189 248;
+  --secondary-rgb: 78 222 163;
+  --on-secondary-rgb: 0 56 36;
+  --secondary-container-rgb: 0 165 114;
+  --on-secondary-container-rgb: 0 49 31;
+  --brand-emerald-deep-rgb: 5 150 105;
+  --tertiary-rgb: 255 184 110;
+  --on-tertiary-rgb: 73 41 0;
+  --tertiary-container-rgb: 222 135 18;
+  --on-tertiary-container-rgb: 77 43 0;
+  --error-rgb: 255 180 171;
+  --on-error-rgb: 105 0 5;
+  --error-container-rgb: 147 0 10;
+  --on-error-container-rgb: 255 218 214;
+
+  /* Direct CSS values */
   --bg-primary: #090D16;
   --surface-canvas: #090D16;
   --surface-dim: #0b1326;
   --surface: #0b1326;
+  --surface-bright: #31394d;
   --surface-subtle: #1E293B;
   --surface-container-lowest: #060e20;
   --surface-container-low: #131b2e;
@@ -38,43 +80,125 @@
   --tertiary-container: #de8712;
   --on-tertiary-container: #4d2b00;
   --error: #ffb4ab;
+  --on-error: #690005;
   --error-container: #93000a;
+  --on-error-container: #ffdad6;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-xl: 20px;
 }
 
+[data-theme="light"] {
+  /* RGB channels for Tailwind alpha opacity support in Light mode */
+  --surface-canvas-rgb: 248 250 252;       /* #f8fafc slate-50 */
+  --surface-dim-rgb: 241 245 249;          /* #f1f5f9 slate-100 */
+  --surface-rgb: 255 255 255;              /* #ffffff white */
+  --surface-bright-rgb: 255 255 255;
+  --surface-subtle-rgb: 241 245 249;       /* #f1f5f9 slate-100 */
+  --surface-container-lowest-rgb: 255 255 255;
+  --surface-container-low-rgb: 248 250 252;
+  --surface-container-rgb: 255 255 255;     /* #ffffff */
+  --surface-container-high-rgb: 226 232 240; /* #e2e8f0 slate-200 */
+  --surface-container-highest-rgb: 203 213 225; /* #cbd5e1 slate-300 */
+  --surface-variant-rgb: 241 245 249;
+  --border-subtle-rgb: 226 232 240;        /* #e2e8f0 slate-200 */
+  --border-card-rgb: 226 232 240;
+  --outline-rgb: 100 116 139;              /* #64748b slate-500 */
+  --outline-variant-rgb: 203 213 225;      /* #cbd5e1 slate-300 */
+  --on-surface-rgb: 15 23 42;              /* #0f172a slate-900 (crisp high contrast) */
+  --on-surface-variant-rgb: 71 85 105;     /* #475569 slate-600 */
+  --inverse-surface-rgb: 15 23 42;
+  --inverse-on-surface-rgb: 248 250 252;
+  --primary-rgb: 2 132 199;                /* #0284c7 sky-600 */
+  --on-primary-rgb: 255 255 255;
+  --primary-container-rgb: 14 165 233;     /* #0ea5e9 sky-500 */
+  --on-primary-container-rgb: 255 255 255;
+  --brand-cyan-bright-rgb: 2 132 199;      /* #0284c7 */
+  --secondary-rgb: 5 150 105;              /* #059669 emerald-600 */
+  --on-secondary-rgb: 255 255 255;
+  --secondary-container-rgb: 16 185 129;   /* #10b981 emerald-500 */
+  --on-secondary-container-rgb: 255 255 255;
+  --brand-emerald-deep-rgb: 4 120 87;      /* #047857 */
+  --tertiary-rgb: 217 119 6;               /* #d97706 amber-600 */
+  --on-tertiary-rgb: 255 255 255;
+  --tertiary-container-rgb: 245 158 11;    /* #f59e0b */
+  --on-tertiary-container-rgb: 255 255 255;
+  --error-rgb: 220 38 38;                  /* #dc2626 red-600 */
+  --on-error-rgb: 255 255 255;
+  --error-container-rgb: 254 226 226;      /* #fee2e2 red-100 */
+  --on-error-container-rgb: 153 27 27;     /* #991b1b red-800 */
+
+  /* Direct CSS values in Light mode */
+  --bg-primary: #f8fafc;
+  --surface-canvas: #f8fafc;
+  --surface-dim: #f1f5f9;
+  --surface: #ffffff;
+  --surface-bright: #ffffff;
+  --surface-subtle: #f1f5f9;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f8fafc;
+  --surface-container: #ffffff;
+  --surface-container-high: #e2e8f0;
+  --surface-container-highest: #cbd5e1;
+  --surface-variant: #f1f5f9;
+  --border-subtle: #e2e8f0;
+  --border-card: #e2e8f0;
+  --on-surface: #0f172a;
+  --on-surface-variant: #475569;
+  --outline: #64748b;
+  --outline-variant: #cbd5e1;
+  --primary: #0284c7;
+  --on-primary: #ffffff;
+  --primary-container: #0ea5e9;
+  --on-primary-container: #ffffff;
+  --brand-cyan-bright: #0284c7;
+  --secondary: #059669;
+  --on-secondary: #ffffff;
+  --secondary-container: #10b981;
+  --on-secondary-container: #ffffff;
+  --brand-emerald-deep: #047857;
+  --tertiary: #d97706;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #f59e0b;
+  --on-tertiary-container: #ffffff;
+  --error: #dc2626;
+  --on-error: #ffffff;
+  --error-container: #fee2e2;
+  --on-error-container: #991b1b;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: #0b1326;
-  color: #dae2fd;
+  background-color: var(--surface-canvas);
+  color: var(--on-surface);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 @layer utilities {
-  .bg-surface-canvas { background-color: #090D16; }
-  .bg-surface-dim { background-color: #0b1326; }
-  .bg-surface { background-color: #0b1326; }
-  .bg-surface-subtle { background-color: #1E293B; }
-  .bg-surface-container-lowest { background-color: #060e20; }
-  .bg-surface-container-low { background-color: #131b2e; }
-  .bg-surface-container { background-color: #171f33; }
-  .bg-surface-container-high { background-color: #222a3d; }
-  .bg-surface-container-highest { background-color: #2d3449; }
-  .bg-surface-variant { background-color: #2d3449; }
-  .bg-primary-container { background-color: #0ea5e9; }
-  .text-on-surface { color: #dae2fd; }
-  .text-on-surface-variant { color: #bec8d2; }
-  .text-primary { color: #89ceff; }
-  .text-on-primary { color: #00344d; }
-  .text-primary-container { color: #0ea5e9; }
-  .text-on-primary-container { color: #003751; }
-  .text-secondary { color: #4edea3; }
-  .text-tertiary { color: #ffb86e; }
-  .text-outline { color: #88929b; }
-  .border-border-subtle { border-color: #334155; }
+  .bg-surface-canvas { background-color: var(--surface-canvas); }
+  .bg-surface-dim { background-color: var(--surface-dim); }
+  .bg-surface { background-color: var(--surface); }
+  .bg-surface-subtle { background-color: var(--surface-subtle); }
+  .bg-surface-container-lowest { background-color: var(--surface-container-lowest); }
+  .bg-surface-container-low { background-color: var(--surface-container-low); }
+  .bg-surface-container { background-color: var(--surface-container); }
+  .bg-surface-container-high { background-color: var(--surface-container-high); }
+  .bg-surface-container-highest { background-color: var(--surface-container-highest); }
+  .bg-surface-variant { background-color: var(--surface-variant); }
+  .bg-primary-container { background-color: var(--primary-container); }
+  .text-on-surface { color: var(--on-surface); }
+  .text-on-surface-variant { color: var(--on-surface-variant); }
+  .text-primary { color: var(--primary); }
+  .text-on-primary { color: var(--on-primary); }
+  .text-primary-container { color: var(--primary-container); }
+  .text-on-primary-container { color: var(--on-primary-container); }
+  .text-secondary { color: var(--secondary); }
+  .text-tertiary { color: var(--tertiary); }
+  .text-outline { color: var(--outline); }
+  .border-border-subtle { border-color: var(--border-subtle); }
 }
 
 /* Custom Scrollbar */
@@ -87,11 +211,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(140, 150, 170, 0.28);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(140, 150, 170, 0.48);
 }
 
 /* ==========================================================================

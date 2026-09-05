@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Search, Globe, Settings2, Code2, X } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navbar({
   displayLang,
@@ -103,6 +104,9 @@ export default function Navbar({
 
         {/* Essential Right Controls */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* Theme Selector (Light/Dark/System) */}
+          <ThemeToggle displayLang={displayLang} />
+
           {/* Language Selector */}
           <div className="relative">
             <button

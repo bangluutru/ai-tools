@@ -24,3 +24,19 @@ export { useAntigravityAgent } from './hooks/useAntigravityAgent.js';
 
 // Storage Service
 export { default as storage } from './services/storage.js';
+
+// Theme System (Single Source of Truth)
+export {
+  THEME_STORAGE_KEY,
+  THEMES,
+  getStoredThemePreference,
+  setStoredThemePreference,
+  getSystemTheme,
+  resolveTheme,
+  applyThemeToDom,
+  applyTheme,
+  initTheme,
+  subscribeTheme,
+} from './theme/themeManager.js';
+export { useTheme } from './theme/useTheme.js';
+

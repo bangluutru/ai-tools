@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, ChevronDown, ChevronRight, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { categories } from '../config/toolsRegistry';
+import ThemeToggle from './ThemeToggle';
 
 export default function ToolContainer({ currentTool, onBackToHub, onSelectTool, displayLang, tools, children }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -99,12 +100,15 @@ export default function ToolContainer({ currentTool, onBackToHub, onSelectTool, 
           </div>
         </div>
 
-        {/* Right Header: Subtle Privacy Note */}
-        <div className="flex items-center gap-1.5 shrink-0 text-xs text-outline">
-          <ShieldCheck size={14} className="text-secondary shrink-0" />
-          <span className="hidden sm:inline">
-            {isClientSide ? 'Xử lý trực tiếp trên trình duyệt' : 'Xử lý bảo mật'}
-          </span>
+        {/* Right Header: Theme Selector & Subtle Privacy Note */}
+        <div className="flex items-center gap-3 shrink-0">
+          <ThemeToggle displayLang={displayLang} />
+          <div className="flex items-center gap-1.5 text-xs text-outline">
+            <ShieldCheck size={14} className="text-secondary shrink-0" />
+            <span className="hidden sm:inline">
+              {isClientSide ? 'Xử lý trực tiếp trên trình duyệt' : 'Xử lý bảo mật'}
+            </span>
+          </div>
         </div>
       </header>
 

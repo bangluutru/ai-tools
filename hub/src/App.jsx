@@ -25,6 +25,7 @@ import {
   toolsForCategory,
   visibleCategoryIds,
 } from './utils/toolFilter';
+import { useTheme } from '@ai-tools/core';
 
 // =========================================================================
 // ISOLATED LAZY LOADED TOOLS (Code-Splitting)
@@ -58,6 +59,7 @@ const toolComponentMap = {
 };
 
 export default function App() {
+  useTheme();
   const [displayLang, setDisplayLang] = useState(() => localStorage.getItem('hub_lang') || 'vi');
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');

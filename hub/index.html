@@ -5,7 +5,24 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI-Tools Master Hub - Trung tâm công cụ PDF, Ảnh & AI All-in-One</title>
-    <meta name="description" content="Trung tâm công cụ trực tuyến xử lý PDF, chuyển đổi WebP, văn bản pháp lý, hóa đơn và dịch thuật AI 100% Client-side bảo mật." />
+    <script>
+      (function() {
+        try {
+          var pref = localStorage.getItem('ai_tools_theme');
+          var isDark = pref === 'dark' || (!pref || pref === 'system' ? window.matchMedia('(prefers-color-scheme: dark)').matches : false);
+          var resolved = isDark ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', resolved);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+          } else {
+            document.documentElement.classList.add('light');
+            document.documentElement.classList.remove('dark');
+          }
+          document.documentElement.style.colorScheme = resolved;
+        } catch (e) {}
+      })();
+    </script>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
