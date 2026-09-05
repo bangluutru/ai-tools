@@ -400,6 +400,9 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
           console.warn('QR render notice:', err);
         }
       } else if (mode === 'barcode') {
+        if (qrContainerRef.current) {
+          qrContainerRef.current.innerHTML = '';
+        }
         const validation = validateAndFixBarcode(barcodeConfig.symbology, barcodeConfig.value);
         if (barcodeSvgRef.current && validation.isValid) {
           try {
@@ -1536,20 +1539,26 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
             </div>
 
             {/* Dynamic Container QR / Barcode Canvas */}
-            <div className="w-full aspect-square bg-surface-light rounded-xl p-6 flex flex-col items-center justify-center relative overflow-hidden shadow-inner transition-all">
+            <div className={`w-full aspect-square bg-surface-container-lowest border border-border-subtle rounded-xl p-6 flex flex-col items-center justify-center relative overflow-hidden shadow-inner transition-all ${
+              isLabelPreview ? 'ring-2 ring-primary/40 ring-offset-2 ring-offset-surface-canvas' : ''
+            }`}>
               {/* Actual Canvas or SVG Container */}
               <div className="flex flex-col items-center justify-center gap-3 w-full h-full">
-                {mode === 'qr' ? (
-                  <div ref={qrContainerRef} className="w-56 h-56 flex items-center justify-center" />
+                {mode === 'qr' || (mode === 'batch' && batchType === 'qr') ? (
+                  <div key="preview-qr-container" ref={qrContainerRef} className="w-56 h-56 flex items-center justify-center transition-all" />
                 ) : (
-                  <div className="w-full flex items-center justify-center py-4">
+                  <div key="preview-barcode-container" className="w-full flex items-center justify-center py-4 transition-all">
                     <svg ref={barcodeSvgRef} className="max-w-full h-auto" />
                   </div>
                 )}
                 {/* Dynamic Label Footer inside print visual */}
-                <span className="text-[#090D16] text-sm font-semibold tracking-tight text-center max-w-[90%] truncate">
-                  {mode === 'qr' ? qrConfig.labelTitle : barcodeConfig.labelTitle}
-                </span>
+                {((mode === 'qr' ? qrConfig.labelTitle : barcodeConfig.labelTitle)?.trim()) ? (
+                  <div className="flex items-center justify-center px-3.5 py-1.5 rounded-md bg-surface-container-high/90 border border-border-subtle max-w-[90%] shadow-sm mt-1">
+                    <span className="text-on-surface font-semibold text-xs sm:text-sm tracking-tight text-center truncate">
+                      {mode === 'qr' ? qrConfig.labelTitle : barcodeConfig.labelTitle}
+                    </span>
+                  </div>
+                ) : null}
               </div>
 
               {/* Label Dimension Overlay */}
