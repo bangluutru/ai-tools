@@ -148,6 +148,16 @@ Mọi miniapp bắt buộc tham chiếu ma trận phối màu đã được ch�
 2. **CẤM DÙNG MÀU CHỮ THƯƠNG HIỆU QUÁ SÁNG LÀM CHỮ TRÊN NỀN TRẮNG**: Không dùng `#0ea5e9` (Sky 500, tương phản 2.77:1) hoặc `#10b981` (Emerald 500, tương phản 2.21:1) làm màu chữ trên nền trắng.
 3. **CẤM THU NHỎ CỠ CHỮ DƯỚI 11PX CHO NỘI DUNG QUAN TRỌNG**: Cỡ chữ `10px` chỉ được phép dùng cho mã hash hoặc watermark không bắt buộc; toàn bộ nhãn chức năng phải từ `11px` (`text-[11px] font-semibold`) trở lên kèm màu tương phản cao.
 4. **CẤM TRẠNG THÁI FOCUS VÔ HÌNH (NO OUTLINE FOCUS)**: Mọi nút bấm, thẻ tương tác và input phải có trạng thái `:focus-visible` với viền `ring-2 ring-primary ring-offset-2`.
+5. **CẤM DÙNG TINTS MỜ CHO TRẠNG THÁI ACTIVE / SELECTED (THE TINTS CONTRAST TRAP)**: Tuyệt đối không dùng `bg-primary-container/20 text-primary-container` hoặc `bg-secondary/15 text-secondary` cho các nút bấm hành động hoặc tab đang được chọn trong Light Mode (độ tương phản chỉ đạt 4.22:1, vi phạm WCAG AA). Bắt buộc dùng `bg-primary text-on-primary` hoặc `bg-secondary text-on-secondary`.
+
+#### 5. Tiêu Chuẩn Trợ Năng Động & Bàn Phím (Dynamic State Accessibility & Keyboard Navigation):
+1. **Accessible Names trên Interactive Controls**: 100% nút icon không có nhãn chữ đi kèm (thu nhỏ/phóng to `ZoomIn`/`ZoomOut`, phân trang `ChevronLeft`/`ChevronRight`, bật tắt lưới/tương phản `Grid`/`Contrast`, xóa tệp `Trash2`, đóng modal `X`, tải tệp, sao chép) bắt buộc phải có thuộc tính `aria-label="..."`.
+2. **Keyboard Accessible Scrollable Regions**: Mọi vùng nội dung có thanh cuộn nội bộ (`overflow-y-auto`, `overflow-x-auto` như hàng đợi tệp tin, danh sách kết quả, bảng tính dữ liệu, khối mã lệnh) bắt buộc phải có:
+   - `tabIndex={0}` để người dùng duyệt bằng bàn phím (Tab) có thể focus vào container.
+   - `role="region"` để trình đọc màn hình (Screen Reader) nhận diện được phân vùng.
+   - `aria-label="..."` mô tả ngắn gọn nội dung của vùng cuộn (ví dụ: `aria-label="Danh sách tệp đã tải lên"`).
+3. **Bảo Toàn Nhãn Ngữ Nghĩa Cho Form Controls Động**: Các thanh trượt tham số `<input type="range">`, ô chọn màu `<input type="color">`, ô nhập mã HEX xuất hiện ở các bước nâng cao bắt buộc phải có `aria-label` hoặc thẻ `<label htmlFor="...">` tương ứng.
+4. **Cơ Chế Khóa Tiêu Điểm (Focus Trap) Trong Modal**: Mọi hộp thoại Modal / Drawer khi mở ra phải tự động focus vào nút đóng hoặc nút hành động đầu tiên, và ngăn focus thoát ra ngoài phần tử nền khi Modal đang kích hoạt.
 
 ---
 
@@ -273,12 +283,13 @@ Trước khi một miniapp được chuyển từ trạng thái `in-development`
 ### 🔵 CỔNG 4: AUTOMATED REAL-BROWSER TESTING & DEEP FLOW VERIFICATION (KIỂM THỬ TRÌNH DUYỆT THẬT & LUỒNG SÂU)
 Được tự động hóa qua script: `npm run test:browser -- --flow` hoặc `npm run test:browser:tool -- <tool-id>`.
 - [ ] **Render thành công**: Mở route `#/tools/<tool-id>` nạp xong trong vòng < 2.0s.
-- [ ] **Zero Console Errors**: 0 lỗi `console.error`, 0 ngoại lệ `pageerror`.
+- [ ] **Zero Console Errors**: 0 lỗi `console.error`, 0 ngoại lệ `pageerror` trong suốt toàn bộ phiên làm việc tĩnh lẫn luồng tương tác sâu.
 - [ ] **Kiểm Trợ Năng Tự Động axe-core Kép (Initial & Dynamic State A11y Audit)**:
   - **Initial State Audit**: Quét WCAG 2.1 A & AA ngay khi nạp trang (Desktop & Mobile, Dark & Light Mode). Bắt buộc đạt **0 vi phạm (`violations: 0`)**.
-  - **Dynamic State Audit**: Tự động thực thi luồng tương tác sâu (nạp tệp mẫu synthetic, bấm nút tính toán/phân tích, chuyển tab kết quả) rồi quét lại axe-core. Toàn bộ các component động (thông báo cảnh báo, bảng kết quả, slider điều chỉnh, color picker) bắt buộc đạt **0 vi phạm (`violations: 0`)**.
-  - **Tiêu chuẩn Form Labels & Control Names**: Mọi `<input>` (bao gồm `range`, `color`, `text`), `<select>` phải có `<label htmlFor="...">` hoặc thuộc tính `aria-label` tường minh.
-  - Tỷ lệ tương phản chữ nhỏ đo đạc thực tế $\ge 4.5:1$, chữ lớn $\ge 3.0:1$.
+  - **Dynamic State Audit**: Tự động thực thi luồng tương tác sâu (nạp tệp mẫu synthetic, bấm nút tính toán/phân tích, chuyển tab kết quả, mở modal tải tệp/hướng dẫn) rồi quét lại axe-core. Toàn bộ các component động (thông báo cảnh báo, bảng kết quả, slider điều chỉnh, color picker, modal, dropzone) bắt buộc đạt **0 vi phạm (`violations: 0`)**.
+  - **Tiêu chuẩn Form Labels & Accessible Names**: Mọi `<input>` (bao gồm `range`, `color`, `text`, `file`), `<select>` phải có `<label htmlFor="...">` hoặc thuộc tính `aria-label` tường minh. Toàn bộ các nút icon không chứa văn bản trực quan bắt buộc có `aria-label`.
+  - **Vùng cuộn bàn phím (Keyboard Scrollable Regions)**: Mọi danh sách cuộn (`overflow-y-auto`, `overflow-x-auto`) bắt buộc gắn `tabIndex={0} role="region" aria-label="..."`.
+  - Tỷ lệ tương phản chữ nhỏ đo đạc thực tế $\ge 4.5:1$, chữ lớn $\ge 3.0:1$. Tuyệt đối không dùng class mờ 20% tint (`bg-*/20 text-*`) cho nút/tab active.
 - [ ] **Kiểm chứng Style Thực Tế (Computed Style)**:
   - Màu nền canvas chuẩn `--surface-canvas` (`#090D16` ở Dark Mode, `#f8fafc` ở Light Mode).
   - Thẻ làm việc có viền `--border-subtle` và nền `--surface-container`.
@@ -291,6 +302,7 @@ Trước khi một miniapp được chuyển từ trạng thái `in-development`
 - [ ] **Kiểm thử Kéo Thả & Luồng Dữ Liệu Tương Tác Sâu (Synthetic Flow Testing)**:
   - Kích hoạt DropZone với tệp fixture synthetic chuẩn (PDF, Excel XLSX, XML hóa đơn điện tử, ảnh mẫu).
   - Kiểm tra trạng thái chuyển bước (Wizard step progression), render bảng dữ liệu / canvas kết quả không sinh ngoại lệ.
+  - **Zero Horizontal Overflow Sau Tương Tác**: Sau khi nạp tệp và render dữ liệu thật/bảng kết quả, kiểm tra `document.documentElement.scrollWidth <= document.documentElement.clientWidth` trên iOS Safari (390px) và Android (393px) đảm bảo không bị xô lệch layout.
 - [ ] **Kiểm chứng Cơ Chế Cách Ly Sự Cố (Fault Isolation)**:
   - Kích hoạt thử nghiệm lỗi mô phỏng → Card `ToolErrorBoundary` hiển thị thông báo an toàn, bấm "Về Trung Tâm" đưa người dùng về Dashboard hoàn hảo.
 
@@ -332,9 +344,13 @@ npm test
 | Đã bọc trong `StandardToolLayout` hoặc `MiniAppLayout` | [ ] | Max 1240px |
 | 100% sử dụng CSS semantic tokens (không có `bg-white`, `text-black`) | [ ] | Tương thích cả Dark/Light |
 | Tỷ lệ tương phản chữ $\ge 4.5:1$ theo ma trận phối màu an toàn (không dùng `text-*-400`) | [ ] | Chuẩn WCAG 2.1 AA |
-| 100% dùng `lucide-react` (không có emoji làm icon) | [ ] | Đảm bảo tính chuyên nghiệp |
+| 100% dùng `lucide-react` (không có emoji làm icon trong nút bấm) | [ ] | Đảm bảo tính chuyên nghiệp |
+| 100% các nút icon và form slider/color controls có thuộc tính `aria-label` | [ ] | Accessible names |
+| 100% vùng cuộn nội bộ có `tabIndex={0} role="region" aria-label="..."` | [ ] | Keyboard navigation |
+| Không sử dụng class active tint mờ (`bg-*/20 text-*`) cho các nút bấm / tab được chọn | [ ] | Chống rớt tương phản Light Mode |
 | Mọi Blob URL đều có `URL.revokeObjectURL` | [ ] | Chống rò rỉ RAM |
 | LocalStorage có prefix `ai_tools_<id>_` | [ ] | Không đè dữ liệu miniapp khác |
 | Chạy `npm run audit:miniapps` trả về 0 lỗi | [ ] | Đạt Gate 1, 2, 3 |
-| Chạy `npm run test:browser:tool -- <id>` đạt 0 lỗi console & 0 vi phạm axe-core | [ ] | Đạt Gate 4 Trợ năng |
+| Chạy `node scripts/verify-miniapp-browser.mjs --tool=<id>` đạt `✔ Init+Dyn` (0 vi phạm axe-core) | [ ] | Đạt Gate 4 Trợ năng |
+| Zero Horizontal Overflow trên iOS Safari (390px) và Android (393px) sau khi nạp tệp | [ ] | Không tràn ngang màn hình |
 | Chạy `npm test` 100% xanh (bao gồm kiểm tra toán học tương phản token) | [ ] | Toàn vẹn hệ thống |

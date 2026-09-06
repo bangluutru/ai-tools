@@ -1659,6 +1659,7 @@ export default function WatermarkStudioView() {
                   })}
                   <input
                     type="color"
+                    aria-label="Màu tùy chỉnh"
                     value={config.color}
                     onChange={function (e) { handleConfigChange({ color: e.target.value }); }}
                     className="w-8 h-8 rounded-full border border-border-subtle bg-surface cursor-pointer p-0.5"

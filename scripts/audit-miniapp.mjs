@@ -239,6 +239,21 @@ function auditGate2(tool, files) {
         }
       }
     }
+
+    // Accessible Form Control Names Check (Range Slider, Color)
+    const unlabelledInputMatch = codeOnly.match(/<input[^>]*type=["'](range|color)["'][^>]*>/g);
+    if (unlabelledInputMatch) {
+      const missingAria = unlabelledInputMatch.filter((tag) => !tag.includes('aria-label') && !tag.includes('id=') && !tag.includes('id ='));
+      if (missingAria.length > 0) {
+        warnings.push(`${relPath}: Phát hiện ${missingAria.length} thẻ <input type="range/color"> thiếu aria-label hoặc label ngữ nghĩa`);
+      }
+    }
+
+    // Active Tints Contrast Trap Check
+    const activeTintMatch = codeOnly.match(/\bbg-(primary-container\/20|secondary\/15)\b[^\n]*\btext-(primary-container|secondary)\b/g);
+    if (activeTintMatch && activeTintMatch.length > 0) {
+      warnings.push(`${relPath}: Phát hiện ${activeTintMatch.length} vị trí dùng class tint (bg-*-container/20 text-*) có nguy cơ rớt tương phản WCAG AA ở Light Mode. Khuyến nghị đổi sang 'bg-primary text-on-primary'`);
+    }
   }
 
   if (!hasLayoutOrContainer) {

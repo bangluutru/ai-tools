@@ -157,6 +157,7 @@ Chạy `npm run audit:miniapps <id>` và `npm run test:browser:tool -- <id>` đ�
 | **Nạp Tệp (File Input)** | Thẻ `<input type="file">` mặc định, chỉ bấm click | **Dual-Contract Dropzone**: Kéo thả chuột + `<input type="file" className="hidden">` | Mang lại trải nghiệm hiện đại; cho phép các test runner headless nạp tệp tự động |
 | **Đa Ngôn Ngữ (i18n)** | Hardcode tiếng Anh hoặc tiếng Việt trong JSX | Nhận prop `displayLang`, dùng từ điển i18n (`vi`, `en`, `ja`) | Phục vụ người dùng quốc tế, đảm bảo metadata khai báo đầy đủ 3 ngôn ngữ |
 | **Độ Tương Phản & Trợ Năng (A11y)** | Dùng chữ mờ `text-gray-400`, `text-slate-400`, hoặc chữ xanh lá nhạt `#059669` trên nền trắng/pastel | Sử dụng semantic tokens an toàn: `text-on-surface-variant` (`#475569`, 5.45:1), `text-secondary` (`#065F46`, 7.70:1 / 6.24:1 trên pastel) | Đạt chuẩn WCAG 2.1 Level AA ($\ge 4.5:1$ cho chữ nhỏ), 0 lỗi axe-core |
+| **Trạng Thái Tương Tác & Vùng Cuộn Phím** | Nút icon không có chữ, thanh cuộn chỉ scroll bằng chuột | Bổ sung `aria-label` cho 100% nút icon; bọc container cuộn bằng `tabIndex={0} role="region" aria-label="..."` | Cho phép người dùng khiếm thị đọc được nhãn và người dùng bàn phím duyệt được danh sách cuộn |
 | **Quản Trị Sự Cố** | Khi gặp lỗi code không bắt được, trắng cả trang web | Bọc trong [ToolErrorBoundary](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/ai-tools/hub/src/components/ToolErrorBoundary.jsx) | Đảm bảo nút "Về Trung Tâm" luôn hoạt động an toàn, không sập toàn bộ Hub |
 
 ---
@@ -240,6 +241,48 @@ Chạy `npm run audit:miniapps <id>` và `npm run test:browser:tool -- <id>` đ�
     />
     ```
 
+### 6.7. Bẫy Trợ Năng Ở Trạng Thái Động (Dynamic State A11y Traps)
+- **Triệu chứng**: Khi vừa tải trang, kiểm tra trợ năng đạt 100% xanh. Nhưng khi người dùng thao tác kéo thả file, mở Modal kết quả hoặc xuất hiện thanh Mini-Toolbar điều khiển thì axe-core báo lỗi vi phạm nút không có nhãn hoặc danh sách cuộn không thể điều hướng bằng bàn phím.
+- **Nguyên nhân**:
+  - Các nút icon đóng Modal (`X`), nút thu nhỏ/phóng to (`ZoomIn`/`ZoomOut`), nút chuyển trang (`ChevronLeft`/`ChevronRight`), nút xóa tệp (`Trash2`) không chứa ký tự văn bản trực quan bên trong thẻ `<button>`.
+  - Danh sách tệp đã tải hoặc bảng kết quả có `overflow-y-auto` nhưng không có `tabIndex={0}` khiến người dùng chỉ dùng bàn phím không thể focus vào để cuộn.
+- **Giải pháp chuẩn hóa**:
+  ```jsx
+  /* 1. Nút icon bắt buộc có aria-label */
+  <button
+    type="button"
+    aria-label="Đóng cửa sổ xuất"
+    onClick={() => setIsOpen(false)}
+    className="..."
+  >
+    <X className="w-5 h-5" />
+  </button>
+
+  /* 2. Container cuộn nội bộ bắt buộc có tabIndex={0} và role="region" */
+  <div
+    tabIndex={0}
+    role="region"
+    aria-label="Danh sách tệp tin đã nạp"
+    className="max-h-[300px] overflow-y-auto focus:outline-none focus:ring-1 focus:ring-primary/40 ..."
+  >
+    {files.map(...)}
+  </div>
+  ```
+
+### 6.8. Bẫy Tương Phản Trạng Thái Active / Selected (The Tints Contrast Trap)
+- **Triệu chứng**: Khi nút hoặc tab chưa được click, chữ hiển thị rõ ràng. Nhưng khi người dùng click chọn (Active state), màu chữ bị mờ nhạt hoặc công cụ kiểm định axe-core báo lỗi `color-contrast` nghiêm trọng trong luồng tương tác sâu.
+- **Nguyên nhân**:
+  - Dùng kiểu hiển thị mờ đục: `bg-primary-container/20 text-primary-container` hoặc `bg-secondary/15 text-secondary`.
+  - Trong Dark Mode, màu nền đen giúp chữ 20% tint nhìn tương đối sáng. Nhưng ở Light Mode, chữ `#0369a1` đặt trên nền trắng pha 20% sky chỉ đạt tỷ lệ tương phản **4.22:1** (dưới ngưỡng 4.5:1 của WCAG AA).
+- **Giải pháp**:
+  - Khi Active/Selected, **luôn dùng màu nền đặc với chữ tương phản cao đối nghịch**:
+    ```jsx
+    /* ĐÚNG */
+    className={isSelected
+      ? 'bg-primary text-on-primary font-bold shadow-sm'
+      : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'}
+    ```
+
 ---
 
 ## ✅ 7. CHECKLIST NGHIỆM THU ĐƯA VÀO VẬN HÀNH
@@ -249,11 +292,63 @@ Trước khi commit và đưa miniapp mới vào production, hãy đảm bảo v
 - [ ] **Khung chứa:** Miniapp nằm gọn trong `max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8`.
 - [ ] **Màu sắc:** 0 class `bg-white`, 0 class `text-black`, 100% dùng CSS semantic tokens.
 - [ ] **Trợ năng WCAG 2.1 AA (Initial & Dynamic):** Tỷ lệ tương phản chữ $\ge 4.5:1$ (không dùng `text-*-400` hoặc chữ xanh/vàng sáng trên nền trắng/pastel), 100% form controls có `aria-label`, kiểm thử axe-core đạt 0 violations ở cả trạng thái ban đầu và trạng thái động sau khi nạp tệp.
+- [ ] **Accessible Names:** 100% các nút bấm icon không có text đi kèm phải có thuộc tính `aria-label` diễn giải rõ ràng.
+- [ ] **Keyboard Scrollable Regions:** 100% các vùng cuộn nội bộ (`overflow-y-auto`/`overflow-x-auto`) có `tabIndex={0} role="region" aria-label="..."`.
+- [ ] **Safe Active States:** Trạng thái Active/Selected dùng `bg-primary text-on-primary` hoặc `bg-secondary text-on-secondary`, không dùng biến thể mờ 20% tint.
 - [ ] **Biểu tượng:** 0 raw emoji trong các nút bấm, 100% dùng icon từ `lucide-react`.
 - [ ] **Đa ngôn ngữ:** Nhận prop `displayLang`, khai báo đủ 3 thứ tiếng trong `toolsRegistry.js`.
-- [ ] **Dropzone:** Có hỗ trợ kéo thả chuột và chứa thẻ `<input type="file" className="hidden">`.
-- [ ] **Mobile Responsive:** Đạt tiêu chuẩn Zero Horizontal Overflow trên iPhone (390px) và Android (360px).
+- [ ] **Dropzone:** Có hỗ trợ kéo thả chuột và chứa thẻ `<input type="file" className="hidden" aria-label="...">`.
+- [ ] **Mobile Responsive:** Đạt tiêu chuẩn Zero Horizontal Overflow trên iPhone (390px) và Android (360px) cả khi chưa nạp và sau khi nạp tệp dữ liệu.
 - [ ] **Cô lập lỗi:** Được bọc trong `ToolErrorBoundary`.
 - [ ] **Rà soát tĩnh:** Lệnh `npm run audit:miniapps <id>` đạt kết quả `PASS`.
-- [ ] **Kiểm thử trình duyệt & Luồng sâu:** Lệnh `node scripts/verify-miniapp-browser.mjs --tool=<id>` đạt 100% PASS (bao gồm cả Initial & Dynamic axe-core scan, 0 lỗi console).
+- [ ] **Kiểm thử trình duyệt & Luồng sâu:** Lệnh `node scripts/verify-miniapp-browser.mjs --tool=<id> --flow` đạt 100% PASS (bao gồm cả Initial & Dynamic axe-core scan = 0 lỗi, 0 console errors).
+
+---
+
+## 🧪 8. HƯỚNG DẪN THIẾT KẾ & ĐĂNG KÝ KỊCH BẢN KIỂM THỬ LUỒNG SÂU (DEEP WORKFLOW TESTING)
+
+Để miniapp của bạn được hệ thống kiểm thử tự động Gate 4 công nhận đạt chuẩn, hãy thiết kế tương tác theo 2 mô hình sau:
+
+### 8.1. Cơ chế Tự Động Nhận Diện (Smart Auto-Discovery Flow)
+Nếu miniapp của bạn tuân thủ đúng mẫu thiết kế chuẩn từ lệnh `npm run create:miniapp`:
+1. Có vùng kéo thả Dual-Contract chứa `<input type="file" className="hidden" aria-label="...">`.
+2. Có nút bấm thực thi với nội dung chứa chữ "Bắt đầu", "Xử lý", "Start", "Execute", hoặc "Chuyển đổi".
+
+$\rightarrow$ Hệ thống `verify-miniapp-browser.mjs` sẽ **tự động nạp tệp fixture synthetic tương ứng (ảnh, PDF, Excel hoặc XML)**, tự động bấm nút xử lý, chờ chuyển bước, và thực hiện quét `axe-core` trạng thái động mà bạn không cần phải cấu hình bất cứ mã script nào!
+
+### 8.2. Đăng Ký Kịch Bản Chuyên Sâu Tùy Biến (Custom Workflow Hook)
+Với các miniapp có luồng làm việc phức tạp nhiều bước (như wizard 3 bước, vẽ canvas, xuất gói ZIP), bạn có thể bổ sung kịch bản trong `scripts/verify-miniapp-browser.mjs`:
+
+```javascript
+// Thêm case vào triggerDeepWorkflow() trong scripts/verify-miniapp-browser.mjs:
+case 'my-custom-tool': {
+  // 1. Nạp tệp mẫu synthetic
+  const uploaded = await triggerFileUpload(page, FIXTURES.photo);
+  if (uploaded) {
+    console.log(`    ✔ Đã nạp ảnh vào My Custom Tool...`);
+    await new Promise((r) => setTimeout(r, 1000));
+
+    // 2. Mô phỏng người dùng tương tác: click nút cấu hình
+    await page.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Tùy chỉnh'));
+      if (btn) btn.click();
+    });
+    await new Promise((r) => setTimeout(r, 600));
+
+    // 3. Chụp màn hình lưu vết
+    await page.screenshot({ path: path.join(artifactsDir, 'gate4_my_custom_tool_flow.png') });
+    fileWorkflowPassed = 'PASSED (Custom Workflow)';
+  }
+  break;
+}
+```
+
+### 8.3. Lệnh Tự Kiểm Thử Cục Bộ Dành Cho Lập Trình Viên
+Trước khi tạo Pull Request, luôn chạy lệnh sau trên máy phát triển:
+```bash
+# Kiểm thử toàn diện trình duyệt thật + luồng sâu + trợ năng động:
+node scripts/verify-miniapp-browser.mjs --tool=<your-tool-id> --flow
+```
+Kết quả hiển thị cột `Trợ năng AA` đạt `✔ Init+Dyn` và kết luận `PASS 100%` là điều kiện bắt buộc để được merge vào hệ thống.
+
 

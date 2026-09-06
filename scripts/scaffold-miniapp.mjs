@@ -295,7 +295,7 @@ export default function ${toPascalCase(toolId)}View({ displayLang = 'vi' }) {
               type="file"
               onChange={handleInputChange}
               className="hidden"
-              aria-label="Tải tệp lên"
+              aria-label="Tải tệp tin lên từ thiết bị"
             />
 
             <div className="w-12 h-12 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center text-primary mb-3 shadow-inner">
@@ -341,6 +341,7 @@ export default function ${toPascalCase(toolId)}View({ displayLang = 'vi' }) {
               </div>
               <input
                 type="range"
+                aria-label="Chất lượng xử lý"
                 min="10"
                 max="100"
                 value={quality}
@@ -375,7 +376,7 @@ export default function ${toPascalCase(toolId)}View({ displayLang = 'vi' }) {
             <button
               type="button"
               onClick={handleDownload}
-              className="h-11 sm:h-10 px-5 rounded-xl bg-secondary text-white hover:brightness-110 text-xs font-bold transition-all shadow flex items-center gap-2 cursor-pointer"
+              className="h-11 sm:h-10 px-5 rounded-xl bg-secondary text-on-secondary hover:brightness-110 text-xs font-bold transition-all shadow flex items-center gap-2 cursor-pointer"
             >
               <Download size={15} />
               <span>{t.btnDownload}</span>
@@ -405,7 +406,12 @@ export default function ${toPascalCase(toolId)}View({ displayLang = 'vi' }) {
 
       {/* TIER 3: RESULT & EXPORT STAGE */}
       {hasResult && (
-        <div className="bg-surface-container border border-border-subtle rounded-2xl p-5 shadow-sm space-y-3 animate-in fade-in duration-300">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Kết quả thực thi"
+          className="bg-surface-container border border-border-subtle rounded-2xl p-5 shadow-sm space-y-3 animate-in fade-in duration-300 focus:outline-none focus:ring-1 focus:ring-primary/40"
+        >
           <div className="flex items-center justify-between border-b border-border-subtle/40 pb-3">
             <span className="text-xs font-bold text-on-surface flex items-center gap-2">
               <CheckCircle2 size={16} className="text-secondary" />
@@ -654,8 +660,8 @@ async function run() {
     console.log(`\n${c.bold}${c.green}🎉 KHỞI TẠO MINIAPP THÀNH CÔNG!${c.reset}`);
     console.log(`\n${c.bold}Các bước tiếp theo:${c.reset}`);
     console.log(`  1. Mở code tại: ${c.cyan}packages/core/src/components/${pascalName}View.jsx${c.reset} để phát triển logic`);
-    console.log(`  2. Chạy rà soát tĩnh: ${c.cyan}node scripts/audit-miniapp.mjs ${toolId}${c.reset}`);
-    console.log(`  3. Kiểm thử trên trình duyệt: ${c.cyan}npm run test:browser:tool -- ${toolId}${c.reset}`);
+    console.log(`  2. Chạy rà soát tĩnh (Gate 1, 2, 3): ${c.cyan}node scripts/audit-miniapp.mjs ${toolId}${c.reset}`);
+    console.log(`  3. Kiểm thử trình duyệt thật & luồng sâu (Gate 4): ${c.cyan}node scripts/verify-miniapp-browser.mjs --tool=${toolId} --flow${c.reset}`);
     return;
   }
 
@@ -775,7 +781,8 @@ async function run() {
     console.log(`  1. Đọc cẩm nang đối chiếu quy tắc tại: ${c.cyan}docs/MINIAPP_DEV_GUIDE.md${c.reset}`);
     console.log(`  2. Di chuyển logic nghiệp vụ từ codebase ngoài vào: ${c.cyan}packages/core/src/components/${pascalName}View.jsx${c.reset}`);
     console.log(`  3. Áp dụng bảng tra cứu ${c.cyan}docs/DESIGN_SYSTEM_REFERENCE.md${c.reset} để thay thế các class màu/icon`);
-    console.log(`  4. Chạy kiểm tra: ${c.cyan}node scripts/audit-miniapp.mjs ${toolId}${c.reset}`);
+    console.log(`  4. Chạy kiểm tra tĩnh (Gate 1, 2, 3): ${c.cyan}node scripts/audit-miniapp.mjs ${toolId}${c.reset}`);
+    console.log(`  5. Kiểm thử trình duyệt thật & luồng sâu (Gate 4): ${c.cyan}node scripts/verify-miniapp-browser.mjs --tool=${toolId} --flow${c.reset}`);
   }
 }
 
