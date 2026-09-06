@@ -1,34 +1,8 @@
 import React from 'react';
-import {
-  Image, Scissors, Combine, Printer, Scale, Globe,
-  Award, FileSpreadsheet, LayoutTemplate, Receipt, ArrowRight, ArrowUpRight, Sparkles,
-  BarChart3, HelpCircle, Calculator, Minimize2, Camera, QrCode, Barcode, UserCheck,
-  ShieldCheck, Cpu, HardDrive, Lock
-} from 'lucide-react';
-
-const iconMap = {
-  Image,
-  Scissors,
-  Combine,
-  Minimize2,
-  Camera,
-  QrCode,
-  Barcode,
-  Printer,
-  Scale,
-  Globe,
-  Award,
-  FileSpreadsheet,
-  LayoutTemplate,
-  Receipt,
-  BarChart3,
-  HelpCircle,
-  Calculator,
-  UserCheck
-};
+import { ArrowRight, ArrowUpRight, ShieldCheck, Cpu, HardDrive } from 'lucide-react';
+import { renderToolIcon } from '../config/toolIcons.js';
 
 export default function ToolCard({ tool, onSelectTool, displayLang = 'vi' }) {
-  const Icon = iconMap[tool.icon] || Sparkles;
   const isDisabled = tool.readiness === 'in-development';
 
   const getName = () => {
@@ -99,7 +73,7 @@ export default function ToolCard({ tool, onSelectTool, displayLang = 'vi' }) {
             className="w-11 h-11 rounded-lg bg-surface-subtle border border-border-subtle flex items-center justify-center transition-transform duration-200 group-hover:scale-105 shadow-inner"
             style={{ color: tool.color || '#38BDF8' }}
           >
-            <Icon size={22} />
+            {renderToolIcon(tool.icon, { size: 22 })}
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap justify-end">

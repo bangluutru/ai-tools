@@ -281,7 +281,7 @@ const toolDefinitions = [
     desc_en: 'Lightning-fast client-side conversion of DOCX, PPTX, XLSX, and images to PDF with zero server uploads.',
     desc_ja: 'サーバーにアップロードせずに、ブラウザ上でDOCX、PPTX、XLSX、および画像をPDFに高速変換します。',
     category: 'pdf',
-    icon: 'RefreshCw',
+    icon: 'ArrowLeftRight',
     gradient: 'from-orange-500 to-amber-600',
     color: '#f97316',
     badge: 'NEW',

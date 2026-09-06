@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, ArrowRight, Sparkles } from 'lucide-react';
+import { Search, X, ArrowRight } from 'lucide-react';
+import { renderToolIcon } from '../config/toolIcons.js';
 
 export default function CommandPalette({ isOpen, onClose, onSelectTool, displayLang, tools }) {
   const [query, setQuery] = useState('');
@@ -70,7 +71,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectTool, displayL
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${tool.gradient} flex items-center justify-center text-white text-xs`}>
-                    <Sparkles size={14} />
+                    {renderToolIcon(tool.icon, { size: 14 })}
                   </div>
                   <div>
                     <div className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors">

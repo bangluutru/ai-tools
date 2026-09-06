@@ -10,6 +10,7 @@ import {
   tools,
   categories,
 } from '../src/config/toolsRegistry.js';
+import { iconMap } from '../src/config/toolIcons.js';
 
 const hubRoot = fileURLToPath(new URL('..', import.meta.url));
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -69,6 +70,17 @@ test('MAIS Gate 1: Every miniapp belongs to an authorized category with a valid 
       `${tool.id} có danh mục không hợp lệ: "${tool.category}"`,
     );
     assert.equal(typeof tool.icon === 'string' && tool.icon.length > 0, true, `${tool.id} thiếu icon`);
+    assert.ok(
+      iconMap[tool.icon],
+      `${tool.id} có icon "${tool.icon}" chưa được ánh xạ trong hub/src/config/toolIcons.js`
+    );
+    if (tool.readiness !== 'in-development') {
+      assert.notEqual(
+        tool.icon,
+        'Sparkles',
+        `${tool.id} không được dùng icon ngôi sao 4 cánh Sparkles làm icon đại diện`,
+      );
+    }
   }
 });
 
