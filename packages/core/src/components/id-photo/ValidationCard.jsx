@@ -16,7 +16,7 @@ const ValidationCard = ({
               <Check className="h-4 w-4 stroke-[3]" />
             </div>
           ) : (
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 text-amber-400">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-tertiary-container/20 text-tertiary">
               <AlertTriangle className="h-4 w-4 stroke-[2.5]" />
             </div>
           )}
@@ -42,13 +42,13 @@ const ValidationCard = ({
         <div className="space-y-0.5">
           <span className="text-[10px] text-on-surface-variant font-medium">{t.valTiltLabel}</span>
           <div className="flex items-center justify-center gap-1 font-mono font-bold">
-            <span className={validation.isTiltAcceptable ? "text-secondary" : "text-amber-400"}>
+            <span className={validation.isTiltAcceptable ? "text-secondary" : "text-tertiary"}>
               {validation.tiltAngleDeg}°
             </span>
             {validation.isTiltAcceptable ? (
               <CheckCircle2 className="h-3.5 w-3.5 text-secondary" />
             ) : (
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+              <AlertTriangle className="h-3.5 w-3.5 text-tertiary" />
             )}
           </div>
         </div>
@@ -57,13 +57,13 @@ const ValidationCard = ({
         <div className="space-y-0.5 border-x border-border-subtle">
           <span className="text-[10px] text-on-surface-variant font-medium">{t.valSizeLabel}</span>
           <div className="flex items-center justify-center gap-1 font-mono font-bold">
-            <span className={validation.isFaceRatioAcceptable ? "text-secondary" : "text-amber-400"}>
+            <span className={validation.isFaceRatioAcceptable ? "text-secondary" : "text-tertiary"}>
               {validation.faceHeightRatio}%
             </span>
             {validation.isFaceRatioAcceptable ? (
               <CheckCircle2 className="h-3.5 w-3.5 text-secondary" />
             ) : (
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+              <AlertTriangle className="h-3.5 w-3.5 text-tertiary" />
             )}
           </div>
         </div>
@@ -72,13 +72,13 @@ const ValidationCard = ({
         <div className="space-y-0.5">
           <span className="text-[10px] text-on-surface-variant font-medium">{t.valDpiLabel}</span>
           <div className="flex items-center justify-center gap-1 font-mono font-bold">
-            <span className={validation.isResolutionAcceptable ? "text-secondary" : "text-amber-400"}>
+            <span className={validation.isResolutionAcceptable ? "text-secondary" : "text-tertiary"}>
               {validation.effectiveDpi} DPI
             </span>
             {validation.isResolutionAcceptable ? (
               <CheckCircle2 className="h-3.5 w-3.5 text-secondary" />
             ) : (
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+              <AlertTriangle className="h-3.5 w-3.5 text-tertiary" />
             )}
           </div>
         </div>
@@ -94,12 +94,12 @@ const ValidationCard = ({
                 warn.severity === "error"
                   ? "bg-error-container/20 text-error border border-error/30"
                   : warn.severity === "warning"
-                  ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                  ? "bg-tertiary-container/15 text-tertiary border border-tertiary/30"
                   : "bg-primary-container/15 text-brand-cyan-bright border border-primary-container/30"
               }`}
             >
               {warn.severity === "warning" ? (
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
+                <AlertTriangle className="h-4 w-4 shrink-0 text-tertiary mt-0.5" />
               ) : warn.severity === "error" ? (
                 <AlertTriangle className="h-4 w-4 shrink-0 text-error mt-0.5" />
               ) : (

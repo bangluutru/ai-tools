@@ -156,6 +156,7 @@ Chạy `npm run audit:miniapps <id>` và `npm run test:browser:tool -- <id>` đ�
 | **Bộ Nhớ Trình Duyệt** | Lưu trực tiếp `localStorage.setItem('settings', ...)` | Thêm tiền tố định danh: `localStorage.setItem('ai_tools_<id>_settings', ...)` | Chống ghi đè và xung đột key với 11+ miniapp khác trong cùng domain |
 | **Nạp Tệp (File Input)** | Thẻ `<input type="file">` mặc định, chỉ bấm click | **Dual-Contract Dropzone**: Kéo thả chuột + `<input type="file" className="hidden">` | Mang lại trải nghiệm hiện đại; cho phép các test runner headless nạp tệp tự động |
 | **Đa Ngôn Ngữ (i18n)** | Hardcode tiếng Anh hoặc tiếng Việt trong JSX | Nhận prop `displayLang`, dùng từ điển i18n (`vi`, `en`, `ja`) | Phục vụ người dùng quốc tế, đảm bảo metadata khai báo đầy đủ 3 ngôn ngữ |
+| **Độ Tương Phản & Trợ Năng (A11y)** | Dùng chữ mờ `text-gray-400`, `text-slate-400`, hoặc chữ xanh lá nhạt `#059669` trên nền trắng/pastel | Sử dụng semantic tokens an toàn: `text-on-surface-variant` (`#475569`, 5.45:1), `text-secondary` (`#065F46`, 7.70:1 / 6.24:1 trên pastel) | Đạt chuẩn WCAG 2.1 Level AA ($\ge 4.5:1$ cho chữ nhỏ), 0 lỗi axe-core |
 | **Quản Trị Sự Cố** | Khi gặp lỗi code không bắt được, trắng cả trang web | Bọc trong [ToolErrorBoundary](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/ai-tools/hub/src/components/ToolErrorBoundary.jsx) | Đảm bảo nút "Về Trung Tâm" luôn hoạt động an toàn, không sập toàn bộ Hub |
 
 ---
@@ -200,6 +201,45 @@ Chạy `npm run audit:miniapps <id>` và `npm run test:browser:tool -- <id>` đ�
 - **Nguyên nhân**: Gọi `URL.createObjectURL(blob)` mà quên gọi `URL.revokeObjectURL(url)`.
 - **Giải pháp**: Bắt buộc giải phóng URL trong hàm dọn dẹp của `useEffect` hoặc ngay sau khi tệp tải về thành công.
 
+### 6.5. Bẫy Tương Phản Màu Chữ Nhỏ & Nền Pastel (Pastel Contrast Trap)
+- **Triệu chứng**: Chữ xanh lá nhãn trạng thái ("Client-side", "Bảo mật", "Đạt"), chữ cảnh báo amber hoặc chữ báo lỗi red nhìn mờ nhạt, khó đọc trên màn hình ngoài trời hoặc bị công cụ kiểm tra tự động axe-core báo lỗi nghiêm trọng Serious P2 (`color-contrast`).
+- **Nguyên nhân**:
+  - Màu chữ xanh lá phổ biến như `#059669` (Emerald 600) có tỷ lệ tương phản chỉ 3.76:1 trên nền trắng.
+  - Màu `#047857` (Emerald 700) tuy đạt 5.48:1 trên nền trắng nhưng khi đặt trên badge nền pastel `bg-secondary/15` (`#D9EBE6`) thì tỷ lệ bị kéo tụt xuống **4.43:1** (< 4.5:1, rớt chuẩn WCAG AA).
+  - Màu cảnh báo `#d97706` (Amber 600) trên nền sáng chỉ đạt ~3.2:1.
+  - Màu báo lỗi `#dc2626` (Red 600) trên nền card xám sáng `#ebedf2` chỉ đạt 4.12:1.
+  - Tương tự, dùng class màu nhạt `text-slate-400` trên nền trắng chỉ đạt 2.59:1.
+- **Giải pháp chuẩn hóa**:
+  - Dùng token `text-secondary` (`#065F46` - Emerald 800) trong Light mode: Tỷ lệ đạt **7.70:1** trên trắng và **6.24:1** trên nền pastel `bg-secondary/15`.
+  - Dùng token `text-tertiary` (`#92400e` - Amber 800) trong Light mode: Tỷ lệ đạt **5.80:1** trên trắng và **4.90:1** trên nền pastel `bg-tertiary-container/15`.
+  - Dùng token `text-error` (`#b91c1c` - Red 700) trong Light mode: Tỷ lệ đạt **5.70:1** trên trắng và **5.10:1** trên nền card xám.
+  - Thay thế toàn bộ class chữ xám nhạt `text-slate-400`, `text-gray-400` bằng `text-on-surface-variant` (`#475569`, 5.45:1) hoặc `text-outline` (`#475569`, 5.67:1).
+  - Với nhãn chữ trắng trên nút nhấn: `bg-primary-container` trong Light mode bắt buộc là `#0369A1` (Sky 700, 5.96:1), không dùng `#0EA5E9` (Sky 500, 2.77:1).
+
+### 6.6. Bẫy Trợ Năng Form Controls & Dynamic State A11y
+- **Triệu chứng**: Trang ban đầu pass trợ năng nhưng khi người dùng tải tệp lên hoặc chuyển sang bước tinh chỉnh (Wizard step) thì axe-core báo lỗi vi phạm `[label]` hoặc `[select-name]`.
+- **Nguyên nhân**:
+  - Các phần tử input điều khiển chuyên biệt như `<input type="range">`, `<input type="color">`, `<input type="text">` (HEX code) chỉ đặt cạnh chữ mô tả bằng thẻ `<span>` mà không có gắn kết ngữ nghĩa bằng `<label htmlFor="...">` hoặc thuộc tính `aria-label`.
+- **Giải pháp**:
+  - Bắt buộc mọi input điều khiển thông số đều phải có thuộc tính `aria-label` diễn giải rõ ràng:
+    ```jsx
+    <input
+      type="range"
+      aria-label="Độ co viền khử lem"
+      min="0"
+      max="3"
+      step="0.2"
+      value={chokePx}
+      onChange={(e) => setChokePx(Number(e.target.value))}
+    />
+    <input
+      type="color"
+      aria-label="Chọn màu phông tùy chỉnh"
+      value={selectedBgColor}
+      onChange={(e) => setSelectedBgColor(e.target.value)}
+    />
+    ```
+
 ---
 
 ## ✅ 7. CHECKLIST NGHIỆM THU ĐƯA VÀO VẬN HÀNH
@@ -208,10 +248,12 @@ Trước khi commit và đưa miniapp mới vào production, hãy đảm bảo v
 
 - [ ] **Khung chứa:** Miniapp nằm gọn trong `max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8`.
 - [ ] **Màu sắc:** 0 class `bg-white`, 0 class `text-black`, 100% dùng CSS semantic tokens.
+- [ ] **Trợ năng WCAG 2.1 AA (Initial & Dynamic):** Tỷ lệ tương phản chữ $\ge 4.5:1$ (không dùng `text-*-400` hoặc chữ xanh/vàng sáng trên nền trắng/pastel), 100% form controls có `aria-label`, kiểm thử axe-core đạt 0 violations ở cả trạng thái ban đầu và trạng thái động sau khi nạp tệp.
 - [ ] **Biểu tượng:** 0 raw emoji trong các nút bấm, 100% dùng icon từ `lucide-react`.
 - [ ] **Đa ngôn ngữ:** Nhận prop `displayLang`, khai báo đủ 3 thứ tiếng trong `toolsRegistry.js`.
 - [ ] **Dropzone:** Có hỗ trợ kéo thả chuột và chứa thẻ `<input type="file" className="hidden">`.
 - [ ] **Mobile Responsive:** Đạt tiêu chuẩn Zero Horizontal Overflow trên iPhone (390px) và Android (360px).
 - [ ] **Cô lập lỗi:** Được bọc trong `ToolErrorBoundary`.
 - [ ] **Rà soát tĩnh:** Lệnh `npm run audit:miniapps <id>` đạt kết quả `PASS`.
-- [ ] **Kiểm thử trình duyệt:** Lệnh `npm run test:browser:tool -- <id>` đạt 100% PASS và 0 lỗi console.
+- [ ] **Kiểm thử trình duyệt & Luồng sâu:** Lệnh `node scripts/verify-miniapp-browser.mjs --tool=<id>` đạt 100% PASS (bao gồm cả Initial & Dynamic axe-core scan, 0 lỗi console).
+

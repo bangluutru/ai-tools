@@ -104,27 +104,27 @@
   --surface-variant-rgb: 241 245 249;
   --border-subtle-rgb: 226 232 240;        /* #e2e8f0 slate-200 */
   --border-card-rgb: 226 232 240;
-  --outline-rgb: 100 116 139;              /* #64748b slate-500 */
+  --outline-rgb: 71 85 105;               /* #475569 slate-600 (contrast-safe >= 4.5:1) */
   --outline-variant-rgb: 203 213 225;      /* #cbd5e1 slate-300 */
   --on-surface-rgb: 15 23 42;              /* #0f172a slate-900 (crisp high contrast) */
   --on-surface-variant-rgb: 71 85 105;     /* #475569 slate-600 */
   --inverse-surface-rgb: 15 23 42;
   --inverse-on-surface-rgb: 248 250 252;
-  --primary-rgb: 2 132 199;                /* #0284c7 sky-600 */
+  --primary-rgb: 3 105 161;                /* #0369a1 sky-700 (contrast-safe >= 4.5:1) */
   --on-primary-rgb: 255 255 255;
-  --primary-container-rgb: 14 165 233;     /* #0ea5e9 sky-500 */
+  --primary-container-rgb: 3 105 161;      /* #0369a1 sky-700 (contrast-safe >= 4.5:1 with white text) */
   --on-primary-container-rgb: 255 255 255;
-  --brand-cyan-bright-rgb: 2 132 199;      /* #0284c7 */
-  --secondary-rgb: 5 150 105;              /* #059669 emerald-600 */
+  --brand-cyan-bright-rgb: 3 105 161;      /* #0369a1 */
+  --secondary-rgb: 6 95 70;                /* #065f46 emerald-800 (contrast-safe >= 4.5:1 on pastel) */
   --on-secondary-rgb: 255 255 255;
   --secondary-container-rgb: 16 185 129;   /* #10b981 emerald-500 */
   --on-secondary-container-rgb: 255 255 255;
-  --brand-emerald-deep-rgb: 4 120 87;      /* #047857 */
-  --tertiary-rgb: 217 119 6;               /* #d97706 amber-600 */
+  --brand-emerald-deep-rgb: 6 95 70;       /* #065f46 */
+  --tertiary-rgb: 146 64 14;               /* #92400e amber-800 (contrast-safe >= 4.5:1 on pastel & white) */
   --on-tertiary-rgb: 255 255 255;
   --tertiary-container-rgb: 245 158 11;    /* #f59e0b */
   --on-tertiary-container-rgb: 255 255 255;
-  --error-rgb: 220 38 38;                  /* #dc2626 red-600 */
+  --error-rgb: 185 28 28;                  /* #b91c1c red-700 (contrast-safe >= 4.5:1 on light surfaces) */
   --on-error-rgb: 255 255 255;
   --error-container-rgb: 254 226 226;      /* #fee2e2 red-100 */
   --on-error-container-rgb: 153 27 27;     /* #991b1b red-800 */
@@ -146,23 +146,23 @@
   --border-card: #e2e8f0;
   --on-surface: #0f172a;
   --on-surface-variant: #475569;
-  --outline: #64748b;
+  --outline: #475569;
   --outline-variant: #cbd5e1;
-  --primary: #0284c7;
+  --primary: #0369a1;
   --on-primary: #ffffff;
-  --primary-container: #0ea5e9;
+  --primary-container: #0369a1;
   --on-primary-container: #ffffff;
-  --brand-cyan-bright: #0284c7;
-  --secondary: #059669;
+  --brand-cyan-bright: #0369a1;
+  --secondary: #065f46;
   --on-secondary: #ffffff;
   --secondary-container: #10b981;
   --on-secondary-container: #ffffff;
-  --brand-emerald-deep: #047857;
-  --tertiary: #d97706;
+  --brand-emerald-deep: #065f46;
+  --tertiary: #92400e;
   --on-tertiary: #ffffff;
   --tertiary-container: #f59e0b;
   --on-tertiary-container: #ffffff;
-  --error: #dc2626;
+  --error: #b91c1c;
   --on-error: #ffffff;
   --error-container: #fee2e2;
   --on-error-container: #991b1b;

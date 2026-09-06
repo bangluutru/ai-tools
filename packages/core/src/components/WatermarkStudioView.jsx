@@ -1050,24 +1050,24 @@ export default function WatermarkStudioView() {
       {/* ==================================================================== */}
       <section className="flex flex-col space-y-4">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-slate-400 text-xs font-mono">
-          <a href="#/tat-ca" className="hover:text-primary-container transition-colors flex items-center gap-1">
+        <nav className="flex items-center gap-2 text-on-surface-variant text-xs font-mono">
+          <a href="#/tat-ca" className="hover:text-primary transition-colors flex items-center gap-1">
             <Home className="w-3.5 h-3.5" />
             <span>Trang chủ</span>
           </a>
-          <span className="text-slate-600">/</span>
-          <a href="#/hinh-anh-webp" className="hover:text-primary-container transition-colors">Hình ảnh & WebP</a>
-          <span className="text-slate-600">/</span>
-          <span className="text-slate-200 font-medium">Watermark Studio — Đóng Dấu Tài Liệu</span>
+          <span className="text-outline-variant">/</span>
+          <a href="#/hinh-anh-webp" className="hover:text-primary transition-colors">Hình ảnh & WebP</a>
+          <span className="text-outline-variant">/</span>
+          <span className="text-on-surface font-medium">Watermark Studio — Đóng Dấu Tài Liệu</span>
         </nav>
 
         {/* Header Content & Badges */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 tracking-tight flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-bold text-on-surface tracking-tight flex items-center gap-3">
               <span>Watermark Studio — Đóng Dấu Bản Quyền & Tài Liệu</span>
             </h1>
-            <p className="text-sm text-slate-400 max-w-4xl leading-relaxed">
+            <p className="text-sm text-on-surface-variant max-w-4xl leading-relaxed">
               Đóng dấu văn bản (Text) hoặc logo hình ảnh bản quyền lên hàng loạt tệp ảnh (PNG, JPG, WebP), tài liệu PDF và Microsoft Office (DOCX, XLSX, PPTX). Tự động tính toán góc xoay, độ trong suốt (opacity), lặp ma trận (tile grid) hoặc dấu chìm chống sao chép trái phép hoàn toàn trong trình duyệt.
             </p>
             <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-2">
@@ -1090,10 +1090,10 @@ export default function WatermarkStudioView() {
           <section className="bg-surface-container/60 border border-border-subtle/70 p-5 rounded-xl space-y-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-primary-container text-slate-950 flex items-center justify-center font-mono text-xs font-bold">1</span>
-                <h2 className="text-sm font-semibold text-slate-100">Tải tệp tin cần đóng dấu</h2>
+                <span className="w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center font-mono text-xs font-bold">1</span>
+                <h2 className="text-sm font-semibold text-on-surface">Tải tệp tin cần đóng dấu</h2>
               </div>
-              <span className="font-mono text-xs text-slate-400">Tối đa 50 tệp / 100MB</span>
+              <span className="font-mono text-xs text-on-surface-variant">Tối đa 50 tệp / 100MB</span>
             </div>
 
             {/* Drag & Drop Zone */}
@@ -1129,10 +1129,10 @@ export default function WatermarkStudioView() {
                 <UploadCloud className="w-6 h-6" />
               </div>
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-slate-200">
+                <p className="text-sm font-medium text-on-surface">
                   Kéo thả tệp hoặc <span className="text-primary-container underline underline-offset-4">chọn từ thiết bị</span>
                 </p>
-                <p className="text-xs text-slate-400">Hỗ trợ PDF, DOCX, XLSX, PPTX, PNG, JPG, WebP</p>
+                <p className="text-xs text-on-surface-variant">Hỗ trợ PDF, DOCX, XLSX, PPTX, PNG, JPG, WebP</p>
               </div>
 
               {/* Sample Files Loader Button */}
@@ -1140,7 +1140,7 @@ export default function WatermarkStudioView() {
                 <button
                   type="button"
                   onClick={handleLoadSamples}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-container hover:bg-surface-bright text-slate-300 hover:text-white border border-border-subtle transition-colors shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-container hover:bg-surface-bright text-on-surface-variant hover:text-on-surface border border-border-subtle transition-colors shadow-sm"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                   <span>Nạp 3 tệp mẫu demo</span>
@@ -1151,19 +1151,19 @@ export default function WatermarkStudioView() {
             {/* File List (Batch Queue) */}
             {fileItems.length > 0 && (
               <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
+                <div className="flex items-center justify-between text-xs font-mono text-on-surface-variant px-1">
                   <span>DANH SÁCH HÀNG ĐỢI XỬ LÝ ({fileItems.length} TỆP)</span>
                   <button
                     type="button"
                     onClick={handleClearAll}
-                    className="text-red-400 hover:underline flex items-center gap-1"
+                    className="text-error font-medium hover:underline flex items-center gap-1"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Xóa tất cả</span>
                   </button>
                 </div>
 
-                <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+                <div tabIndex={0} role="region" aria-label="Danh sách tệp chờ đóng dấu" className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
                   {fileItems.map(function (item) {
                     const isSelected = item.id === selectedId;
                     return (
@@ -1180,14 +1180,14 @@ export default function WatermarkStudioView() {
                             {renderFileIcon(item.category)}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-medium text-slate-200 truncate">{item.name}</p>
-                            <span className="text-[11px] font-mono text-slate-400">{formatFileSize(item.size)} • {item.extension.toUpperCase()}</span>
+                            <p className="text-xs font-medium text-on-surface truncate">{item.name}</p>
+                            <span className="text-[11px] font-mono text-on-surface-variant">{formatFileSize(item.size)} • {item.extension.toUpperCase()}</span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
                           {item.status === 'processing' && (
-                            <div className="flex items-center gap-1.5 text-xs text-primary-container">
+                            <div className="flex items-center gap-1.5 text-xs text-primary">
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               <span className="font-mono">{item.progress}%</span>
                             </div>
@@ -1216,6 +1216,7 @@ export default function WatermarkStudioView() {
                                 downloadBlob(item.resultBlob, 'watermarked_' + item.name);
                               }}
                               className="p-1 rounded bg-emerald-500/20 text-secondary hover:bg-emerald-500/30 transition-colors"
+                              aria-label={`Tải tệp ${item.name}`}
                               title="Tải tệp này"
                             >
                               <Download className="w-3.5 h-3.5" />
@@ -1228,7 +1229,8 @@ export default function WatermarkStudioView() {
                               e.stopPropagation();
                               handleRemoveFile(item.id);
                             }}
-                            className="text-slate-400 hover:text-red-400 p-1 transition-colors"
+                            className="text-on-surface-variant hover:text-red-400 p-1 transition-colors"
+                            aria-label={`Xóa tệp ${item.name}`}
                             title="Xóa tệp"
                           >
                             <X className="w-4 h-4" />
@@ -1237,7 +1239,7 @@ export default function WatermarkStudioView() {
 
                         {item.status === 'processing' && (
                           <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-surface-container overflow-hidden rounded-b-lg">
-                            <div className="h-full bg-primary-container transition-all duration-200" style={{ width: item.progress + '%' }} />
+                            <div className="h-full bg-primary transition-all duration-200" style={{ width: item.progress + '%' }} />
                           </div>
                         )}
                       </div>
@@ -1246,12 +1248,12 @@ export default function WatermarkStudioView() {
                 </div>
 
                 {/* Summary Bar */}
-                <div className="p-3 bg-surface/50 border border-border-subtle/60 rounded-lg flex items-center justify-between text-xs text-slate-400">
+                <div className="p-3 bg-surface/50 border border-border-subtle/60 rounded-lg flex items-center justify-between text-xs text-on-surface-variant">
                   <div className="flex items-center gap-2">
                     <CheckSquare className="w-4 h-4 text-secondary" />
                     <span>{fileItems.length} tệp trong hàng đợi</span>
                   </div>
-                  <span className="font-mono text-primary-container">Đóng dấu đồng loạt</span>
+                  <span className="font-mono text-primary">Đóng dấu đồng loạt</span>
                 </div>
               </div>
             )}
@@ -1261,13 +1263,14 @@ export default function WatermarkStudioView() {
           <section className="bg-surface-container/60 border border-border-subtle/70 p-5 rounded-xl space-y-5 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-primary-container text-slate-950 flex items-center justify-center font-mono text-xs font-bold">2</span>
-                <h2 className="text-sm font-semibold text-slate-100">Cấu hình kiểu dấu & tùy biến chi tiết</h2>
+                <span className="w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center font-mono text-xs font-bold">2</span>
+                <h2 className="text-sm font-semibold text-on-surface">Cấu hình kiểu dấu & tùy biến chi tiết</h2>
               </div>
               <button
                 type="button"
                 onClick={function () { setIsHelpOpen(true); }}
-                className="text-slate-400 hover:text-white transition-colors"
+                aria-label="Hướng dẫn sử dụng"
+                className="text-on-surface-variant hover:text-on-surface transition-colors"
                 title="Hướng dẫn"
               >
                 <HelpCircle className="w-4 h-4" />
@@ -1281,8 +1284,8 @@ export default function WatermarkStudioView() {
                 onClick={function () { handleTabClick('text'); }}
                 className={'py-2 px-3 rounded-md font-mono text-xs transition-colors flex items-center justify-center gap-2 ' +
                   (controlTab === 'text'
-                    ? 'bg-primary-container text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-surface-container')}
+                    ? 'bg-primary text-on-primary font-bold shadow-sm'
+                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container')}
               >
                 <Type className="w-4 h-4" />
                 <span>Văn bản (Text)</span>
@@ -1292,8 +1295,8 @@ export default function WatermarkStudioView() {
                 onClick={function () { handleTabClick('image'); }}
                 className={'py-2 px-3 rounded-md font-mono text-xs transition-colors flex items-center justify-center gap-2 ' +
                   (controlTab === 'image'
-                    ? 'bg-primary-container text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-surface-container')}
+                    ? 'bg-primary text-on-primary font-bold shadow-sm'
+                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container')}
               >
                 <ImageIcon className="w-4 h-4" />
                 <span>Logo / Con dấu (Image)</span>
@@ -1304,23 +1307,23 @@ export default function WatermarkStudioView() {
             {controlTab === 'text' && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-slate-200">
+                  <div className="flex items-center justify-between text-xs text-on-surface">
                     <label htmlFor="watermarkText" className="font-medium">Nội dung con dấu văn bản:</label>
-                    <span className="font-mono text-[11px] text-slate-400">Độ dài: {config.text.length} ký tự</span>
+                    <span className="font-mono text-[11px] text-on-surface-variant">Độ dài: {config.text.length} ký tự</span>
                   </div>
                   <input
                     id="watermarkText"
                     type="text"
                     value={config.text}
                     onChange={function (e) { handleConfigChange({ text: e.target.value }); }}
-                    className="w-full bg-surface text-slate-100 px-3 py-2.5 rounded-lg border border-border-subtle text-xs font-medium focus:outline-none focus:border-primary-container transition-colors"
+                    className="w-full bg-surface text-on-surface px-3 py-2.5 rounded-lg border border-border-subtle text-xs font-medium focus:outline-none focus:border-primary transition-colors"
                     placeholder="Nhập nội dung đóng dấu..."
                   />
                 </div>
 
                 {/* Quick Presets */}
                 <div className="space-y-2">
-                  <span className="font-mono text-[10px] text-slate-400 uppercase tracking-wider">MẪU ĐÓNG DẤU NHANH (QUICK PRESETS):</span>
+                  <span className="font-mono text-[10px] text-on-surface-variant uppercase tracking-wider">MẪU ĐÓNG DẤU NHANH (QUICK PRESETS):</span>
                   <div className="flex flex-wrap gap-1.5">
                     {WATERMARK_PRESETS.map(function (preset) {
                       const isActive = config.text === preset.config.text;
@@ -1331,8 +1334,8 @@ export default function WatermarkStudioView() {
                           onClick={function () { handleApplyPreset(preset); }}
                           className={'px-2.5 py-1 rounded font-mono text-[11px] transition-colors border ' +
                             (isActive
-                              ? 'bg-primary-container/20 text-primary-container border-primary-container/40 font-bold'
-                              : 'bg-surface hover:bg-surface-container text-slate-300 border-border-subtle hover:text-white')}
+                              ? 'bg-primary text-on-primary border-primary font-bold shadow-sm'
+                              : 'bg-surface hover:bg-surface-container text-on-surface-variant border-border-subtle hover:text-on-surface')}
                         >
                           {preset.name}
                         </button>
@@ -1344,20 +1347,22 @@ export default function WatermarkStudioView() {
                 {/* Font & Style */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-slate-300 mb-1 font-medium">Phông chữ</label>
+                    <label htmlFor="watermark-font-select" className="block text-xs text-on-surface-variant mb-1 font-medium">Phông chữ</label>
                     <select
+                      id="watermark-font-select"
+                      aria-label="Chọn phông chữ dấu chìm"
                       value={config.fontFamily}
                       onChange={function (e) { handleConfigChange({ fontFamily: e.target.value }); }}
-                      className="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-slate-200 text-xs focus:outline-none focus:border-primary-container cursor-pointer"
+                      className="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface text-xs focus:outline-none focus:border-primary cursor-pointer"
                     >
                       {FONT_OPTIONS.map(function (f) {
-                        return <option key={f.value} value={f.value} className="bg-slate-900 text-slate-200">{f.name}</option>;
+                        return <option key={f.value} value={f.value} className="bg-surface text-on-surface">{f.name}</option>;
                       })}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs text-slate-300 mb-1 font-medium">Định dạng</label>
+                    <label className="block text-xs text-on-surface-variant mb-1 font-medium">Định dạng</label>
                     <div className="flex items-center gap-1.5">
                       {[
                         { key: 'bold', icon: <Bold className="w-3.5 h-3.5" />, label: 'Đậm' },
@@ -1374,8 +1379,8 @@ export default function WatermarkStudioView() {
                             }}
                             className={'flex-1 py-2 rounded-lg border text-xs font-mono font-medium flex items-center justify-center gap-1 transition-all ' +
                               (config[btn.key]
-                                ? 'bg-primary-container/20 text-primary-container border-primary-container/50 font-bold'
-                                : 'bg-surface text-slate-400 border-border-subtle hover:text-slate-200')}
+                                ? 'bg-primary text-on-primary border-primary font-bold shadow-sm'
+                                : 'bg-surface text-on-surface-variant border-border-subtle hover:text-on-surface')}
                           >
                             {btn.icon}
                             <span>{btn.label}</span>
@@ -1392,13 +1397,14 @@ export default function WatermarkStudioView() {
             {controlTab === 'image' && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
-                    <ImageIcon className="w-3.5 h-3.5 text-primary-container" />
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1.5 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-primary" />
                     <span>Tải Logo / Con Dấu từ máy</span>
                   </label>
                   <input
                     ref={wmImageInputRef}
                     type="file"
+                    aria-label="Tải Logo / Con Dấu từ máy"
                     accept="image/png,image/jpeg,image/svg+xml,image/webp"
                     className="hidden"
                     onChange={handleWmImageChange}
@@ -1420,14 +1426,16 @@ export default function WatermarkStudioView() {
                         <button
                           type="button"
                           onClick={function () { wmImageInputRef.current && wmImageInputRef.current.click(); }}
-                          className="px-2.5 py-1.5 rounded bg-surface-container text-xs text-slate-200 hover:bg-surface-bright transition-colors"
+                          aria-label="Đổi logo khác"
+                          className="px-2.5 py-1.5 rounded bg-surface-container text-xs text-on-surface hover:bg-surface-bright transition-colors"
                         >
                           Đổi
                         </button>
                         <button
                           type="button"
                           onClick={function () { handleConfigChange({ imageFile: null, imageDataUrl: null, type: 'text' }); }}
-                          className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          aria-label="Xóa logo"
+                          className="p-1.5 rounded text-on-surface-variant hover:text-red-400 hover:bg-red-500/10 transition-colors"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -1436,19 +1444,19 @@ export default function WatermarkStudioView() {
                   ) : (
                     <div
                       onClick={function () { wmImageInputRef.current && wmImageInputRef.current.click(); }}
-                      className="cursor-pointer p-4 rounded-lg border border-dashed border-border-subtle bg-surface hover:bg-surface-container hover:border-primary-container/60 transition-all text-center flex flex-col items-center justify-center gap-1.5"
+                      className="cursor-pointer p-4 rounded-lg border border-dashed border-border-subtle bg-surface hover:bg-surface-container hover:border-primary/60 transition-all text-center flex flex-col items-center justify-center gap-1.5"
                     >
-                      <div className="w-9 h-9 rounded-lg bg-primary-container/10 border border-primary-container/20 flex items-center justify-center text-primary-container">
+                      <div className="w-9 h-9 rounded-lg bg-primary-container/10 border border-primary-container/20 flex items-center justify-center text-primary">
                         <Upload className="w-4 h-4" />
                       </div>
-                      <p className="text-xs font-medium text-slate-200">Chọn tệp Logo (PNG trong suốt, SVG, JPG)</p>
+                      <p className="text-xs font-medium text-on-surface">Chọn tệp Logo (PNG trong suốt, SVG, JPG)</p>
                     </div>
                   )}
                 </div>
 
                 {/* Sample Seals */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <label className="block text-xs font-medium text-on-surface-variant mb-1.5 flex items-center gap-1.5">
                     <Wand2 className="w-3.5 h-3.5 text-amber-400" />
                     <span>Con dấu mẫu có sẵn</span>
                   </label>
@@ -1456,7 +1464,7 @@ export default function WatermarkStudioView() {
                     {[
                       { type: 'confidential', label: 'Tuyệt Mật', color: 'text-red-400' },
                       { type: 'approved', label: 'Phê Duyệt', color: 'text-secondary' },
-                      { type: 'seal', label: 'Ngôi Sao', color: 'text-primary-container' }
+                      { type: 'seal', label: 'Ngôi Sao', color: 'text-primary' }
                     ].map(function (s) {
                       return (
                         <button
@@ -1477,17 +1485,18 @@ export default function WatermarkStudioView() {
                 {/* Image Scale Slider */}
                 <div className="space-y-1">
                   <div className="flex justify-between font-mono text-xs">
-                    <span className="text-slate-300">Thu phóng Logo</span>
-                    <span className="text-primary-container font-bold">{Math.round(config.imageScale * 100)}%</span>
+                    <span className="text-on-surface-variant">Thu phóng Logo</span>
+                    <span className="text-primary font-bold">{Math.round(config.imageScale * 100)}%</span>
                   </div>
                   <input
                     type="range"
+                    aria-label="Thu phóng Logo"
                     min="0.1"
                     max="1.5"
                     step="0.05"
                     value={config.imageScale}
                     onChange={function (e) { handleConfigChange({ imageScale: parseFloat(e.target.value) }); }}
-                    className="w-full accent-primary-container h-1.5 bg-surface rounded-lg cursor-pointer"
+                    className="w-full accent-primary h-1.5 bg-surface rounded-lg cursor-pointer"
                   />
                 </div>
 
@@ -1495,13 +1504,14 @@ export default function WatermarkStudioView() {
                 <label className="flex items-center gap-2.5 cursor-pointer p-2 rounded-lg bg-surface border border-border-subtle">
                   <input
                     type="checkbox"
+                    aria-label="Tự động khử nền trắng"
                     checked={config.removeWhiteBg}
                     onChange={function (e) { handleConfigChange({ removeWhiteBg: e.target.checked }); }}
-                    className="w-4 h-4 rounded accent-primary-container cursor-pointer"
+                    className="w-4 h-4 rounded accent-primary cursor-pointer"
                   />
                   <div>
-                    <span className="text-xs font-medium text-slate-200 block">Tự động khử nền trắng</span>
-                    <span className="text-[11px] text-slate-400 block">Thích hợp cho logo scan có nền trắng</span>
+                    <span className="text-xs font-medium text-on-surface block">Tự động khử nền trắng</span>
+                    <span className="text-[11px] text-on-surface-variant block">Thích hợp cho logo scan có nền trắng</span>
                   </div>
                 </label>
               </div>
@@ -1509,15 +1519,15 @@ export default function WatermarkStudioView() {
 
             {/* Display Mode / Position */}
             <div className="space-y-2 pt-1">
-              <label className="text-xs text-slate-200 font-medium">Kiểu hiển thị & Bố cục vị trí:</label>
+              <label className="text-xs text-on-surface font-medium">Kiểu hiển thị & Bố cục vị trí:</label>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={function () { handleConfigChange({ layoutMode: 'tiled', rotation: -45 }); }}
                   className={'p-3 rounded-lg flex flex-col items-center justify-center gap-1.5 text-center transition-colors border ' +
                     (config.layoutMode === 'tiled'
-                      ? 'bg-primary-container/15 text-primary-container border-primary-container/60 shadow-sm'
-                      : 'bg-surface text-slate-400 border-border-subtle hover:bg-surface-container hover:text-slate-200')}
+                      ? 'bg-primary text-on-primary border-primary font-bold shadow-sm'
+                      : 'bg-surface text-on-surface-variant border-border-subtle hover:bg-surface-container hover:text-on-surface')}
                 >
                   <Grid3X3 className="w-5 h-5" />
                   <span className="font-mono text-[11px] font-semibold">Lặp ma trận 45°</span>
@@ -1527,8 +1537,8 @@ export default function WatermarkStudioView() {
                   onClick={function () { handleConfigChange({ layoutMode: 'single', position: 'center', rotation: 0 }); }}
                   className={'p-3 rounded-lg flex flex-col items-center justify-center gap-1.5 text-center transition-colors border ' +
                     (config.layoutMode === 'single' && config.position === 'center'
-                      ? 'bg-primary-container/15 text-primary-container border-primary-container/60 shadow-sm'
-                      : 'bg-surface text-slate-400 border-border-subtle hover:bg-surface-container hover:text-slate-200')}
+                      ? 'bg-primary text-on-primary border-primary font-bold shadow-sm'
+                      : 'bg-surface text-on-surface-variant border-border-subtle hover:bg-surface-container hover:text-on-surface')}
                 >
                   <Stamp className="w-5 h-5" />
                   <span className="font-mono text-[11px]">Tâm chính giữa</span>
@@ -1538,8 +1548,8 @@ export default function WatermarkStudioView() {
                   onClick={function () { handleConfigChange({ layoutMode: 'single', position: 'bottom-right', rotation: 0 }); }}
                   className={'p-3 rounded-lg flex flex-col items-center justify-center gap-1.5 text-center transition-colors border ' +
                     (config.layoutMode === 'single' && config.position === 'bottom-right'
-                      ? 'bg-primary-container/15 text-primary-container border-primary-container/60 shadow-sm'
-                      : 'bg-surface text-slate-400 border-border-subtle hover:bg-surface-container hover:text-slate-200')}
+                      ? 'bg-primary text-on-primary border-primary font-bold shadow-sm'
+                      : 'bg-surface text-on-surface-variant border-border-subtle hover:bg-surface-container hover:text-on-surface')}
                 >
                   <RotateCw className="w-5 h-5" />
                   <span className="font-mono text-[11px]">Góc dưới phải</span>
@@ -1552,17 +1562,18 @@ export default function WatermarkStudioView() {
               {/* Opacity */}
               <div className="space-y-1">
                 <div className="flex justify-between font-mono text-xs">
-                  <span className="text-slate-300">Độ trong suốt (Opacity)</span>
-                  <span className="text-primary-container font-bold">{Math.round(config.opacity * 100)}%</span>
+                  <span className="text-on-surface-variant">Độ trong suốt (Opacity)</span>
+                  <span className="text-primary font-bold">{Math.round(config.opacity * 100)}%</span>
                 </div>
                 <input
                   type="range"
+                  aria-label="Độ trong suốt (Opacity)"
                   min="0.05"
                   max="1.0"
                   step="0.01"
                   value={config.opacity}
                   onChange={function (e) { handleConfigChange({ opacity: parseFloat(e.target.value) }); }}
-                  className="w-full accent-primary-container h-1.5 bg-surface rounded-lg cursor-pointer"
+                  className="w-full accent-primary h-1.5 bg-surface rounded-lg cursor-pointer"
                 />
               </div>
 
@@ -1570,17 +1581,18 @@ export default function WatermarkStudioView() {
               {controlTab === 'text' && (
                 <div className="space-y-1">
                   <div className="flex justify-between font-mono text-xs">
-                    <span className="text-slate-300">Cỡ chữ (Font Size)</span>
-                    <span className="text-slate-400">{config.fontSize} px</span>
+                    <span className="text-on-surface-variant">Cỡ chữ (Font Size)</span>
+                    <span className="text-on-surface-variant">{config.fontSize} px</span>
                   </div>
                   <input
                     type="range"
+                    aria-label="Cỡ chữ (Font Size)"
                     min="14"
                     max="72"
                     step="2"
                     value={config.fontSize}
                     onChange={function (e) { handleConfigChange({ fontSize: parseInt(e.target.value, 10) }); }}
-                    className="w-full accent-primary-container h-1.5 bg-surface rounded-lg cursor-pointer"
+                    className="w-full accent-primary h-1.5 bg-surface rounded-lg cursor-pointer"
                   />
                 </div>
               )}
@@ -1589,34 +1601,36 @@ export default function WatermarkStudioView() {
                 {/* Angle */}
                 <div className="space-y-1">
                   <div className="flex justify-between font-mono text-xs">
-                    <span className="text-slate-300">Góc xoay</span>
-                    <span className="text-slate-400">{config.rotation}°</span>
+                    <span className="text-on-surface-variant">Góc xoay</span>
+                    <span className="text-on-surface-variant">{config.rotation}°</span>
                   </div>
                   <input
                     type="range"
+                    aria-label="Góc xoay"
                     min="-90"
                     max="90"
                     step="5"
                     value={config.rotation}
                     onChange={function (e) { handleConfigChange({ rotation: parseInt(e.target.value, 10) }); }}
-                    className="w-full accent-primary-container h-1.5 bg-surface rounded-lg cursor-pointer"
+                    className="w-full accent-primary h-1.5 bg-surface rounded-lg cursor-pointer"
                   />
                 </div>
 
                 {/* Tile Spacing */}
                 <div className="space-y-1">
                   <div className="flex justify-between font-mono text-xs">
-                    <span className="text-slate-300">Khoảng cách lặp</span>
-                    <span className="text-slate-400">{config.tileGapX} px</span>
+                    <span className="text-on-surface-variant">Khoảng cách lặp</span>
+                    <span className="text-on-surface-variant">{config.tileGapX} px</span>
                   </div>
                   <input
                     type="range"
+                    aria-label="Khoảng cách lặp"
                     min="60"
                     max="300"
                     step="10"
                     value={config.tileGapX}
                     onChange={function (e) { handleConfigChange({ tileGapX: parseInt(e.target.value, 10), tileGapY: Math.round(parseInt(e.target.value, 10) * 0.8) }); }}
-                    className="w-full accent-primary-container h-1.5 bg-surface rounded-lg cursor-pointer"
+                    className="w-full accent-primary h-1.5 bg-surface rounded-lg cursor-pointer"
                   />
                 </div>
               </div>
@@ -1625,7 +1639,7 @@ export default function WatermarkStudioView() {
             {/* Color Palette Picker (for text) */}
             {controlTab === 'text' && (
               <div className="space-y-2">
-                <span className="text-xs text-slate-200 font-medium">Bảng màu dấu bảo mật:</span>
+                <span className="text-xs text-on-surface font-medium">Bảng màu dấu bảo mật:</span>
                 <div className="flex items-center gap-2.5">
                   {COLOR_PALETTES.map(function (pal) {
                     const isSelected = config.color.toLowerCase() === pal.hex.toLowerCase();
@@ -1663,7 +1677,7 @@ export default function WatermarkStudioView() {
                   onChange={function (e) { handleConfigChange({ applyAllPages: e.target.checked }); }}
                   className="w-4 h-4 accent-primary-container rounded cursor-pointer"
                 />
-                <span className="text-xs text-slate-300">Áp dụng trên toàn bộ trang tài liệu PDF & Office</span>
+                <span className="text-xs text-on-surface">Áp dụng trên toàn bộ trang tài liệu PDF & Office</span>
               </label>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
@@ -1672,7 +1686,7 @@ export default function WatermarkStudioView() {
                   onChange={function (e) { handleConfigChange({ addTimestampHidden: e.target.checked }); }}
                   className="w-4 h-4 accent-primary-container rounded cursor-pointer"
                 />
-                <span className="text-xs text-slate-300">Chèn Timestamp & User ID ngầm (Chống rò rỉ nội bộ)</span>
+                <span className="text-xs text-on-surface">Chèn Timestamp & User ID ngầm (Chống rò rỉ nội bộ)</span>
               </label>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
@@ -1681,7 +1695,7 @@ export default function WatermarkStudioView() {
                   onChange={function (e) { handleConfigChange({ flattenLayers: e.target.checked }); }}
                   className="w-4 h-4 accent-primary-container rounded cursor-pointer"
                 />
-                <span className="text-xs text-slate-300">Khóa chỉnh sửa & bảo vệ vector tài liệu (Flatten layers)</span>
+                <span className="text-xs text-on-surface">Khóa chỉnh sửa & bảo vệ vector tài liệu (Flatten layers)</span>
               </label>
             </div>
 
@@ -1695,7 +1709,7 @@ export default function WatermarkStudioView() {
                 className={'w-full py-3 px-6 rounded-lg font-mono text-xs font-bold shadow-lg transition-all flex items-center justify-center gap-2 ' +
                   (!hasFiles || stats.processing
                     ? 'bg-surface text-slate-500 border border-border-subtle cursor-not-allowed'
-                    : 'bg-primary-container hover:bg-sky-400 text-slate-950 shadow-sky-500/20 active:scale-[0.99]')}
+                    : 'bg-primary hover:bg-primary/90 text-on-primary shadow-primary/20 active:scale-[0.99]')}
               >
                 {stats.processing ? (
                   <>
@@ -1723,34 +1737,38 @@ export default function WatermarkStudioView() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-primary-container animate-pulse" />
-                <h3 className="text-sm font-semibold text-slate-100">Xem trước trực quan thời gian thực</h3>
+                <h3 className="text-sm font-semibold text-on-surface">Xem trước trực quan thời gian thực</h3>
               </div>
 
               {/* Mini Toolbar Controls */}
               <div className="flex items-center gap-2">
                 {/* Page switch simulation */}
-                <div className="flex items-center bg-surface border border-border-subtle rounded px-2 py-1 gap-2 font-mono text-xs text-slate-300">
-                  <button className="hover:text-primary-container transition-colors" title="Trang trước">
+                <div className="flex items-center bg-surface border border-border-subtle rounded px-2 py-1 gap-2 font-mono text-xs text-on-surface-variant">
+                  <button type="button" aria-label="Trang trước" className="hover:text-primary transition-colors">
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
                   <span>Trang 1 / 1</span>
-                  <button className="hover:text-primary-container transition-colors" title="Trang sau">
+                  <button type="button" aria-label="Trang sau" className="hover:text-primary transition-colors">
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 {/* Zoom */}
-                <div className="flex items-center bg-surface border border-border-subtle rounded px-2 py-1 gap-1 font-mono text-xs text-slate-300">
+                <div className="flex items-center bg-surface border border-border-subtle rounded px-2 py-1 gap-1 font-mono text-xs text-on-surface-variant">
                   <button
+                    type="button"
+                    aria-label="Thu nhỏ xem trước"
                     onClick={function () { setZoom(function (z) { return Math.max(0.4, z - 0.1); }); }}
-                    className="hover:text-primary-container transition-colors"
+                    className="hover:text-primary transition-colors"
                   >
                     <ZoomOut className="w-3.5 h-3.5" />
                   </button>
                   <span className="w-10 text-center">{Math.round(zoom * 100)}%</span>
                   <button
+                    type="button"
+                    aria-label="Phóng to xem trước"
                     onClick={function () { setZoom(function (z) { return Math.min(1.8, z + 0.1); }); }}
-                    className="hover:text-primary-container transition-colors"
+                    className="hover:text-primary transition-colors"
                   >
                     <ZoomIn className="w-3.5 h-3.5" />
                   </button>
@@ -1759,11 +1777,12 @@ export default function WatermarkStudioView() {
                 {/* Grid toggle */}
                 <button
                   type="button"
+                  aria-label="Bật/Tắt lưới căn chỉnh"
                   onClick={function () { setShowGrid(!showGrid); }}
                   className={'p-1.5 rounded border transition-colors ' +
                     (showGrid
-                      ? 'bg-primary-container/20 text-primary-container border-primary-container/50'
-                      : 'bg-surface text-slate-400 border-border-subtle hover:text-white')}
+                      ? 'bg-primary text-on-primary border-primary'
+                      : 'bg-surface text-on-surface-variant border-border-subtle hover:text-on-surface')}
                   title="Bật/Tắt lưới căn chỉnh"
                 >
                   <Grid className="w-3.5 h-3.5" />
@@ -1772,11 +1791,12 @@ export default function WatermarkStudioView() {
                 {/* Background Mode Toggle */}
                 <button
                   type="button"
+                  aria-label="Chuyển nền kiểm tra tương phản"
                   onClick={function () { setContrastMode(!contrastMode); }}
                   className={'p-1.5 rounded border transition-colors ' +
                     (contrastMode
-                      ? 'bg-primary-container/20 text-primary-container border-primary-container/50'
-                      : 'bg-surface text-slate-400 border-border-subtle hover:text-white')}
+                      ? 'bg-primary text-on-primary border-primary'
+                      : 'bg-surface text-on-surface-variant border-border-subtle hover:text-on-surface')}
                   title="Chuyển nền kiểm tra tương phản"
                 >
                   <Contrast className="w-3.5 h-3.5" />
@@ -1795,7 +1815,7 @@ export default function WatermarkStudioView() {
             </div>
 
             {/* File Switcher inside preview */}
-            <div className="flex items-center justify-between font-mono text-xs text-slate-400 pt-1">
+            <div className="flex items-center justify-between font-mono text-xs text-on-surface-variant pt-1">
               <span className="flex items-center gap-1.5">
                 <CheckCircle className="w-3.5 h-3.5 text-secondary" />
                 <span>
@@ -1811,7 +1831,7 @@ export default function WatermarkStudioView() {
                         key={item.id}
                         type="button"
                         onClick={function () { setSelectedId(item.id); }}
-                        className="text-primary-container hover:underline truncate max-w-[140px]"
+                        className="text-primary hover:underline truncate max-w-[140px]"
                       >
                         Xem {item.name}
                       </button>
@@ -1836,7 +1856,7 @@ export default function WatermarkStudioView() {
                       : 'CHƯA CÓ TỆP TIN NÀO ĐƯỢC CHỌN'}
                 </span>
               </div>
-              <span className="font-mono text-xs text-slate-400">
+              <span className="font-mono text-xs text-on-surface-variant">
                 {hasFiles ? 'Kích thước: ' + formatFileSize(fileItems.reduce(function (a, b) { return a + b.size; }, 0)) : '0 MB'}
               </span>
             </div>
@@ -1844,8 +1864,8 @@ export default function WatermarkStudioView() {
             {/* Summary Metrics Grid */}
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 bg-surface border border-border-subtle rounded-lg flex flex-col">
-                <span className="font-mono text-[10px] text-slate-400 uppercase">TỔNG TỆP TIN</span>
-                <span className="text-xl font-bold text-slate-100 font-mono mt-0.5">
+                <span className="font-mono text-[10px] text-on-surface-variant uppercase">TỔNG TỆP TIN</span>
+                <span className="text-xl font-bold text-on-surface font-mono mt-0.5">
                   {stats.done} / {stats.total}
                 </span>
                 <span className="text-xs text-secondary mt-0.5">
@@ -1854,17 +1874,17 @@ export default function WatermarkStudioView() {
               </div>
 
               <div className="p-3 bg-surface border border-border-subtle rounded-lg flex flex-col">
-                <span className="font-mono text-[10px] text-slate-400 uppercase">KHỐI LƯỢNG TRANG</span>
-                <span className="text-xl font-bold text-slate-100 font-mono mt-0.5">
+                <span className="font-mono text-[10px] text-on-surface-variant uppercase">KHỐI LƯỢNG TRANG</span>
+                <span className="text-xl font-bold text-on-surface font-mono mt-0.5">
                   {hasFiles ? fileItems.length * 4 : 0}
                 </span>
-                <span className="text-xs text-slate-400 mt-0.5">PDF & Office & Ảnh</span>
+                <span className="text-xs text-on-surface-variant mt-0.5">PDF & Office & Ảnh</span>
               </div>
 
               <div className="p-3 bg-surface border border-border-subtle rounded-lg flex flex-col">
-                <span className="font-mono text-[10px] text-slate-400 uppercase">CHẤT LƯỢNG XUẤT</span>
-                <span className="text-xl font-bold text-primary-container font-mono mt-0.5">Lossless</span>
-                <span className="text-xs text-slate-400 mt-0.5">Không nén suy hao</span>
+                <span className="font-mono text-[10px] text-on-surface-variant uppercase">CHẤT LƯỢNG XUẤT</span>
+                <span className="text-xl font-bold text-primary font-mono mt-0.5">Lossless</span>
+                <span className="text-xs text-on-surface-variant mt-0.5">Không nén suy hao</span>
               </div>
             </div>
 
@@ -1877,7 +1897,7 @@ export default function WatermarkStudioView() {
                 onClick={handleDownloadZip}
                 className={'w-full py-3 px-6 rounded-lg font-mono text-xs font-bold transition-all flex items-center justify-center gap-2 ' +
                   (isAllDone
-                    ? 'bg-secondary hover:bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/20 active:scale-[0.99] cursor-pointer'
+                    ? 'bg-secondary hover:bg-secondary/90 text-on-secondary shadow-lg shadow-emerald-500/20 active:scale-[0.99] cursor-pointer'
                     : 'bg-surface text-slate-500 border border-border-subtle cursor-not-allowed')}
               >
                 <Archive className="w-4 h-4" />
@@ -1889,7 +1909,7 @@ export default function WatermarkStudioView() {
                 <button
                   type="button"
                   onClick={function () { setZoom(1); }}
-                  className="py-2 px-3 bg-surface hover:bg-surface-container border border-border-subtle text-slate-300 hover:text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                  className="py-2 px-3 bg-surface hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
                 >
                   <Maximize2 className="w-3.5 h-3.5" />
                   <span>Vừa khung hình</span>
@@ -1897,15 +1917,15 @@ export default function WatermarkStudioView() {
                 <button
                   type="button"
                   onClick={function () { alert('Đã lưu cấu hình watermark thành công!'); }}
-                  className="py-2 px-3 bg-surface hover:bg-surface-container border border-border-subtle text-slate-300 hover:text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                  className="py-2 px-3 bg-surface hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                   <span>Lưu cấu hình mẫu</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleClearAll}
-                  className="py-2 px-3 bg-surface hover:bg-surface-container border border-border-subtle text-slate-300 hover:text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+                  className="py-2 px-3 bg-surface hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Đóng dấu tệp mới</span>
@@ -1928,11 +1948,12 @@ export default function WatermarkStudioView() {
         const successfulItems = fileItems.filter(function (i) { return i.status === 'done' && i.resultBlob; });
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-            <div className="bg-surface border border-border-subtle rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-slate-100 flex flex-col max-h-[90vh]">
+            <div className="bg-surface border border-border-subtle rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-on-surface flex flex-col max-h-[90vh]">
               <button
                 type="button"
+                aria-label="Đóng cửa sổ xuất"
                 onClick={function () { setIsExportOpen(false); }}
-                className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-container transition-colors"
+                className="absolute top-4 right-4 p-1.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1946,7 +1967,12 @@ export default function WatermarkStudioView() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-2 my-3 pr-1 max-h-[260px]">
+              <div
+                tabIndex={0}
+                role="region"
+                aria-label="Danh sách tệp đã xử lý thành công"
+                className="flex-1 overflow-y-auto space-y-2 my-3 pr-1 max-h-[260px] focus:outline-none focus:ring-1 focus:ring-primary/40"
+              >
                 {successfulItems.map(function (item) {
                   return (
                     <div key={item.id} className="p-3 rounded-xl bg-surface-container/60 border border-border-subtle flex items-center justify-between gap-3">
@@ -1959,6 +1985,7 @@ export default function WatermarkStudioView() {
                       </div>
                       <button
                         type="button"
+                        aria-label={'Tải tệp ' + item.name}
                         onClick={function () { downloadBlob(item.resultBlob, 'watermarked_' + item.name); }}
                         className="px-2.5 py-1.5 rounded-lg bg-surface hover:bg-surface-bright border border-border-subtle text-on-surface text-xs font-medium flex items-center gap-1 transition-colors shrink-0"
                       >
@@ -1974,7 +2001,7 @@ export default function WatermarkStudioView() {
                 <button
                   type="button"
                   onClick={handleDownloadZip}
-                  className="flex-1 py-3 px-4 rounded-xl bg-secondary hover:bg-emerald-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                  className="flex-1 py-3 px-4 rounded-xl bg-secondary hover:bg-secondary/90 text-on-secondary font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
                 >
                   <Package className="w-4 h-4" />
                   <span>Tải Về Gói ZIP ({successfulItems.length})</span>
@@ -2000,6 +2027,7 @@ export default function WatermarkStudioView() {
           <div className="bg-surface border border-border-subtle rounded-2xl max-w-xl w-full p-6 shadow-2xl relative text-on-surface flex flex-col max-h-[90vh]">
             <button
               type="button"
+              aria-label="Đóng cửa sổ hướng dẫn"
               onClick={function () { setIsHelpOpen(false); }}
               className="absolute top-4 right-4 p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors"
             >
@@ -2015,7 +2043,12 @@ export default function WatermarkStudioView() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-xs text-on-surface-variant">
+            <div
+              tabIndex={0}
+              role="region"
+              aria-label="Nội dung hướng dẫn chi tiết"
+              className="flex-1 overflow-y-auto space-y-4 pr-1 text-xs text-on-surface-variant focus:outline-none focus:ring-1 focus:ring-primary/40"
+            >
               <div className="p-3.5 rounded-xl bg-surface-container/60 border border-border-subtle">
                 <h4 className="font-semibold text-on-surface flex items-center gap-1.5 mb-1.5">
                   <ShieldCheck className="w-4 h-4 text-secondary" />
@@ -2027,11 +2060,11 @@ export default function WatermarkStudioView() {
               </div>
 
               <div className="p-3.5 rounded-xl bg-surface-container/60 border border-border-subtle">
-                <h4 className="font-semibold text-slate-100 flex items-center gap-1.5 mb-1.5">
-                  <FileCheck2 className="w-4 h-4 text-primary-container" />
+                <h4 className="font-semibold text-on-surface flex items-center gap-1.5 mb-1.5">
+                  <FileCheck2 className="w-4 h-4 text-primary" />
                   <span>Khả Năng Hỗ Trợ Đa Định Dạng</span>
                 </h4>
-                <ul className="space-y-1.5 text-slate-400">
+                <ul className="space-y-1.5 text-on-surface-variant">
                   <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-red-400" /><span><strong>PDF:</strong> Vẽ vector watermark lên mọi trang</span></li>
                   <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-blue-400" /><span><strong>DOCX:</strong> Chèn watermark header chuẩn OpenXML</span></li>
                   <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /><span><strong>XLSX:</strong> Đóng dấu nền toàn bộ các sheet tính</span></li>
@@ -2045,7 +2078,7 @@ export default function WatermarkStudioView() {
               <button
                 type="button"
                 onClick={function () { setIsHelpOpen(false); }}
-                className="px-4 py-2 rounded-xl bg-primary-container hover:bg-sky-400 text-slate-950 font-bold text-xs transition-colors"
+                className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-bold text-xs transition-colors"
               >
                 Đã Hiểu
               </button>

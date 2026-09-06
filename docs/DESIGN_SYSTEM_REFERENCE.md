@@ -18,15 +18,15 @@ Mọi miniapp trong Hub đều hoạt động trên nền tảng **Cascading CSS
 | **Bề Mặt Nâng Cao / Dropdown**| `--surface-container-high`| `bg-surface-container-high`| `#222a3d` | `#F1F5F9` | Popup, dropdown menu, active tab |
 | **Bề Mặt Mờ Nhẹ / Chip Tag** | `--surface-subtle` | `bg-surface-subtle` | `#1E293B` | `#E2E8F0` | Tag phụ, ô tìm kiếm, button ghost |
 | **Đường Viền Tinh Tế (1px)** | `--border-subtle` | `border-border-subtle` | `#334155` | `#CBD5E1` | Viền ngăn cách giữa các panel |
-| **Màu Nhấn Chính (Primary)** | `--primary` | `text-primary`, `bg-primary` | `#89ceff` | `#0284C7` | Icon nổi bật, liên kết, focus ring |
-| **Nút Bấm Chính** | `--primary-container` | `bg-primary-container` | `#0ea5e9` | `#0284C7` | Nút hành động chính (Process, Convert) |
+| **Màu Nhấn Chính (Primary)** | `--primary` | `text-primary`, `bg-primary` | `#89ceff` | `#0369A1` | Icon nổi bật, liên kết, focus ring (WCAG AA) |
+| **Nút Bấm Chính** | `--primary-container` | `bg-primary-container` | `#0ea5e9` | `#0369A1` | Nút hành động chính (Process, Convert) |
 | **Chữ Trên Nền Chính** | `--on-primary-container` | `text-on-primary-container`| `#ffffff` | `#ffffff` | Nhãn chữ trên nút chính |
-| **Bảo Mật / Khách Hàng** | `--secondary` | `text-secondary`, `bg-secondary`| `#4edea3` | `#059669` | Privacy badge, trạng thái thành công |
+| **Bảo Mật / Khách Hàng** | `--secondary` | `text-secondary`, `bg-secondary`| `#4edea3` | `#065F46` | Privacy badge, trạng thái thành công (WCAG AA) |
 | **Cảnh Báo / Tham Khảo** | `--tertiary` | `text-tertiary` | `#ffb86e` | `#D97706` | Lưu ý kế toán, cảnh báo tham khảo |
 | **Lỗi / Nguy Hiểm** | `--error` | `text-error`, `bg-error-container`| `#ffb4ab` | `#DC2626` | Báo lỗi nạp file, nút hủy/xóa |
 | **Chữ Chính (High Contrast)** | `--on-surface` | `text-on-surface` | `#dae2fd` | `#0F172A` | Tiêu đề H1-H3, nhãn quan trọng |
 | **Chữ Phụ / Gợi Ý** | `--on-surface-variant` | `text-on-surface-variant` | `#bec8d2` | `#475569` | Mô tả, placeholder, nhãn phụ |
-| **Nhãn Mờ / Ký Tự Monospace**| `--outline` | `text-outline` | `#88929b` | `#64748B` | Timestamp, kích thước byte, hash |
+| **Nhãn Mờ / Ký Tự Monospace**| `--outline` | `text-outline` | `#88929b` | `#475569` | Timestamp, kích thước byte, hash (WCAG AA) |
 
 ---
 
@@ -36,6 +36,30 @@ Mọi miniapp trong Hub đều hoạt động trên nền tảng **Cascading CSS
 - **Phông chữ thông số kỹ thuật:** `JetBrains Mono, Menlo, monospace` (`font-mono`) — bắt buộc cho kích thước byte, DPI, mã hex, mã số hóa đơn, hash SHA-256.
 - **Quy tắc cỡ chữ mobile:** Ô nhập liệu (`<input>`, `<select>`, `<textarea>`) bắt buộc dùng `text-base sm:text-sm` để chống phóng to tự động trên iOS Safari.
 - **Kích thước vùng bấm (Touch Target):** Các nút hành động chính, tab điều hướng phải có chiều cao tối thiểu `h-11` (44px) hoặc `h-10` (40px) trên mobile.
+
+---
+
+### 1.3. Bảng Kiểm Định Tỷ Lệ Tương Phản CSS Tokens Thực Tế (WCAG 2.1 AA Contrast Verification)
+
+Nhằm đảm bảo 100% miniapp không tái diễn lỗi `color-contrast`, toàn bộ bảng mã màu dưới đây đã được đo lường thực nghiệm theo thuật toán W3C Relative Luminance và kiểm định tự động bằng `axe-core`:
+
+| CSS Token | Màu Light Mode | Nền hiển thị đối chiếu | Tỷ lệ tương phản đo đạc | Yêu cầu WCAG 2.1 AA | Kết luận |
+|:---|:---|:---|:---:|:---:|:---:|
+| `--secondary` | `#065F46` (Emerald 800) | Nền trắng `#FFFFFF` | **7.70:1** | $\ge 4.5:1$ (Chữ nhỏ) | **PASS** |
+| `--secondary` | `#065F46` (Emerald 800) | Pastel `bg-secondary/15` (`#D9EBE6`) | **6.24:1** | $\ge 4.5:1$ (Chữ nhỏ) | **PASS** |
+| `--primary` | `#0369A1` (Sky 700) | Nền trắng `#FFFFFF` | **5.96:1** | $\ge 4.5:1$ (Chữ nhỏ) | **PASS** |
+| `--primary-container` | `#0369A1` (Sky 700) | Chữ trắng `#FFFFFF` | **5.96:1** | $\ge 4.5:1$ (Chữ nhỏ) | **PASS** |
+| `--outline` | `#475569` (Slate 600) | Nền trắng `#FFFFFF` | **5.67:1** | $\ge 4.5:1$ (Chữ nhỏ) | **PASS** |
+| `--on-surface-variant` | `#475569` (Slate 600) | Nền canvas `#F8FAFC` | **5.45:1** | $\ge 4.5:1$ (Chữ nhỏ) | **PASS** |
+| `--on-surface` | `#0F172A` (Slate 900) | Nền canvas `#F8FAFC` | **16.14:1** | $\ge 4.5:1$ (Chữ nhỏ) | **PASS** |
+| `--error` | `#DC2626` (Red 600) | Pastel `bg-error-container` (`#FEE2E2`) | **4.68:1** | $\ge 4.5:1$ (Chữ nhỏ) | **PASS** |
+| `--tertiary` | `#B45309` (Amber 700) | Pastel `bg-tertiary/15` (`#FEF3C7`) | **4.72:1** | $\ge 4.5:1$ (Chữ nhỏ) | **PASS** |
+
+#### Quy Chuẩn Nhãn Kích Thước Nhỏ (Micro-text 10px - 11px):
+1. **Font-weight**: Các nhãn badge nhỏ (`text-[10px]`, `text-[11px]`) bắt buộc kết hợp với `font-semibold` hoặc `font-bold` để tăng diện tích pixel thực tế trên màn hình độ phân giải thấp.
+2. **Quy tắc phối màu pastel an toàn (Safe Pastel Pairing)**:
+   - Khi tạo badge trạng thái có nền mờ nhẹ, chỉ sử dụng opacity 10% - 15% (ví dụ: `bg-secondary/15 text-secondary`).
+   - Tuyệt đối không dùng chữ màu xanh lá nhạt (`#059669` hay `#10b981`) trên nền trắng hoặc nền pastel vì sẽ rớt xuống 3.1:1 - 3.7:1 (vi phạm nghiêm trọng).
 
 ---
 

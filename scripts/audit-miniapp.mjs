@@ -165,6 +165,14 @@ function auditGate2(tool, files) {
     { regex: /\btext-slate-900\b/g, label: 'Lạm dụng class "text-slate-900" (phải dùng "text-on-surface")' },
   ];
 
+  // A11y: Low-contrast text classes on light surfaces (violates WCAG 2.1 AA 4.5:1)
+  const lowContrastTextPatterns = [
+    { regex: /\btext-slate-400\b/g, label: 'Class "text-slate-400" có độ tương phản thấp (~2.5:1) trên nền sáng (khuyến nghị dùng "text-on-surface-variant" hoặc "text-outline")' },
+    { regex: /\btext-gray-400\b/g, label: 'Class "text-gray-400" có độ tương phản thấp (~2.5:1) trên nền sáng (khuyến nghị dùng "text-on-surface-variant" hoặc "text-outline")' },
+    { regex: /\btext-zinc-400\b/g, label: 'Class "text-zinc-400" có độ tương phản thấp (~2.5:1) trên nền sáng (khuyến nghị dùng "text-on-surface-variant" hoặc "text-outline")' },
+    { regex: /\btext-neutral-400\b/g, label: 'Class "text-neutral-400" có độ tương phản thấp (~2.5:1) trên nền sáng (khuyến nghị dùng "text-on-surface-variant" hoặc "text-outline")' },
+  ];
+
   // Raw emoji in button or action elements
   const emojiInActionPattern = /<button[^>]*>([^<]*[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}][^<]*)<\/button>/gu;
 
@@ -184,6 +192,14 @@ function auditGate2(tool, files) {
         // More than 5 occurrences is a critical fail
         issues.push(`${relPath}: Phát hiện ${matches.length} lần ${label}`);
       } else if (matches && matches.length > 0) {
+        warnings.push(`${relPath}: ${matches.length} lần ${label}`);
+      }
+    }
+
+    // A11y low-contrast text check
+    for (const { regex, label } of lowContrastTextPatterns) {
+      const matches = codeOnly.match(regex);
+      if (matches && matches.length > 0) {
         warnings.push(`${relPath}: ${matches.length} lần ${label}`);
       }
     }

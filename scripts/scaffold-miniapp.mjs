@@ -375,7 +375,7 @@ export default function ${toPascalCase(toolId)}View({ displayLang = 'vi' }) {
             <button
               type="button"
               onClick={handleDownload}
-              className="h-11 sm:h-10 px-5 rounded-xl bg-secondary text-surface-canvas hover:brightness-110 text-xs font-bold transition-all shadow flex items-center gap-2 cursor-pointer"
+              className="h-11 sm:h-10 px-5 rounded-xl bg-secondary text-white hover:brightness-110 text-xs font-bold transition-all shadow flex items-center gap-2 cursor-pointer"
             >
               <Download size={15} />
               <span>{t.btnDownload}</span>
@@ -411,7 +411,7 @@ export default function ${toPascalCase(toolId)}View({ displayLang = 'vi' }) {
               <CheckCircle2 size={16} className="text-secondary" />
               <span>{t.resultTitle}</span>
             </span>
-            <span className="text-[11px] text-secondary font-mono bg-secondary/10 px-2 py-0.5 rounded">
+            <span className="text-[11px] text-secondary font-semibold font-mono bg-secondary/15 px-2 py-0.5 rounded">
               READY
             </span>
           </div>
@@ -531,6 +531,7 @@ function scanExternalCodebase(sourceDir) {
     totalFiles: 0,
     bgWhite: [],
     textBlack: [],
+    lowContrastText: [],
     rawEmojis: [],
     reactRouter: [],
     serverApis: [],
@@ -556,6 +557,7 @@ function scanExternalCodebase(sourceDir) {
           const lineNum = idx + 1;
           if (/\bbg-white\b/.test(line)) findings.bgWhite.push({ file: rel, lineNum, line: line.trim() });
           if (/\btext-(black|slate-900)\b/.test(line)) findings.textBlack.push({ file: rel, lineNum, line: line.trim() });
+          if (/\btext-(slate|gray|zinc|neutral)-400\b/.test(line)) findings.lowContrastText.push({ file: rel, lineNum, line: line.trim() });
           if (/<button[^>]*>.*[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}].*<\/button>/u.test(line)) {
             findings.rawEmojis.push({ file: rel, lineNum, line: line.trim() });
           }
@@ -696,6 +698,7 @@ async function run() {
     const hasIssues =
       findings.bgWhite.length > 0 ||
       findings.textBlack.length > 0 ||
+      findings.lowContrastText.length > 0 ||
       findings.rawEmojis.length > 0 ||
       findings.reactRouter.length > 0 ||
       findings.serverApis.length > 0 ||
@@ -714,6 +717,12 @@ async function run() {
       if (findings.textBlack.length > 0) {
         console.log(`  ${c.red}✖ Class tĩnh "text-black / text-slate-900"${c.reset} (${findings.textBlack.length} vị trí):`);
         findings.textBlack.slice(0, 3).forEach((f) => console.log(`    - ${f.file}:${f.lineNum} -> Thay bằng "text-on-surface"`));
+      }
+
+      if (findings.lowContrastText.length > 0) {
+        console.log(`  ${c.yellow}⚠ Class chữ tương phản thấp WCAG AA (text-*-400)${c.reset} (${findings.lowContrastText.length} vị trí):`);
+        findings.lowContrastText.slice(0, 3).forEach((f) => console.log(`    - ${f.file}:${f.lineNum} -> Thay bằng "text-on-surface-variant" hoặc "text-outline"`));
+        if (findings.lowContrastText.length > 3) console.log(`    ... và ${findings.lowContrastText.length - 3} vị trí khác.`);
       }
 
       if (findings.rawEmojis.length > 0) {

@@ -1275,7 +1275,12 @@ export default function InvoiceTool() {
       {notice && (
         <div className="mb-space-6 rounded-xl border border-error/30 bg-error/10 px-space-4 py-space-3 font-body-sm text-body-sm text-error flex items-center justify-between">
           <span>{notice}</span>
-          <button type="button" onClick={() => setNotice('')} className="p-1 hover:bg-error/20 rounded">
+          <button
+            type="button"
+            onClick={() => setNotice('')}
+            aria-label="Đóng thông báo lỗi"
+            className="p-1 hover:bg-error/20 rounded cursor-pointer"
+          >
             <X size={16} />
           </button>
         </div>
@@ -1831,6 +1836,7 @@ export default function InvoiceTool() {
                         <th className="py-space-3 px-space-2 w-12 text-center">
                           <input
                             type="checkbox"
+                            aria-label="Xác nhận tất cả hóa đơn"
                             checked={allConfirmed}
                             onChange={(e) => setAllConfirmed(e.target.checked)}
                             className="h-4 w-4 accent-secondary rounded cursor-pointer"
@@ -1863,6 +1869,7 @@ export default function InvoiceTool() {
                             <td className="py-space-3 px-space-2 text-center">
                               <input
                                 type="checkbox"
+                                aria-label={`Xác nhận hóa đơn ${inv.invoiceNo || idx + 1}`}
                                 checked={inv.isConfirmed}
                                 onChange={() => toggleConfirmed(inv.id)}
                                 className="h-4 w-4 accent-secondary rounded cursor-pointer"

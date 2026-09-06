@@ -170,7 +170,7 @@ const Step2Background = ({
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
-                <span className="text-[11px] text-on-surface-variant/80">
+                <span className="text-[11px] text-on-surface-variant">
                   {engine === "imgly_hd" ? t.engineStudioHdDesc : t.engineFastDesc}
                 </span>
               </div>
@@ -257,6 +257,7 @@ const Step2Background = ({
                 <div className="flex items-center gap-3">
                   <input
                     type="color"
+                    aria-label={t.colorCustom || "Chọn màu phông tùy chỉnh"}
                     value={selectedBgColor}
                     onChange={(e) => setSelectedBgColor(e.target.value)}
                     className="h-6 w-6 cursor-pointer rounded-md border-0 bg-transparent"
@@ -269,6 +270,7 @@ const Step2Background = ({
                   <span className="text-[11px] text-on-surface-variant">HEX:</span>
                   <input
                     type="text"
+                    aria-label="Mã màu HEX phông nền"
                     value={selectedBgColor}
                     onChange={(e) => setSelectedBgColor(e.target.value)}
                     className="w-20 rounded border border-border-subtle bg-surface-container px-1.5 py-0.5 text-center font-mono text-xs uppercase text-on-surface"
@@ -295,6 +297,7 @@ const Step2Background = ({
               </div>
               <input
                 type="range"
+                aria-label={t.chokeLabel || "Độ co viền khử lem"}
                 min="0"
                 max="3"
                 step="0.2"
@@ -302,7 +305,7 @@ const Step2Background = ({
                 onChange={(e) => setChokePx(Number(e.target.value))}
                 className="h-1.5 w-full cursor-pointer accent-brand-cyan-bright"
               />
-              <p className="text-[10px] text-on-surface-variant/80">{t.chokeSub}</p>
+              <p className="text-[10px] text-on-surface-variant">{t.chokeSub}</p>
             </div>
 
             {/* Feather Slider */}
@@ -313,6 +316,7 @@ const Step2Background = ({
               </div>
               <input
                 type="range"
+                aria-label={t.featherOption || "Độ làm mềm viền"}
                 min="0"
                 max="4"
                 step="0.2"

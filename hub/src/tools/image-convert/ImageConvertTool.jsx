@@ -277,6 +277,7 @@ export default function ImageConvertTool() {
               type="file"
               accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
               multiple
+              aria-label="Tải ảnh lên"
               className="hidden"
               onChange={(e) => {
                 if (e.target.files?.length) processFiles(Array.from(e.target.files));
@@ -397,7 +398,7 @@ export default function ImageConvertTool() {
                   }`}
                 >
                   <span>WebP</span>
-                  <span className="font-label-sm text-[10px] opacity-80">Phổ biến nhất</span>
+                  <span className={`font-label-sm text-[10px] ${settings.targetFormat === 'webp' ? 'text-white font-medium' : 'text-on-surface-variant'}`}>Phổ biến nhất</span>
                 </button>
                 <button
                   type="button"
@@ -409,7 +410,7 @@ export default function ImageConvertTool() {
                   }`}
                 >
                   <span>AVIF</span>
-                  <span className="font-label-sm text-[10px] opacity-80">Tối đa nén</span>
+                  <span className={`font-label-sm text-[10px] ${settings.targetFormat === 'avif' ? 'text-white font-medium' : 'text-on-surface-variant'}`}>Tối đa nén</span>
                 </button>
                 <button
                   type="button"
@@ -421,7 +422,7 @@ export default function ImageConvertTool() {
                   }`}
                 >
                   <span>JPEG Tối ưu</span>
-                  <span className="font-label-sm text-[10px] opacity-80">Tương thích</span>
+                  <span className={`font-label-sm text-[10px] ${settings.targetFormat === 'jpg' ? 'text-white font-medium' : 'text-on-surface-variant'}`}>Tương thích</span>
                 </button>
               </div>
             </div>
@@ -430,10 +431,10 @@ export default function ImageConvertTool() {
             <div className="space-y-space-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <label className="font-label-md text-label-md text-on-surface-variant uppercase">
+                  <label htmlFor="quality-slider" className="font-label-md text-label-md text-on-surface-variant uppercase cursor-pointer">
                     MỨC ĐỘ CHẤT LƯỢNG (QUALITY)
                   </label>
-                  <span className="px-space-1 py-[1px] bg-secondary/10 text-secondary font-label-sm text-label-sm rounded border border-secondary/20">
+                  <span className="px-space-1 py-[1px] bg-secondary/15 text-secondary font-label-sm text-label-sm font-semibold rounded border border-secondary/20">
                     Khuyên Dùng
                   </span>
                 </div>
@@ -442,9 +443,11 @@ export default function ImageConvertTool() {
                 </span>
               </div>
               <input
+                id="quality-slider"
                 type="range"
                 min="40"
                 max="100"
+                aria-label="Mức độ chất lượng nén ảnh"
                 value={Math.round(settings.quality * 100)}
                 onChange={(e) => setSettings((s) => ({ ...s, quality: Number(e.target.value) / 100 }))}
                 className="w-full accent-primary-container bg-surface-subtle h-2 rounded-lg cursor-pointer"
@@ -585,6 +588,7 @@ export default function ImageConvertTool() {
                     type="range"
                     min="0"
                     max="100"
+                    aria-label="Thanh trượt so sánh ảnh trước và sau"
                     value={splitPos}
                     onChange={(e) => setSplitPos(Number(e.target.value))}
                     className="absolute inset-0 opacity-0 cursor-ew-resize w-full h-full z-20"

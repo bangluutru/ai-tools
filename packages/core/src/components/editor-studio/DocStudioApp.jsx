@@ -389,46 +389,61 @@ export default function DocStudioApp({ displayLang }) {
                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <header className="mb-8 flex justify-between items-end">
                                 <div>
-                                    <h2 className="text-2xl font-bold tracking-tight text-slate-100">{t.dashTitle}</h2>
-                                    <p className="text-slate-400 text-sm mt-1">{t.dashSubtitle}</p>
+                                    <h2 className="text-2xl font-bold tracking-tight text-on-surface">{t.dashTitle}</h2>
+                                    <p className="text-on-surface-variant text-sm mt-1">{t.dashSubtitle}</p>
                                 </div>
                                 <button
                                     onClick={() => setActiveSubTab('editor')}
-                                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-sm"
+                                    className="px-4 py-2 bg-primary-container hover:bg-brand-cyan-bright text-on-primary-container text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-sm cursor-pointer"
                                 >
                                     <PlusCircle size={16} /> {t.createDoc}
                                 </button>
                             </header>
-                            <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-sm overflow-hidden">
-                                <div className="p-4 border-b border-slate-800 flex gap-4">
+                            <div className="bg-surface-container border border-border-subtle rounded-2xl shadow-sm overflow-hidden">
+                                <div className="p-4 border-b border-border-subtle flex gap-4">
                                     <div className="relative flex-1">
-                                        <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
-                                        <input type="text" placeholder={t.searchPlaceholder} value={searchQuery}
+                                        <Search size={16} className="absolute left-3 top-2.5 text-on-surface-variant" />
+                                        <input
+                                            type="text"
+                                            placeholder={t.searchPlaceholder}
+                                            aria-label={t.searchPlaceholder || "Tìm kiếm tài liệu"}
+                                            value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-2 bg-slate-900/60 border border-slate-800 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                            className="w-full pl-9 pr-4 py-2 bg-surface-subtle border border-border-subtle rounded-lg text-sm text-on-surface focus:ring-2 focus:ring-primary-container outline-none"
+                                        />
                                     </div>
                                 </div>
-                                <div className="divide-y divide-slate-100">
+                                <div className="divide-y divide-border-subtle/30">
                                     {MOCK_DOCS.filter(d => getDocTitle(d).toLowerCase().includes(searchQuery.toLowerCase())).map(doc => (
-                                        <div key={doc.id} onClick={() => handleLoadDocument(doc)} className="p-4 hover:bg-slate-800/60 flex items-center justify-between group transition-colors cursor-pointer">
+                                        <div key={doc.id} onClick={() => handleLoadDocument(doc)} className="p-4 hover:bg-surface-subtle/60 flex items-center justify-between group transition-colors cursor-pointer">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
+                                                <div className="w-10 h-10 bg-primary-container/15 text-brand-cyan-bright rounded-lg flex items-center justify-center">
                                                     <FileText size={18} />
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-bold text-slate-100 text-sm">{getDocTitle(doc)}</h3>
+                                                    <h3 className="font-bold text-on-surface text-sm">{getDocTitle(doc)}</h3>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{doc.type}</span>
-                                                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                                                        <span className="text-xs text-slate-400">{t.updated} {doc.updatedAt}</span>
+                                                        <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">{doc.type}</span>
+                                                        <span className="w-1 h-1 bg-border-subtle rounded-full"></span>
+                                                        <span className="text-xs text-on-surface-variant">{t.updated} {doc.updatedAt}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-4">
-                                                <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide ${doc.status === 'DRAFT' ? 'bg-slate-800 text-slate-400' : doc.status === 'GENERATED' ? 'bg-blue-500/10 text-blue-600' : 'bg-emerald-500/10 text-emerald-600'} `}>
+                                                <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide border ${
+                                                    doc.status === 'DRAFT'
+                                                        ? 'bg-surface-subtle text-on-surface-variant border-border-subtle'
+                                                        : doc.status === 'GENERATED'
+                                                        ? 'bg-primary-container/15 text-brand-cyan-bright border-primary-container/30'
+                                                        : 'bg-secondary/15 text-secondary border-secondary/30'
+                                                }`}>
                                                     {doc.status}
                                                 </span>
-                                                <button className="text-slate-400 hover:text-slate-600 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    type="button"
+                                                    aria-label="Tùy chọn thao tác tài liệu"
+                                                    className="text-on-surface-variant hover:text-on-surface p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                                >
                                                     <MoreVertical size={16} />
                                                 </button>
                                             </div>
@@ -443,26 +458,28 @@ export default function DocStudioApp({ displayLang }) {
                     {activeSubTab === 'templates' && (
                         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <header className="mb-8">
-                                <h2 className="text-2xl font-bold tracking-tight text-slate-100">{t.templateTitle}</h2>
-                                <p className="text-slate-400 text-sm mt-1">{t.templateSubtitle}</p>
+                                <h2 className="text-2xl font-bold tracking-tight text-on-surface">{t.templateTitle}</h2>
+                                <p className="text-on-surface-variant text-sm mt-1">{t.templateSubtitle}</p>
                             </header>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {['Official Letter', 'Meeting Minutes', 'Contract'].map((template) => (
-                                    <div key={template} onClick={() => handleLoadTemplate(template)} className="bg-slate-900 border border-slate-800 p-5 rounded-xl hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group">
+                                    <div key={template} onClick={() => handleLoadTemplate(template)} className="bg-surface-container border border-border-subtle p-5 rounded-xl hover:shadow-md hover:border-primary-container/50 transition-all cursor-pointer group">
                                         <div className="flex justify-between items-start mb-4">
-                                            <div className="w-10 h-10 bg-slate-800 text-slate-400 rounded-lg flex items-center justify-center group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                                            <div className="w-10 h-10 bg-surface-subtle text-on-surface-variant rounded-lg flex items-center justify-center group-hover:bg-primary-container/15 group-hover:text-brand-cyan-bright transition-colors">
                                                 <LayoutTemplate size={20} />
                                             </div>
                                             <button
+                                                type="button"
                                                 onClick={(e) => handleDownloadTemplate(e, template)}
-                                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                                                className="p-1.5 text-on-surface-variant hover:text-brand-cyan-bright hover:bg-surface-subtle rounded-md transition-colors cursor-pointer"
                                                 title="Tải mẫu định dạng chuẩn (.txt)"
+                                                aria-label={`Tải mẫu định dạng ${template}`}
                                             >
                                                 <Download size={16} />
                                             </button>
                                         </div>
-                                        <h3 className="font-bold text-slate-100">{template}</h3>
-                                        <p className="text-xs text-slate-400 mt-1">A4 | Mẫu tài liệu chuẩn</p>
+                                        <h3 className="font-bold text-on-surface">{template}</h3>
+                                        <p className="text-xs text-on-surface-variant mt-1">A4 | Mẫu tài liệu chuẩn</p>
                                     </div>
                                 ))}
                             </div>
@@ -475,39 +492,67 @@ export default function DocStudioApp({ displayLang }) {
                             {/* Toolbar */}
                             <header className="mb-3 flex justify-between items-center shrink-0 print:hidden">
                                 <div className="flex items-center gap-3">
-                                    <button onClick={() => setActiveSubTab('dashboard')}
-                                        className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-800 rounded-lg transition-colors" title={t.backToDash}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveSubTab('dashboard')}
+                                        aria-label={t.backToDash || "Quay lại danh sách tài liệu"}
+                                        className="p-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-subtle rounded-lg transition-colors cursor-pointer"
+                                        title={t.backToDash}
+                                    >
                                         <ArrowLeft size={18} />
                                     </button>
                                     <div>
-                                        <h2 className="text-xl font-bold tracking-tight text-slate-100">{t.editorTitle}</h2>
-                                        <p className="text-slate-400 text-xs mt-0.5">{t.editorSubtitle}</p>
+                                        <h2 className="text-xl font-bold tracking-tight text-on-surface">{t.editorTitle}</h2>
+                                        <p className="text-on-surface-variant text-xs mt-0.5">{t.editorSubtitle}</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-2 flex-wrap justify-end">
-                                    <input ref={fileInputRef} type="file" accept=".txt,.md,.text,.markdown,.doc,.docx"
-                                        onChange={handleFileUpload} className="hidden" />
-                                    <button onClick={() => fileInputRef.current?.click()}
-                                        className="px-3 py-1.5 bg-slate-900 border border-indigo-200 hover:bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all"
-                                        title={t.uploadHint}>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        aria-label="Tải lên tệp tài liệu văn bản"
+                                        accept=".txt,.md,.text,.markdown,.doc,.docx"
+                                        onChange={handleFileUpload}
+                                        className="hidden"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="px-3 py-1.5 bg-surface-subtle border border-border-subtle hover:bg-surface-container text-on-surface text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer"
+                                        title={t.uploadHint}
+                                    >
                                         <Upload size={14} /> {t.uploadBtn}
                                     </button>
-                                    <button onClick={handleAnalyze} disabled={!rawInput.trim() || isAnalyzing}
-                                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm">
+                                    <button
+                                        type="button"
+                                        onClick={handleAnalyze}
+                                        disabled={!rawInput.trim() || isAnalyzing}
+                                        className="px-3 py-1.5 bg-primary-container hover:bg-brand-cyan-bright disabled:opacity-50 text-on-primary-container text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                                    >
                                         <Sparkles size={14} /> {t.analyzeBtn}
                                     </button>
-                                    <button onClick={handleGeneratePreview} disabled={!rawInput.trim()}
-                                        className="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800/60 disabled:opacity-40 text-slate-300 text-xs font-bold rounded-lg transition-all">
+                                    <button
+                                        type="button"
+                                        onClick={handleGeneratePreview}
+                                        disabled={!rawInput.trim()}
+                                        className="px-3 py-1.5 bg-surface-container border border-border-subtle hover:bg-surface-subtle disabled:opacity-40 text-on-surface text-xs font-bold rounded-lg transition-all cursor-pointer"
+                                    >
                                         {t.generatePreview}
                                     </button>
                                     {generatedSchema && (
                                         <>
-                                            <button onClick={() => window.print()}
-                                                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm">
+                                            <button
+                                                type="button"
+                                                onClick={() => window.print()}
+                                                className="px-3 py-1.5 bg-surface-subtle hover:bg-surface-container border border-border-subtle text-on-surface text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                                            >
                                                 <Printer size={14} /> PDF
                                             </button>
-                                            <button onClick={() => exportDocx(generatedSchema, 'DocStudio_Export.docx', layoutConfig)}
-                                                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm">
+                                            <button
+                                                type="button"
+                                                onClick={() => exportDocx(generatedSchema, 'DocStudio_Export.docx', layoutConfig)}
+                                                className="px-3 py-1.5 bg-secondary hover:bg-secondary-container text-on-secondary text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                                            >
                                                 <Download size={14} /> DOCX
                                             </button>
                                         </>
@@ -517,8 +562,14 @@ export default function DocStudioApp({ displayLang }) {
 
                             {/* Status message */}
                             {statusMessage && (
-                                <div className={`print:hidden mb-3 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 shrink-0 ${statusType === 'success' ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-300' : statusType === 'error' ? 'bg-red-500/10 border border-red-500/30 text-red-200' : 'bg-blue-500/10 border border-blue-500/30 text-blue-200'}`}>
-                                    {statusType === 'info' ? <Sparkles size={14} className="animate-spin text-blue-500" /> : <Sparkles size={14} />}
+                                <div className={`print:hidden mb-3 px-4 py-2.5 rounded-xl text-sm font-medium flex items-center gap-2 shrink-0 ${
+                                    statusType === 'success'
+                                        ? 'bg-secondary/15 border border-secondary/30 text-secondary'
+                                        : statusType === 'error'
+                                        ? 'bg-error-container/20 border border-error/30 text-error'
+                                        : 'bg-primary-container/15 border border-primary-container/30 text-brand-cyan-bright'
+                                }`}>
+                                    {statusType === 'info' ? <Sparkles size={14} className="animate-spin text-primary-container" /> : <Sparkles size={14} />}
                                     {statusMessage}
                                 </div>
                             )}
@@ -528,10 +579,10 @@ export default function DocStudioApp({ displayLang }) {
                                 {/* Left: Editor + Suggestions + Validation */}
                                 <div className="w-1/2 flex flex-col gap-3 min-h-0 print:hidden">
                                     {/* Textarea */}
-                                    <div className={`relative flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm ${suggestions.length > 0 ? 'h-1/3' : 'flex-1'}`}>
-                                        <div className="p-3 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between shrink-0">
-                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.rawInputLabel}</span>
-                                            <span className="text-[10px] text-slate-400">{t.uploadHint}</span>
+                                    <div className={`relative flex flex-col bg-surface-container border border-border-subtle rounded-xl overflow-hidden shadow-sm ${suggestions.length > 0 ? 'h-1/3' : 'flex-1'}`}>
+                                        <div className="p-3 bg-surface-subtle/50 border-b border-border-subtle flex items-center justify-between shrink-0">
+                                            <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">{t.rawInputLabel}</span>
+                                            <span className="text-[10px] text-on-surface-variant">{t.uploadHint}</span>
                                         </div>
                                         <textarea
                                             ref={textareaRef}
@@ -539,20 +590,20 @@ export default function DocStudioApp({ displayLang }) {
                                             onChange={(e) => setRawInput(e.target.value)}
                                             onSelect={handleTextSelect}
                                             onBlur={() => setTimeout(() => setSelectionRange(null), 200)}
-                                            className="flex-1 p-4 resize-none outline-none font-mono text-sm text-slate-200 custom-scrollbar"
+                                            className="flex-1 p-4 resize-none outline-none font-mono text-sm text-on-surface custom-scrollbar bg-transparent"
                                             placeholder={t.rawInputPlaceholder}
                                         />
 
                                         {/* Notion-style AI Floating Toolbar */}
                                         {selectionRange && (
-                                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 text-white rounded-lg shadow-2xl p-1.5 flex items-center gap-1 z-50 animate-in slide-in-from-bottom-3 fade-in duration-200">
-                                                <span className="text-xs font-bold text-slate-300 px-2 flex-1 whitespace-nowrap">
-                                                    <Sparkles size={12} className="inline mr-1 text-indigo-400" /> AI Rewrite
+                                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface-container-high border border-border-subtle text-on-surface rounded-lg shadow-2xl p-1.5 flex items-center gap-1 z-50 animate-in slide-in-from-bottom-3 fade-in duration-200">
+                                                <span className="text-xs font-bold text-on-surface px-2 flex-1 whitespace-nowrap">
+                                                    <Sparkles size={12} className="inline mr-1 text-brand-cyan-bright" /> AI Rewrite
                                                 </span>
-                                                <div className="w-px h-4 bg-slate-700 mx-1"></div>
-                                                <button onClick={() => applyAIRewrite('longer')} className="px-2.5 py-1.5 hover:bg-slate-800 rounded-md text-xs font-semibold text-slate-200 transition-colors">Dài hơn</button>
-                                                <button onClick={() => applyAIRewrite('shorter')} className="px-2.5 py-1.5 hover:bg-slate-800 rounded-md text-xs font-semibold text-slate-200 transition-colors">Ngắn gọn</button>
-                                                <button onClick={() => applyAIRewrite('professional')} className="px-2.5 py-1.5 hover:bg-slate-800 rounded-md text-xs font-semibold text-slate-200 transition-colors">Văn phong Pro</button>
+                                                <div className="w-px h-4 bg-border-subtle mx-1"></div>
+                                                <button type="button" onClick={() => applyAIRewrite('longer')} className="px-2.5 py-1.5 hover:bg-surface-subtle rounded-md text-xs font-semibold text-on-surface transition-colors cursor-pointer">Dài hơn</button>
+                                                <button type="button" onClick={() => applyAIRewrite('shorter')} className="px-2.5 py-1.5 hover:bg-surface-subtle rounded-md text-xs font-semibold text-on-surface transition-colors cursor-pointer">Ngắn gọn</button>
+                                                <button type="button" onClick={() => applyAIRewrite('professional')} className="px-2.5 py-1.5 hover:bg-surface-subtle rounded-md text-xs font-semibold text-on-surface transition-colors cursor-pointer">Văn phong Pro</button>
                                             </div>
                                         )}
                                     </div>
@@ -579,20 +630,20 @@ export default function DocStudioApp({ displayLang }) {
 
                                     {/* Validation Panel */}
                                     {validationIssues.length > 0 && (
-                                        <div className="h-40 bg-slate-900 border border-rose-200 rounded-xl shadow-sm overflow-hidden flex flex-col shrink-0">
-                                            <div className="p-2.5 bg-rose-50 border-b border-rose-100 flex items-center gap-2 text-rose-700 font-bold text-xs uppercase tracking-wider">
+                                        <div className="h-40 bg-surface-container border border-error/30 rounded-xl shadow-sm overflow-hidden flex flex-col shrink-0">
+                                            <div className="p-2.5 bg-error-container/20 border-b border-error/30 flex items-center gap-2 text-error font-bold text-xs uppercase tracking-wider">
                                                 <Layers size={14} /> {t.validationLabel} ({validationIssues.length})
                                             </div>
                                             <div className="p-3 overflow-y-auto custom-scrollbar flex-1 space-y-2">
                                                 {validationIssues.map(issue => (
-                                                    <div key={issue.id} className="p-2 border border-slate-800 rounded bg-slate-900/60">
+                                                    <div key={issue.id} className="p-2 border border-border-subtle rounded bg-surface-subtle">
                                                         <div className="flex items-center gap-2 mb-1">
-                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${issue.severity === 'ERROR' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${issue.severity === 'ERROR' ? 'bg-error-container/20 text-error' : 'bg-tertiary-container/20 text-tertiary'}`}>
                                                                 {issue.severity}
                                                             </span>
-                                                            <span className="text-xs font-bold text-slate-200">{issue.message}</span>
+                                                            <span className="text-xs font-bold text-on-surface">{issue.message}</span>
                                                         </div>
-                                                        <p className="text-[11px] text-slate-400 ml-1">{t.noteLabel}: {issue.suggestion}</p>
+                                                        <p className="text-[11px] text-on-surface-variant ml-1">{t.noteLabel}: {issue.suggestion}</p>
                                                     </div>
                                                 ))}
                                             </div>
@@ -601,17 +652,17 @@ export default function DocStudioApp({ displayLang }) {
                                 </div>
 
                                 {/* Right: Preview */}
-                                <div className="w-1/2 flex flex-col min-h-0 bg-slate-700 border border-slate-700 rounded-xl overflow-hidden print:w-full print:border-none print:shadow-none print:bg-transparent print:block print:overflow-visible">
-                                    <div className="p-2 border-b border-slate-700 bg-white/50 backdrop-blur-sm z-10 shrink-0 print:hidden">
+                                <div className="w-1/2 flex flex-col min-h-0 bg-surface-subtle border border-border-subtle rounded-xl overflow-hidden print:w-full print:border-none print:shadow-none print:bg-transparent print:block print:overflow-visible">
+                                    <div className="p-2 border-b border-border-subtle bg-surface-container/80 backdrop-blur-sm z-10 shrink-0 print:hidden">
                                         <LayoutSettingsBar config={layoutConfig} onChange={setLayoutConfig} />
                                     </div>
                                     <div className="flex-1 overflow-y-auto p-4 flex justify-center custom-scrollbar print:p-0 print:m-0 print:overflow-visible print:block">
                                         {generatedSchema ? (
                                             <DocStudioPreview schema={generatedSchema} layoutConfig={layoutConfig} />
                                         ) : (
-                                            <div className="bg-slate-900 w-full max-w-[210mm] min-h-[297mm] shadow-lg p-10 flex flex-col items-center justify-center">
-                                                <FileUp size={48} className="text-slate-200 mb-4" />
-                                                <p className="text-slate-400 text-center italic text-sm max-w-xs">{t.previewEmpty}</p>
+                                            <div className="bg-surface-container w-full max-w-[210mm] min-h-[297mm] shadow-lg p-10 flex flex-col items-center justify-center">
+                                                <FileUp size={48} className="text-on-surface-variant mb-4" />
+                                                <p className="text-on-surface-variant text-center italic text-sm max-w-xs">{t.previewEmpty}</p>
                                             </div>
                                         )}
                                     </div>

@@ -283,8 +283,8 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
       </div>
 
       {/* ADVISORY ALERT */}
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-space-3 text-body-sm text-amber-200 mb-space-4 flex items-center gap-2">
-        <AlertCircle className="w-5 h-5 text-amber-400 shrink-0" />
+      <div className="rounded-xl border border-tertiary/30 bg-tertiary/10 p-space-3 text-body-sm text-tertiary mb-space-4 flex items-center gap-2">
+        <AlertCircle className="w-5 h-5 text-tertiary shrink-0" />
         <span>Kết quả chỉ mang tính tham khảo kỹ thuật. Dữ liệu được xử lý cục bộ trên trình duyệt và cần kế toán kiểm tra đối chiếu trước khi lập báo cáo tài chính chính thức.</span>
       </div>
 
@@ -318,6 +318,7 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
               ref={fileInputRef}
               multiple
               accept=".xlsx,.xls"
+              aria-label="Tải lên tệp sổ kế toán Excel (.xlsx, .xls)"
               onChange={handleFileUpload}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />

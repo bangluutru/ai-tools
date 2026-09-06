@@ -581,7 +581,7 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
                     }`}
                   >
                     <span>{m.label}</span>
-                    <span className="px-1.5 py-[1px] bg-primary-container/20 text-brand-cyan-bright font-label-sm text-[9px] rounded">
+                    <span className="px-1.5 py-[1px] bg-primary-container text-on-primary-container font-label-sm text-[9px] font-semibold rounded">
                       {m.sub}
                     </span>
                   </button>
@@ -716,6 +716,7 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
                     type="text"
                     value={outputFileName}
                     onChange={(e) => setOutputFileName(e.target.value)}
+                    aria-label="Tên file đầu ra"
                     className="bg-transparent text-on-surface font-label-md text-label-md w-full outline-none"
                   />
                 </div>

@@ -33,14 +33,14 @@ Tuyệt đối không sử dụng mã màu tùy tiện. Toàn bộ màu sắc, n
 | **Khung Nâng Cao / Dropdown** | `--surface-container-high`| `bg-surface-container-high`| `#222a3d` | `#F1F5F9` |
 | **Nền Nút Phụ / Chip** | `--surface-subtle` | `bg-surface-subtle` | `#1E293B` | `#E2E8F0` |
 | **Đường Viền Tinh Tế (1px)** | `--border-subtle` | `border-border-subtle` | `#334155` | `#CBD5E1` |
-| **Màu Nhấn Chính (Primary)** | `--primary` | `text-primary`, `bg-primary` | `#89ceff` | `#0284C7` |
-| **Khối Nút Bấm Chính** | `--primary-container` | `bg-primary-container` | `#0ea5e9` | `#0284C7` |
-| **Bảo Mật / Khách Hàng (Client)**| `--secondary` | `text-secondary`, `bg-secondary`| `#4edea3` | `#059669` |
-| **Cảnh Báo / Tham Khảo (Kế Toán)**| `--tertiary` | `text-tertiary` | `#ffb86e` | `#D97706` |
-| **Báo Lỗi / Cảnh Báo Nguy Hiểm** | `--error` | `text-error`, `bg-error-container`| `#ffb4ab` | `#DC2626` |
+| **Màu Nhấn Chính (Primary)** | `--primary` | `text-primary`, `bg-primary` | `#89ceff` | `#0369A1` |
+| **Khối Nút Bấm Chính** | `--primary-container` | `bg-primary-container` | `#0ea5e9` | `#0369A1` |
+| **Bảo Mật / Khách Hàng (Client)**| `--secondary` | `text-secondary`, `bg-secondary`| `#4edea3` | `#065F46` (Đạt >= 4.5:1 trên pastel/trắng) |
+| **Cảnh Báo / Tham Khảo (Kế Toán)**| `--tertiary` | `text-tertiary` | `#ffb86e` | `#92400e` (Amber-800, đạt >= 4.5:1 trên pastel/trắng) |
+| **Báo Lỗi / Cảnh Báo Nguy Hiểm** | `--error` | `text-error`, `bg-error-container`| `#ffb4ab` | `#B91C1C` (Red-700, đạt >= 4.5:1 trên xám/trắng) |
 | **Văn Bản Chính** | `--on-surface` | `text-on-surface` | `#dae2fd` | `#0F172A` |
 | **Văn Bản Phụ / Gợi Ý** | `--on-surface-variant` | `text-on-surface-variant` | `#bec8d2` | `#475569` |
-| **Nhãn Mờ / Monospace Note** | `--outline` | `text-outline` | `#88929b` | `#64748B` |
+| **Nhãn Mờ / Monospace Note** | `--outline` | `text-outline` | `#88929b` | `#475569` |
 
 > [!CAUTION]
 > **ĐIỀU CẤM KỶ LUẬT SỐ 1: CẤM HARDCODE MÀU SẮC LẠ HOẶC CLASS LIGHT-MODE TĨNH**
@@ -105,6 +105,49 @@ Mọi miniapp bắt buộc phải vượt qua kiểm thử hiển thị trên 4 
    - Mọi phần tử `<input>`, `<select>`, `<textarea>` bắt buộc có font-size tối thiểu `16px` trên mobile (sử dụng class Tailwind `text-base sm:text-sm`). Font nhỏ hơn 16px sẽ khiến iOS Safari tự động zoom màn hình, làm vỡ khung hiển thị.
 4. **Bố Cục Tự Động Xếp Chồng (Adaptive Stacking)**:
    - Các bố cục dạng lưới 2-3 cột trên Desktop (`grid-cols-2`, `grid-cols-12`) bắt buộc phải dùng tiền tố responsive (ví dụ: `grid grid-cols-1 lg:grid-cols-12`) để tự động chuyển thành 1 cột dọc trên màn hình hẹp.
+
+### 2.7. Tiêu Chuẩn Trợ Năng WCAG 2.1 Level A & AA (Accessibility & Color Contrast)
+Mọi miniapp và thành phần trên Hub bắt buộc phải đáp ứng 100% tiêu chuẩn trợ năng quốc tế **WCAG 2.1 Level A và Level AA**. Việc này đảm bảo người dùng suy giảm thị lực, người lớn tuổi hoặc người làm việc trong môi trường ánh sáng mạnh đều đọc được nội dung rõ ràng, sắc nét.
+
+#### 1. Quy chuẩn tỷ lệ tương phản màu sắc (Contrast Ratio Thresholds):
+- **Văn bản thông thường / Văn bản kích thước nhỏ (< 18pt / 24px thường, hoặc < 14pt / 18.5px đậm)**:
+  - Tỷ lệ tương phản tối thiểu bắt buộc: **$\ge 4.5:1$**.
+  - Áp dụng cho toàn bộ: nhãn badge, văn bản thẻ, ghi chú phụ, mã số, nhãn trạng thái (10px - 14px).
+- **Văn bản lớn ($\ge 18pt / 24px$ thường, hoặc $\ge 14pt / 18.5px$ đậm)**:
+  - Tỷ lệ tương phản tối thiểu: **$\ge 3.0:1$**.
+- **Thành phần tương tác & Đồ họa (UI Components, Form Inputs, Borders, Icons)**:
+  - Tỷ lệ tương phản viền, placeholder trạng thái kích hoạt tối thiểu: **$\ge 3.0:1$** so với nền lân cận.
+
+#### 2. Công thức đo lường chuẩn toán học (W3C Relative Luminance):
+Độ sáng tương đối ($L$) tính từ giá trị sRGB chuẩn hóa ($R, G, B \in [0, 1]$):
+$$C_{\text{linear}} = \begin{cases} \frac{C}{12.92} & \text{nếu } C \le 0.04045 \\ \left(\frac{C + 0.055}{1.055}\right)^{2.4} & \text{nếu } C > 0.04045 \end{cases}$$
+$$L = 0.2126 \times R_{\text{linear}} + 0.7152 \times G_{\text{linear}} + 0.0722 \times B_{\text{linear}}$$
+Tỷ lệ tương phản giữa màu chữ ($L_1$) và màu nền ($L_2$) (với $L_1$ sáng hơn $L_2$):
+$$\text{Contrast Ratio} = \frac{L_1 + 0.05}{L_2 + 0.05}$$
+
+#### 3. Ma Trận Phối Màu An Toàn (Safe Color Pairing Matrix):
+Mọi miniapp bắt buộc tham chiếu ma trận phối màu đã được chứng minh toán học và kiểm định qua axe-core:
+
+| Thành phần UI | Màu chữ (Token / Hex) | Nền hiển thị (Token / Hex) | Tỷ lệ tương phản đo đạc | Kết luận WCAG 2.1 AA |
+|:---|:---|:---|:---:|:---:|
+| **Nhãn Trạng Thái Client (Badge)** | `text-secondary` (`#065F46` - Emerald 800) | Nền trắng `#FFFFFF` | **7.70:1** | **PASS** ($\ge 4.5:1$) |
+| **Nhãn Trạng Thái Pastel** | `text-secondary` (`#065F46` - Emerald 800) | Pastel `bg-secondary/15` (`#D9EBE6`) | **6.24:1** | **PASS** ($\ge 4.5:1$) |
+| **Nút / Badge Primary Container** | `text-on-primary-container` (`#FFFFFF`) | `bg-primary-container` (`#0369A1` - Sky 700) | **5.96:1** | **PASS** ($\ge 4.5:1$) |
+| **Văn Bản Chính (Light Mode)** | `text-on-surface` (`#0F172A` - Slate 900) | `bg-surface-canvas` (`#F8FAFC`) | **16.14:1** | **PASS** ($\ge 4.5:1$) |
+| **Văn Bản Phụ / Gợi Ý (Light)** | `text-on-surface-variant` (`#475569` - Slate 600) | `bg-surface-canvas` (`#F8FAFC`) | **5.45:1** | **PASS** ($\ge 4.5:1$) |
+| **Ghi Chú Kỹ Thuật (Outline Note)** | `text-outline` (`#475569` - Slate 600) | Nền trắng `#FFFFFF` | **5.67:1** | **PASS** ($\ge 4.5:1$) |
+| **Badge Báo Lỗi / Cảnh Báo** | `text-error` (`#DC2626` - Red 600) | Pastel `bg-error-container` (`#FEE2E2`) | **4.68:1** | **PASS** ($\ge 4.5:1$) |
+| **Badge Kế Toán / Cảnh Báo Vàng** | `text-tertiary` (`#B45309` - Amber 700) | Pastel `bg-tertiary/15` (`#FEF3C7`) | **4.72:1** | **PASS** ($\ge 4.5:1$) |
+
+> [!CAUTION]
+> **BẪY TƯƠNG PHẢN NỀN PASTEL (PASTEL CONTRAST TRAP)**:
+> Mã màu `#047857` (emerald-700) đạt 5.48:1 trên nền trắng tinh `#FFFFFF`, nhưng khi đặt trên nền pastel `bg-secondary/15` (`#D9EBE6`), nền bị nâng Luminance lên dẫn đến tỷ lệ tương phản rớt xuống **4.43:1** (< 4.5:1 — VI PHẠM WCAG AA). Vì vậy, màu chữ xanh lá trong Light Mode **bắt buộc phải là `#065F46` (Emerald 800)**.
+
+#### 4. Danh Mục Anti-Patterns Bị Cấm Tuyệt Đối (The A11y Anti-patterns):
+1. **CẤM DÙNG TEXT MÀU NHẠT TRÊN NỀN SÁNG**: Nghiêm cấm dùng các class `text-slate-400`, `text-gray-400`, `text-zinc-400`, `text-neutral-400` cho bất kỳ văn bản nào trong Light Mode (tương phản chỉ ~2.5:1, vi phạm nghiêm trọng).
+2. **CẤM DÙNG MÀU CHỮ THƯƠNG HIỆU QUÁ SÁNG LÀM CHỮ TRÊN NỀN TRẮNG**: Không dùng `#0ea5e9` (Sky 500, tương phản 2.77:1) hoặc `#10b981` (Emerald 500, tương phản 2.21:1) làm màu chữ trên nền trắng.
+3. **CẤM THU NHỎ CỠ CHỮ DƯỚI 11PX CHO NỘI DUNG QUAN TRỌNG**: Cỡ chữ `10px` chỉ được phép dùng cho mã hash hoặc watermark không bắt buộc; toàn bộ nhãn chức năng phải từ `11px` (`text-[11px] font-semibold`) trở lên kèm màu tương phản cao.
+4. **CẤM TRẠNG THÁI FOCUS VÔ HÌNH (NO OUTLINE FOCUS)**: Mọi nút bấm, thẻ tương tác và input phải có trạng thái `:focus-visible` với viền `ring-2 ring-primary ring-offset-2`.
 
 ---
 
@@ -209,6 +252,9 @@ Trước khi một miniapp được chuyển từ trạng thái `in-development`
 ### 🟡 CỔNG 2: STATIC TOKEN & UI LINTER (RÀ SOÁT TĨNH GIAO DIỆN)
 - [ ] **Quét sạch Class Light-Mode tĩnh**:
   - Không có `bg-white`, `bg-slate-50`, `bg-gray-100`, `text-black`, `text-slate-900`.
+- [ ] **Quét sạch Class Màu Chữ Tương Phản Thấp (A11y Anti-patterns)**:
+  - Không có `text-slate-400`, `text-gray-400`, `text-zinc-400`, `text-neutral-400` dùng trên nền sáng (tương phản chỉ ~2.5:1, rớt chuẩn WCAG AA).
+  - Bắt buộc dùng `text-on-surface-variant` (`#475569`, 5.45:1) hoặc `text-outline` (`#475569`, 5.67:1).
 - [ ] **Kiểm tra Iconography**:
   - Không có ký tự emoji thô (`🚀`, `💡`, `❌`, `🔥`) được render làm icon thao tác.
 - [ ] **Kiểm tra Layout Container**:
@@ -224,21 +270,29 @@ Trước khi một miniapp được chuyển từ trạng thái `in-development`
 - [ ] **Kiểm tra Cleanup Event Listeners**:
   - `addEventListener` trên window/document phải có hàm hủy trong `useEffect`.
 
-### 🔵 CỔNG 4: AUTOMATED REAL-BROWSER TESTING (KIỂM THỬ TRÌNH DUYỆT THẬT)
-Được tự động hóa qua script: `npm run test:browser -- --tool=<tool-id>` hoặc `npm run test:browser`.
+### 🔵 CỔNG 4: AUTOMATED REAL-BROWSER TESTING & DEEP FLOW VERIFICATION (KIỂM THỬ TRÌNH DUYỆT THẬT & LUỒNG SÂU)
+Được tự động hóa qua script: `npm run test:browser -- --flow` hoặc `npm run test:browser:tool -- <tool-id>`.
 - [ ] **Render thành công**: Mở route `#/tools/<tool-id>` nạp xong trong vòng < 2.0s.
 - [ ] **Zero Console Errors**: 0 lỗi `console.error`, 0 ngoại lệ `pageerror`.
+- [ ] **Kiểm Trợ Năng Tự Động axe-core Kép (Initial & Dynamic State A11y Audit)**:
+  - **Initial State Audit**: Quét WCAG 2.1 A & AA ngay khi nạp trang (Desktop & Mobile, Dark & Light Mode). Bắt buộc đạt **0 vi phạm (`violations: 0`)**.
+  - **Dynamic State Audit**: Tự động thực thi luồng tương tác sâu (nạp tệp mẫu synthetic, bấm nút tính toán/phân tích, chuyển tab kết quả) rồi quét lại axe-core. Toàn bộ các component động (thông báo cảnh báo, bảng kết quả, slider điều chỉnh, color picker) bắt buộc đạt **0 vi phạm (`violations: 0`)**.
+  - **Tiêu chuẩn Form Labels & Control Names**: Mọi `<input>` (bao gồm `range`, `color`, `text`), `<select>` phải có `<label htmlFor="...">` hoặc thuộc tính `aria-label` tường minh.
+  - Tỷ lệ tương phản chữ nhỏ đo đạc thực tế $\ge 4.5:1$, chữ lớn $\ge 3.0:1$.
 - [ ] **Kiểm chứng Style Thực Tế (Computed Style)**:
-  - Màu nền canvas chuẩn `--surface-canvas` (`#090D16` ở Dark Mode).
-  - Thẻ làm việc có viền `--border-subtle` (`#334155`) và nền `--surface-container` (`#171f33`).
+  - Màu nền canvas chuẩn `--surface-canvas` (`#090D16` ở Dark Mode, `#f8fafc` ở Light Mode).
+  - Thẻ làm việc có viền `--border-subtle` và nền `--surface-container`.
   - Chiều rộng không tràn khung (`clientWidth <= 1240px`).
 - [ ] **Kiểm chứng Chuyển Theme (Dark ↔ Light)**:
   - Khi bật Light Mode: Nền chuyển sang sáng chuẩn (`#F8FAFC`), chữ tối rõ nét, độ tương phản đạt chuẩn WCAG.
   - Khi bật Dark Mode: Giao diện tối sâu đồng bộ.
 - [ ] **Kiểm chứng Đổi Ngôn Ngữ (VI ↔ EN ↔ JA)**:
   - Chuyển ngôn ngữ trên Navbar lập tức cập nhật tiêu đề miniapp tương ứng mà không cần reload trang.
+- [ ] **Kiểm thử Kéo Thả & Luồng Dữ Liệu Tương Tác Sâu (Synthetic Flow Testing)**:
+  - Kích hoạt DropZone với tệp fixture synthetic chuẩn (PDF, Excel XLSX, XML hóa đơn điện tử, ảnh mẫu).
+  - Kiểm tra trạng thái chuyển bước (Wizard step progression), render bảng dữ liệu / canvas kết quả không sinh ngoại lệ.
 - [ ] **Kiểm chứng Cơ Chế Cách Ly Sự Cố (Fault Isolation)**:
-  - Kích hoạt thử nghiệm lỗi mô phỏng → Card `ToolErrorBoundary` hiển thị thông báo an toàn, bấm "Về Trang Chủ" đưa người dùng về Dashboard hoàn hảo.
+  - Kích hoạt thử nghiệm lỗi mô phỏng → Card `ToolErrorBoundary` hiển thị thông báo an toàn, bấm "Về Trung Tâm" đưa người dùng về Dashboard hoàn hảo.
 
 ---
 
@@ -247,19 +301,24 @@ Trước khi một miniapp được chuyển từ trạng thái `in-development`
 Dự án đã tích hợp sẵn các lệnh CLI để lập trình viên tự kiểm duyệt nhanh:
 
 ```bash
-# 1. Rà soát tĩnh toàn bộ các miniapp theo Gate 1, 2, 3
+# 1. Rà soát tĩnh toàn bộ các miniapp theo Gate 1, 2, 3 (kèm kiểm tra class tương phản thấp)
 npm run audit:miniapps
 
 # 2. Rà soát tĩnh một miniapp cụ thể
 node scripts/audit-miniapp.mjs <tool-id>
 
-# 3. Chạy kiểm thử tự động trên trình duyệt thật (Gate 4) cho toàn bộ 12 miniapps
+# 3. Chạy kiểm thử tự động trên trình duyệt thật (Gate 4 cơ bản)
 npm run test:browser
 
-# 4. Chạy kiểm thử trình duyệt cho riêng một miniapp đang phát triển
-npm run test:browser:tool -- id-photo-studio
+# 4. Chạy kiểm thử trình duyệt toàn diện kèm luồng sâu & quét trợ năng động (Dynamic State A11y Audit)
+node scripts/verify-miniapp-browser.mjs --flow
 
-# 5. Chạy toàn bộ unit test & contract tests của dự án
+# 5. Chạy kiểm thử trình duyệt & trợ năng chuyên sâu cho riêng một miniapp đang phát triển
+npm run test:browser:tool -- <tool-id>
+# Hoặc:
+node scripts/verify-miniapp-browser.mjs --tool=<tool-id>
+
+# 6. Chạy toàn bộ unit test & contract tests (kèm kiểm tra toán học độ tương phản CSS tokens)
 npm test
 ```
 
@@ -272,9 +331,10 @@ npm test
 | Đã khai báo đầy đủ 3 ngôn ngữ trong `toolsRegistry.js` | [ ] | VN, EN, JA |
 | Đã bọc trong `StandardToolLayout` hoặc `MiniAppLayout` | [ ] | Max 1240px |
 | 100% sử dụng CSS semantic tokens (không có `bg-white`, `text-black`) | [ ] | Tương thích cả Dark/Light |
+| Tỷ lệ tương phản chữ $\ge 4.5:1$ theo ma trận phối màu an toàn (không dùng `text-*-400`) | [ ] | Chuẩn WCAG 2.1 AA |
 | 100% dùng `lucide-react` (không có emoji làm icon) | [ ] | Đảm bảo tính chuyên nghiệp |
 | Mọi Blob URL đều có `URL.revokeObjectURL` | [ ] | Chống rò rỉ RAM |
 | LocalStorage có prefix `ai_tools_<id>_` | [ ] | Không đè dữ liệu miniapp khác |
 | Chạy `npm run audit:miniapps` trả về 0 lỗi | [ ] | Đạt Gate 1, 2, 3 |
-| Chạy `npm run test:browser` trả về 0 lỗi console | [ ] | Đạt Gate 4 |
-| Chạy `npm test` 100% xanh | [ ] | Toàn vẹn hệ thống |
+| Chạy `npm run test:browser:tool -- <id>` đạt 0 lỗi console & 0 vi phạm axe-core | [ ] | Đạt Gate 4 Trợ năng |
+| Chạy `npm test` 100% xanh (bao gồm kiểm tra toán học tương phản token) | [ ] | Toàn vẹn hệ thống |

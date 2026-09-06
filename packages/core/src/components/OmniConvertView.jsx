@@ -329,7 +329,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
       case 'presentation': return <Presentation className="w-5 h-5 text-amber-400" />;
       case 'image': return <ImageIcon className="w-5 h-5 text-purple-400" />;
       case 'pdf': return <FileCode className="w-5 h-5 text-red-400" />;
-      default: return <File className="w-5 h-5 text-slate-400" />;
+      default: return <File className="w-5 h-5 text-on-surface-variant" />;
     }
   };
 
@@ -350,35 +350,35 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
       <section className="flex flex-col space-y-4">
         {/* Breadcrumb */}
         <div className="flex items-center justify-between gap-4">
-          <nav className="flex items-center gap-2 text-xs font-mono text-slate-400">
-            <a href="#/tat-ca" className="hover:text-primary-container transition-colors flex items-center gap-1">
+          <nav className="flex items-center gap-2 text-xs font-mono text-on-surface-variant">
+            <a href="#/tat-ca" className="hover:text-primary transition-colors flex items-center gap-1">
               <Home className="w-3.5 h-3.5" />
               <span>Trang chủ</span>
             </a>
-            <span className="text-slate-600">/</span>
-            <a href="#/tien-ich" className="hover:text-primary-container transition-colors">Tiện ích & Văn phòng</a>
-            <span className="text-slate-600">/</span>
-            <span className="text-slate-200 font-medium">Chuyển Đổi OmniConvert</span>
+            <span className="text-outline">/</span>
+            <a href="#/tien-ich" className="hover:text-primary transition-colors">Tiện ích &amp; Văn phòng</a>
+            <span className="text-outline">/</span>
+            <span className="text-on-surface font-medium">Chuyển Đổi OmniConvert</span>
           </nav>
-          <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] text-slate-400">
+          <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] text-on-surface-variant">
             <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
             <span>WASM ENGINE v3.1.8 ACTIVE</span>
           </div>
         </div>
 
         {/* Tool Header Block */}
-        <div className="bg-surface-container/60 border border-border-subtle/70 rounded-xl p-6 shadow-sm relative overflow-hidden">
+        <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-sm relative overflow-hidden">
           <div className="absolute -right-12 -top-12 w-64 h-64 bg-primary-container/10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-6">
             <div className="flex items-start gap-4">
-              <div className="w-14 h-14 rounded-xl bg-surface-container border border-border-subtle flex items-center justify-center text-primary-container shrink-0 shadow-sm">
-                <FileStack className="w-8 h-8" />
+              <div className="w-14 h-14 rounded-xl bg-surface-container-high border border-border-subtle flex items-center justify-center text-primary-container shrink-0 shadow-sm">
+                <FileStack className="w-8 h-8 text-primary-container" />
               </div>
               <div className="space-y-2 max-w-3xl">
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 tracking-tight">
-                  Chuyển Đổi OmniConvert — Office sang PDF & Markdown
+                <h1 className="text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">
+                  Chuyển Đổi OmniConvert — Office sang PDF &amp; Markdown
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
                   Chuyển đổi tức thì tài liệu văn phòng Office (Word .docx, Excel .xlsx, PowerPoint .pptx, TXT, HTML) sang PDF chuẩn in ấn hoặc Markdown / Clean HTML tối ưu cho LLM/AI prompt mà không làm mất định dạng bảng biểu hay tiêu đề.
                 </p>
                 <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
@@ -392,7 +392,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface border border-border-subtle hover:bg-surface-container text-slate-300 text-xs font-medium transition-colors"
+                aria-label="Cài đặt thông số xuất tài liệu"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-subtle border border-border-subtle hover:bg-surface-container text-on-surface text-xs font-medium transition-colors cursor-pointer"
               >
                 <Sliders className="w-4 h-4 text-primary-container" />
                 <span>Cài đặt xuất</span>
@@ -405,16 +406,18 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {POPULAR_PRESETS.map((preset) => {
             const isActive = activePreset === preset.id;
-            const label = preset[`label_${displayLang}`] || preset.label_vi;
+            const langKey = displayLang === 'vi' ? 'vn' : displayLang;
+            const label = preset[`label_${langKey}`] || preset.label_vn || preset.label_en || preset.id;
             return (
               <button
                 key={preset.id}
                 type="button"
                 onClick={() => handleSelectPreset(preset)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
+                aria-label={label}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border cursor-pointer ${
                   isActive
-                    ? 'bg-primary-container/20 text-primary-container border-primary-container/60 shadow-sm'
-                    : 'bg-surface-container/60 text-slate-300 border-border-subtle hover:bg-surface-container hover:text-white'
+                    ? 'bg-primary text-on-primary border-primary shadow-sm'
+                    : 'bg-surface-container text-on-surface-variant border-border-subtle hover:bg-surface-subtle hover:text-on-surface'
                 }`}
               >
                 <span>{label}</span>
@@ -437,10 +440,10 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
           <div className="bg-surface-container/60 border border-border-subtle/70 rounded-xl p-5 shadow-sm flex flex-col gap-4">
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-primary-container text-slate-950 font-mono text-xs font-bold flex items-center justify-center">1</span>
-                <h2 className="text-sm font-semibold text-slate-100">Tải Tệp Tin Văn Phòng Nguồn</h2>
+                <span className="w-6 h-6 rounded bg-primary text-on-primary font-mono text-xs font-bold flex items-center justify-center">1</span>
+                <h2 className="text-sm font-semibold text-on-surface">Tải Tệp Tin Văn Phòng Nguồn</h2>
               </div>
-              <span className="font-mono text-xs text-slate-400">Tối đa 50MB / tệp</span>
+              <span className="font-mono text-xs text-on-surface-variant">Tối đa 50MB / tệp</span>
             </div>
 
             {/* Error banner */}
@@ -485,15 +488,15 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               <div className="w-12 h-12 rounded-full bg-surface-container border border-border-subtle flex items-center justify-center text-primary-container mb-2">
                 <UploadCloud className="w-6 h-6" />
               </div>
-              <span className="text-sm font-medium text-slate-200 mb-1">
+              <span className="text-sm font-medium text-on-surface mb-1">
                 Kéo thả tài liệu vào đây, hoặc <span className="text-primary-container underline underline-offset-4">Duyệt tệp tin</span>
               </span>
-              <p className="text-xs text-slate-400 max-w-sm">
+              <p className="text-xs text-on-surface-variant max-w-sm">
                 Hỗ trợ Word (.docx), Excel (.xlsx, .csv), PowerPoint (.pptx), Ảnh (.png, .jpg), HTML, TXT.
               </p>
               <div className="flex items-center gap-2 mt-3">
                 {['DOCX', 'XLSX', 'PPTX', 'PNG', 'PDF'].map((ext) => (
-                  <span key={ext} className="px-2 py-0.5 rounded bg-surface font-mono text-[10px] text-slate-400 border border-border-subtle">
+                  <span key={ext} className="px-2 py-0.5 rounded bg-surface font-mono text-[10px] text-on-surface-variant border border-border-subtle">
                     {ext}
                   </span>
                 ))}
@@ -501,14 +504,15 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
             </div>
 
             {/* Merge Images Toggle */}
-            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-surface border border-border-subtle text-xs text-slate-300">
+            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-surface border border-border-subtle text-xs text-on-surface-variant">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-primary-container" />
-                <span>Gộp nhiều tệp ảnh thành 1 tài liệu PDF duy nhất</span>
+                <span className="text-on-surface">Gộp nhiều tệp ảnh thành 1 tài liệu PDF duy nhất</span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
+                  aria-label="Gộp nhiều tệp ảnh thành 1 tài liệu PDF duy nhất"
                   checked={mergeImagesToPdf}
                   onChange={(e) => setMergeImagesToPdf(e.target.checked)}
                   className="sr-only peer"
@@ -520,7 +524,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
             {/* Staged Files List */}
             {queue.length > 0 && (
               <div className="space-y-2 pt-1">
-                <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                <div tabIndex={0} role="region" aria-label="Danh sách tệp chờ chuyển đổi" className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
                   {queue.map((item) => {
                     const sourceDetails = FORMAT_DETAILS[item.sourceFormat] || {};
                     return (
@@ -533,11 +537,11 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                             {renderIcon(sourceDetails.category)}
                           </div>
                           <div className="min-w-0">
-                            <div className="text-xs font-medium text-slate-200 truncate">{item.file.name}</div>
-                            <div className="font-mono text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                            <div className="text-xs font-medium text-on-surface truncate">{item.file.name}</div>
+                            <div className="font-mono text-[11px] text-on-surface-variant flex items-center gap-2 mt-0.5">
                               <span>{formatFileSize(item.file.size)}</span>
                               <span>•</span>
-                              <span className="uppercase text-primary-container font-semibold">.{item.sourceFormat}</span>
+                              <span className="uppercase text-primary font-semibold">.{item.sourceFormat}</span>
                               <span>➔</span>
                               <span className="uppercase text-secondary font-semibold">.{item.targetFormat}</span>
                             </div>
@@ -546,7 +550,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
                         <div className="flex items-center gap-2 shrink-0">
                           {item.status === 'converting' && (
-                            <span className="font-mono text-xs text-primary-container flex items-center gap-1">
+                            <span className="font-mono text-xs text-primary flex items-center gap-1">
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
                               <span>{item.progress}%</span>
                             </span>
@@ -572,7 +576,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                               <button
                                 type="button"
                                 onClick={() => openPreview(item)}
-                                className="p-1 rounded bg-surface-container hover:bg-surface-bright text-slate-300 transition-colors"
+                                className="p-1 rounded bg-surface-container hover:bg-surface-bright text-on-surface-variant transition-colors"
+                                aria-label={`Xem trước chi tiết tệp ${item.file.name}`}
                                 title="Xem trước chi tiết"
                               >
                                 <Eye className="w-3.5 h-3.5" />
@@ -581,6 +586,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                                 type="button"
                                 onClick={() => handleDownloadSingle(item)}
                                 className="p-1 rounded bg-emerald-500/20 text-secondary hover:bg-emerald-500/30 transition-colors"
+                                aria-label={`Tải tệp ${item.file.name}`}
                                 title="Tải tệp này"
                               >
                                 <Download className="w-3.5 h-3.5" />
@@ -591,7 +597,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                           <button
                             type="button"
                             onClick={() => setQueue(prev => prev.filter(q => q.id !== item.id))}
-                            className="text-slate-400 hover:text-red-400 p-1 transition-colors"
+                            className="text-on-surface-variant hover:text-red-400 p-1 transition-colors"
+                            aria-label={`Xóa tệp ${item.file.name}`}
                             title="Xóa tệp"
                           >
                             <X className="w-4 h-4" />
@@ -603,7 +610,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 </div>
 
                 {/* Files Action Summary */}
-                <div className="flex items-center justify-between pt-1 text-xs text-slate-400">
+                <div className="flex items-center justify-between pt-1 text-xs text-on-surface-variant">
                   <div className="flex items-center gap-2">
                     <CheckSquare className="w-4 h-4 text-secondary" />
                     <span>{queue.length} tệp đã chọn • {formatFileSize(totalSize)}</span>
@@ -611,7 +618,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   <button
                     type="button"
                     onClick={() => setQueue([])}
-                    className="text-red-400 hover:underline text-xs"
+                    className="text-error font-medium hover:underline text-xs"
                   >
                     Xóa tất cả
                   </button>
@@ -624,15 +631,15 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
           <div className="bg-surface-container/60 border border-border-subtle/70 rounded-xl p-5 shadow-sm flex flex-col gap-5">
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-primary-container text-slate-950 font-mono text-xs font-bold flex items-center justify-center">2</span>
-                <h2 className="text-sm font-semibold text-slate-100">Cấu Hình Định Dạng Đích & Tinh Chỉnh</h2>
+                <span className="w-6 h-6 rounded bg-primary text-on-primary font-mono text-xs font-bold flex items-center justify-center">2</span>
+                <h2 className="text-sm font-semibold text-on-surface">Cấu Hình Định Dạng Đích & Tinh Chỉnh</h2>
               </div>
               <span className="font-mono text-xs text-secondary font-bold">CHẤT LƯỢNG CAO NHẤT</span>
             </div>
 
             {/* Target Format Selector Buttons */}
             <div className="space-y-2">
-              <label className="font-mono text-[10px] text-slate-400 block uppercase tracking-wider">
+              <label className="font-mono text-[10px] text-on-surface-variant block uppercase tracking-wider">
                 Định dạng đầu ra mong muốn
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -651,14 +658,14 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-200">PDF In Ấn & Vector</span>
+                      <span className="text-xs font-semibold text-on-surface">PDF In Ấn & Vector</span>
                       {targetFormat === 'pdf' && (
-                        <span className="px-1.5 py-0.5 rounded bg-primary-container text-slate-950 font-mono text-[10px] font-bold">
+                        <span className="px-1.5 py-0.5 rounded bg-primary text-on-primary font-mono text-[10px] font-bold">
                           Đã chọn
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">Chuẩn A4, dàn trang pixel-perfect</p>
+                    <p className="text-[11px] text-on-surface-variant line-clamp-1 mt-0.5">Chuẩn A4, dàn trang pixel-perfect</p>
                   </div>
                 </button>
 
@@ -668,21 +675,21 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   onClick={() => { handleSelectTargetFormat('md'); setPreviewTab('md'); }}
                   className={`p-3 rounded-lg text-left transition-all border flex items-start gap-3 ${
                     targetFormat === 'md'
-                      ? 'bg-emerald-500/15 border-emerald-500/60 shadow-sm'
+                      ? 'bg-secondary/15 border-secondary/60 shadow-sm'
                       : 'bg-surface border-border-subtle hover:bg-surface-container hover:border-slate-600'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded bg-emerald-500/20 text-secondary flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded bg-secondary/20 text-secondary flex items-center justify-center shrink-0">
                     <FileText className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-200">Markdown LLM</span>
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-secondary font-mono text-[10px] font-bold">
+                      <span className="text-xs font-semibold text-on-surface">Markdown LLM</span>
+                      <span className="px-1.5 py-0.5 rounded bg-secondary/20 text-secondary font-mono text-[10px] font-bold">
                         AI Ready
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">Tối ưu nạp ChatGPT, Claude, RAG</p>
+                    <p className="text-[11px] text-on-surface-variant line-clamp-1 mt-0.5">Tối ưu nạp ChatGPT, Claude, RAG</p>
                   </div>
                 </button>
 
@@ -696,12 +703,12 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                       : 'bg-surface border-border-subtle hover:bg-surface-container hover:border-slate-600'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded bg-surface-bright text-slate-300 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded bg-surface-bright text-on-surface-variant flex items-center justify-center shrink-0">
                     <Code className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-slate-200">Clean HTML Semantic</span>
-                    <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">Giữ nguyên cấu trúc thẻ chuẩn web</p>
+                    <span className="text-xs font-semibold text-on-surface">Clean HTML Semantic</span>
+                    <p className="text-[11px] text-on-surface-variant line-clamp-1 mt-0.5">Giữ nguyên cấu trúc thẻ chuẩn web</p>
                   </div>
                 </button>
 
@@ -711,16 +718,16 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   onClick={() => handleSelectTargetFormat('png')}
                   className={`p-3 rounded-lg text-left transition-all border flex items-start gap-3 ${
                     targetFormat === 'png'
-                      ? 'bg-amber-500/15 border-amber-500/60 shadow-sm'
+                      ? 'bg-tertiary/15 border-tertiary/60 shadow-sm'
                       : 'bg-surface border-border-subtle hover:bg-surface-container hover:border-slate-600'
                   }`}
                 >
-                  <div className="w-8 h-8 rounded bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded bg-tertiary/20 text-tertiary flex items-center justify-center shrink-0">
                     <FolderArchive className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-slate-200">Trích xuất ảnh minh họa</span>
-                    <p className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">Gói ảnh gốc phân giải cao .ZIP</p>
+                    <span className="text-xs font-semibold text-on-surface">Trích xuất ảnh minh họa</span>
+                    <p className="text-[11px] text-on-surface-variant line-clamp-1 mt-0.5">Gói ảnh gốc phân giải cao .ZIP</p>
                   </div>
                 </button>
               </div>
@@ -728,46 +735,49 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
             {/* Advanced Tuning Options */}
             <div className="space-y-3 pt-1">
-              <label className="font-mono text-[10px] text-slate-400 block uppercase tracking-wider">
+              <label className="font-mono text-[10px] text-on-surface-variant block uppercase tracking-wider">
                 Tùy chọn nâng cao khi xuất
               </label>
 
               <label className="flex items-start gap-3 cursor-pointer select-none">
                 <input
                   type="checkbox"
+                  aria-label="Giữ nguyên siêu liên kết (Hyperlinks) & Bookmark mục lục"
                   checked={keepHyperlinks}
                   onChange={(e) => setKeepHyperlinks(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary-container"
+                  className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary"
                 />
                 <div className="text-xs">
-                  <span className="text-slate-200 font-medium block">Giữ nguyên siêu liên kết (Hyperlinks) & Bookmark mục lục</span>
-                  <span className="text-slate-400 text-[11px]">Tạo mục lục thông minh (TOC) trong PDF để điều hướng click nhanh chóng.</span>
+                  <span className="text-on-surface font-medium block">Giữ nguyên siêu liên kết (Hyperlinks) & Bookmark mục lục</span>
+                  <span className="text-on-surface-variant text-[11px]">Tạo mục lục thông minh (TOC) trong PDF để điều hướng click nhanh chóng.</span>
                 </div>
               </label>
 
               <label className="flex items-start gap-3 cursor-pointer select-none">
                 <input
                   type="checkbox"
+                  aria-label="Tự động nhúng toàn bộ font chữ (Font Subsetting 100%)"
                   checked={embedFonts}
                   onChange={(e) => setEmbedFonts(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary-container"
+                  className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary"
                 />
                 <div className="text-xs">
-                  <span className="text-slate-200 font-medium block">Tự động nhúng toàn bộ font chữ (Font Subsetting 100%)</span>
-                  <span className="text-slate-400 text-[11px]">Tránh lỗi mất font Tiếng Việt hoặc hiển thị sai ký tự khi mở máy khác.</span>
+                  <span className="text-on-surface font-medium block">Tự động nhúng toàn bộ font chữ (Font Subsetting 100%)</span>
+                  <span className="text-on-surface-variant text-[11px]">Tránh lỗi mất font Tiếng Việt hoặc hiển thị sai ký tự khi mở máy khác.</span>
                 </div>
               </label>
 
               <label className="flex items-start gap-3 cursor-pointer select-none">
                 <input
                   type="checkbox"
+                  aria-label="Tối ưu nén hình ảnh nhúng trong tài liệu (DPR 2.0x)"
                   checked={compressImages}
                   onChange={(e) => setCompressImages(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary-container"
+                  className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary"
                 />
                 <div className="text-xs">
-                  <span className="text-slate-200 font-medium block">Tối ưu nén hình ảnh nhúng trong tài liệu (DPR 2.0x)</span>
-                  <span className="text-slate-400 text-[11px]">Giảm 40-60% kích cỡ tệp PDF đầu ra mà vẫn bảo toàn độ nét khi in ấn.</span>
+                  <span className="text-on-surface font-medium block">Tối ưu nén hình ảnh nhúng trong tài liệu (DPR 2.0x)</span>
+                  <span className="text-on-surface-variant text-[11px]">Giảm 40-60% kích cỡ tệp PDF đầu ra mà vẫn bảo toàn độ nét khi in ấn.</span>
                 </div>
               </label>
 
@@ -776,15 +786,16 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-secondary" />
-                    <span className="text-xs font-semibold text-slate-200">Chế độ Clean LLM Markdown</span>
+                    <span className="text-xs font-semibold text-on-surface">Chế độ Clean LLM Markdown</span>
                   </div>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-on-surface-variant">
                     Tự động chuẩn hóa tiêu đề (#, ##), chuyển đổi bảng phức tạp sang cú pháp Markdown Table (|---|).
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer shrink-0">
                   <input
                     type="checkbox"
+                    aria-label="Tối ưu Markdown chuẩn LLM/RAG"
                     checked={cleanLlmMarkdown}
                     onChange={(e) => setCleanLlmMarkdown(e.target.checked)}
                     className="sr-only peer"
@@ -801,8 +812,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               onClick={handleConvertAll}
               className={`w-full py-3 px-6 rounded-lg font-mono text-xs font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${
                 queue.length === 0 || isProcessingAll
-                  ? 'bg-surface text-slate-500 border border-border-subtle cursor-not-allowed'
-                  : 'bg-primary-container hover:bg-sky-400 text-slate-950 shadow-sky-500/20 active:scale-[0.99] cursor-pointer'
+                  ? 'bg-surface text-on-surface-variant/50 border border-border-subtle cursor-not-allowed'
+                  : 'bg-primary hover:bg-primary/90 text-on-primary shadow-primary/20 active:scale-[0.99] cursor-pointer'
               }`}
             >
               {isProcessingAll ? (
@@ -833,7 +844,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 <div className="w-6 h-6 rounded-full bg-emerald-500/15 text-secondary flex items-center justify-center border border-emerald-500/20">
                   <CheckCircle2 className="w-3.5 h-3.5" />
                 </div>
-                <span className="text-sm font-semibold text-slate-100">
+                <span className="text-sm font-semibold text-on-surface">
                   {isAllDone
                     ? `Đã chuyển đổi hoàn tất ${completedCount}/${totalCount} tệp`
                     : queue.length > 0
@@ -850,11 +861,11 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
             <div className="space-y-1">
               <div className="w-full h-2 bg-surface rounded-full overflow-hidden border border-border-subtle">
                 <div
-                  className="h-full bg-gradient-to-r from-primary-container to-secondary transition-all duration-300 rounded-full"
+                  className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300 rounded-full"
                   style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs font-mono text-slate-400 pt-0.5">
+              <div className="flex justify-between text-xs font-mono text-on-surface-variant pt-0.5">
                 <span>{totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}% Tiến trình</span>
                 <span>Khởi chạy trên luồng WebWorker song song</span>
               </div>
@@ -863,18 +874,18 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
             {/* Results Metrics Grid */}
             <div className="grid grid-cols-3 gap-3 pt-1">
               <div className="p-3 rounded-lg bg-surface border border-border-subtle text-center">
-                <div className="text-xl font-bold text-slate-100 font-mono">
+                <div className="text-xl font-bold text-on-surface font-mono">
                   {completedCount} / {totalCount}
                 </div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Tệp thành công</div>
+                <div className="text-[11px] text-on-surface-variant mt-0.5">Tệp thành công</div>
               </div>
               <div className="p-3 rounded-lg bg-surface border border-border-subtle text-center">
                 <div className="text-xl font-bold text-secondary font-mono">100%</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Bảo toàn Format</div>
+                <div className="text-[11px] text-on-surface-variant mt-0.5">Bảo toàn Format</div>
               </div>
               <div className="p-3 rounded-lg bg-surface border border-border-subtle text-center">
-                <div className="text-xl font-bold text-primary-container font-mono">-34%</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">Nén dung lượng</div>
+                <div className="text-xl font-bold text-primary font-mono">-34%</div>
+                <div className="text-[11px] text-on-surface-variant mt-0.5">Nén dung lượng</div>
               </div>
             </div>
 
@@ -884,7 +895,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 <button
                   type="button"
                   onClick={handleDownloadAllZip}
-                  className="w-full py-3 px-6 rounded-lg bg-secondary hover:bg-emerald-400 text-slate-950 font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+                  className="w-full py-3 px-6 rounded-lg bg-secondary hover:bg-secondary/90 text-on-secondary font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-secondary/20 transition-all cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
                   <span>Tải Về Toàn Bộ Tệp Đã Chuyển Đổi (.ZIP)</span>
@@ -903,8 +914,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   onClick={() => setPreviewTab('pdf')}
                   className={`px-3 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 transition-colors ${
                     previewTab === 'pdf'
-                      ? 'bg-primary-container/20 text-primary-container font-bold border border-primary-container/40'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-primary text-on-primary font-bold shadow-sm'
+                      : 'text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
                   <FileCode className="w-3.5 h-3.5" />
@@ -915,8 +926,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   onClick={() => setPreviewTab('md')}
                   className={`px-3 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 transition-colors ${
                     previewTab === 'md'
-                      ? 'bg-emerald-500/20 text-secondary font-bold border border-emerald-500/40'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-secondary text-on-secondary font-bold shadow-sm'
+                      : 'text-on-surface-variant hover:text-on-surface'
                   }`}
                 >
                   <FileText className="w-3.5 h-3.5" />
@@ -924,19 +935,21 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 </button>
               </div>
 
-              <div className="flex items-center gap-2 font-mono text-xs text-slate-400">
+              <div className="flex items-center gap-2 font-mono text-xs text-on-surface-variant">
                 <span className="hidden sm:inline">Zoom: {zoomLevel}%</span>
                 <button
                   type="button"
                   onClick={() => setZoomLevel(z => Math.max(50, z - 10))}
-                  className="p-1 rounded hover:bg-surface-container text-slate-300"
+                  className="p-1 rounded hover:bg-surface-container text-on-surface-variant"
+                  aria-label="Thu nhỏ xem trước"
                 >
                   <ZoomOut className="w-3.5 h-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setZoomLevel(z => Math.min(150, z + 10))}
-                  className="p-1 rounded hover:bg-surface-container text-slate-300"
+                  className="p-1 rounded hover:bg-surface-container text-on-surface-variant"
+                  aria-label="Phóng to xem trước"
                 >
                   <ZoomIn className="w-3.5 h-3.5" />
                 </button>
@@ -957,11 +970,11 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                       <div className="font-bold text-sm tracking-tight text-slate-900">
                         CÔNG TY CỔ PHẦN CÔNG NGHỆ OMNI
                       </div>
-                      <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                      <div className="text-[10px] text-slate-600 font-mono mt-0.5">
                         BÁO CÁO KẾ HOẠCH TÀI CHÍNH CHIẾN LƯỢC QUÝ 3 - 2026
                       </div>
                     </div>
-                    <div className="w-7 h-7 rounded bg-sky-500 text-white flex items-center justify-center font-bold text-[10px]">
+                    <div className="w-7 h-7 rounded bg-sky-600 text-white flex items-center justify-center font-bold text-[10px]">
                       WASM
                     </div>
                   </div>
@@ -971,23 +984,23 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                     <h3 className="font-bold text-xs text-slate-900">
                       1. Tóm tắt chỉ tiêu chuyển đổi tài liệu ({activePreviewFile ? activePreviewFile.file.name : 'Ke_Hoach_2026.docx'})
                     </h3>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                    <p className="text-[11px] text-slate-700 leading-relaxed">
                       Tài liệu trích xuất chuẩn vector từ tệp Word nguồn. Cấu trúc bảng và đồ thị được giữ nguyên tỷ lệ với độ nét 100%.
                     </p>
                   </div>
 
                   {/* Inline Chart Simulation */}
-                  <div className="p-3 bg-slate-50 rounded border border-slate-100">
-                    <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold mb-2 font-mono">
+                  <div className="p-3 bg-slate-50 rounded border border-slate-200">
+                    <div className="flex justify-between items-center text-[10px] text-slate-600 font-semibold mb-2 font-mono">
                       <span>DOANH THU DỰ KIẾN (TỶ VNĐ)</span>
-                      <span className="text-emerald-600 font-bold">+28.4%</span>
+                      <span className="text-emerald-700 font-bold">+28.4%</span>
                     </div>
                     <svg className="w-full h-16" fill="none" viewBox="0 0 320 80">
-                      <rect fill="#94a3b8" height="30" rx="3" width="36" x="10" y="45" />
-                      <rect fill="#94a3b8" height="43" rx="3" width="36" x="70" y="32" />
+                      <rect fill="#64748b" height="30" rx="3" width="36" x="10" y="45" />
+                      <rect fill="#64748b" height="43" rx="3" width="36" x="70" y="32" />
                       <rect fill="#0284c7" height="53" rx="3" width="36" x="130" y="22" />
                       <rect fill="#0284c7" height="60" rx="3" width="36" x="190" y="15" />
-                      <rect fill="#10b981" height="67" rx="3" width="36" x="250" y="8" />
+                      <rect fill="#059669" height="67" rx="3" width="36" x="250" y="8" />
                       <line stroke="#cbd5e1" strokeWidth="1.5" x1="5" x2="310" y1="76" y2="76" />
                       <text fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle" x="28" y="72">Q1</text>
                       <text fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle" x="88" y="72">Q2</text>
@@ -1023,15 +1036,15 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   </div>
 
                   {/* Footer Pagination */}
-                  <div className="flex justify-between items-center pt-2 text-[9px] text-slate-400 font-mono">
+                  <div className="flex justify-between items-center pt-2 text-[9px] text-slate-600 font-mono">
                     <span>BẢO MẬT NỘI BỘ — AI-TOOLS MASTER HUB</span>
                     <span>Trang 1 / 1</span>
                   </div>
                 </div>
               ) : (
                 /* Markdown AI Prompt Viewport */
-                <div className="w-full h-full p-4 rounded-lg bg-surface border border-border-subtle font-mono text-xs text-slate-200 space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-border-subtle text-slate-400 text-[11px]">
+                <div className="w-full h-full p-4 rounded-lg bg-surface border border-border-subtle font-mono text-xs text-on-surface space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-border-subtle text-on-surface-variant text-[11px]">
                     <span className="flex items-center gap-1.5 text-secondary">
                       <span className="w-2 h-2 rounded-full bg-secondary" />
                       MARKDOWN EXTRACTED — OPTIMIZED FOR RAG & CLAUDE 3.7 / GPT-4o
@@ -1051,10 +1064,10 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                     </button>
                   </div>
 
-                  <pre className="overflow-x-auto text-slate-300 font-mono text-[11px] leading-relaxed select-all">
-                    <span className="text-amber-400 font-bold"># BÁO CÁO KẾ HOẠCH TÀI CHÍNH CHIẾN LƯỢC QUÝ 3 - 2026</span>{'\n'}
-                    <span className="text-slate-500">&gt; Trích xuất tự động qua WASM OmniConvert Engine lúc 14:20:05</span>{'\n\n'}
-                    <span className="text-sky-400 font-bold">## 1. Tóm tắt chỉ tiêu tăng trưởng doanh thu theo sản phẩm</span>{'\n'}
+                  <pre tabIndex={0} role="region" aria-label="Nội dung Markdown xem trước" className="overflow-x-auto text-on-surface-variant font-mono text-[11px] leading-relaxed select-all">
+                    <span className="text-amber-500 font-bold"># BÁO CÁO KẾ HOẠCH TÀI CHÍNH CHIẾN LƯỢC QUÝ 3 - 2026</span>{'\n'}
+                    <span className="text-on-surface-variant/70">&gt; Trích xuất tự động qua WASM OmniConvert Engine lúc 14:20:05</span>{'\n\n'}
+                    <span className="text-primary font-bold">## 1. Tóm tắt chỉ tiêu tăng trưởng doanh thu theo sản phẩm</span>{'\n'}
                     Tài liệu trích xuất chuẩn vector từ tệp Word nguồn. Toàn bộ cấu trúc phân cấp tiêu đề được giữ nguyên theo chuẩn CommonMark.{'\n\n'}
                     <span className="text-secondary font-bold">### Bảng phân bổ nguồn vốn đầu tư:</span>{'\n'}
                     | Hạng mục chi phí | Ngân sách (VNĐ) | Tỷ trọng | Trạng thái |{'\n'}
@@ -1088,15 +1101,16 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
+                aria-label="Đóng cửa sổ cài đặt"
                 className="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-subtle transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-5 text-xs text-slate-200">
+            <div className="p-6 space-y-5 text-xs text-on-surface">
               <div className="space-y-1.5">
-                <label className="font-semibold uppercase tracking-wider text-slate-400">Khổ giấy PDF</label>
+                <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Khổ giấy PDF</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[{ id: 'a4', label: 'A4' }, { id: 'letter', label: 'US Letter' }, { id: 'fit', label: 'Fit Image' }].map(opt => (
                     <button
@@ -1105,8 +1119,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                       onClick={() => setSettings(s => ({ ...s, pageSize: opt.id }))}
                       className={`py-2 px-3 rounded-lg font-medium border transition-all ${
                         settings.pageSize === opt.id
-                          ? 'bg-primary-container text-slate-950 font-bold border-primary-container'
-                          : 'bg-surface-container text-slate-300 border-border-subtle hover:bg-surface-bright'
+                          ? 'bg-primary text-on-primary font-bold border-primary'
+                          : 'bg-surface-container text-on-surface-variant border-border-subtle hover:bg-surface-bright'
                       }`}
                     >
                       {opt.label}
@@ -1116,7 +1130,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold uppercase tracking-wider text-slate-400">Hướng trang giấy</label>
+                <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Hướng trang giấy</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[{ id: 'auto', label: 'Tự động' }, { id: 'portrait', label: 'Dọc (Portrait)' }, { id: 'landscape', label: 'Ngang (Landscape)' }].map(opt => (
                     <button
@@ -1125,8 +1139,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                       onClick={() => setSettings(s => ({ ...s, orientation: opt.id }))}
                       className={`py-2 px-3 rounded-lg font-medium border transition-all ${
                         settings.orientation === opt.id
-                          ? 'bg-primary-container text-slate-950 font-bold border-primary-container'
-                          : 'bg-surface-container text-slate-300 border-border-subtle hover:bg-surface-bright'
+                          ? 'bg-primary text-on-primary font-bold border-primary'
+                          : 'bg-surface-container text-on-surface-variant border-border-subtle hover:bg-surface-bright'
                       }`}
                     >
                       {opt.label}
@@ -1136,7 +1150,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold uppercase tracking-wider text-slate-400">Độ nét trích xuất trang PDF ➔ Ảnh</label>
+                <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Độ nét trích xuất trang PDF ➔ Ảnh</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[{ val: 1.5, label: '1.5x (Web)' }, { val: 2.0, label: '2.0x (150 DPI)' }, { val: 3.0, label: '3.0x (300 DPI)' }].map(opt => (
                     <button
@@ -1145,8 +1159,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                       onClick={() => setSettings(s => ({ ...s, scale: opt.val }))}
                       className={`py-2 px-3 rounded-lg font-medium border transition-all ${
                         settings.scale === opt.val
-                          ? 'bg-primary-container text-slate-950 font-bold border-primary-container'
-                          : 'bg-surface-container text-slate-300 border-border-subtle hover:bg-surface-bright'
+                          ? 'bg-primary text-on-primary font-bold border-primary'
+                          : 'bg-surface-container text-on-surface-variant border-border-subtle hover:bg-surface-bright'
                       }`}
                     >
                       {opt.label}
@@ -1157,17 +1171,18 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="font-semibold uppercase tracking-wider text-slate-400">Chất lượng ảnh JPG/WebP</label>
-                  <span className="font-mono text-primary-container font-bold">{Math.round(settings.quality * 100)}%</span>
+                  <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Chất lượng ảnh JPG/WebP</label>
+                  <span className="font-mono text-primary font-bold">{Math.round(settings.quality * 100)}%</span>
                 </div>
                 <input
                   type="range"
+                  aria-label="Chất lượng ảnh JPG/WebP"
                   min="0.5"
                   max="1.0"
                   step="0.05"
                   value={settings.quality}
                   onChange={(e) => setSettings(s => ({ ...s, quality: parseFloat(e.target.value) }))}
-                  className="w-full h-1.5 bg-surface-container rounded-lg appearance-none cursor-pointer accent-primary-container"
+                  className="w-full h-1.5 bg-surface-container rounded-lg appearance-none cursor-pointer accent-primary"
                 />
               </div>
             </div>
@@ -1176,14 +1191,14 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               <button
                 type="button"
                 onClick={() => setSettings({ pageSize: 'a4', orientation: 'auto', scale: 2.0, quality: 0.92, margin: 20 })}
-                className="text-xs text-slate-400 hover:text-slate-200 transition-colors"
+                className="text-xs text-on-surface-variant hover:text-on-surface transition-colors"
               >
                 Mặc định
               </button>
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
-                className="px-4 py-2 rounded-lg bg-primary-container hover:bg-sky-400 text-slate-950 text-xs font-bold shadow-md transition-colors"
+                className="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold shadow-md transition-colors"
               >
                 Áp Dụng
               </button>
@@ -1209,7 +1224,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   <button
                     type="button"
                     onClick={() => handleDownloadSingle(previewItem)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-emerald-400 text-white text-xs font-bold shadow-md transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/90 text-on-secondary text-xs font-bold shadow-md transition-colors"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Tải về</span>
@@ -1218,6 +1233,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 <button
                   type="button"
                   onClick={closePreview}
+                  aria-label="Đóng cửa sổ xem trước"
                   className="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-subtle transition-colors"
                 >
                   <X className="w-5 h-5" />
@@ -1248,7 +1264,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                         <button
                           type="button"
                           onClick={() => handleDownloadSingle(previewItem)}
-                          className="px-4 py-2 rounded-xl bg-primary-container hover:bg-sky-400 text-slate-950 text-xs font-bold shadow-lg"
+                          className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold shadow-lg"
                         >
                           Tải tệp .{ext?.toUpperCase()}
                         </button>

@@ -1167,6 +1167,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       <input
         ref={fileInputRef}
         type="file"
+        aria-label="Tải lên tệp ảnh chụp màn hình"
         accept="image/*"
         className="hidden"
         onChange={(e) => {
@@ -1376,6 +1377,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       setRedoStack([]);
                       setStage('idle');
                     }}
+                    aria-label={t.btnClear || "Xóa ảnh hiện tại và chọn lại"}
                     className="p-space-2 text-on-surface-variant hover:text-error rounded hover:bg-surface-subtle transition-colors cursor-pointer"
                     title={t.btnClear}
                   >
@@ -1482,13 +1484,17 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
               {/* Cường độ làm mờ nhạy cảm */}
               <div className="flex flex-col gap-space-1">
                 <div className="flex items-center justify-between">
-                  <label className="font-body-sm text-body-sm text-on-surface-variant">{t.labelBlurIntensity}</label>
+                  <label htmlFor="blur-intensity-slider" className="font-body-sm text-body-sm text-on-surface-variant cursor-pointer">
+                    {t.labelBlurIntensity}
+                  </label>
                   <span className="font-label-sm text-label-sm text-brand-cyan-bright">
                     Pixelate {blurIntensity}px
                   </span>
                 </div>
                 <input
+                  id="blur-intensity-slider"
                   type="range"
+                  aria-label={t.labelBlurIntensity || "Cường độ làm mờ Pixelate"}
                   min="4"
                   max="24"
                   value={blurIntensity}
@@ -1648,6 +1654,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                   type="button"
                   onClick={() => setAnnotations([])}
                   disabled={annotations.length === 0}
+                  aria-label={t.btnClearAll || "Xóa toàn bộ chú thích"}
                   className="p-space-1 text-on-surface-variant hover:text-error rounded hover:bg-surface-subtle transition-colors flex items-center cursor-pointer disabled:opacity-30"
                   title={t.btnClearAll}
                 >
@@ -1681,6 +1688,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       <button
                         type="button"
                         onClick={() => setStage(baseImage ? 'editing' : 'idle')}
+                        aria-label="Đóng công cụ cắt tỉa ảnh"
                         className="p-1 rounded hover:bg-surface-subtle text-outline hover:text-error transition cursor-pointer"
                       >
                         <X className="w-4 h-4" />
@@ -1738,6 +1746,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                         <input
                           type="text"
                           autoFocus
+                          aria-label="Nội dung ghi chú trên ảnh"
                           value={textInputValue}
                           placeholder="Nhập ghi chú..."
                           onChange={(e) => setTextInputValue(e.target.value)}

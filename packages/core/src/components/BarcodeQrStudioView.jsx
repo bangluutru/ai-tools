@@ -44,6 +44,7 @@ import {
   Zap,
   Store,
   ShieldCheck,
+  Shuffle,
 } from 'lucide-react';
 import { validateAndFixBarcode } from '../utils/codecraft/checksumValidators.js';
 
@@ -671,6 +672,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
         ref={logoInputRef}
         type="file"
         accept="image/*"
+        aria-label="Tải lên logo hình ảnh"
         className="hidden"
         onChange={async (e) => {
           const file = e.target.files?.[0];
@@ -692,6 +694,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
         ref={batchFileInputRef}
         type="file"
         accept=".csv,.txt"
+        aria-label="Tải lên tệp CSV hàng loạt"
         className="hidden"
         onChange={(e) => {
           if (e.target.files && e.target.files[0]) {
@@ -846,6 +849,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                         value={qrConfig.rawText}
                         onChange={(e) => setQrConfig((prev) => ({ ...prev, rawText: e.target.value }))}
                         placeholder="https://..."
+                        aria-label="Đường dẫn hoặc nội dung mã hóa QR"
                         className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary-container focus:bg-surface-container-high transition-colors"
                       />
                       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-outline">
@@ -863,6 +867,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                         type="text"
                         value={qrConfig.wifi.ssid}
                         onChange={(e) => setQrConfig((prev) => ({ ...prev, wifi: { ...prev.wifi, ssid: e.target.value } }))}
+                        aria-label="Tên mạng WiFi (SSID)"
                         className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary-container"
                       />
                     </div>
@@ -872,6 +877,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                         type="text"
                         value={qrConfig.wifi.password}
                         onChange={(e) => setQrConfig((prev) => ({ ...prev, wifi: { ...prev.wifi, password: e.target.value } }))}
+                        aria-label="Mật khẩu WiFi"
                         className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-4 py-2 text-sm font-mono focus:outline-none focus:border-primary-container"
                       />
                     </div>
@@ -880,6 +886,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                       <select
                         value={qrConfig.wifi.encryption}
                         onChange={(e) => setQrConfig((prev) => ({ ...prev, wifi: { ...prev.wifi, encryption: e.target.value } }))}
+                        aria-label="Chuẩn mã hóa WiFi"
                         className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-container"
                       >
                         <option value="WPA">WPA / WPA2 / WPA3</option>
@@ -898,6 +905,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                         type="text"
                         value={qrConfig.vcard.firstName}
                         onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, firstName: e.target.value } }))}
+                        aria-label="Họ và tên vCard"
                         className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-container"
                       />
                     </div>
@@ -907,6 +915,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                         type="tel"
                         value={qrConfig.vcard.phone}
                         onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, phone: e.target.value } }))}
+                        aria-label="Số điện thoại vCard"
                         className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary-container"
                       />
                     </div>
@@ -916,6 +925,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                         type="email"
                         value={qrConfig.vcard.email}
                         onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, email: e.target.value } }))}
+                        aria-label="Địa chỉ email vCard"
                         className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-primary-container"
                       />
                     </div>
@@ -925,6 +935,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                         type="text"
                         value={qrConfig.vcard.organization}
                         onChange={(e) => setQrConfig((prev) => ({ ...prev, vcard: { ...prev.vcard, organization: e.target.value } }))}
+                        aria-label="Tổ chức hoặc công ty vCard"
                         className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-container"
                       />
                     </div>
@@ -953,6 +964,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                     value={qrConfig.labelTitle}
                     onChange={(e) => setQrConfig((prev) => ({ ...prev, labelTitle: e.target.value, frameText: e.target.value }))}
                     placeholder="VD: Menu Nhà Hàng & Bảng Giá..."
+                    aria-label="Tiêu đề nhãn sản phẩm chú thích in ấn"
                     className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-primary-container focus:bg-surface-container-high transition-colors"
                   />
                 </div>
@@ -1006,17 +1018,19 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                       type="text"
                       value={barcodeConfig.value}
                       onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, value: e.target.value }))}
+                      aria-label="Dãy số mã vạch Barcode"
                       className="w-full bg-surface-subtle border border-border-subtle text-on-surface font-mono text-sm tracking-widest rounded-lg px-4 py-2.5 focus:outline-none focus:border-primary-container"
                     />
                     <button
                       type="button"
                       onClick={handleGenerateRandomBarcode}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-surface-container border border-border-subtle text-primary text-xs font-medium rounded hover:bg-surface-bright transition-colors"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-surface-container border border-border-subtle text-primary text-xs font-medium rounded hover:bg-surface-bright transition-colors flex items-center gap-1.5"
                     >
-                      Tạo Ngẫu Nhiên
+                      <Shuffle className="w-3.5 h-3.5" />
+                      <span>Tạo ngẫu nhiên</span>
                     </button>
                   </div>
-                  <p className="text-xs text-outline">
+                  <p className="text-[11px] text-on-surface-variant font-mono">
                     {currentSymbology?.desc || "Đầu số '893' là mã quốc gia GS1 dành riêng cho Việt Nam."}
                   </p>
                 </div>
@@ -1031,6 +1045,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                     value={barcodeConfig.labelTitle}
                     onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, labelTitle: e.target.value, customText: e.target.value }))}
                     placeholder="VD: Bánh Tráng Tây Ninh 500g..."
+                    aria-label="Tiêu đề sản phẩm dưới mã vạch"
                     className="w-full bg-surface-subtle border border-border-subtle text-on-surface rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary-container"
                   />
                 </div>
@@ -1043,6 +1058,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                 <input
                   type="checkbox"
                   defaultChecked
+                  aria-label="Mã hóa UTF-8 chuẩn (Tiếng Việt có dấu)"
                   className="w-4 h-4 rounded bg-surface-subtle text-primary-container focus:ring-0"
                 />
                 <span>Mã hóa UTF-8 chuẩn (Tiếng Việt có dấu)</span>
@@ -1050,6 +1066,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
               <label className="flex items-center gap-2 cursor-pointer select-none text-xs text-on-surface-variant">
                 <input
                   type="checkbox"
+                  aria-label="Kích hoạt GS1 Application Identifier (AI)"
                   className="w-4 h-4 rounded bg-surface-subtle text-primary-container focus:ring-0"
                 />
                 <span>Kích hoạt GS1 Application Identifier (AI)</span>
@@ -1132,6 +1149,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                       <select
                         value={qrConfig.dotType}
                         onChange={(e) => setQrConfig((prev) => ({ ...prev, dotType: e.target.value }))}
+                        aria-label="Kiểu hạt mã QR (Dot Pattern)"
                         className="w-full px-3 py-2 rounded-lg bg-surface-subtle border border-border-subtle text-on-surface text-xs focus:outline-none focus:border-primary-container"
                       >
                         <option value="rounded">Bo Góc (Rounded)</option>
@@ -1144,17 +1162,19 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                   </div>
 
                   {/* Màu Sắc */}
-                  <div className="space-y-2">
+                  <div className="space-y-3 pt-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-mono text-on-surface-variant uppercase">BẢNG MÀU MÃ VÀ NỀN</label>
-                      <div className="flex items-center gap-1">
+                      <span className="text-xs font-mono text-on-surface-variant uppercase">MÀU SẮC MÃ & MÀU NỀN</span>
+                      <div className="flex items-center gap-1.5 bg-surface-subtle p-0.5 rounded-lg border border-border-subtle">
                         {['none', 'linear'].map((g) => (
                           <button
                             key={g}
                             type="button"
                             onClick={() => setQrConfig((prev) => ({ ...prev, gradientType: g }))}
-                            className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                              qrConfig.gradientType === g ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant'
+                            className={`px-2.5 py-1 text-[11px] font-semibold rounded cursor-pointer transition ${
+                              qrConfig.gradientType === g
+                                ? 'bg-primary-container text-on-primary-container shadow-xs'
+                                : 'text-on-surface-variant hover:text-on-surface'
                             }`}
                           >
                             {g === 'none' ? 'Đơn sắc' : 'Gradient'}
@@ -1163,36 +1183,39 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg">
+                      <label className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg cursor-pointer">
                         <input
                           type="color"
                           value={qrConfig.dotColor}
                           onChange={(e) => setQrConfig((prev) => ({ ...prev, dotColor: e.target.value }))}
+                          aria-label="Màu hạt mã QR chính"
                           className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
                         />
                         <span className="text-xs font-mono text-on-surface">Màu mã</span>
-                      </div>
+                      </label>
                       {qrConfig.gradientType !== 'none' && (
-                        <div className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg">
+                        <label className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg cursor-pointer">
                           <input
                             type="color"
                             value={qrConfig.dotColor2}
                             onChange={(e) => setQrConfig((prev) => ({ ...prev, dotColor2: e.target.value }))}
+                            aria-label="Màu gradient hạt mã QR"
                             className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
                           />
                           <span className="text-xs font-mono text-on-surface">Màu gradient</span>
-                        </div>
+                        </label>
                       )}
-                      <div className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg">
+                      <label className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg cursor-pointer">
                         <input
                           type="color"
                           value={qrConfig.bgColor}
                           disabled={qrConfig.bgTransparent}
                           onChange={(e) => setQrConfig((prev) => ({ ...prev, bgColor: e.target.value }))}
+                          aria-label="Màu nền mã QR"
                           className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 disabled:opacity-30"
                         />
                         <span className="text-xs font-mono text-on-surface">Màu nền</span>
-                      </div>
+                      </label>
                     </div>
 
                     {/* Gradient Presets */}
@@ -1277,6 +1300,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                       max="6"
                       value={qrConfig.logoMargin}
                       onChange={(e) => setQrConfig((prev) => ({ ...prev, logoMargin: parseInt(e.target.value, 10) }))}
+                      aria-label="Viền bảo vệ Quiet Zone Margin"
                       className="w-full accent-primary-container h-1.5 bg-surface-subtle rounded-lg cursor-pointer"
                     />
                   </div>
@@ -1296,6 +1320,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                         max="4"
                         value={barcodeConfig.barWidth}
                         onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, barWidth: parseInt(e.target.value, 10) }))}
+                        aria-label="Độ rộng thanh Bar Width"
                         className="w-full accent-primary-container"
                       />
                     </div>
@@ -1311,30 +1336,33 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                         step="5"
                         value={barcodeConfig.barHeight}
                         onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, barHeight: parseInt(e.target.value, 10) }))}
+                        aria-label="Chiều cao thanh mã vạch Bar Height"
                         className="w-full accent-primary-container"
                       />
                     </div>
                   </div>
 
                   <div className="flex items-center gap-4 pt-2">
-                    <div className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg">
+                    <label className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg cursor-pointer">
                       <input
                         type="color"
                         value={barcodeConfig.lineColor}
                         onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, lineColor: e.target.value }))}
+                        aria-label="Màu vạch Barcode"
                         className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
                       />
                       <span className="text-xs font-mono text-on-surface">Màu vạch</span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg">
+                    </label>
+                    <label className="flex items-center gap-2 bg-surface-subtle border border-border-subtle p-2 rounded-lg cursor-pointer">
                       <input
                         type="color"
                         value={barcodeConfig.bgColor}
                         onChange={(e) => setBarcodeConfig((prev) => ({ ...prev, bgColor: e.target.value }))}
+                        aria-label="Màu nền Barcode"
                         className="w-6 h-6 rounded cursor-pointer bg-transparent border-0"
                       />
                       <span className="text-xs font-mono text-on-surface">Màu nền</span>
-                    </div>
+                    </label>
                   </div>
                 </div>
               )}
@@ -1380,6 +1408,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                   <select
                     value={batchSymbology}
                     onChange={(e) => setBatchSymbology(e.target.value)}
+                    aria-label="Chuẩn mã vạch hàng loạt"
                     className="px-3 py-1.5 rounded-lg bg-surface-subtle border border-border-subtle text-on-surface text-xs font-mono focus:outline-none focus:border-primary-container"
                   >
                     {BARCODE_SYMBOLOGIES.map((s) => (
@@ -1424,6 +1453,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
                   rows={5}
                   value={batchRawInput}
                   onChange={(e) => setBatchRawInput(e.target.value)}
+                  aria-label="Dữ liệu danh sách mã hàng loạt"
                   className="w-full p-3 rounded-lg bg-surface-subtle border border-border-subtle text-on-surface font-mono text-xs focus:outline-none focus:border-primary-container"
                 />
               </div>
@@ -1631,7 +1661,7 @@ export default function BarcodeQrStudioView({ displayLang = 'vi' }) {
               <button
                 type="button"
                 onClick={handleDownloadSVG}
-                className="w-full py-3 px-4 bg-brand-emerald-deep hover:bg-secondary text-on-secondary font-semibold text-sm rounded-lg shadow-md flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                className="w-full py-3 px-4 bg-primary-container hover:opacity-90 text-on-primary-container font-semibold text-sm rounded-lg shadow-md flex items-center justify-center gap-2 transition-opacity cursor-pointer"
               >
                 <FileDown className="w-5 h-5" />
                 <span>Tải Mã Vector (.SVG Siêu Nét In Ấn)</span>

@@ -219,6 +219,7 @@ export default function AutoBiView() {
         <div className="relative border-2 border-dashed border-border-subtle hover:border-primary-container/60 bg-surface-container-low/60 hover:bg-surface-container transition-all rounded-2xl p-12 text-center cursor-pointer group mb-space-12">
           <input
             type="file"
+            aria-label="Tải lên tệp dữ liệu bảng tính Excel hoặc CSV"
             accept=".xlsx,.xls,.csv"
             onChange={handleFileUpload}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -245,6 +246,7 @@ export default function AutoBiView() {
               <div className="flex items-center gap-2">
                 <span className="text-on-surface-variant font-medium">Trục phân loại (X):</span>
                 <select
+                  aria-label="Chọn cột trục phân loại (Trục X)"
                   value={selectedDimension}
                   onChange={(e) => handleDimensionChange(e.target.value)}
                   className="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-on-surface focus:outline-none focus:border-primary-container cursor-pointer"
@@ -260,6 +262,7 @@ export default function AutoBiView() {
               <div className="flex items-center gap-2">
                 <span className="text-on-surface-variant font-medium">Chỉ số tính toán (Y):</span>
                 <select
+                  aria-label="Chọn cột chỉ số tính toán (Trục Y)"
                   value={selectedMetric}
                   onChange={(e) => handleMetricChange(e.target.value)}
                   className="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-brand-cyan-bright font-semibold focus:outline-none focus:border-primary-container cursor-pointer"
@@ -283,7 +286,13 @@ export default function AutoBiView() {
                 Xuất Báo Cáo BI (Excel)
               </button>
               <label className="px-space-3 py-space-2 rounded-lg bg-surface-subtle hover:bg-surface-container-high border border-border-subtle text-on-surface font-body-sm text-body-sm font-semibold cursor-pointer transition">
-                <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFileUpload} className="hidden" />
+                <input
+                  type="file"
+                  aria-label="Chọn tệp bảng tính khác thay thế"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
                 Đổi Tệp Khác
               </label>
             </div>

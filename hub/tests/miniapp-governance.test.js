@@ -115,3 +115,101 @@ test('MAIS Gate 2: Active miniapps do not use raw emojis inside button elements'
     }
   }
 });
+
+test('MAIS Gate 2: CSS color contrast & accessibility tokens adhere to WCAG 2.1 AA standards (>= 4.5:1)', () => {
+  const cssPath = join(hubRoot, 'src/index.css');
+  const cssContent = readFileSync(cssPath, 'utf8');
+
+  // Helper: Calculate relative luminance per W3C WCAG 2.1
+  function getLuminance(r, g, b) {
+    const [rs, gs, bs] = [r, g, b].map((val) => {
+      const s = val / 255;
+      return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+  }
+
+  // Helper: Calculate contrast ratio
+  function getContrastRatio(rgb1, rgb2) {
+    const l1 = getLuminance(...rgb1);
+    const l2 = getLuminance(...rgb2);
+    const lighter = Math.max(l1, l2);
+    const darker = Math.min(l1, l2);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  // Extract light theme block
+  const lightBlockMatch = cssContent.match(/\[data-theme="light"\]\s*\{([^}]+)\}/);
+  assert.equal(Boolean(lightBlockMatch), true, 'Không tìm thấy block [data-theme="light"] trong index.css');
+  const lightBlock = lightBlockMatch[1];
+
+  function parseRgb(varName) {
+    const regex = new RegExp(`${varName}:\\s*(\\d+)\\s+(\\d+)\\s+(\\d+)`);
+    const match = lightBlock.match(regex);
+    assert.equal(Boolean(match), true, `Không tìm thấy biến ${varName} trong [data-theme="light"]`);
+    return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10)];
+  }
+
+  const secondaryRgb = parseRgb('--secondary-rgb');
+  const primaryRgb = parseRgb('--primary-rgb');
+  const outlineRgb = parseRgb('--outline-rgb');
+  const primaryContainerRgb = parseRgb('--primary-container-rgb');
+
+  const whiteRgb = [255, 255, 255];
+  const surfaceSubtleRgb = [241, 245, 249]; // #f1f5f9 slate-100
+
+  // Pastel background helper (alpha blend over white)
+  function blendOverWhite(rgb, alpha) {
+    return [
+      Math.round(rgb[0] * alpha + whiteRgb[0] * (1 - alpha)),
+      Math.round(rgb[1] * alpha + whiteRgb[1] * (1 - alpha)),
+      Math.round(rgb[2] * alpha + whiteRgb[2] * (1 - alpha)),
+    ];
+  }
+
+  // 1. Secondary text (Emerald) on pure white and on 15% pastel background
+  const secOnWhite = getContrastRatio(secondaryRgb, whiteRgb);
+  assert.equal(
+    secOnWhite >= 4.5,
+    true,
+    `--secondary trên nền trắng vi phạm WCAG AA: ${secOnWhite.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+  );
+  const secPastelBg = blendOverWhite(secondaryRgb, 0.15);
+  const secOnPastel = getContrastRatio(secondaryRgb, secPastelBg);
+  assert.equal(
+    secOnPastel >= 4.5,
+    true,
+    `--secondary trên nền pastel bg-secondary/15 vi phạm WCAG AA: ${secOnPastel.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+  );
+
+  // 2. Primary text (Sky) on pure white and on 15% pastel container background
+  const primOnWhite = getContrastRatio(primaryRgb, whiteRgb);
+  assert.equal(
+    primOnWhite >= 4.5,
+    true,
+    `--primary trên nền trắng vi phạm WCAG AA: ${primOnWhite.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+  );
+  const primPastelBg = blendOverWhite(primaryContainerRgb, 0.15);
+  const primOnPastel = getContrastRatio(primaryRgb, primPastelBg);
+  assert.equal(
+    primOnPastel >= 4.5,
+    true,
+    `--primary trên nền pastel bg-primary-container/15 vi phạm WCAG AA: ${primOnPastel.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+  );
+
+  // 3. Outline text (Slate) on surface-subtle (#f1f5f9)
+  const outlineOnSubtle = getContrastRatio(outlineRgb, surfaceSubtleRgb);
+  assert.equal(
+    outlineOnSubtle >= 4.5,
+    true,
+    `--outline trên nền bg-surface-subtle vi phạm WCAG AA: ${outlineOnSubtle.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+  );
+
+  // 4. White text on Primary Container button
+  const whiteOnContainer = getContrastRatio(whiteRgb, primaryContainerRgb);
+  assert.equal(
+    whiteOnContainer >= 4.5,
+    true,
+    `Chữ trắng trên --primary-container vi phạm WCAG AA: ${whiteOnContainer.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+  );
+});

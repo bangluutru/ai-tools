@@ -308,6 +308,7 @@ export default function ExcelMappingView({ t: tProp }) {
                     <div className="text-body-sm flex items-center gap-2">
                         <span className="text-on-surface-variant">Profile:</span>
                         <select
+                            aria-label="Chọn cấu hình ánh xạ cột (Profile)"
                             className="bg-surface-container-low border border-border-subtle rounded-lg px-2.5 py-1 text-xs outline-none text-on-surface cursor-pointer"
                             value={currentProfileName}
                             onChange={(e) => {
@@ -356,7 +357,7 @@ export default function ExcelMappingView({ t: tProp }) {
                             </label>
                         </div>
 
-                        <div className="flex-1 overflow-auto p-3">
+                        <div className="flex-1 overflow-auto p-3" tabIndex={0} role="region" aria-label="Bảng xem trước dữ liệu nguồn">
                             {sourceHeaders.length > 0 ? (
                                 <table className="w-full text-xs text-left border-collapse font-body-sm">
                                     <thead className="bg-surface-container-high sticky top-0 z-10 shadow-sm backdrop-blur">
@@ -412,7 +413,7 @@ export default function ExcelMappingView({ t: tProp }) {
                         <div className="p-3 border-b border-border-subtle/40 bg-surface-container flex items-center justify-between shrink-0">
                             <h2 className="font-title-sm text-title-sm text-on-surface font-semibold">{t.targetSupplier || 'Đích: Mẫu Nhà cung cấp'}</h2>
                             <label className="cursor-pointer">
-                                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleFileUpload(e, false)} />
+                                <input type="file" aria-label="Tải lên tệp biểu mẫu nhà cung cấp (Target)" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleFileUpload(e, false)} />
                                 <div className={`px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors flex items-center gap-2 ${targetFile ? 'bg-primary-container/15 border-primary-container/40 text-brand-cyan-bright font-semibold' : 'hover:bg-surface-subtle border-border-subtle text-on-surface-variant'}`}>
                                     <Upload className="w-3.5 h-3.5" />
                                     {targetFile ? `${targetFile} ✓` : 'Upload Template'}
@@ -420,7 +421,7 @@ export default function ExcelMappingView({ t: tProp }) {
                             </label>
                         </div>
 
-                        <div className="flex-1 overflow-auto p-3">
+                        <div className="flex-1 overflow-auto p-3" tabIndex={0} role="region" aria-label="Bảng xem trước dữ liệu đích">
                             {targetHeaders.length > 0 ? (
                                 <div className="space-y-2">
                                     {/* ZONE 1: Editable Header */}
@@ -538,6 +539,7 @@ export default function ExcelMappingView({ t: tProp }) {
                                     <div key={idx} className={`group flex items-center gap-2 px-2.5 py-1.5 rounded-lg border shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary-container/40 ${bgColors[rule.type] || bgColors.manual}`}>
 
                                         <select
+                                            aria-label="Cột nguồn cần ánh xạ"
                                             className="bg-transparent border-none outline-none text-xs font-medium appearance-none cursor-pointer text-inherit max-w-[110px] truncate"
                                             value={rule.sourceCol}
                                             onChange={(e) => updateRule(idx, 'sourceCol', e.target.value)}
@@ -549,6 +551,7 @@ export default function ExcelMappingView({ t: tProp }) {
                                         <span className="text-inherit opacity-60 text-xs">→</span>
 
                                         <select
+                                            aria-label="Cột đích trong biểu mẫu"
                                             className="bg-transparent border-none outline-none text-xs font-medium appearance-none cursor-pointer text-inherit max-w-[110px] truncate"
                                             value={rule.targetCol}
                                             onChange={(e) => updateRule(idx, 'targetCol', e.target.value)}
@@ -559,6 +562,7 @@ export default function ExcelMappingView({ t: tProp }) {
 
                                         <button
                                             type="button"
+                                            aria-label="Xóa quy tắc ánh xạ này"
                                             onClick={() => removeRule(idx)}
                                             className="opacity-0 group-hover:opacity-100 ml-1 text-error hover:bg-surface-container rounded p-0.5 transition-all cursor-pointer"
                                         >
