@@ -17,6 +17,7 @@ export { default as ScreenCaptureView } from './components/ScreenCaptureView.jsx
 export { default as WatermarkStudioView } from './components/WatermarkStudioView.jsx';
 export { default as DocStudioApp } from './components/editor-studio/DocStudioApp.jsx';
 export { default as CertificateStudioView } from './components/CertificateStudioView.jsx';
+export { default as TaxCalculatorView } from './components/TaxCalculatorView.jsx';
 
 // Core Hooks
 export { useLocalStorage } from './hooks/useLocalStorage.js';

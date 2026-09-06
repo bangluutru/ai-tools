@@ -89,6 +89,11 @@ const toolGovernance = {
     priority: 1,
     outputPurpose: 'reference'
   },
+  'tax-calculator': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility'
+  },
   'watermark-studio': {
     readiness: 'beta',
     processing: 'browser',
@@ -394,6 +399,22 @@ const toolDefinitions = [
     badge: 'NEW',
     popular: true,
     tags: ['accounting', 'reconcile', 'đối chiếu', 'kế toán', 'thuế', 'doanh thu', '511', '33311', 'br', 'excel']
+  },
+  {
+    id: 'tax-calculator',
+    name_vn: 'Tính Thuế TNCN',
+    name_en: 'Personal Income Tax Calculator',
+    name_ja: '個人所得税計算（ベトナム）',
+    desc_vn: 'Tính thuế TNCN lũy tiến 5 bậc 2026, chuyển đổi Gross ↔ Net, mức giảm trừ mới, bảo hiểm 4 vùng, tính thuế Freelancer, BĐS và BHXH rút 1 lần.',
+    desc_en: 'Vietnam 2026 5-bracket PIT calculator, Gross ↔ Net conversion, region I-IV insurance ceilings, Freelancer, Real Estate & Lump-sum Social Insurance.',
+    desc_ja: 'ベトナム2026年新5段階累進税率、Gross・Net相互換算、地域別保険上限、フリーランス・不動産譲渡・社会保険一括受給の計算ツール。',
+    category: 'office',
+    icon: 'Calculator',
+    gradient: 'from-blue-600 via-indigo-600 to-teal-500',
+    color: '#2563eb',
+    badge: '2026 READY',
+    popular: true,
+    tags: ['thuế tncn', 'tax', 'pit', 'gross net', 'lương', 'salary', 'bhxh', 'bhtn', 'quuyết toán', 'freelancer', 'bất động sản', 'office']
   },
   {
     id: 'watermark-studio',
