@@ -102,7 +102,15 @@ import { Sparkles, ShieldCheck, ArrowLeft } from 'lucide-react';
 import ToolErrorBoundary from '../../components/ToolErrorBoundary';
 import ${pascalName}View from '@ai-tools/core/components/${pascalName}View';
 
+const TOOL_TITLES = {
+  vi: '${toolName}',
+  en: '${toolName}',
+  ja: '${toolName}',
+};
+
 export default function ${pascalName}Tool({ displayLang = 'vi', onBackToHub }) {
+  const currentTitle = TOOL_TITLES[displayLang] || TOOL_TITLES.vi;
+
   return (
     <ToolErrorBoundary toolId="${toolId}" onBackToHub={onBackToHub}>
       <div className="max-w-[1240px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col text-on-surface">
@@ -114,10 +122,10 @@ export default function ${pascalName}Tool({ displayLang = 'vi', onBackToHub }) {
             className="hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
           >
             <ArrowLeft size={14} />
-            <span>Trang chủ</span>
+            <span>{displayLang === 'vi' ? 'Trang chủ' : displayLang === 'en' ? 'Home' : 'ホーム'}</span>
           </button>
           <span className="text-outline">/</span>
-          <span className="text-on-surface font-semibold">${toolName}</span>
+          <span className="text-on-surface font-semibold">{currentTitle}</span>
         </nav>
 
         {/* TIER 1: CONTEXT HEADER */}
@@ -128,10 +136,14 @@ export default function ${pascalName}Tool({ displayLang = 'vi', onBackToHub }) {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-on-surface">
-                ${toolName}
+                {currentTitle}
               </h1>
               <p className="text-xs sm:text-sm text-on-surface-variant mt-0.5">
-                Xử lý dữ liệu trực tiếp trên trình duyệt, an toàn và tối ưu hiệu suất.
+                {displayLang === 'vi'
+                  ? 'Xử lý dữ liệu trực tiếp trên trình duyệt, an toàn và tối ưu hiệu suất.'
+                  : displayLang === 'en'
+                  ? 'Fast, secure client-side processing directly in your browser.'
+                  : 'ブラウザ内で高速かつ安全に完结するデータ処理。'}
               </p>
             </div>
           </div>
@@ -139,7 +151,13 @@ export default function ${pascalName}Tool({ displayLang = 'vi', onBackToHub }) {
           {/* PRIVACY 1-LINE BADGE */}
           <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
             <ShieldCheck size={14} className="text-secondary shrink-0" />
-            <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
+            <span>
+              {displayLang === 'vi'
+                ? 'Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.'
+                : displayLang === 'en'
+                ? 'Client-side processing — your files never leave your device.'
+                : '100% ブラウザ内処理・ファイルは外部サーバーに送信されません。'}
+            </span>
           </div>
         </header>
 
@@ -627,7 +645,7 @@ async function run() {
 
     let toolName = opts.name;
     while (!toolName) {
-      toolName = await askQuestion('Nhập Tên Hiển Thị (ví dụ: Cắt Ghép Âm Thanh): ');
+      toolName = await askQuestion('Nhập Tên Hiển Thị (ví dụ: Cắt Âm Thanh — chuẩn súc tích, cấm PRO/Master): ');
     }
 
     let category = opts.cat;

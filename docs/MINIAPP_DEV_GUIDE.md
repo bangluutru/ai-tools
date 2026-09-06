@@ -85,7 +85,8 @@ npm run create:miniapp -- --id=audio-cutter --name="Cắt Ghép Âm Thanh" --cat
 ### Bước 2: Hiện thực Core View Logic
 Mở file `packages/core/src/components/<ToolName>View.jsx` để lập trình chức năng:
 - Tham chiếu các mẫu component JSX có sẵn trong [docs/DESIGN_SYSTEM_REFERENCE.md](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/ai-tools/docs/DESIGN_SYSTEM_REFERENCE.md).
-- Nhận prop `displayLang` để hiển thị nhãn tiếng Việt (`vi`), tiếng Anh (`en`), tiếng Nhật (`ja`).
+- **Quy chuẩn tên gọi 3 ngôn ngữ**: Đặt tên theo công thức `[Hành động / Thể loại] + [Đối tượng / Định dạng]` súc tích (ví dụ: *Nén Ảnh Đa Năng / Multi-Purpose Image Compressor / 画像圧縮・変換*). Cấm các từ cấm tiếp thị (`PRO`, `Master`, `Craft`, `Studio PRO`).
+- **Nhận prop `displayLang`**: Tự động hiển thị nhãn tiếng Việt (`vi`), tiếng Anh (`en`), tiếng Nhật (`ja`) cho cả Breadcrumb, tiêu đề Context Header H1 và các nút bấm hành động.
 - Tích hợp xử lý tệp tin với cơ chế dọn dẹp bộ nhớ: luôn gọi `URL.revokeObjectURL` khi xong việc.
 
 ### Bước 3: Rà soát & Kiểm thử chất lượng
@@ -125,13 +126,15 @@ Tập lệnh sẽ quét toàn bộ source code bên ngoài và xuất ra **Báo 
 ### Bước 2: Chuyển đổi mã nguồn theo Bảng Đối Chiếu Quy Tắc (Adaptation Matrix)
 Dựa vào báo cáo Gap Analysis, tiến hành chuyển đổi lớp giao diện (xem chi tiết tại Mục 5):
 1. **Dời Router**: Nếu app ngoài có nhiều trang con, chuyển thành **Tab nội bộ** hoặc **Step Wizard** (`useState('step1')`).
-2. **Thay thế CSS Tokens**:
+2. **Loại Bỏ Navbar Toàn Cục Riêng**: Xóa bỏ các thanh Header/Navbar tự dựng của app ngoài. Kế thừa thanh `ToolContainer` h-16 chuẩn của Hub.
+3. **Chuẩn Hóa Tên Gọi 3 Ngôn Ngữ**: Xóa các hậu tố phô trương (`PRO`, `Master`), đặt tên súc tích hướng công năng.
+4. **Thay thế CSS Tokens**:
    - `bg-white` / `bg-slate-50` ➔ `bg-surface-container`
    - `text-slate-900` / `text-black` ➔ `text-on-surface`
    - `text-slate-500` / `text-gray-400` ➔ `text-on-surface-variant`
    - `border-slate-200` ➔ `border-border-subtle`
-3. **Thay thế Icon**: Chuyển các raw emoji hoặc icon ngoài sang `lucide-react`.
-4. **Namespace Storage**: Thay `localStorage.setItem('key')` bằng `localStorage.setItem('ai_tools_<id>_key')`.
+5. **Thay thế Icon**: Chuyển các raw emoji hoặc icon ngoài sang `lucide-react`.
+6. **Namespace Storage**: Thay `localStorage.setItem('key')` bằng `localStorage.setItem('ai_tools_<id>_key')`.
 
 ### Bước 3: Đặt Component vào Kiến Trúc 2 Tầng của Hub
 - Đặt component chính đã refactor UI vào: `packages/core/src/components/<ToolName>View.jsx`.
@@ -147,6 +150,8 @@ Chạy `npm run audit:miniapps <id>` và `npm run test:browser:tool -- <id>` đ�
 
 | Thành Phần Kỹ Thuật | Codebase Bên Ngoài (Legacy / External) | Chuẩn Hóa Theo AI-Tools Hub (MAIS Standard) | Hướng Dẫn Kỹ Thuật Chi Tiết |
 |:---|:---|:---|:---|
+| **Thanh Điều Hướng (Navbar)** | Tự tạo Header, nút Dark Mode, chọn thứ tiếng, tìm kiếm riêng | **Kế thừa 100% `ToolContainer`**: Bỏ thanh Header riêng; chỉ nhận `displayLang` từ Hub | `ToolContainer` đã cung cấp thanh h-16 gồm Logo, Về Trung Tâm, Quick Tool Switcher, ThemeToggle và Language Selector. Cấm tự dựng lại |
+| **Quy Chuẩn Tên Gọi** | Đặt tên dài dòng, phô trương ("Super PDF Studio PRO", "WebP Master") | **Tên súc tích 3 ngôn ngữ** theo công thức: `[Hành động/Thể loại] + [Đối tượng]` | Đồng bộ 100% tại 4 điểm: Registry, Breadcrumb, Header H1 và file i18n. Cấm từ cấm tiếp thị (`PRO`, `Master`, `Craft`, `Studio PRO`) |
 | **Khung Bao Ngoài (Root)** | Chiếm toàn bộ `window`, có Header/Navbar/Footer riêng | Bọc trong container chuẩn `max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8` | Xóa bỏ Header/Navbar/Footer riêng của app ngoài; sử dụng Context Header chuẩn của Hub |
 | **Màu Nền & Bề Mặt** | Hardcode `bg-white`, `bg-gray-100`, `#f8fafc` | Semantic tokens: `bg-surface-container`, `bg-surface-canvas`, `bg-surface-subtle` | Đảm bảo hiển thị hoàn hảo ở cả Light và Dark Mode mà không cần viết điều kiện thủ công |
 | **Màu Chữ & Viền** | Hardcode `text-black`, `text-slate-900`, `border-gray-300` | Semantic tokens: `text-on-surface`, `text-on-surface-variant`, `border-border-subtle` | Chống lỗi "tàng hình chữ" khi người dùng bật Dark Mode |
@@ -283,12 +288,35 @@ Chạy `npm run audit:miniapps <id>` và `npm run test:browser:tool -- <id>` đ�
       : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'}
     ```
 
+### 6.9. Bẫy Trùng Lặp Thanh Điều Hướng (Duplicate Navbar / Control Clash Trap)
+- **Triệu chứng**: Giao diện miniapp xuất hiện 2 thanh header xếp chồng lên nhau, hoặc xuất hiện nút Dark/Light mode và nút chọn ngôn ngữ thừa thãi bên trong khung làm việc của miniapp.
+- **Nguyên nhân**: Khi chuyển đổi codebase bên ngoài vào Hub, lập trình viên giữ nguyên thanh `<header>` hoặc component `<Navbar>` cũ của app độc lập.
+- **Giải pháp**:
+  - Xóa bỏ 100% thanh header/navbar riêng của app ngoài.
+  - Hub đã cung cấp sẵn thanh điều hướng cấp cao `ToolContainer` (`h-16`) chuẩn mực trên cùng với đầy đủ: Logo, nút Về Trung Tâm, Bộ chuyển nhanh công cụ, ThemeToggle và Language Selector.
+  - Miniapp chỉ cần bắt đầu từ Breadcrumb và Tier 1 Context Header, đồng thời nhận prop `displayLang` để đổi ngôn ngữ hiển thị.
+
+### 6.10. Bẫy Tên Gọi Rườm Rà & Lệch Pha Đa Ngôn Ngữ (Inconsistent & Marketing Naming Trap)
+- **Triệu chứng**: `toolsRegistry.js` ghi tên một kiểu nhưng Breadcrumb và thẻ H1 trong miniapp ghi một kiểu khác; hoặc tên công cụ bị gài các từ ngữ tiếp thị phô trương ("Studio PRO", "Master", "Craft", "— Đóng Dấu Bản Quyền..."). Khi người dùng chuyển sang tiếng Anh hoặc tiếng Nhật, tiêu đề H1 vẫn giữ nguyên tiếng Việt.
+- **Nguyên nhân**: Hardcode chuỗi tên tĩnh trong JSX thay vì phản ứng theo `displayLang` hoặc không tuân thủ Bảng tham chiếu tên gọi chuẩn mực.
+- **Giải pháp**:
+  - Đặt tên theo công thức chuẩn: `[Hành động/Thể loại] + [Đối tượng]` súc tích.
+  - Bắt buộc đồng bộ 100% tên tại cả 4 điểm: Registry, Breadcrumb, Context Header H1 và file từ điển i18n.
+  - Luôn render tiêu đề theo prop `displayLang`:
+    ```jsx
+    <h1>
+      {displayLang === 'en' ? 'Document Watermark' : displayLang === 'ja' ? '文書透かし・押印' : 'Đóng Dấu Tài Liệu'}
+    </h1>
+    ```
+
 ---
 
 ## ✅ 7. CHECKLIST NGHIỆM THU ĐƯA VÀO VẬN HÀNH
 
 Trước khi commit và đưa miniapp mới vào production, hãy đảm bảo vượt qua bảng kiểm tra:
 
+- [ ] **Thanh điều hướng:** Không tự tạo Navbar/Header toàn cục riêng, kế thừa 100% thanh điều hướng chuẩn từ `ToolContainer`.
+- [ ] **Tên gọi chuẩn mực:** Tên gọi súc tích 3 ngôn ngữ theo công thức `[Hành động/Thể loại] + [Đối tượng]`, không chứa từ cấm tiếp thị (`PRO`, `Master`, `Craft`...), đồng bộ 4 điểm (Registry, Breadcrumb, H1, i18n).
 - [ ] **Khung chứa:** Miniapp nằm gọn trong `max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8`.
 - [ ] **Màu sắc:** 0 class `bg-white`, 0 class `text-black`, 100% dùng CSS semantic tokens.
 - [ ] **Trợ năng WCAG 2.1 AA (Initial & Dynamic):** Tỷ lệ tương phản chữ $\ge 4.5:1$ (không dùng `text-*-400` hoặc chữ xanh/vàng sáng trên nền trắng/pastel), 100% form controls có `aria-label`, kiểm thử axe-core đạt 0 violations ở cả trạng thái ban đầu và trạng thái động sau khi nạp tệp.

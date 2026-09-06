@@ -63,6 +63,51 @@ Nhằm đảm bảo 100% miniapp không tái diễn lỗi `color-contrast`, toà
 
 ---
 
+### 1.4. Đặc Tả Kỹ Thuật Thanh Điều Hướng Công Cụ (Tool Navigation Bar Specification)
+
+Toàn bộ các miniapp khi chạy trong Hub đều được bọc bởi thanh điều hướng chuẩn `ToolContainer` (`hub/src/components/ToolContainer.jsx`), đảm bảo người dùng có thể điều hướng xuyên suốt và tức thời:
+
+```
++---------------------------------------------------------------------------------------------------+
+| [✨ AI-Tools HUB] | [← Về Trung Tâm] [🟢 Tên Công Cụ ▼]           [🌓 Theme (Auto)] [🌐 VI/EN/JA] |
++---------------------------------------------------------------------------------------------------+
+```
+
+- **Quy cách CSS Container**:
+  ```jsx
+  <header className="no-print bg-surface-canvas/95 backdrop-blur-xl border-b border-border-subtle sticky top-0 z-50 shadow-sm">
+    <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-3">
+  ```
+- **Cụm bên trái (Left Cluster)**:
+  1. **Brand Logo**: Icon `Sparkles` trong khối `w-8 h-8 rounded-lg bg-surface-container border border-border-subtle`, chữ `AI-Tools` và badge `HUB`. Click để về Dashboard khám phá.
+  2. **Vạch ngăn cách**: `h-5 w-px bg-border-subtle hidden xs:block`.
+  3. **Nút Về Trung Tâm**: `button` với icon `ArrowLeft` và nhãn `Về Trung Tâm` / `Back to Hub` / `ハブに戻る` tương ứng theo `displayLang`.
+  4. **Quick Tool Switcher**: Dropdown hiển thị chấm màu công cụ hiện tại + tên công cụ + mũi tên `ChevronDown`. Khi mở, hiển thị danh sách toàn bộ các miniapp có sẵn (kèm icon `CheckCircle2` trên công cụ đang mở) cho phép nhảy cóc tức thì.
+- **Cụm bên phải (Right Cluster)**:
+  1. **ThemeToggle**: Component chuyển đổi 3 chế độ (`Light` / `Dark` / `System`) kèm biểu tượng trực quan.
+  2. **Language Selector**: Nút chọn ngôn ngữ với icon `Globe` và dropdown menu 3 thứ tiếng (Tiếng Việt, English, 日本語).
+- **Ranh giới bất biến**: Miniapp con **không được tự tạo navbar riêng**. Toàn bộ không gian bên dưới dành trọn cho Breadcrumb và Workspace của công cụ.
+
+---
+
+### 1.5. Bảng Tra Cứu Tên Gọi Chuẩn Mực 3 Ngôn Ngữ (Official Miniapp Naming Reference Table)
+
+Mọi miniapp bắt buộc đặt tên súc tích theo công thức: `[Hành động/Thể loại] + [Đối tượng]` (cấm các từ cấm tiếp thị như `PRO`, `Master`, `Craft`, `Studio PRO`). Dưới đây là bảng chuẩn mực 9 miniapp hiện hành:
+
+| Miniapp ID | Danh mục | Tên Tiếng Việt (`name_vn`) | Tên Tiếng Anh (`name_en`) | Tên Tiếng Nhật (`name_ja`) |
+|:---|:---|:---|:---|:---|
+| `business-card-studio` | `office` | **Tạo Danh Thiếp** | **Business Card Maker** | **名刺作成** |
+| `id-photo-studio` | `image` | **Tạo Ảnh Thẻ & Hộ Chiếu** | **ID & Passport Photo** | **証明写真・パスポート写真** |
+| `image-convert` | `image` | **Nén Ảnh Đa Năng** | **Multi-Purpose Image Compressor** | **画像圧縮・変換** |
+| `screen-capture` | `utils` | **Chụp Màn Hình** | **Screen Capture** | **画面キャプチャ** |
+| `barcode-qr` | `utils` | **Tạo Mã QR & Barcode** | **QR & Barcode Generator** | **QRコード・バーコード生成** |
+| `pdf-toolkit` | `pdf` | **Công Cụ PDF Đa Năng** | **PDF Multi-Tool** | **万能PDFツール** |
+| `omniconvert` | `office` | **Chuyển Đổi Đa Năng** | **Universal File Converter** | **万能ファイル変換** |
+| `invoice-studio` | `office` | **Tạo Đề Nghị Thanh Toán** | **Payment Request Maker** | **支払依頼書作成** |
+| `watermark-studio` | `image` | **Đóng Dấu Tài Liệu** | **Document Watermark** | **文書透かし・押印** |
+
+---
+
 ## 🧩 2. KHO MẪU COMPONENT THỰC CHIẾN (COPY-PASTE READY)
 
 Dưới đây là 10 mẫu giao diện chuẩn hóa sẵn sàng sao chép vào mã nguồn miniapp mới:
@@ -76,7 +121,15 @@ import { Sparkles, ShieldCheck, ArrowLeft } from 'lucide-react';
 import ToolErrorBoundary from '../../components/ToolErrorBoundary';
 import MyToolView from '@ai-tools/core/components/MyToolView';
 
+const TOOL_TITLES = {
+  vi: 'Tên Công Cụ',
+  en: 'Tool Name',
+  ja: 'ツール名',
+};
+
 export default function MyToolTool({ displayLang = 'vi', onBackToHub }) {
+  const currentTitle = TOOL_TITLES[displayLang] || TOOL_TITLES.vi;
+
   return (
     <ToolErrorBoundary toolId="my-tool" onBackToHub={onBackToHub}>
       <div className="max-w-[1240px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col text-on-surface">
@@ -88,10 +141,10 @@ export default function MyToolTool({ displayLang = 'vi', onBackToHub }) {
             className="hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
           >
             <ArrowLeft size={14} />
-            <span>Trang chủ</span>
+            <span>{displayLang === 'vi' ? 'Trang chủ' : displayLang === 'en' ? 'Home' : 'ホーム'}</span>
           </button>
           <span className="text-outline">/</span>
-          <span className="text-on-surface font-semibold">Tên Công Cụ Của Bạn</span>
+          <span className="text-on-surface font-semibold">{currentTitle}</span>
         </nav>
 
         {/* TIER 1: CONTEXT HEADER */}
@@ -102,10 +155,14 @@ export default function MyToolTool({ displayLang = 'vi', onBackToHub }) {
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-on-surface">
-                Tên Công Cụ Của Bạn
+                {currentTitle}
               </h1>
               <p className="text-xs sm:text-sm text-on-surface-variant mt-0.5">
-                Mô tả cô đọng mục đích và kết quả công cụ mang lại cho người dùng trong 1 câu ngắn gọn.
+                {displayLang === 'vi'
+                  ? 'Mô tả cô đọng mục đích và kết quả công cụ mang lại cho người dùng trong 1 câu ngắn gọn.'
+                  : displayLang === 'en'
+                  ? 'Concise description of the utility and result delivered directly in the browser.'
+                  : 'ブラウザ内で完結する機能と成果を簡潔に説明します。'}
               </p>
             </div>
           </div>
@@ -113,7 +170,13 @@ export default function MyToolTool({ displayLang = 'vi', onBackToHub }) {
           {/* PRIVACY 1-LINE BADGE */}
           <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
             <ShieldCheck size={14} className="text-secondary shrink-0" />
-            <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
+            <span>
+              {displayLang === 'vi'
+                ? 'Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.'
+                : displayLang === 'en'
+                ? 'Client-side processing — your files never leave your device.'
+                : '100% ブラウザ内処理・ファイルは外部サーバーに送信されません。'}
+            </span>
           </div>
         </header>
 

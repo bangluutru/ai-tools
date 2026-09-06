@@ -159,6 +159,67 @@ Mọi miniapp bắt buộc tham chiếu ma trận phối màu đã được ch�
 3. **Bảo Toàn Nhãn Ngữ Nghĩa Cho Form Controls Động**: Các thanh trượt tham số `<input type="range">`, ô chọn màu `<input type="color">`, ô nhập mã HEX xuất hiện ở các bước nâng cao bắt buộc phải có `aria-label` hoặc thẻ `<label htmlFor="...">` tương ứng.
 4. **Cơ Chế Khóa Tiêu Điểm (Focus Trap) Trong Modal**: Mọi hộp thoại Modal / Drawer khi mở ra phải tự động focus vào nút đóng hoặc nút hành động đầu tiên, và ngăn focus thoát ra ngoài phần tử nền khi Modal đang kích hoạt.
 
+### 2.8. Tiêu Chuẩn Thanh Điều Hướng Miniapp (Tool Navigation Bar Contract)
+Nhằm mang lại trải nghiệm tiện ích nhất quán, người dùng khi chuyển đổi giữa bất kỳ công cụ nào trong Hub đều được phục vụ bởi một **Thanh điều hướng công cụ cấp cao duy nhất (Top Tool Navigation Bar)** được quản lý tập trung tại `hub/src/components/ToolContainer.jsx`.
+
+#### 1. Cấu trúc thanh điều hướng chuẩn:
+- **Kích thước & Trạng thái**: Chiều cao chuẩn cố định `h-16` (64px), cố định trên cùng (`sticky top-0 z-50`), hiệu ứng kính mờ `backdrop-blur-xl bg-surface-canvas/95` và viền dưới `border-b border-border-subtle`.
+- **Khung chứa**: Giới hạn tối đa `max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8`.
+- **Cụm bên trái (Left Cluster)**:
+  1. **Brand Logo (`AI-Tools HUB`)**: Biểu tượng Sparkles, click để trở về trang chủ Hub.
+  2. **Đường phân cách mảnh (Vertical Divider)**: `h-5 w-px bg-border-subtle`.
+  3. **Nút Quay Về Trung Tâm (`Về Trung Tâm` / `Back to Hub` / `ハブに戻る`)**: Icon `ArrowLeft`, kích hoạt callback `onBackToHub`.
+  4. **Bộ Chuyển Nhanh Công Cụ (`Quick Tool Switcher Dropdown`)**:
+     - Hiển thị chấm tròn màu thương hiệu của công cụ hiện tại (`currentTool.color`), tên công cụ rút gọn và icon mũi tên `ChevronDown`.
+     - Nhấp chuột mở popup danh sách các miniapp khả dụng (kèm checkmark cho công cụ hiện tại), cho phép chuyển đổi ngay lập tức mà không cần quay về dashboard.
+- **Cụm bên phải (Right Cluster)**:
+  1. **Bộ Chuyển Đổi Giao Diện (`ThemeToggle`)**: Hỗ trợ 3 chế độ `Light` (Sáng) / `Dark` (Tối) / `System` (Theo hệ điều hành) đồng bộ toàn trang.
+  2. **Bộ Chọn Ngôn Ngữ (`Language Selector`)**: Icon `Globe`, hỗ trợ chuyển đổi tức thì 3 ngôn ngữ: Tiếng Việt (`vi`), English (`en`), 日本語 (`ja`).
+
+#### 2. Ranh giới kiến trúc bất biến (The Shell-Miniapp Isolation Boundary):
+- **CẤM TỰ TẠO THANH ĐIỀU HƯỚNG / NAVBAR TOÀN CỤC BÊN TRONG MINIAPP**: Miniapp con **tuyệt đối không được** tự tạo header riêng chứa logo portal, nút chuyển theme, nút chọn ngôn ngữ hoặc thanh tìm kiếm portal. Việc này gây xung đột trải nghiệm, lãng phí diện tích màn hình và phá vỡ cấu trúc tổng thể.
+- **HỢP ĐỒNG TIẾP NHẬN NGÔN NGỮ**: Miniapp con nhận prop `displayLang` (`vi` | `en` | `ja`) truyền từ `ToolContainer`. Mọi tiêu đề, nút bấm, hướng dẫn trong miniapp phải tự động phản ứng theo giá trị prop này.
+- **ĐIỂM BẮT ĐẦU CỦA WORKSPACE**: Khung làm việc của miniapp bắt đầu trực tiếp từ:
+  1. **Breadcrumb**: Dòng chỉ mục điều hướng nhỏ gọn (ví dụ: `Trang chủ / Danh mục / Tên Công Cụ`).
+  2. **Tier 1 Context Header**: H1 hiển thị tên công cụ chuẩn hóa, mô tả ngắn gọn và Privacy Note (`ShieldCheck`).
+
+---
+
+### 2.9. Quy Chuẩn Đặt Tên Miniapp & Bảng Tham Chiếu 3 Ngôn Ngữ (Naming Convention & Reference Matrix)
+
+#### 1. Triết lý đặt tên (Action-Oriented & Zero-Marketing Fluff):
+AI-Tools Master Hub là không gian làm việc chuyên nghiệp (Modern Utility Workspace). Người dùng mở công cụ để giải quyết tác vụ tức thời, không phải để xem quảng cáo. Do đó, tên gọi miniapp phải tuân theo các nguyên tắc:
+- **Trực diện, hướng công năng (Action-oriented)**: Nói ngay công cụ này làm gì hoặc tạo ra cái gì.
+- **Công thức chuẩn**: `[Hành động / Thể loại] + [Đối tượng / Định dạng]`
+  - *Tiếng Việt*: Độ dài tối ưu **3 – 5 từ** (ví dụ: *Tạo Danh Thiếp, Nén Ảnh Đa Năng, Tạo Đề Nghị Thanh Toán*).
+  - *Tiếng Anh*: Danh từ/danh ngữ súc tích **2 – 4 từ** (ví dụ: *Business Card Maker, Multi-Purpose Image Compressor, Payment Request Maker*).
+  - *Tiếng Nhật*: Từ vựng tự nhiên theo chuẩn văn phòng Nhật Bản (ví dụ: *名刺作成, 画像圧縮・変換, 支払依頼書作成*).
+- **DANH MỤC TỪ CẤM TIẾP THỊ (FORBIDDEN MARKETING FLUFF)**:
+  - CẤM các từ phô trương: `PRO`, `Master`, `Studio PRO`, `AI Studio`, `Craft`, `Vip`, `Ultimate`.
+  - CẤM các khẩu hiệu tiếp thị nối dài bằng dấu gạch ngang (ví dụ: cấm *Watermark Studio — Đóng Dấu Bản Quyền & Bảo Vệ Tài Liệu*).
+
+#### 2. Quy tắc đồng bộ 4 điểm (The 4-Point Naming Synchronization Rule):
+Khi tạo miniapp mới hoặc đổi tên, tên gọi của công cụ bắt buộc phải đồng nhất 100% tại 4 vị trí:
+1. **Registry**: `hub/src/config/toolsRegistry.js` (`name_vn`, `name_en`, `name_ja`).
+2. **Breadcrumb**: Phản ứng theo `displayLang` trong view của miniapp.
+3. **Context Header H1**: Tiêu đề chính của miniapp phản ứng theo `displayLang`.
+4. **Từ điển / Utility i18n**: Các file ngôn ngữ nội bộ (`translations.js`, `i18n/vi.js`, v.v.) phải dùng đúng tên này.
+
+#### 3. Bảng Tham Chiếu Tên Gọi 9 Miniapp Chuẩn Mực:
+Dưới đây là bảng đối chiếu chính thức của 9 miniapp hiện tại làm chuẩn mực quy chiếu cho mọi miniapp tích hợp sau này:
+
+| Miniapp ID | Danh mục | Tên Tiếng Việt (`name_vn`) | Tên Tiếng Anh (`name_en`) | Tên Tiếng Nhật (`name_ja`) |
+|:---|:---|:---|:---|:---|
+| `business-card-studio` | `office` | **Tạo Danh Thiếp** | **Business Card Maker** | **名刺作成** |
+| `id-photo-studio` | `image` | **Tạo Ảnh Thẻ & Hộ Chiếu** | **ID & Passport Photo** | **証明写真・パスポート写真** |
+| `image-convert` | `image` | **Nén Ảnh Đa Năng** | **Multi-Purpose Image Compressor** | **画像圧縮・変換** |
+| `screen-capture` | `utils` | **Chụp Màn Hình** | **Screen Capture** | **画面キャプチャ** |
+| `barcode-qr` | `utils` | **Tạo Mã QR & Barcode** | **QR & Barcode Generator** | **QRコード・バーコード生成** |
+| `pdf-toolkit` | `pdf` | **Công Cụ PDF Đa Năng** | **PDF Multi-Tool** | **万能PDFツール** |
+| `omniconvert` | `office` | **Chuyển Đổi Đa Năng** | **Universal File Converter** | **万能ファイル変換** |
+| `invoice-studio` | `office` | **Tạo Đề Nghị Thanh Toán** | **Payment Request Maker** | **支払依頼書作成** |
+| `watermark-studio` | `image` | **Đóng Dấu Tài Liệu** | **Document Watermark** | **文書透かし・押印** |
+
 ---
 
 ## 🛡️ 3. TIÊU CHUẨN ĐỘ ỔN ĐỊNH & CÁCH LY SỰ CỐ (FAULT ISOLATION & STABILITY)
@@ -250,6 +311,9 @@ Trước khi một miniapp được chuyển từ trạng thái `in-development`
   - `readiness`: Gắn trạng thái chuẩn (`experimental`, `beta`, hoặc `in-development`).
   - `processing`: `browser` (khuyến nghị 100%), `hybrid`, hoặc `backend-antigravity`.
   - `outputPurpose`: `utility` hoặc `reference`.
+- [ ] **Chuẩn Hóa Tên Gọi Miniapp 3 Ngôn Ngữ (Naming Convention & Zero-Fluff)**:
+  - Tên gọi `name_vn`, `name_en`, `name_ja` phải súc tích, hướng công năng (Action-oriented theo công thức `[Hành động/Thể loại] + [Đối tượng]`).
+  - Tuyệt đối cấm các từ ngữ tiếp thị phô trương (`PRO`, `Master`, `Studio PRO`, `AI Studio`, `Craft`, `Vip`, `Ultimate`) hoặc khẩu hiệu dài dòng nối bằng dấu gạch ngang.
 - [ ] **Cấu trúc thư mục khớp 1-1**:
   - Miniapp hoạt động phải có thư mục wrapper: `hub/src/tools/<id>/<Component>Tool.jsx`.
   - Miniapp tạm dừng phải nằm ở: `hub/src/tools-in-development/<id>/`.
@@ -260,6 +324,9 @@ Trước khi một miniapp được chuyển từ trạng thái `in-development`
   - Mọi thư viện `import` phải được khai báo trong `dependencies` của package tương ứng. Cấm dựa vào hoisting ngầm của npm.
 
 ### 🟡 CỔNG 2: STATIC TOKEN & UI LINTER (RÀ SOÁT TĨNH GIAO DIỆN)
+- [ ] **Cách Ly Thanh Điều Hướng (Navbar Isolation & Contract)**:
+  - Miniapp không tự dựng lại thanh Header/Navbar toàn cục riêng, không nhúng lại `ThemeToggle`, Language Selector hoặc ô tìm kiếm portal.
+  - Miniapp bắt đầu từ Breadcrumb và Tier 1 Context Header, nhận và phản ứng tức thì với prop `displayLang` truyền từ `ToolContainer`.
 - [ ] **Quét sạch Class Light-Mode tĩnh**:
   - Không có `bg-white`, `bg-slate-50`, `bg-gray-100`, `text-black`, `text-slate-900`.
 - [ ] **Quét sạch Class Màu Chữ Tương Phản Thấp (A11y Anti-patterns)**:
@@ -341,6 +408,8 @@ npm test
 | Hạng mục kiểm tra | Đạt chuẩn | Ghi chú |
 |---|:---:|---|
 | Đã khai báo đầy đủ 3 ngôn ngữ trong `toolsRegistry.js` | [ ] | VN, EN, JA |
+| Tên gọi miniapp chuẩn hóa 3 ngôn ngữ, không chứa từ cấm tiếp thị (`PRO`, `Master`, `Craft`...) | [ ] | Naming Convention & Zero-Fluff |
+| Không tự dựng Navbar/Header riêng, tuân thủ Navbar Contract từ `ToolContainer` | [ ] | Navbar Isolation |
 | Đã bọc trong `StandardToolLayout` hoặc `MiniAppLayout` | [ ] | Max 1240px |
 | 100% sử dụng CSS semantic tokens (không có `bg-white`, `text-black`) | [ ] | Tương thích cả Dark/Light |
 | Tỷ lệ tương phản chữ $\ge 4.5:1$ theo ma trận phối màu an toàn (không dùng `text-*-400`) | [ ] | Chuẩn WCAG 2.1 AA |

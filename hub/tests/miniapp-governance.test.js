@@ -213,3 +213,42 @@ test('MAIS Gate 2: CSS color contrast & accessibility tokens adhere to WCAG 2.1 
     `Chữ trắng trên --primary-container vi phạm WCAG AA: ${whiteOnContainer.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
   );
 });
+
+test('MAIS Gate 1: Tool names adhere to Naming Convention and do not contain forbidden marketing fluff', () => {
+  const forbiddenFluff = [
+    { regex: /\bPRO\b/i, word: 'PRO' },
+    { regex: /\bMaster\b/i, word: 'Master' },
+    { regex: /\bStudio\s+PRO\b/i, word: 'Studio PRO' },
+    { regex: /\bCraft\b/i, word: 'Craft' },
+    { regex: /\bUltimate\b/i, word: 'Ultimate' },
+    { regex: /\bVip\b/i, word: 'Vip' },
+  ];
+
+  for (const tool of tools) {
+    for (const key of ['name_vn', 'name_en', 'name_ja']) {
+      const val = tool[key] || '';
+      for (const { regex, word } of forbiddenFluff) {
+        assert.equal(
+          regex.test(val),
+          false,
+          `Tool "${tool.id}" field "${key}"="${val}" chứa từ cấm tiếp thị "${word}" (MAIS Gate 1 Naming Convention)`
+        );
+      }
+    }
+  }
+});
+
+test('MAIS Gate 2: Active miniapps adhere to Navbar Isolation and do not duplicate ThemeToggle', () => {
+  for (const tool of activeTools) {
+    const files = getToolFiles(tool.id);
+    for (const file of files) {
+      const content = readFileSync(file, 'utf8');
+      const codeOnly = content.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+      assert.equal(
+        codeOnly.includes('ThemeToggle'),
+        false,
+        `${file} vi phạm Navbar Isolation: Miniapp tự nhúng ThemeToggle. Thanh điều hướng và ThemeToggle do ToolContainer đảm nhiệm duy nhất.`
+      );
+    }
+  }
+});

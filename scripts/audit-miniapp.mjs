@@ -144,6 +144,28 @@ function auditGate1(tool, registryInfo) {
     }
   }
 
+  // Naming Convention: Prohibit marketing fluff (PRO, Master, Studio PRO, Craft, Vip, Ultimate)
+  const forbiddenFluffPatterns = [
+    { regex: /\bPRO\b/i, word: 'PRO' },
+    { regex: /\bMaster\b/i, word: 'Master' },
+    { regex: /\bStudio\s+PRO\b/i, word: 'Studio PRO' },
+    { regex: /\bCraft\b/i, word: 'Craft' },
+    { regex: /\bUltimate\b/i, word: 'Ultimate' },
+    { regex: /\bVip\b/i, word: 'Vip' },
+  ];
+
+  for (const langKey of ['name_vn', 'name_en', 'name_ja']) {
+    const val = tool[langKey] || '';
+    for (const { regex, word } of forbiddenFluffPatterns) {
+      if (regex.test(val)) {
+        issues.push(`Tên gọi "${langKey}: ${val}" vi phạm MAIS Gate 1 Naming Convention: Chứa từ cấm tiếp thị "${word}".`);
+      }
+    }
+    if (val.includes(' — ') || val.includes(' - ')) {
+      warnings.push(`Tên gọi "${langKey}: ${val}" chứa dấu gạch ngang slogan. Khuyến nghị rút gọn theo công thức [Hành động] + [Đối tượng].`);
+    }
+  }
+
   return {
     name: 'Gate 1: Contract & Architecture',
     passed: issues.length === 0,
@@ -253,6 +275,11 @@ function auditGate2(tool, files) {
     const activeTintMatch = codeOnly.match(/\bbg-(primary-container\/20|secondary\/15)\b[^\n]*\btext-(primary-container|secondary)\b/g);
     if (activeTintMatch && activeTintMatch.length > 0) {
       warnings.push(`${relPath}: Phát hiện ${activeTintMatch.length} vị trí dùng class tint (bg-*-container/20 text-*) có nguy cơ rớt tương phản WCAG AA ở Light Mode. Khuyến nghị đổi sang 'bg-primary text-on-primary'`);
+    }
+
+    // Navbar Isolation Check: Miniapp should not re-implement ThemeToggle or global portal navbar
+    if (codeOnly.includes('ThemeToggle') && !filePath.includes('ToolContainer.jsx') && !filePath.includes('Navbar.jsx')) {
+      issues.push(`${relPath}: Phát hiện miniapp tự import/sử dụng ThemeToggle. Thanh điều hướng và ThemeToggle do ToolContainer đảm nhiệm duy nhất.`);
     }
   }
 
