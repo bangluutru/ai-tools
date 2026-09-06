@@ -138,10 +138,10 @@ function IdPhotoAppContent() {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-3 shrink-0">
+            <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-3 min-w-0">
               <div className="flex items-center gap-1.5 text-xs text-on-surface-variant">
                 <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
-                <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
+                <span className="break-words">Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
               </div>
               <div className="flex items-center gap-2">
                 <button

@@ -1,7 +1,7 @@
 export const TRANSLATIONS = {
   vi: {
     // Header & Brand
-    brandTitle: "MEISHI STUDIO",
+    brandTitle: "Tạo Danh Thiếp",
     brandBadge: "AI Danh Thi\u1EBFp",
     defaultProjectTitle: "D\u1EF1 \xE1n danh thi\u1EBFp ch\u01B0a \u0111\u1EB7t t\xEAn",
     preflightScore: "Ki\u1EC3m \u0111\u1ECBnh in",
@@ -261,7 +261,7 @@ export const TRANSLATIONS = {
   },
   en: {
     // Header & Brand
-    brandTitle: "MEISHI STUDIO",
+    brandTitle: "Business Card Maker",
     brandBadge: "AI Business Card",
     defaultProjectTitle: "Untitled Business Card Project",
     preflightScore: "Preflight Score",
@@ -521,7 +521,7 @@ export const TRANSLATIONS = {
   },
   ja: {
     // Header & Brand
-    brandTitle: "MEISHI STUDIO",
+    brandTitle: "名刺作成",
     brandBadge: "AI \u540D\u523A\u30E1\u30FC\u30AB\u30FC",
     defaultProjectTitle: "\u7121\u984C\u306E\u540D\u523A\u30D7\u30ED\u30B8\u30A7\u30AF\u30C8",
     preflightScore: "\u5165\u7A3F\u9069\u6027\u691C\u67FB",

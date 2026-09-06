@@ -180,6 +180,7 @@ export default function App() {
           onBackToHub={backToHub}
           onSelectTool={selectTool}
           displayLang={displayLang}
+          onLangChange={setDisplayLang}
           tools={activeTools}
         >
           <ToolErrorBoundary

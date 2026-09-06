@@ -792,7 +792,7 @@ function DateField({ value, onChange, label, id }) {
   );
 }
 
-export default function InvoiceTool() {
+export default function InvoiceTool({ displayLang = 'vi' } = {}) {
   const [invoices, setInvoices] = useState([]);
   // Việc đọc chứng từ chạy bất đồng bộ khá lâu; ref giữ danh sách mới nhất để
   // mẻ vừa đọc gộp đúng vào những gì đang có trên bảng.
@@ -1245,7 +1245,9 @@ export default function InvoiceTool() {
           <span className="text-outline-variant">/</span>
           <a className="hover:text-primary transition-colors" href="#excel-hoa-don">Excel & Hóa đơn</a>
           <span className="text-outline-variant">/</span>
-          <span className="text-brand-cyan-bright">Xử Lý Hóa Đơn XML & PDF</span>
+          <span className="text-brand-cyan-bright">
+            {displayLang === 'en' ? 'Payment Request Maker' : displayLang === 'ja' ? '支払依頼書作成' : 'Tạo Đề Nghị Thanh Toán'}
+          </span>
         </nav>
 
         {/* Header Banner */}
@@ -1256,7 +1258,7 @@ export default function InvoiceTool() {
             </div>
             <div className="flex flex-col gap-space-1">
               <h1 className="font-headline-lg text-xl sm:text-2xl text-on-surface tracking-tight font-semibold">
-                Xử Lý Hóa Đơn XML &amp; PDF Đa Năng
+                {displayLang === 'en' ? 'Payment Request Maker' : displayLang === 'ja' ? '支払依頼書作成' : 'Tạo Đề Nghị Thanh Toán'}
               </h1>
               <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant max-w-3xl leading-relaxed">
                 Bóc tách dữ liệu hóa đơn điện tử XML của Tổng cục Thuế và PDF, trích xuất bảng kê Excel tự động, kiểm tra tính hợp lệ chữ ký số và đồng bộ phiếu kế toán tức thì.

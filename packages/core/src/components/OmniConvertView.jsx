@@ -358,7 +358,9 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
             <span className="text-outline">/</span>
             <a href="#/tien-ich" className="hover:text-primary transition-colors">Tiện ích &amp; Văn phòng</a>
             <span className="text-outline">/</span>
-            <span className="text-on-surface font-medium">Chuyển Đổi OmniConvert</span>
+            <span className="text-on-surface font-medium">
+              {displayLang === 'en' ? 'Universal File Converter' : displayLang === 'ja' ? '万能ファイル変換' : 'Chuyển Đổi Đa Năng'}
+            </span>
           </nav>
           <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] text-on-surface-variant">
             <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
@@ -376,7 +378,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               </div>
               <div className="space-y-2 max-w-3xl">
                 <h1 className="text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">
-                  Chuyển Đổi OmniConvert — Office sang PDF &amp; Markdown
+                  {displayLang === 'en' ? 'Universal File Converter' : displayLang === 'ja' ? '万能ファイル変換' : 'Chuyển Đổi Đa Năng'}
                 </h1>
                 <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
                   Chuyển đổi tức thì tài liệu văn phòng Office (Word .docx, Excel .xlsx, PowerPoint .pptx, TXT, HTML) sang PDF chuẩn in ấn hoặc Markdown / Clean HTML tối ưu cho LLM/AI prompt mà không làm mất định dạng bảng biểu hay tiêu đề.

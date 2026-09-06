@@ -1,6 +1,6 @@
 const ja = {
   // Common & Header
-  appTitle: "証明写真PRO",
+  appTitle: "証明写真・パスポート写真",
   appSubtitle: "AI背景透過・自動顔位置合わせ・コンビニ印刷シート作成",
   privacyBadge: "100% ブラウザ内処理・写真データは外部送信されません",
   langJa: "日本語",

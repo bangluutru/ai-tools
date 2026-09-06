@@ -797,7 +797,7 @@ function createSampleStampSvg(type) {
 // MAIN VIEW COMPONENT — WatermarkStudioView
 // ========================================================================
 
-export default function WatermarkStudioView() {
+export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
   const [config, setConfig] = useState(DEFAULT_WATERMARK_CONFIG);
   const [fileItems, setFileItems] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -1058,14 +1058,18 @@ export default function WatermarkStudioView() {
           <span className="text-outline-variant">/</span>
           <a href="#/hinh-anh-webp" className="hover:text-primary transition-colors">Hình ảnh & WebP</a>
           <span className="text-outline-variant">/</span>
-          <span className="text-on-surface font-medium">Watermark Studio — Đóng Dấu Tài Liệu</span>
+          <span className="text-on-surface font-medium">
+            {displayLang === 'en' ? 'Document Watermark' : displayLang === 'ja' ? '文書透かし・押印' : 'Đóng Dấu Tài Liệu'}
+          </span>
         </nav>
 
         {/* Header Content & Badges */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-2">
             <h1 className="text-2xl sm:text-3xl font-bold text-on-surface tracking-tight flex items-center gap-3">
-              <span>Watermark Studio — Đóng Dấu Bản Quyền & Tài Liệu</span>
+              <span>
+                {displayLang === 'en' ? 'Document Watermark' : displayLang === 'ja' ? '文書透かし・押印' : 'Đóng Dấu Tài Liệu'}
+              </span>
             </h1>
             <p className="text-sm text-on-surface-variant max-w-4xl leading-relaxed">
               Đóng dấu văn bản (Text) hoặc logo hình ảnh bản quyền lên hàng loạt tệp ảnh (PNG, JPG, WebP), tài liệu PDF và Microsoft Office (DOCX, XLSX, PPTX). Tự động tính toán góc xoay, độ trong suốt (opacity), lặp ma trận (tile grid) hoặc dấu chìm chống sao chép trái phép hoàn toàn trong trình duyệt.

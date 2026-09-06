@@ -201,7 +201,7 @@ function BusinessCardStudioContent({ onBackToHub }) {
 
       {/* BREADCRUMB */}
       <ToolBreadcrumb
-        title={t('brandTitle') || 'Tạo Danh Thiếp & Namecard AI'}
+        title={t('brandTitle') || 'Tạo Danh Thiếp'}
         onBackToHub={onBackToHub}
       />
 
@@ -219,7 +219,7 @@ function BusinessCardStudioContent({ onBackToHub }) {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-on-surface tracking-tight font-display">
-                  {t('brandTitle') || 'MEISHI STUDIO'}
+                  {t('brandTitle') || 'Tạo Danh Thiếp'}
                 </h1>
                 <div className="flex items-center gap-1.5 text-xs text-secondary font-medium mt-1">
                   <ShieldCheck className="w-3.5 h-3.5 shrink-0" />

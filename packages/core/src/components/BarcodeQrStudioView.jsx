@@ -53,7 +53,7 @@ import { validateAndFixBarcode } from '../utils/codecraft/checksumValidators.js'
 // =====================================================================
 const i18n = {
   vi: {
-    heroTitle: 'Tạo Mã QR & Barcode GS1 Chuẩn Quốc Tế',
+    heroTitle: 'Tạo Mã QR & Barcode',
     heroTagline: 'Tạo mã QR tĩnh/động, mã vạch EAN-13, Code 128, UPC-A, Data Matrix chuẩn bán lẻ và kho vận logistics. Tùy biến logo nhận diện, màu sắc, kiểm tra checksum GS1 và xuất bản in vector SVG/PDF độ phân giải cao 300 DPI.',
     tabQR: 'Mã QR Đa Năng',
     tabBarcode: 'EAN-13 / Code 128',
@@ -70,7 +70,7 @@ const i18n = {
     copySuccess: '🎉 Đã sao chép vào Clipboard! Hãy dán Ctrl+V sang Word, Zalo, Photoshop...',
   },
   en: {
-    heroTitle: 'Artistic QR Code & Industrial Barcode Studio',
+    heroTitle: 'QR & Barcode Generator',
     heroTagline: 'Generate styled QR with logos, dual gradients, and GS1 industrial 1D barcodes 100% client-side.',
     tabQR: 'Artistic QR Code',
     tabBarcode: 'GS1 Barcode 1D',
@@ -87,7 +87,7 @@ const i18n = {
     copySuccess: '🎉 Copied to Clipboard! Press Ctrl+V to paste anywhere...',
   },
   ja: {
-    heroTitle: '高精度QRコード＆産業用バーコード作成スタジオ',
+    heroTitle: 'QRコード・バーコード生成',
     heroTagline: 'ロゴ埋め込みQRコード、カラーグラデーション、GS1産業用バーコードを100%ローカルで安全に作成。',
     tabQR: '多機能QRコード',
     tabBarcode: '産業用バーコード',

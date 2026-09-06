@@ -72,7 +72,7 @@ function detectInitialMode() {
   return 'merge';
 }
 
-export default function PdfToolkitTool({ displayLang: _displayLang }) {
+export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
   const [activeMode, setActiveMode] = useState(detectInitialMode);
   const [files, setFiles] = useState([]); // [{ id, file, name, size, pageCount, arrayBuffer, pages: [{ pageIndex, rotation, thumbnail, isDeleted }] }]
   const [isProcessing, setIsProcessing] = useState(false);
@@ -432,7 +432,7 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
         </a>
         <ChevronRight size={14} className="text-outline shrink-0" />
         <span className="text-on-surface font-title-sm text-label-md">
-          Công Cụ PDF Đa Năng
+          {displayLang === 'en' ? 'PDF Multi-Tool' : displayLang === 'ja' ? '万能PDFツール' : 'Công Cụ PDF Đa Năng'}
         </span>
       </nav>
 
@@ -445,7 +445,7 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
             </div>
             <div className="space-y-1">
               <h1 className="font-headline-lg text-xl sm:text-2xl text-on-surface font-semibold tracking-tight">
-                Công Cụ PDF Đa Năng &amp; Biên Tập Trang
+                {displayLang === 'en' ? 'PDF Multi-Tool' : displayLang === 'ja' ? '万能PDFツール' : 'Công Cụ PDF Đa Năng'}
               </h1>
               <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant leading-relaxed">
                 Gộp nhiều tệp PDF, tách trang lẻ theo dải tùy chọn, nén giảm dung lượng và xoay/sắp xếp thứ tự trang trực tiếp trong trình duyệt.

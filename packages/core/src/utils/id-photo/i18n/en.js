@@ -1,6 +1,6 @@
 const en = {
   // Common & Header
-  appTitle: "ID Photo Studio PRO",
+  appTitle: "ID & Passport Photo",
   appSubtitle: "AI Background Removal • Auto Face Alignment • Japanese Convenience Store Print Sheets",
   privacyBadge: "100% Client-Side Processing • Your photos never leave your device",
   langJa: "日本語",

@@ -17,7 +17,7 @@ const StepWizard = ({
   ];
 
   return (
-    <nav aria-label="Progress" className="w-full bg-surface-container border border-border-subtle rounded-xl py-3 px-4 sm:py-4 sm:px-6 shadow-sm">
+    <nav aria-label="Progress" className="w-full bg-surface-container border border-border-subtle rounded-xl py-3 px-4 sm:py-4 sm:px-6 shadow-sm overflow-hidden">
       <div className="mx-auto max-w-4xl">
         <ol className="flex items-center justify-between">
           {steps.map((step, idx) => {

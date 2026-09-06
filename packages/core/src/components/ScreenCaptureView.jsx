@@ -49,7 +49,7 @@ import {
 const i18n = {
   vi: {
     breadcrumbCategory: 'Tiện ích & Studio',
-    toolTitle: 'Chụp Màn Hình & Chú Thích Studio',
+    toolTitle: 'Chụp Màn Hình',
     pipelineId: 'PIPELINE ID: CAPTURE-ANNOTATE-V2.4.8-STU',
     tagStudio: 'Studio',
     tagOffline: 'Offline Client-Side',
@@ -138,7 +138,7 @@ const i18n = {
   },
   en: {
     breadcrumbCategory: 'Utilities & Studio',
-    toolTitle: 'Screen Capture & Annotation Studio',
+    toolTitle: 'Screen Capture',
     pipelineId: 'PIPELINE ID: CAPTURE-ANNOTATE-V2.4.8-STU',
     tagStudio: 'Studio',
     tagOffline: 'Offline Client-Side',
@@ -224,6 +224,67 @@ const i18n = {
       'Automatically applies 32px canvas padding with multi-layer ambient shadow, ready for direct embedding into Notion, Slack, Jira, or technical wikis.',
     emptyStagePrompt: 'No screenshot loaded yet',
     emptyStageDesc: 'Click the capture button, paste from clipboard (Ctrl+V), or upload an image file to start editing.',
+  },
+  ja: {
+    breadcrumbCategory: '便利ツール＆スタジオ',
+    toolTitle: '画面キャプチャ',
+    pipelineId: 'PIPELINE ID: CAPTURE-ANNOTATE-V2.4.8-STU',
+    tagStudio: 'スタジオ',
+    tagOffline: 'オフライン・ローカル',
+    tagVector: 'ベクター注釈',
+    btnDrafts: '履歴',
+    btnShortcuts: 'ショートカット',
+    toolDesc:
+      '画面・ウィンドウ・タブから直接キャプチャ、またはクリップボード（Ctrl+V）から貼り付け。自動ステップ番号、ぼかし、矢印、枠線を追加し、高解像度HD/Retinaで出力。',
+    privacyTitle: '100% ブラウザ内プライバシー処理',
+    privacyBadge: 'ISO-27001 ISOLATED',
+    privacyDesc:
+      'すべての画像処理とベクター描画はブラウザのメモリ内（Canvas API）で完結し、サーバーに画像を送信しません。',
+    step1Title: 'スクリーンショットの取得・読み込み',
+    step1Ready: '準備完了',
+    btnCaptureApi: '画面 / タブをキャプチャ (Screen Capture API)',
+    btnPreparing: 'キャプチャの初期化中...',
+    timerInstant: '0秒 (即時)',
+    dropzoneTitle: 'Ctrl + V でクリップボードから直接貼り付け',
+    dropzoneSubtitle: 'または画像ファイル（PNG、JPG、WebP 最大50MB）をドラッグ＆ドロップ',
+    loadedBadge: '読み込み完了',
+    btnReplace: '画像を変更',
+    btnClear: '削除',
+    step2Title: '注釈・カスタマイズツールボックス',
+    step2Badge: 'VECTOR GRAPHICS',
+    tools: {
+      step: 'ステップ番号',
+      stepSub: '自動 (1, 2, 3)',
+      arrow: 'ガイド矢印',
+      arrowSub: '矢印＆引き出し線',
+      rect: '枠線・ハイライト',
+      rectSub: 'ボックス',
+      blur: '機密部分のぼかし',
+      blurSub: 'Pixelate / Blur',
+      text: 'テキスト注釈',
+      textSub: '文字入力',
+      crop: '切り抜き',
+      cropSub: '領域トリミング',
+    },
+    canvasColorLabel: 'アクセントカラー',
+    canvasStrokeLabel: '線の太さ',
+    canvasShadowLabel: '外枠の影 (Soft Shadow)',
+    canvasPaddingLabel: '余白パディング',
+    canvasCornerLabel: '角丸',
+    btnExportPng: 'PNG画像を保存 (HD)',
+    btnExportJpg: 'JPG画像を保存',
+    btnCopyClipboard: 'クリップボードにコピー',
+    toastCopied: 'クリップボードに画像をコピーしました！',
+    toastDownloaded: '画像をダウンロードしました！',
+    assuranceTitle: 'グラフィック標準とデータセキュリティ',
+    card1Title: 'Retina対応キャプチャAPI',
+    card1Desc: 'システムネイティブのDPR 2.0x/3.0x解像度を保持し、4Kディスプレイでも鮮明さを維持します。',
+    card2Title: '機密保護ピクセルモザイク',
+    card2Desc: 'CanvasのRGBAバイト配列に直接ぼかしを適用し、不可逆なマスキングを保証します。',
+    card3Title: '文書・チャット向けスタジオ枠',
+    card3Desc: '32pxの余白と影効果を自動設定し、NotionやSlackに美しく貼り付けられます。',
+    emptyStagePrompt: '画像が読み込まれていません',
+    emptyStageDesc: 'キャプチャボタンを押すか、Ctrl+Vで貼り付けるか、ファイルをアップロードしてください。',
   },
 };
 
@@ -356,7 +417,7 @@ function formatBytes(bytes) {
 }
 
 export default function ScreenCaptureView({ displayLang = 'vi' }) {
-  const langKey = displayLang === 'en' ? 'en' : 'vi';
+  const langKey = displayLang === 'ja' ? 'ja' : displayLang === 'en' ? 'en' : 'vi';
   const t = i18n[langKey];
 
   // Workflow Stage: 'idle' | 'snipping' | 'editing'

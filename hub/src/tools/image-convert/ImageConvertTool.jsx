@@ -25,7 +25,7 @@ import { downloadAllAsZip } from '@ai-tools/core/utils/image/zipExporter.js';
 import { IMAGE_LIMITS, validateImageFiles } from '@ai-tools/core/utils/image/limits.js';
 import { verifyDocumentSignature } from '@ai-tools/core/utils/documentFiles.js';
 
-export default function ImageConvertTool() {
+export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
   const [settings, setSettings] = useState({
     quality: 0.85,
     maxWidth: '',
@@ -220,7 +220,9 @@ export default function ImageConvertTool() {
           Hình ảnh & WebP
         </a>
         <ChevronRight size={14} className="text-outline shrink-0" />
-        <span className="text-primary font-semibold">WebP Master & Nén Ảnh</span>
+        <span className="text-primary font-semibold">
+          {displayLang === 'en' ? 'Multi-Purpose Image Compressor' : displayLang === 'ja' ? '画像圧縮・変換' : 'Nén Ảnh Đa Năng'}
+        </span>
       </nav>
 
       {/* 2. Tool Header & Privacy Assurance */}
@@ -231,7 +233,7 @@ export default function ImageConvertTool() {
           </div>
           <div className="space-y-1">
             <h1 className="font-headline-lg text-xl sm:text-2xl text-on-surface font-semibold tracking-tight">
-              WebP Master &amp; Nén Ảnh Đa Năng
+              {displayLang === 'en' ? 'Multi-Purpose Image Compressor' : displayLang === 'ja' ? '画像圧縮・変換' : 'Nén Ảnh Đa Năng'}
             </h1>
             <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant max-w-2xl leading-relaxed">
               Chuyển đổi định dạng PNG, JPG sang WebP thế hệ mới và nén tối ưu dung lượng hàng loạt trực tiếp trong trình duyệt.
