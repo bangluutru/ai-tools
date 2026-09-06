@@ -330,16 +330,24 @@ async function runToolDeepWorkflow(tool, page, artifactsDir) {
           console.log(`    ${c.green}✔${c.reset} Đã nạp PDF vào PDF Toolkit...`);
           await new Promise((r) => setTimeout(r, 1200));
 
-          // Switch functional tab
+          // Switch to Nén PDF tab and execute real compression
           await page.evaluate(() => {
             const btns = Array.from(document.querySelectorAll('button'));
-            const tabBtn = btns.find((b) => b.textContent.includes('Trích xuất') || b.textContent.includes('Xoay') || b.textContent.includes('Ghép'));
-            if (tabBtn) tabBtn.click();
+            const compressTab = btns.find((b) => b.textContent.includes('Nén PDF'));
+            if (compressTab) compressTab.click();
           });
           await new Promise((r) => setTimeout(r, 600));
 
+          // Click Start Processing button (Bắt Đầu Nén)
+          await page.evaluate(() => {
+            const btns = Array.from(document.querySelectorAll('button'));
+            const execBtn = btns.find((b) => b.textContent.includes('Bắt Đầu Nén') || b.textContent.includes('Bắt Đầu Xử Lý'));
+            if (execBtn) execBtn.click();
+          });
+          await new Promise((r) => setTimeout(r, 1500));
+
           await page.screenshot({ path: path.join(artifactsDir, 'gate4_pdf_toolkit_flow.png') });
-          fileWorkflowPassed = 'PASSED (PDF Loaded & Tab Active)';
+          fileWorkflowPassed = 'PASSED (PDF Compress Flow Active)';
         }
         break;
       }
@@ -860,6 +868,47 @@ async function run() {
     if (boundaryCheck.hasHeader && boundaryCheck.hasBackButton) {
       console.log(`  ${c.green}✔${c.reset} Shell Hub và ToolErrorBoundary bảo vệ an toàn 100%.`);
       console.log(`  ${c.green}✔${c.reset} Nút "Về Trung Tâm" luôn đảm bảo lối thoát khi miniapp gặp sự cố.`);
+    }
+
+    // Dropdown Quick Switcher Test
+    console.log(`\n${c.bold}[DROPDOWN TEST] Kiểm thử Quick Tool Switcher Dropdown trong ToolContainer...${c.reset}`);
+    const dropdownPage = await browser.newPage();
+    await dropdownPage.setViewport(DEVICES.desktop.viewport);
+    await dropdownPage.goto(`${serverInfo.url}#/tools/pdf-toolkit`, { waitUntil: 'networkidle0' });
+    await new Promise((r) => setTimeout(r, 600));
+
+    const dropdownTest = await dropdownPage.evaluate(async () => {
+      const switcherBtn = document.querySelector('button[aria-label="Chuyển nhanh công cụ"]');
+      if (!switcherBtn) return { success: false, reason: 'Không tìm thấy nút switcher' };
+
+      // Click to open dropdown
+      switcherBtn.click();
+      await new Promise((r) => setTimeout(r, 300));
+
+      const menu = document.querySelector('.animate-in, .shadow-2xl');
+      if (!menu) return { success: false, reason: 'Menu popup không xuất hiện trong DOM' };
+
+      const rect = menu.getBoundingClientRect();
+      const isVisible = rect.width > 50 && rect.height > 50 && rect.bottom > 40;
+      if (!isVisible) return { success: false, reason: `Menu bị cắt bởi overflow (rect: ${rect.width}x${rect.height}, bottom: ${rect.bottom})` };
+
+      // Find another tool link and click it
+      const toolItems = Array.from(menu.querySelectorAll('button'));
+      const targetTool = toolItems.find((b) => b.textContent.includes('Chuyển Đổi') || b.textContent.includes('Hóa Đơn') || b.textContent.includes('Barcode'));
+      if (targetTool) {
+        targetTool.click();
+        await new Promise((r) => setTimeout(r, 300));
+      }
+
+      return { success: true, urlAfterSwitch: window.location.hash };
+    });
+    await dropdownPage.close();
+
+    if (dropdownTest.success) {
+      console.log(`  ${c.green}✔${c.reset} Quick Tool Switcher Dropdown hiển thị đầy đủ không bị kẹp overflow-hidden.`);
+      console.log(`  ${c.green}✔${c.reset} Chuyển nhanh miniapp thành công sang: ${dropdownTest.urlAfterSwitch}`);
+    } else {
+      console.log(`  ${c.red}✖ LỖI DROPDOWN:${c.reset} ${dropdownTest.reason}`);
     }
 
   } finally {

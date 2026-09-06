@@ -129,7 +129,7 @@ function IdPhotoAppContent() {
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl lg:text-3xl font-bold text-on-surface tracking-tight">
-                    {t.appTitle || 'Tạo Ảnh Thẻ & Hộ Chiếu ICAO'}
+                    {t.appTitle || 'Tạo Ảnh Thẻ & Hộ Chiếu'}
                   </h1>
                 </div>
                 <p className="text-sm text-on-surface-variant max-w-3xl leading-relaxed">

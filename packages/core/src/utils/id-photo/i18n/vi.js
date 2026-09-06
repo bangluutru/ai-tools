@@ -1,6 +1,6 @@
 const vi = {
   // Common & Header
-  appTitle: "Chứng Minh Ảnh PRO",
+  appTitle: "Tạo Ảnh Thẻ & Hộ Chiếu",
   appSubtitle: "Tách nền AI • Tự động căn chỉnh khuôn mặt • Xếp sheet in ảnh combini",
   privacyBadge: "100% Xử lý trong trình duyệt • Ảnh không gửi ra bên ngoài",
   langJa: "日本語",

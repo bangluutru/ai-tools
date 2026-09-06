@@ -53,7 +53,7 @@ const loadPdfDocument = () => import('pdf-lib').then((m) => m.PDFDocument);
 const loadDegrees = () => import('pdf-lib').then((m) => m.degrees);
 
 const MODES = [
-  { id: 'merge', label: 'Gộp PDF', sub: 'Phổ biến', icon: Combine },
+  { id: 'merge', label: 'Gộp PDF', sub: 'Merge', icon: Combine },
   { id: 'split', label: 'Tách trang', sub: 'Split', icon: Scissors },
   { id: 'compress', label: 'Nén PDF', sub: 'Compress', icon: Minimize2 },
   { id: 'organize', label: 'Sắp xếp', sub: 'Organize', icon: Layers },
@@ -274,7 +274,79 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
       const degrees = await loadDegrees();
       const mergedDoc = await PDFDocument.create();
 
-      if (activeMode === 'merge' || activeMode === 'organize' || activeMode === 'compress') {
+      let pdfBytes;
+      let resultingPageCount = 0;
+
+      if (activeMode === 'compress') {
+        // Real raster-assisted compression via pdfjs-dist canvas downsampling + pdf-lib embed
+        let scale = 1.2;
+        let jpegQuality = 0.65;
+        if (compressionLevel === '20') {
+          scale = 1.5;
+          jpegQuality = 0.80;
+        } else if (compressionLevel === '75') {
+          scale = 0.95;
+          jpegQuality = 0.45;
+        }
+
+        const pdfjsLib = await loadPdfJs();
+
+        for (const f of files) {
+          const loadingTask = pdfjsLib.getDocument({ data: f.arrayBuffer.slice(0) });
+          const pdfDoc = await loadingTask.promise;
+          const numPages = pdfDoc.numPages;
+
+          for (let i = 0; i < numPages; i++) {
+            const pageConfig = f.pages?.find((p) => p.pageIndex === i);
+            if (pageConfig?.isDeleted) continue;
+
+            const page = await pdfDoc.getPage(i + 1);
+            const unscaledViewport = page.getViewport({ scale: 1.0 });
+            const renderViewport = page.getViewport({ scale });
+
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.floor(renderViewport.width);
+            canvas.height = Math.floor(renderViewport.height);
+            const ctx = canvas.getContext('2d');
+            await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+
+            const imgBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', jpegQuality));
+            const imgBytes = await imgBlob.arrayBuffer();
+            const embeddedImg = await mergedDoc.embedJpg(imgBytes);
+
+            const newPage = mergedDoc.addPage([unscaledViewport.width, unscaledViewport.height]);
+            if (pageConfig?.rotation) {
+              newPage.setRotation(degrees(pageConfig.rotation));
+            }
+            newPage.drawImage(embeddedImg, {
+              x: 0,
+              y: 0,
+              width: unscaledViewport.width,
+              height: unscaledViewport.height,
+            });
+          }
+        }
+
+        pdfBytes = await mergedDoc.save({ useObjectStreams: true });
+
+        // Safety check: In compress mode, if the compressed raster output is larger than input (e.g. tiny vector PDF),
+        // fallback to direct stream compression or keep original bytes. Never inflate file size!
+        if (pdfBytes.length >= totalSize && files.length === 1) {
+          try {
+            const srcDirectDoc = await PDFDocument.load(files[0].arrayBuffer);
+            const directBytes = await srcDirectDoc.save({ useObjectStreams: true });
+            if (directBytes.length < totalSize) {
+              pdfBytes = directBytes;
+            } else {
+              pdfBytes = new Uint8Array(files[0].arrayBuffer);
+              setNotice('Tệp PDF gốc đã đạt dung lượng tối ưu, hệ thống giữ nguyên chất lượng cao nhất.');
+            }
+          } catch {
+            // Keep pdfBytes if direct load fails
+          }
+        }
+        resultingPageCount = mergedDoc.getPageCount() || totalPages;
+      } else if (activeMode === 'merge' || activeMode === 'organize') {
         for (const f of files) {
           const srcDoc = await PDFDocument.load(f.arrayBuffer);
           const pageIndices = srcDoc.getPageIndices();
@@ -291,6 +363,8 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
             mergedDoc.addPage(copiedPage);
           }
         }
+        pdfBytes = await mergedDoc.save({ useObjectStreams: true });
+        resultingPageCount = mergedDoc.getPageCount();
       } else if (activeMode === 'split') {
         // Split logic: take pages from first file according to range or split all
         const firstFile = files[0];
@@ -320,25 +394,19 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
           const copiedPages = await mergedDoc.copyPages(srcDoc, targetIndices);
           copiedPages.forEach((page) => mergedDoc.addPage(page));
         }
+        pdfBytes = await mergedDoc.save({ useObjectStreams: true });
+        resultingPageCount = mergedDoc.getPageCount();
       }
 
-      const pdfBytes = await mergedDoc.save();
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
-      const resultingPageCount = mergedDoc.getPageCount();
-
-      // Estimate compressed size based on compression level if in compress mode
-      const sizeReductionMultiplier = activeMode === 'compress'
-        ? (100 - parseInt(compressionLevel, 10)) / 100
-        : 0.9;
-      const displaySize = Math.max(Math.round(pdfBytes.length * sizeReductionMultiplier), 1024);
 
       if (outputResult?.url) URL.revokeObjectURL(outputResult.url);
 
       setOutputResult({
         url,
         name: outputFileName.endsWith('.pdf') ? outputFileName : `${outputFileName}.pdf`,
-        size: displaySize,
+        size: blob.size,
         pageCount: resultingPageCount,
         originalSize: totalSize,
       });
@@ -682,7 +750,7 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
                         />
                         <span className="font-body-sm text-body-sm text-primary font-semibold">Nén cân bằng (50%) — Chuẩn gửi Email</span>
                       </div>
-                      <span className="px-space-1 py-[2px] bg-secondary-container/20 text-secondary font-label-sm text-label-sm rounded border border-secondary/20">
+                      <span className="px-space-1 py-[2px] bg-surface-container-high text-secondary font-label-sm text-label-sm rounded border border-secondary/30">
                         ~{formatSize(totalSize * 0.5)}
                       </span>
                     </label>
@@ -866,12 +934,12 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
           <div className="bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md flex flex-col gap-space-5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-space-2">
-                <div className="w-8 h-8 rounded-lg bg-secondary-container/20 text-secondary flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-surface-container-high text-secondary border border-secondary/30 flex items-center justify-center">
                   <CheckCircle2 size={20} />
                 </div>
                 <h2 className="font-title-sm text-title-sm text-on-surface">Kết Quả Xử Lý & Xuất Tệp</h2>
               </div>
-              <span className="px-space-2 py-[2px] bg-secondary-container/20 text-secondary font-label-sm text-label-sm rounded flex items-center gap-1 border border-secondary/20">
+              <span className="px-space-2 py-[2px] bg-surface-container-high text-secondary font-label-sm text-label-sm rounded flex items-center gap-1 border border-secondary/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
                 {outputResult ? 'SẴN SÀNG TẢI VỀ' : 'ĐANG CHỜ XỬ LÝ'}
               </span>
@@ -894,12 +962,24 @@ export default function PdfToolkitTool({ displayLang: _displayLang }) {
                 <span className="font-body-sm text-body-sm text-on-surface-variant">Không mất định dạng font</span>
               </div>
               <div className="bg-surface-subtle border border-border-subtle p-space-3 rounded-lg flex flex-col gap-1">
-                <span className="font-label-sm text-label-sm text-outline uppercase tracking-wider">Dung lượng ước tính</span>
+                <span className="font-label-sm text-label-sm text-outline uppercase tracking-wider">
+                  {outputResult ? 'Dung lượng thực tế' : 'Dung lượng ban đầu'}
+                </span>
                 <span className="font-title-sm text-title-sm text-secondary">
                   {outputResult ? formatSize(outputResult.size) : formatSize(totalSize)}
                 </span>
                 <span className="font-body-sm text-body-sm text-outline">
-                  {outputResult ? `Gốc: ${formatSize(outputResult.originalSize)}` : 'In-memory buffer'}
+                  {outputResult ? (
+                    outputResult.size < outputResult.originalSize ? (
+                      <span className="text-secondary font-semibold">
+                        Tiết kiệm {Math.round((1 - outputResult.size / outputResult.originalSize) * 100)}% (Gốc: {formatSize(outputResult.originalSize)})
+                      </span>
+                    ) : (
+                      `Gốc: ${formatSize(outputResult.originalSize)} (Tối ưu)`
+                    )
+                  ) : (
+                    'In-memory buffer'
+                  )}
                 </span>
               </div>
             </div>
