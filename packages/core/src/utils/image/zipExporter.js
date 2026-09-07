@@ -1,32 +1,41 @@
 import JSZip from 'jszip';
 
 /**
- * Downloads multiple converted WebP files as a single ZIP archive
+ * Downloads multiple converted image files as a single ZIP archive
  * @param {Array<Object>} items - Array of converted image objects
- * @param {string} zipFilename - Output zip name
+ * @param {string} [zipFilename='compressed-images.zip'] - Output zip name
  */
-export async function downloadAllAsZip(items, zipFilename = 'webp-images.zip') {
+export async function downloadAllAsZip(items, zipFilename = 'compressed-images.zip') {
   if (!items || items.length === 0) return;
 
   const zip = new JSZip();
-  const folder = zip.folder('webp-images');
+  const folderName = zipFilename.replace(/\.zip$/i, '') || 'images';
+  const folder = zip.folder(folderName);
   const usedNames = new Set();
 
   // Add each blob to zip
   items.forEach((item, index) => {
-    if (item.webpBlob && item.status === 'completed') {
-      // Ensure unique filename if duplicates exist
-      let name = item.webpFilename || `image_${index + 1}.webp`;
+    const blob = item.outputBlob || item.webpBlob;
+    const isReady = item.status === 'completed' || item.status === 'done';
+
+    if (blob && isReady) {
+      // Determine filename
+      let name = item.outputFilename || item.webpFilename;
+      if (!name) {
+        const ext = item.targetFormat === 'jpg' || item.targetFormat === 'jpeg' ? '.jpg' : item.targetFormat === 'avif' ? '.avif' : '.webp';
+        name = `image_${index + 1}${ext}`;
+      }
+
       const dotIndex = name.lastIndexOf('.');
       const baseName = dotIndex > 0 ? name.slice(0, dotIndex) : name;
-      const extension = dotIndex > 0 ? name.slice(dotIndex) : '.webp';
+      const extension = dotIndex > 0 ? name.slice(dotIndex) : '';
       let suffix = 2;
       while (usedNames.has(name.toLowerCase())) {
         name = `${baseName}_${suffix}${extension}`;
         suffix += 1;
       }
       usedNames.add(name.toLowerCase());
-      folder.file(name, item.webpBlob);
+      folder.file(name, blob);
     }
   });
 

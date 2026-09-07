@@ -47,7 +47,7 @@ export const IMAGE_CONVERT_LIMITS = Object.freeze({
   maxFileBytes: 25 * MIB,
   maxTotalBytes: 100 * MIB,
   maxPixels: 40_000_000,
-  extensions: ['.png', '.jpg', '.jpeg', '.webp', '.gif'],
+  extensions: ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'],
 });
 
 /** Ảnh đơn lẻ dùng làm đầu vào: logo mã QR, ảnh nạp vào trình chú thích. */
@@ -140,6 +140,12 @@ export function hasExpectedDocumentSignature(bytes, extension) {
     return bytes.length >= 12
       && String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF'
       && String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP';
+  }
+  if (ext === '.avif') {
+    // ISOBMFF container: 4 bytes length, then 'ftyp', then 'avif' or 'avis'
+    return bytes.length >= 12
+      && String.fromCharCode(...bytes.slice(4, 8)) === 'ftyp'
+      && (String.fromCharCode(...bytes.slice(8, 12)) === 'avif' || String.fromCharCode(...bytes.slice(8, 12)) === 'avis');
   }
   if (ext === '.svg') {
     // SVG là văn bản nên không có magic byte cố định; chấp nhận theo phần mở rộng.

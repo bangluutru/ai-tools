@@ -20,10 +20,36 @@ import {
   MoveHorizontal,
   X
 } from 'lucide-react';
-import { convertImageToWebP } from '@ai-tools/core/utils/image/converter.js';
+import { convertImage, convertImageToWebP, SUPPORTED_TARGET_FORMATS } from '@ai-tools/core/utils/image/converter.js';
 import { downloadAllAsZip } from '@ai-tools/core/utils/image/zipExporter.js';
 import { IMAGE_LIMITS, validateImageFiles } from '@ai-tools/core/utils/image/limits.js';
 import { verifyDocumentSignature } from '@ai-tools/core/utils/documentFiles.js';
+
+const getFormatLabel = (fmt) => {
+  switch (fmt?.toLowerCase()) {
+    case 'avif':
+      return 'AVIF';
+    case 'jpg':
+    case 'jpeg':
+      return 'JPEG';
+    case 'webp':
+    default:
+      return 'WebP';
+  }
+};
+
+const getTargetExtension = (fmt) => {
+  switch (fmt?.toLowerCase()) {
+    case 'avif':
+      return '.avif';
+    case 'jpg':
+    case 'jpeg':
+      return '.jpg';
+    case 'webp':
+    default:
+      return '.webp';
+  }
+};
 
 export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
   const [settings, setSettings] = useState({
@@ -53,7 +79,8 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
 
   useEffect(() => () => {
     imagesRef.current.forEach((image) => {
-      if (image.webpUrl) URL.revokeObjectURL(image.webpUrl);
+      if (image.outputUrl) URL.revokeObjectURL(image.outputUrl);
+      if (image.webpUrl && image.webpUrl !== image.outputUrl) URL.revokeObjectURL(image.webpUrl);
       if (image.originalUrl) URL.revokeObjectURL(image.originalUrl);
     });
   }, []);
@@ -64,17 +91,24 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
   }, [images, selectedImageId]);
 
   const stats = useMemo(() => {
-    const totalOriginal = images.reduce((acc, cur) => acc + cur.originalSize, 0);
-    const convertedItems = images.filter((item) => item.status === 'done');
-    const totalWebp = convertedItems.reduce((acc, cur) => acc + (cur.webpSize || 0), 0);
-    const savedBytes = totalOriginal > 0 && totalWebp > 0 ? totalOriginal - totalWebp : 0;
-    const savedPercent = totalOriginal > 0 && totalWebp > 0
-      ? Math.round((savedBytes / totalOriginal) * 100)
-      : 0;
+    const totalOriginal = images.reduce((acc, cur) => acc + (cur.originalSize || 0), 0);
+    const convertedItems = images.filter(
+      (item) => item.status === 'completed' || item.status === 'done'
+    );
+    const totalOutput = convertedItems.reduce(
+      (acc, cur) => acc + (cur.outputSize ?? cur.webpSize ?? 0),
+      0
+    );
+    const savedBytes = convertedItems.length > 0 ? totalOriginal - totalOutput : 0;
+    const savedPercent =
+      totalOriginal > 0 && convertedItems.length > 0
+        ? Math.round((savedBytes / totalOriginal) * 100)
+        : 0;
 
     return {
       totalOriginal,
-      totalWebp,
+      totalOutput,
+      totalWebp: totalOutput, // backward-compat alias
       savedBytes,
       savedPercent,
       completedCount: convertedItems.length,
@@ -129,9 +163,15 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
       try {
         const resizeSettings = {
           ...currentSettings,
-          maxWidth: currentSettings.resizeMode === '1920' ? 1920 : currentSettings.resizeMode === '1200' ? 1200 : '',
+          targetFormat: currentSettings.targetFormat || 'webp',
+          maxWidth:
+            currentSettings.resizeMode === '1920'
+              ? 1920
+              : currentSettings.resizeMode === '1200'
+              ? 1200
+              : '',
         };
-        const result = await convertImageToWebP(item.originalFile, resizeSettings);
+        const result = await convertImage(item.originalFile, resizeSettings);
         setImages((prev) =>
           prev.map((img) => (img.id === item.id ? { ...img, ...result, id: item.id } : img))
         );
@@ -161,22 +201,82 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
 
   const handleApplyToAll = async () => {
     if (images.length === 0 || isProcessing) return;
-    const rawFiles = images.map((i) => i.originalFile).filter(Boolean);
-    images.forEach((image) => {
-      if (image.webpUrl) URL.revokeObjectURL(image.webpUrl);
-      if (image.originalUrl) URL.revokeObjectURL(image.originalUrl);
-    });
-    setImages([]);
-    await processFiles(rawFiles, settings);
+    setIsProcessing(true);
+    cancelRequestedRef.current = false;
+    setProgress({ completed: 0, total: images.length });
+
+    // Mark all as processing and revoke old output URLs
+    setImages((prev) =>
+      prev.map((img) => {
+        if (img.outputUrl) URL.revokeObjectURL(img.outputUrl);
+        if (img.webpUrl && img.webpUrl !== img.outputUrl) URL.revokeObjectURL(img.webpUrl);
+        return {
+          ...img,
+          status: 'processing',
+          outputUrl: null,
+          webpUrl: null,
+          outputBlob: null,
+          webpBlob: null,
+        };
+      })
+    );
+
+    const resizeSettings = {
+      ...settings,
+      targetFormat: settings.targetFormat || 'webp',
+      maxWidth:
+        settings.resizeMode === '1920'
+          ? 1920
+          : settings.resizeMode === '1200'
+          ? 1200
+          : '',
+    };
+
+    let successCount = 0;
+    for (const item of imagesRef.current) {
+      if (cancelRequestedRef.current) break;
+      if (!item.originalFile) {
+        setProgress((curr) => ({ ...curr, completed: curr.completed + 1 }));
+        continue;
+      }
+      try {
+        const result = await convertImage(item.originalFile, resizeSettings);
+        setImages((prev) =>
+          prev.map((img) => (img.id === item.id ? { ...img, ...result, id: item.id } : img))
+        );
+        successCount++;
+      } catch (err) {
+        setImages((prev) =>
+          prev.map((img) =>
+            img.id === item.id
+              ? { ...img, status: 'error', errorMessage: err.message || 'Lỗi chuyển đổi' }
+              : img
+          )
+        );
+      }
+      setProgress((curr) => ({ ...curr, completed: curr.completed + 1 }));
+    }
+
+    setIsProcessing(false);
+
+    if (successCount > 0) {
+      try {
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+      } catch {
+        // decorative
+      }
+    }
   };
 
   const handleDownloadZip = async () => {
-    await downloadAllAsZip(images);
+    const ext = getTargetExtension(settings.targetFormat).replace('.', '');
+    await downloadAllAsZip(images, `${ext}-images.zip`);
   };
 
   const handleClearAll = () => {
     images.forEach((img) => {
-      if (img.webpUrl) URL.revokeObjectURL(img.webpUrl);
+      if (img.outputUrl) URL.revokeObjectURL(img.outputUrl);
+      if (img.webpUrl && img.webpUrl !== img.outputUrl) URL.revokeObjectURL(img.webpUrl);
       if (img.originalUrl) URL.revokeObjectURL(img.originalUrl);
     });
     setImages([]);
@@ -189,7 +289,8 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
     setImages((prev) => {
       const target = prev.find((i) => i.id === id);
       if (target) {
-        if (target.webpUrl) URL.revokeObjectURL(target.webpUrl);
+        if (target.outputUrl) URL.revokeObjectURL(target.outputUrl);
+        if (target.webpUrl && target.webpUrl !== target.outputUrl) URL.revokeObjectURL(target.webpUrl);
         if (target.originalUrl) URL.revokeObjectURL(target.originalUrl);
       }
       const next = prev.filter((i) => i.id !== id);
@@ -263,7 +364,7 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
           <div className="bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md space-y-space-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-primary-container/20 text-brand-cyan-bright flex items-center justify-center font-label-sm text-label-sm font-bold">
+                <span className="w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center font-label-sm text-label-sm font-bold">
                   1
                 </span>
                 <h2 className="font-title-sm text-title-sm text-on-surface">Tải tệp tin nguồn</h2>
@@ -325,8 +426,8 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                     >
                       <div className="flex items-center gap-space-3 min-w-0">
                         <div className="w-9 h-9 rounded bg-surface-container flex items-center justify-center text-primary shrink-0 overflow-hidden border border-border-subtle">
-                          {item.webpUrl || item.originalUrl ? (
-                            <img src={item.webpUrl || item.originalUrl} alt={item.originalName} className="w-full h-full object-cover" />
+                          {item.outputUrl || item.webpUrl || item.originalUrl ? (
+                            <img src={item.outputUrl || item.webpUrl || item.originalUrl} alt={item.originalName} className="w-full h-full object-cover" />
                           ) : (
                             <ImageIcon size={18} />
                           )}
@@ -340,9 +441,9 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                               {formatSize(item.originalSize)}
                             </span>
                             <span className="w-1 h-1 rounded-full bg-outline" />
-                            {item.status === 'done' ? (
+                            {item.status === 'completed' || item.status === 'done' ? (
                               <span className="font-label-sm text-label-sm text-secondary">
-                                {formatSize(item.webpSize)} ({item.savings > 0 ? `-${item.savings}%` : 'Tối ưu'})
+                                {formatSize(item.outputSize ?? item.webpSize)} ({item.savedPercent > 0 ? `-${item.savedPercent}%` : item.savedPercent < 0 ? `+${Math.abs(item.savedPercent)}%` : '0%'})
                               </span>
                             ) : item.status === 'processing' ? (
                               <span className="font-label-sm text-label-sm text-brand-cyan-bright animate-pulse">
@@ -373,7 +474,7 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
           <div className="bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md space-y-space-5">
             <div className="flex items-center justify-between pb-space-2 border-b border-border-subtle/50">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded bg-primary-container/20 text-brand-cyan-bright flex items-center justify-center font-label-sm text-label-sm font-bold">
+                <span className="w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center font-label-sm text-label-sm font-bold">
                   2
                 </span>
                 <h2 className="font-title-sm text-title-sm text-on-surface">Cấu hình nén & Định dạng đích</h2>
@@ -389,7 +490,7 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
               <label className="font-label-md text-label-md text-on-surface-variant uppercase">
                 ĐỊNH DẠNG ĐẦU RA
               </label>
-              <div className="grid grid-cols-3 gap-space-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-2">
                 <button
                   type="button"
                   onClick={() => setSettings((s) => ({ ...s, targetFormat: 'webp' }))}
@@ -436,7 +537,7 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                   <label htmlFor="quality-slider" className="font-label-md text-label-md text-on-surface-variant uppercase cursor-pointer">
                     MỨC ĐỘ CHẤT LƯỢNG (QUALITY)
                   </label>
-                  <span className="px-space-1 py-[1px] bg-secondary/15 text-secondary font-label-sm text-label-sm font-semibold rounded border border-secondary/20">
+                  <span className="px-space-1 py-[1px] bg-secondary text-on-secondary font-label-sm text-label-sm font-semibold rounded">
                     Khuyên Dùng
                   </span>
                 </div>
@@ -558,7 +659,7 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                     </span>
                   </div>
 
-                  {/* After Image Layer (WebP Compressed) */}
+                  {/* After Image Layer (Compressed) */}
                   <div
                     className="absolute inset-y-0 left-0 overflow-hidden"
                     style={{ width: `${splitPos}%` }}
@@ -566,21 +667,21 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                     <div
                       className="w-[600px] h-[320px] max-w-none bg-contain bg-no-repeat bg-center"
                       style={{
-                        backgroundImage: `url(${activeImage.webpUrl || activeImage.originalUrl})`,
+                        backgroundImage: `url(${activeImage.outputUrl || activeImage.webpUrl || activeImage.originalUrl})`,
                       }}
                     >
                       <span className="absolute top-3 left-3 bg-primary-container text-on-primary-container px-space-2 py-1 rounded font-label-sm text-label-sm font-semibold shadow">
-                        WEBP ({Math.round(settings.quality * 100)}%): {formatSize(activeImage.webpSize || activeImage.originalSize)}
+                        {getFormatLabel(settings.targetFormat)} ({Math.round(settings.quality * 100)}%): {formatSize(activeImage.outputSize ?? activeImage.webpSize ?? activeImage.originalSize)}
                       </span>
                     </div>
                   </div>
 
                   {/* Vertical Split Bar with Drag Indicator */}
                   <div
-                    className="absolute top-0 bottom-0 w-[2px] bg-white cursor-ew-resize flex items-center justify-center pointer-events-none"
+                    className="absolute top-0 bottom-0 w-[2px] bg-surface-container-lowest shadow-sm cursor-ew-resize flex items-center justify-center pointer-events-none"
                     style={{ left: `${splitPos}%` }}
                   >
-                    <div className="w-8 h-8 rounded-full bg-white text-surface-canvas flex items-center justify-center shadow-xl">
+                    <div className="w-8 h-8 rounded-full bg-surface-container-lowest text-on-surface border border-border-subtle flex items-center justify-center shadow-xl">
                       <MoveHorizontal size={18} />
                     </div>
                   </div>
@@ -608,7 +709,7 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
             </div>
 
             <p className="font-body-sm text-body-sm text-on-surface-variant text-center">
-              Kéo thanh gạt sang trái/phải để kiểm chứng độ sắc nét vi mô giữa định dạng gốc và WebP.
+              Kéo thanh gạt sang trái/phải để kiểm chứng độ sắc nét vi mô giữa định dạng gốc và {getFormatLabel(settings.targetFormat)}.
             </p>
           </div>
 
@@ -636,18 +737,20 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
               <div className="p-space-3 bg-surface-subtle border border-border-subtle rounded-lg flex flex-col justify-between">
                 <span className="font-label-md text-label-md text-on-surface-variant uppercase">SAU KHI NÉN</span>
                 <span className="font-headline-md text-headline-md text-primary mt-1">
-                  {formatSize(stats.totalWebp)}
+                  {formatSize(stats.totalOutput)}
                 </span>
-                <span className="font-label-sm text-label-sm text-primary">WebP Quality {Math.round(settings.quality * 100)}%</span>
+                <span className="font-label-sm text-label-sm text-primary">
+                  {getFormatLabel(settings.targetFormat)} Quality {Math.round(settings.quality * 100)}%
+                </span>
               </div>
               <div className="p-space-3 bg-secondary/10 border border-secondary/20 rounded-lg flex flex-col justify-between">
                 <span className="font-label-md text-label-md text-secondary uppercase">TIẾT KIỆM ĐƯỢC</span>
                 <div className="flex items-baseline gap-1 mt-1">
                   <span className="font-headline-md text-headline-md text-secondary font-bold">
-                    -{stats.savedPercent}%
+                    {stats.savedBytes >= 0 ? `-${stats.savedPercent}%` : `+${Math.abs(stats.savedPercent)}%`}
                   </span>
                   <span className="font-label-sm text-label-sm text-secondary">
-                    (-{formatSize(stats.savedBytes)})
+                    ({stats.savedBytes >= 0 ? `-${formatSize(stats.savedBytes)}` : `+${formatSize(Math.abs(stats.savedBytes))}`})
                   </span>
                 </div>
                 <span className="font-label-sm text-label-sm text-secondary">Tốc độ tải web nhanh hơn</span>
@@ -684,14 +787,17 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                 <span>Tải về tất cả (.ZIP)</span>
               </button>
 
-              {activeImage?.webpUrl && (
+              {(activeImage?.outputUrl || activeImage?.webpUrl) && (
                 <a
-                  href={activeImage.webpUrl}
-                  download={`compressed_${activeImage.originalName.replace(/\.[^/.]+$/, '')}.webp`}
-                  className="w-full sm:w-auto py-space-3 px-space-4 bg-surface-subtle hover:bg-surface-container-high border border-border-subtle text-on-surface font-title-sm text-title-sm rounded-lg flex items-center justify-center gap-space-2 transition-colors"
+                  href={activeImage.outputUrl || activeImage.webpUrl}
+                  download={
+                    activeImage.outputFilename ||
+                    `compressed_${activeImage.originalName.replace(/\.[^/.]+$/, '')}${getTargetExtension(settings.targetFormat)}`
+                  }
+                  className="w-full sm:w-auto py-space-3 px-space-4 bg-surface-subtle hover:bg-surface-container-high border border-border-subtle text-on-surface font-title-sm text-title-sm rounded-lg flex items-center justify-center gap-space-2 transition-colors cursor-pointer"
                 >
                   <Download size={18} />
-                  <span>Tải ảnh đang chọn</span>
+                  <span>Tải ảnh ({getFormatLabel(settings.targetFormat)})</span>
                 </a>
               )}
 
