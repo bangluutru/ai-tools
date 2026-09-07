@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import Navbar from './components/Navbar';
 import ToolCard from './components/ToolCard';
 import ToolContainer from './components/ToolContainer';
@@ -27,8 +27,10 @@ import {
 } from './utils/toolFilter';
 import { useTheme } from '@ai-tools/core';
 
+import { lazyWithRetry as lazy } from './utils/lazyWithRetry';
+
 // =========================================================================
-// ISOLATED LAZY LOADED TOOLS (Code-Splitting)
+// ISOLATED LAZY LOADED TOOLS (Code-Splitting with Auto-Retry on New Deploys)
 // =========================================================================
 const ImageConvertTool = lazy(() => import('./tools/image-convert/ImageConvertTool'));
 const ScreenCaptureTool = lazy(() => import('./tools/screen-capture/ScreenCaptureTool'));

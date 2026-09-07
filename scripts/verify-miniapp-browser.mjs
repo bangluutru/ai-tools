@@ -117,14 +117,29 @@ function findChrome() {
   return null;
 }
 
-// Check if dev server is responding
+// Check if dev server is responding and actually serving AI-Tools
 function checkServer(url) {
   return new Promise((resolve) => {
     const req = http.get(url, (res) => {
-      resolve(res.statusCode >= 200 && res.statusCode < 400);
+      if (res.statusCode < 200 || res.statusCode >= 400) {
+        return resolve(false);
+      }
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+        if (data.length > 50000) req.destroy();
+      });
+      res.on('end', () => {
+        const isAiTools = data.includes('AI-Tools') || data.includes('ai-tools') || data.includes('StandardToolLayout') || data.includes('main.jsx');
+        resolve(isAiTools);
+      });
+      res.on('close', () => {
+        const isAiTools = data.includes('AI-Tools') || data.includes('ai-tools') || data.includes('StandardToolLayout') || data.includes('main.jsx');
+        resolve(isAiTools);
+      });
     });
     req.on('error', () => resolve(false));
-    req.setTimeout(1000, () => {
+    req.setTimeout(1500, () => {
       req.destroy();
       resolve(false);
     });
@@ -132,11 +147,17 @@ function checkServer(url) {
 }
 
 // Ensure Dev Server is running
-async function ensureServer(port = 5173) {
+async function ensureServer(port = 5179) {
+  // Check if 5173 is already running AI-Tools
+  if (await checkServer('http://localhost:5173/')) {
+    console.log(`${c.green}✔${c.reset} Dev server AI-Tools đang chạy sẵn tại http://localhost:5173/`);
+    return { process: null, url: 'http://localhost:5173/' };
+  }
+
   const url = `http://localhost:${port}/`;
   const isRunning = await checkServer(url);
   if (isRunning) {
-    console.log(`${c.green}✔${c.reset} Dev server đang chạy sẵn tại ${url}`);
+    console.log(`${c.green}✔${c.reset} Dev server AI-Tools đang chạy sẵn tại ${url}`);
     return { process: null, url };
   }
 
