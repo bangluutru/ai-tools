@@ -142,6 +142,11 @@ const toolGovernance = {
     outputPurpose: 'utility',
     verified: true,
     verifiedAt: '2026-09-07'
+  },
+  'invoice-xml-fetcher': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility'
   }
 };
 
@@ -369,6 +374,22 @@ const toolDefinitions = [
     badge: 'INVOICE AI',
     popular: true,
     tags: ['invoice', 'hóa đơn', 'thanh toán', 'xml', 'pdf', 'excel']
+  },
+  {
+    id: 'invoice-xml-fetcher',
+    name_vn: 'Lấy Hóa Đơn XML',
+    name_en: 'Invoice XML Fetcher',
+    name_ja: '請求書XML取得',
+    desc_vn: 'Đọc mã tra cứu và link từ PDF hóa đơn, tải XML trực tiếp hoặc hỗ trợ 1 chạm mở cổng tra cứu.',
+    desc_en: 'Extract lookup code and URL from PDF invoice, download XML directly or 1-click open provider portal.',
+    desc_ja: '請求書PDFから検索コードとURLを抽出し、XMLを直接ダウンロードまたは照会ポータルをワンクリック起動。',
+    category: 'office',
+    icon: 'FileDown',
+    gradient: 'from-blue-600 to-indigo-600',
+    color: '#2563eb',
+    badge: 'XML GET',
+    popular: true,
+    tags: ['invoice', 'hóa đơn', 'xml', 'tra cứu', 'pdf', 'hilo', 'vnpt', 'viettel', 'misa']
   },
   {
     id: 'contract-auditor',

@@ -148,6 +148,12 @@ function checkServer(url) {
 
 // Ensure Dev Server is running
 async function ensureServer(port = 5179) {
+  // Check if 5179 is already running AI-Tools
+  if (await checkServer('http://localhost:5179/')) {
+    console.log(`${c.green}✔${c.reset} Dev server AI-Tools đang chạy sẵn tại http://localhost:5179/`);
+    return { process: null, url: 'http://localhost:5179/' };
+  }
+
   // Check if 5173 is already running AI-Tools
   if (await checkServer('http://localhost:5173/')) {
     console.log(`${c.green}✔${c.reset} Dev server AI-Tools đang chạy sẵn tại http://localhost:5173/`);
@@ -610,7 +616,7 @@ async function run() {
     fs.mkdirSync(artifactsDir, { recursive: true });
   }
 
-  const serverInfo = await ensureServer(5173);
+  const serverInfo = await ensureServer(5179);
 
   const browser = await puppeteer.launch({
     executablePath: chromePath,

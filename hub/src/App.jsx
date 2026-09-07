@@ -46,6 +46,7 @@ const WatermarkStudioTool = lazy(() => import('./tools/watermark-studio/Watermar
 const IdPhotoStudioTool = lazy(() => import('./tools/id-photo-studio/IdPhotoStudioTool'));
 const BusinessCardStudioTool = lazy(() => import('./tools/business-card-studio/BusinessCardStudioTool'));
 const TaxCalculatorTool = lazy(() => import('./tools/tax-calculator/TaxCalculatorTool'));
+const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
 
 const toolComponentMap = {
   'image-convert': ImageConvertTool,
@@ -61,7 +62,8 @@ const toolComponentMap = {
   'watermark-studio': WatermarkStudioTool,
   'id-photo-studio': IdPhotoStudioTool,
   'business-card-studio': BusinessCardStudioTool,
-  'tax-calculator': TaxCalculatorTool
+  'tax-calculator': TaxCalculatorTool,
+  'invoice-xml-fetcher': InvoiceXmlFetcherTool
 };
 
 export default function App() {

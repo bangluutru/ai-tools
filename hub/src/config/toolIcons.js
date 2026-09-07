@@ -25,6 +25,7 @@ import {
   RefreshCw,
   ArrowLeftRight,
   Stamp,
+  FileDown,
   Sparkles
 } from 'lucide-react';
 
@@ -43,6 +44,7 @@ export const iconMap = {
   FileSpreadsheet,
   LayoutTemplate,
   Receipt,
+  FileDown,
   BarChart3,
   HelpCircle,
   Calculator,
