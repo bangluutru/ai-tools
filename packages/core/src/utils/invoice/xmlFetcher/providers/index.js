@@ -6,6 +6,7 @@ import { FptProviderAdapter } from './fpt.js';
 import { BkavProviderAdapter } from './bkav.js';
 import { HiloProviderAdapter } from './hilo.js';
 import { ThaisonProviderAdapter } from './thaison.js';
+import { PetrolimexProviderAdapter } from './petrolimex.js';
 import { GenericProviderAdapter } from './generic.js';
 
 export const PROVIDER_ADAPTERS = [
@@ -17,6 +18,7 @@ export const PROVIDER_ADAPTERS = [
   new BkavProviderAdapter(),
   new HiloProviderAdapter(),
   new ThaisonProviderAdapter(),
+  new PetrolimexProviderAdapter(),
   new GenericProviderAdapter(), // Fallback must always be last
 ];
 

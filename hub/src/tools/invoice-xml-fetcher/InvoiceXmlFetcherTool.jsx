@@ -30,7 +30,9 @@ import {
   buildStandardXmlFilename,
   attemptDirectXmlDownload,
   sanitizeLookupUrl,
-  sanitizeLookupCode
+  sanitizeLookupCode,
+  recognizeImage,
+  recognizeScannedPdf,
 } from '@ai-tools/core/utils/invoice/xmlFetcher/index.js';
 import InvoiceXmlCard from './InvoiceXmlCard.jsx';
 import InvoiceEditModal from './InvoiceEditModal.jsx';
@@ -60,12 +62,34 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
   const fileInputRef = useRef(null);
 
   /**
-   * Processes a single PDF file into an invoice item
+   * Processes a single invoice file (PDF or Image) into an invoice item
    */
-  const processPdfFile = async (file, pdfjsLib) => {
+  const processFile = async (file, pdfjsLib) => {
     try {
-      const buffer = await file.arrayBuffer();
-      const text = await parsePdfToText(buffer, pdfjsLib);
+      const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp)$/i.test(file.name);
+      let text = '';
+      let isOcr = false;
+
+      if (isImage) {
+        isOcr = true;
+        const ocrResult = await recognizeImage(file);
+        text = ocrResult.text || '';
+      } else {
+        const buffer = await file.arrayBuffer();
+        text = await parsePdfToText(buffer, pdfjsLib);
+        // Fallback for scanned PDF without digital text layer (< 20 characters)
+        if (!text || text.trim().length < 20) {
+          try {
+            const ocrResult = await recognizeScannedPdf(buffer, pdfjsLib);
+            if (ocrResult.text && ocrResult.text.trim().length > 0) {
+              text = ocrResult.text;
+              isOcr = true;
+            }
+          } catch (ocrErr) {
+            console.warn('Scanned PDF OCR attempt failed:', ocrErr);
+          }
+        }
+      }
 
       if (!text || text.trim().length === 0) {
         return {
@@ -73,8 +97,11 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
           fileName: file.name,
           fileSize: file.size,
           rawText: '',
+          isOcr,
           status: STATUS_TYPES.UNSUPPORTED,
-          note: 'PDF dạng scan ảnh hoặc không có lớp văn bản số. Cần nhập mã tra cứu thủ công.',
+          note: isImage
+            ? 'Hình ảnh mờ hoặc không thể nhận diện ký tự qua OCR. Cần nhập thông tin tra cứu thủ công.'
+            : 'PDF scan ảnh hoặc không có lớp ký tự rõ nét. Cần nhập thông tin tra cứu thủ công.',
           lookupUrl: '',
           lookupCode: '',
           sellerTaxCode: '',
@@ -129,6 +156,7 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
         fileName: file.name,
         fileSize: file.size,
         rawText: text,
+        isOcr,
         status,
         note,
         lookupUrl: lookupUrl || primaryUrl,
@@ -149,8 +177,9 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
         fileName: file.name,
         fileSize: file.size,
         rawText: '',
+        isOcr: false,
         status: STATUS_TYPES.ERROR,
-        note: `Lỗi đọc file: ${err.message || 'Không thể giải mã PDF'}`,
+        note: `Lỗi đọc file: ${err.message || 'Không thể giải mã nội dung'}`,
         lookupUrl: '',
         lookupCode: '',
         sellerTaxCode: '',
@@ -170,15 +199,24 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
    * Handles multi-file upload with queue processing
    */
   const handleFiles = useCallback(async (filesList) => {
-    const validFiles = Array.from(filesList).filter((f) =>
-      f.name.toLowerCase().endsWith('.pdf')
-    );
+    const validFiles = Array.from(filesList).filter((f) => {
+      const name = f.name.toLowerCase();
+      return (
+        name.endsWith('.pdf') ||
+        name.endsWith('.jpg') ||
+        name.endsWith('.jpeg') ||
+        name.endsWith('.png') ||
+        name.endsWith('.webp') ||
+        f.type === 'application/pdf' ||
+        f.type.startsWith('image/')
+      );
+    });
 
     if (validFiles.length === 0) return;
 
     const maxAllowedFiles = XML_FETCHER_LIMITS?.MAX_BATCH_FILES || XML_FETCHER_LIMITS?.maxFiles || 50;
     if (validFiles.length > maxAllowedFiles) {
-      alert(`Vui lòng chọn tối đa ${maxAllowedFiles} file PDF mỗi đợt.`);
+      alert(`Vui lòng chọn tối đa ${maxAllowedFiles} file mỗi đợt.`);
       return;
     }
 
@@ -188,12 +226,12 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
     try {
       const pdfjsLib = await loadPdfJs();
       const results = [];
-      const batchSize = XML_FETCHER_LIMITS?.MAX_CONCURRENT_WORKERS || XML_FETCHER_LIMITS?.concurrencyLimit || 4;
+      const batchSize = 2;
 
       for (let i = 0; i < validFiles.length; i += batchSize) {
         const slice = validFiles.slice(i, i + batchSize);
         const batchResults = await Promise.all(
-          slice.map((file) => processPdfFile(file, pdfjsLib))
+          slice.map((file) => processFile(file, pdfjsLib))
         );
         results.push(...batchResults);
         setProcessingProgress({
@@ -202,19 +240,15 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
         });
       }
 
-      setInvoices((prev) => [...batchResultsMerged(prev, results)]);
+      setInvoices((prev) => [...prev, ...results]);
     } catch (err) {
-      console.error('Error during batch PDF processing:', err);
+      console.error('Error during batch invoice processing:', err);
     } finally {
       setIsProcessing(false);
       setProcessingProgress({ current: 0, total: 0 });
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }, []);
-
-  const batchResultsMerged = (existing, incoming) => {
-    return [...existing, ...incoming];
-  };
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -399,7 +433,7 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
           <span className="font-semibold text-content block text-sm mb-0.5">
             100% Xử Lý Trực Tiếp Trong Trình Duyệt (Client-Safe)
           </span>
-          Toàn bộ file PDF hóa đơn được đọc trực tiếp trên thiết bị của bạn. Không gửi tài liệu hay thông tin tài chính lên bất kỳ máy chủ nào.
+          Toàn bộ file PDF và ảnh hóa đơn được giải mã trực tiếp trên thiết bị của bạn. Không gửi tài liệu hay thông tin tài chính lên bất kỳ máy chủ nào.
         </div>
       </div>
 
@@ -407,9 +441,9 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,application/pdf"
+        accept=".pdf,application/pdf,image/*,.png,.jpg,.jpeg,.webp"
         multiple
-        aria-label="Tải file PDF hóa đơn"
+        aria-label="Tải file PDF hoặc ảnh hóa đơn"
         className="hidden"
         onChange={(e) => {
           if (e.target.files && e.target.files.length > 0) {
@@ -438,16 +472,16 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
           </div>
           <div>
             <h3 className="text-lg font-semibold text-content-title">
-              Kéo thả file PDF hóa đơn điện tử vào đây
+              Kéo thả file PDF hoặc ảnh chụp hóa đơn vào đây
             </h3>
             <p className="text-xs text-content-muted mt-1 max-w-md mx-auto">
-              Hỗ trợ VNPT, Viettel, MISA, GSM Xanh SM (Hilo), Thái Sơn, FPT, BKAV, EasyInvoice... Tải nhiều file cùng lúc.
+              Hỗ trợ file PDF & ảnh chụp (JPG, PNG, WEBP, bản scan OCR). Tự nhận diện VNPT, Viettel, MISA, GSM (Hilo), Petrolimex, FPT, BKAV, EasyInvoice...
             </p>
           </div>
           <div className="pt-2">
             <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-colors">
               <FileCode className="w-4 h-4" />
-              Chọn file PDF từ máy tính
+              Chọn file PDF hoặc ảnh từ máy tính
             </span>
           </div>
         </div>
@@ -456,7 +490,7 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
           <div className="absolute inset-0 bg-surface-card/90 backdrop-blur-sm rounded-3xl flex flex-col items-center justify-center space-y-3 z-10">
             <RefreshCw className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-spin" />
             <p className="text-sm font-medium text-content">
-              Đang phân tích PDF... ({processingProgress.current}/{processingProgress.total})
+              Đang phân tích tài liệu... ({processingProgress.current}/{processingProgress.total})
             </p>
           </div>
         )}

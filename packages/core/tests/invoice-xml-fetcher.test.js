@@ -235,3 +235,72 @@ Mã số thuế: 0102030405
   assert.equal(thaisonDoc.providerId, 'thaison');
   assert.equal(thaisonDoc.lookupCode, 'TS-554433');
 });
+
+// 15. Nhận diện MST có khoảng trắng giữa các chữ số (Spaced digits)
+test('Test Case 15: extracts tax code when digits are separated by spaces', async () => {
+  const spacedMstText = `
+HÓA ĐƠN GIÁ TRỊ GIA TĂNG
+Tên người bán : CÔNG TY CỔ PHẦN THƯƠNG MẠI
+Mã số thuế : 1 6 0 2 0 6 6 7 0 8
+Địa chỉ : Số 123 Đường ABC, Phường XYZ
+Tra cứu hóa đơn: https://1602066708-tt78.vnpt-invoice.com.vn/
+Mã tra cứu: VNPT123456
+  `;
+  const doc = await parsePdfInvoiceDocument({ rawText: spacedMstText });
+  assert.equal(doc.sellerTaxCode, '1602066708');
+});
+
+// 16. Nhận diện MST cá nhân / hộ kinh doanh 12 chữ số
+test('Test Case 16: extracts 12-digit personal/household tax code', async () => {
+  const householdText = `
+HÓA ĐƠN BÁN HÀNG
+Tên người bán: HỘ KINH DOANH NGUYỄN VĂN A
+Mã số thuế: 012345678901
+Địa chỉ: Chợ Bến Thành, Quận 1, TP.HCM
+Mã tra cứu: HKD-998811
+  `;
+  const doc = await parsePdfInvoiceDocument({ rawText: householdText });
+  assert.equal(doc.sellerTaxCode, '012345678901');
+});
+
+// 17. Giữ nguyên subdomain tra cứu đầy đủ và xử lý khoảng trắng sau protocol
+test('Test Case 17: preserves complete subdomain and cleans space after protocol', () => {
+  const textWithSubdomain = `
+Tra cứu hóa đơn: https:// 1602066708-tt78.vnpt-invoice.com.vn/
+Mã số bí mật: 998877
+  `;
+  const urls = extractCandidateUrls(textWithSubdomain);
+  assert.ok(urls.length > 0);
+  assert.equal(urls[0], 'https://1602066708-tt78.vnpt-invoice.com.vn/');
+});
+
+// 18. Nhận diện nhãn mã tra cứu song ngữ có dấu ngoặc đơn
+test('Test Case 18: extracts candidate lookup code with bilingual bracketed label', () => {
+  const bilingualText = `
+- Mã tra cứu (Invoice code) : KZFVIQ69GPQR
+Tra cứu tại: https://meinvoice.vn/tra-cuu
+  `;
+  const code = extractCandidateLookupCode(bilingualText);
+  assert.equal(code, 'KZFVIQ69GPQR');
+});
+
+// 19. Nhận diện nhà cung cấp Petrolimex
+test('Test Case 19: detects Petrolimex provider and extracts secret code', async () => {
+  const petrolimexText = `
+TẬP ĐOÀN XĂNG DẦU VIỆT NAM (PETROLIMEX)
+CÔNG TY XĂNG DẦU HÀ GIANG
+Mã số thuế : 1500207131-103
+Ký hiệu : 1K26TXN
+Số : 00045678
+Mã tra cứu : 6A843AHQG
+Trang tra cứu: https://hoadon.petrolimex.com.vn/
+  `;
+  const doc = await parsePdfInvoiceDocument({ rawText: petrolimexText });
+  assert.equal(doc.providerId, 'petrolimex');
+  assert.equal(doc.providerName, 'Petrolimex Invoice');
+  assert.equal(doc.sellerTaxCode, '1500207131-103');
+  assert.equal(doc.lookupCode, '6A843AHQG');
+  assert.equal(doc.invoiceSymbol, '1K26TXN');
+  assert.equal(doc.lookupUrl, 'https://hoadon.petrolimex.com.vn/');
+});
+

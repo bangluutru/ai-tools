@@ -90,9 +90,11 @@ export function extractCandidateUrls(text) {
   if (!text) return [];
 
   // Normalize URLs wrapped across lines (e.g. line ending in '-' or '/' or next line starting with '/')
+  // and remove spaces after protocol: "https:// 1602066708..." -> "https://1602066708..."
   const normalizedText = text
     .replace(/(https?:\/\/[^\s]+[-/])\r?\n\s*([a-zA-Z0-9_.~!*';:@&=+$,/?%#-]+)/gi, '$1$2')
-    .replace(/(https?:\/\/[^\s]+)\r?\n\s*(\/[a-zA-Z0-9_.~!*';:@&=+$,/?%#-]+)/gi, '$1$2');
+    .replace(/(https?:\/\/[^\s]+)\r?\n\s*(\/[a-zA-Z0-9_.~!*';:@&=+$,/?%#-]+)/gi, '$1$2')
+    .replace(/(https?:\/\/)\s+([a-zA-Z0-9_.~!*';:@&=+$,/?%#-]+)/gi, '$1$2');
 
   const candidates = [];
   const urlRegex = /https?:\/\/[^\s"'<>]+/gi;
@@ -105,8 +107,8 @@ export function extractCandidateUrls(text) {
     }
   }
 
-  // Also check for common domain-style lookup portals without protocol
-  const domainRegex = /\b(?:tracuu|tracuuhoadon|tra-cuu|einvoice|hoadon|sinvoice)\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s"'<>]*)?/gi;
+  // Also check for common domain-style lookup portals with full subdomains
+  const domainRegex = /\b(?:[a-zA-Z0-9_.-]+\.)*(?:tracuu|tracuuhoadon|tra-cuu|einvoice|hoadon|sinvoice|meinvoice|vnpt-invoice|easyinvoice|ehoadon|hilo)\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s"'<>]*)?/gi;
   const domainMatches = normalizedText.match(domainRegex) || [];
   for (const dm of domainMatches) {
     const sanitized = sanitizeLookupUrl(dm);
@@ -115,26 +117,25 @@ export function extractCandidateUrls(text) {
     }
   }
 
-  // Known e-invoice domains without http:// prefix
+  // Known e-invoice root domains: preserve any preceding subdomains
   const knownDomains = [
-    'tracuu.vnpt-invoice.com.vn',
-    'portal.vnpt-invoice.com.vn',
     'vnpt-invoice.com.vn',
-    'sinvoice.viettel.vn',
-    'vinvoice.viettel.vn',
+    'viettel.vn',
     'meinvoice.vn',
-    'tracuu.meinvoice.vn',
+    'easyinvoice.com.vn',
     'easyinvoice.vn',
-    'tracuu.easyinvoice.vn',
-    'einvoice.fpt.com.vn',
+    'fpt.com.vn',
     'ehoadon.vn',
-    'tracuu.ehoadon.vn',
-    'gsm-einvoice.hilo.com.vn',
+    'hilo.com.vn',
     'einvoice.vn',
+    'mobifoneinvoice.vn',
+    'vietjetair.com',
+    'petrolimex.com.vn',
   ];
 
   for (const domain of knownDomains) {
-    const regex = new RegExp(`(?:www\\.)?${domain.replace('.', '\\.')}(?:/[^\\s"'<>]*)?`, 'gi');
+    const escapedDomain = domain.replace(/\./g, '\\.');
+    const regex = new RegExp(`(?:https?://)?(?:[a-zA-Z0-9_.-]+\\.)?${escapedDomain}(?:/[^\\s"'<>]*)?`, 'gi');
     const dMatches = normalizedText.match(regex) || [];
     for (const dm of dMatches) {
       const sanitized = sanitizeLookupUrl(dm);
@@ -162,13 +163,13 @@ export function extractCandidateLookupCode(text, providerAdapter = null) {
     if (customCode) return sanitizeLookupCode(customCode);
   }
 
-  // 2. Common Vietnamese e-invoice lookup labels
+  // 2. Common Vietnamese e-invoice lookup labels (including bilingual brackets like "(Invoice code)")
   const labelPatterns = [
-    /(?:mã\s+tra\s+cứu\s+hóa\s+đơn|mã\s+tra\s+cứu\s+hđđt|mã\s+tra\s+cứu)\s*[:.]?\s*([A-Za-z0-9\-_]{5,40})/i,
-    /(?:mã\s+nhận\s+hóa\s+đơn|mã\s+nhận\s+hđ)\s*[:.]?\s*([A-Za-z0-9\-_]{5,40})/i,
-    /(?:mã\s+số\s+bí\s+mật\s*(?:\(access\s*code\))?|mã\s+số\s+bí\s+mật|mã\s+bí\s+mật)\s*[:.]?\s*([A-Za-z0-9\-_]{5,40})/i,
-    /(?:lookup\s*code|access\s*code)\s*[:.]?\s*([A-Za-z0-9\-_]{5,40})/i,
-    /(?:mã\s+kiểm\s+tra|mã\s+truy\s+cập)\s*[:.]?\s*([A-Za-z0-9\-_]{5,40})/i,
+    /(?:mã\s+tra\s+cứu(?:\s+hóa\s+đơn|\s+hđđt)?|mã\s+tra\s+cứu)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i,
+    /(?:mã\s+nhận\s+hóa\s+đơn|mã\s+nhận\s+hđ)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i,
+    /(?:mã\s+số\s+bí\s+mật\s*(?:\(access\s*code\))?|mã\s+số\s+bí\s+mật|mã\s+bí\s+mật)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i,
+    /(?:lookup\s*code|access\s*code|invoice\s*code)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i,
+    /(?:mã\s+kiểm\s+tra|mã\s+truy\s+cập)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i,
   ];
 
   for (const regex of labelPatterns) {
@@ -186,10 +187,11 @@ export function extractCandidateLookupCode(text, providerAdapter = null) {
       line.includes('mã tra cứu') ||
       line.includes('mã nhận hóa đơn') ||
       line.includes('mã số bí mật') ||
-      line.includes('access code')
+      line.includes('access code') ||
+      line.includes('invoice code')
     ) {
       const nextLine = lines[i + 1].trim();
-      const codeCandidate = nextLine.match(/^([A-Za-z0-9\-_]{5,40})$/);
+      const codeCandidate = nextLine.match(/^([A-Za-z0-9\-_*]{5,40})$/);
       if (codeCandidate) {
         return sanitizeLookupCode(codeCandidate[1]);
       }
@@ -219,7 +221,25 @@ export function extractInvoiceMetadataFromText(text) {
 
   const invoiceDate = fields.date || '';
   const sellerName = fields.seller || '';
-  const sellerTaxCode = fields.sellerTax || '';
+  let sellerTaxCode = fields.sellerTax || '';
+
+  // Fallback for seller tax code if fields.sellerTax is empty or missed
+  if (!sellerTaxCode && text) {
+    // 1. Search for tax code after "Đơn vị bán hàng", "Người bán", "Seller"
+    const sellerBlockMatch = text.match(/(?:Đơn\s+vị\s+bán\s+hàng|Người\s+bán\s+hàng|Đơn\s+vị\s+bán|Seller)[\s\S]{1,400}?(?:Mã\s+số\s+thuế|MST|Tax\s*code)\s*(?:\([^)]*\))?\s*[:.]?\s*([0-9\s-]{10,24})/i);
+    if (sellerBlockMatch && sellerBlockMatch[1]) {
+      sellerTaxCode = normalizeTaxCode(sellerBlockMatch[1]);
+    }
+  }
+
+  // 2. Direct tax code match if still empty
+  if (!sellerTaxCode && text) {
+    const directTaxMatch = text.match(/(?:Mã\s+số\s+thuế|MST|Tax\s*code)\s*(?:\([^)]*\))?\s*[:.]?\s*([0-9\s-]{10,24})/i);
+    if (directTaxMatch && directTaxMatch[1]) {
+      sellerTaxCode = normalizeTaxCode(directTaxMatch[1]);
+    }
+  }
+
   const buyerName = fields.buyer || '';
   const totalAmount = fields.totalAmount || 0;
   return {

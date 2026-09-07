@@ -20,6 +20,7 @@ import { STATUS_TYPES, STATUS_LABELS } from '@ai-tools/core/utils/invoice/xmlFet
 
 export default function InvoiceXmlCard({ invoice, onDownload, onEdit, onDelete, displayLang = 'vi' }) {
   const [copied, setCopied] = useState(false);
+  const [copiedMst, setCopiedMst] = useState(false);
 
   const handleCopyCode = async (e) => {
     e.stopPropagation();
@@ -38,6 +39,25 @@ export default function InvoiceXmlCard({ invoice, onDownload, onEdit, onDelete, 
       document.body.removeChild(input);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopyMst = async (e) => {
+    e.stopPropagation();
+    if (!invoice.sellerTaxCode) return;
+    try {
+      await navigator.clipboard.writeText(invoice.sellerTaxCode);
+      setCopiedMst(true);
+      setTimeout(() => setCopiedMst(false), 2000);
+    } catch {
+      const input = document.createElement('input');
+      input.value = invoice.sellerTaxCode;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopiedMst(true);
+      setTimeout(() => setCopiedMst(false), 2000);
     }
   };
 
@@ -113,6 +133,15 @@ export default function InvoiceXmlCard({ invoice, onDownload, onEdit, onDelete, 
               {invoice.providerName || 'Khác'}
             </span>
             {getStatusBadge()}
+            {invoice.isOcr && (
+              <span
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                title="Dữ liệu trích xuất qua công nghệ nhận diện quang học (OCR)"
+              >
+                <Sparkles className="w-3 h-3" />
+                OCR
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-1">
@@ -143,20 +172,45 @@ export default function InvoiceXmlCard({ invoice, onDownload, onEdit, onDelete, 
         </h4>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-content-muted mb-4 py-2 border-y border-surface-subtle/60">
-          <div className="flex items-center gap-1 truncate" title={`Số HĐ: ${invoice.invoiceNumber || 'N/A'}`}>
-            <Hash className="w-3.5 h-3.5 text-content-muted shrink-0" />
+          <div className="flex items-center gap-1 truncate" title={`Số hóa đơn: ${invoice.invoiceNumber || 'Chưa rõ'}`}>
+            <span title="Số hóa đơn" className="cursor-help inline-flex items-center">
+              <Hash className="w-3.5 h-3.5 text-content-muted shrink-0" />
+            </span>
             <span className="font-mono text-content">{invoice.invoiceNumber || 'Chưa rõ số'}</span>
           </div>
-          <div className="flex items-center gap-1 truncate" title={`Ký hiệu: ${invoice.invoiceSymbol || 'N/A'}`}>
-            <FileCode className="w-3.5 h-3.5 text-content-muted shrink-0" />
+          <div className="flex items-center gap-1 truncate" title={`Ký hiệu mẫu hóa đơn (Symbol): ${invoice.invoiceSymbol || 'Chưa rõ'}`}>
+            <span title="Ký hiệu mẫu hóa đơn (Symbol)" className="cursor-help inline-flex items-center">
+              <FileCode className="w-3.5 h-3.5 text-content-muted shrink-0" />
+            </span>
             <span className="font-mono text-content">{invoice.invoiceSymbol || 'Chưa rõ mẫu'}</span>
           </div>
-          <div className="flex items-center gap-1 truncate" title={`MST: ${invoice.sellerTaxCode || 'N/A'}`}>
-            <Building className="w-3.5 h-3.5 text-content-muted shrink-0" />
-            <span className="font-mono text-content">{invoice.sellerTaxCode || 'Chưa rõ MST'}</span>
+          <div className="flex items-center justify-between gap-1 min-w-0" title={`Mã số thuế đơn vị bán hàng (MST): ${invoice.sellerTaxCode || 'Chưa rõ'}`}>
+            <div className="flex items-center gap-1 truncate min-w-0">
+              <span title="Mã số thuế đơn vị bán hàng (MST)" className="cursor-help inline-flex items-center">
+                <Building className="w-3.5 h-3.5 text-content-muted shrink-0" />
+              </span>
+              <span className="font-mono text-content truncate">{invoice.sellerTaxCode || 'Chưa rõ MST'}</span>
+            </div>
+            {invoice.sellerTaxCode && (
+              <button
+                type="button"
+                onClick={handleCopyMst}
+                className="p-1 rounded hover:bg-surface-elevated text-content-muted hover:text-content transition-colors shrink-0"
+                title={copiedMst ? 'Đã chép MST!' : 'Sao chép MST'}
+                aria-label="Sao chép MST"
+              >
+                {copiedMst ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+              </button>
+            )}
           </div>
-          <div className="flex items-center gap-1 truncate" title={`Ngày: ${invoice.invoiceDate || 'N/A'}`}>
-            <Calendar className="w-3.5 h-3.5 text-content-muted shrink-0" />
+          <div className="flex items-center gap-1 truncate" title={`Ngày lập hóa đơn: ${invoice.invoiceDate || 'Chưa rõ'}`}>
+            <span title="Ngày lập hóa đơn" className="cursor-help inline-flex items-center">
+              <Calendar className="w-3.5 h-3.5 text-content-muted shrink-0" />
+            </span>
             <span className="text-content">{invoice.invoiceDate || 'Chưa rõ ngày'}</span>
           </div>
         </div>

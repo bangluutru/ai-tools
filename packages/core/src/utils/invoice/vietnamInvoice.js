@@ -56,8 +56,8 @@ export const INVOICE_SYMBOL_PATTERN = new RegExp(
   `\\b([1-9])?([CK])(\\d{2})([${USAGE_CHARS}])([A-Z0-9]{2})\\b`,
 );
 
-/** Mã số thuế Việt Nam: 10 chữ số, đơn vị phụ thuộc thêm 3 chữ số. */
-export const TAX_CODE_PATTERN = /\b(\d{10})(?:[-\s]?(\d{3}))?\b/;
+/** Mã số thuế Việt Nam: 10 chữ số, đơn vị phụ thuộc thêm 3 chữ số, hoặc 12 chữ số (CCCD / hộ kinh doanh). */
+export const TAX_CODE_PATTERN = /\b(\d{10})(?:[-\s]?(\d{3}))?\b|\b(\d{12})\b/;
 
 /**
  * Bỏ dấu theo từng ký tự để độ dài chuỗi không đổi. Nhờ vậy vị trí tìm được
@@ -108,8 +108,12 @@ export function parseInvoiceSymbol(text) {
 }
 
 export function normalizeTaxCode(value) {
-  const match = TAX_CODE_PATTERN.exec(String(value ?? '').replace(/[.\s]/g, ' '));
+  if (!value) return '';
+  // Sáp nhập các chữ số bị ngắt bởi khoảng trắng: "1 6 0 2 0 6 6 7 0 8" -> "1602066708"
+  const collapsed = String(value).replace(/(\d)\s+(?=\d)/g, '$1');
+  const match = TAX_CODE_PATTERN.exec(collapsed.replace(/[.\s]/g, ' '));
   if (!match) return '';
+  if (match[3]) return match[3]; // 12-digit CCCD/personal tax code
   return match[2] ? `${match[1]}-${match[2]}` : match[1];
 }
 
@@ -387,7 +391,22 @@ function findParties(lines) {
   const seller = findLabeledValue(lines, LABELS.seller, { endIndex: boundary + 1 });
   const buyer = buyerLine < 0 ? null : findLabeledValue(lines, LABELS.buyer, { startIndex: buyerLine });
 
-  const sellerTaxHit = findLabeledValue(lines, LABELS.taxCode, { endIndex: boundary });
+  // Lọc bỏ các dòng thông tin đơn vị giải pháp phần mềm/T-VAN để không lấy nhầm MST của đơn vị giải pháp
+  const sanitizedLinesForSeller = lines.map((l) => {
+    const folded = foldText(l);
+    if (
+      folded.includes('cung cap giai phap') ||
+      folded.includes('don vi khoi tao') ||
+      folded.includes('t-van') ||
+      folded.includes('giai phap hoa don') ||
+      folded.includes('truyen va cung cap giai phap')
+    ) {
+      return '';
+    }
+    return l;
+  });
+
+  const sellerTaxHit = findLabeledValue(sanitizedLinesForSeller, LABELS.taxCode, { endIndex: boundary });
   const buyerTaxHit = buyerLine < 0
     ? null
     : findLabeledValue(lines, LABELS.taxCode, { startIndex: buyerLine });
