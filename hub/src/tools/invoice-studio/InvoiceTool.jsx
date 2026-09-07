@@ -29,6 +29,7 @@ import {
   companyKeyOf,
   describeFormContent,
   groupInvoicesByCompany,
+  sanitizeEntityName,
 } from '@ai-tools/core/utils/invoice/companyGrouping.js';
 import { describeExpense } from '@ai-tools/core/utils/invoice/expenseCategory.js';
 import { buildPerDiemRow, parseIsoDate, perDiemDays } from '@ai-tools/core/utils/invoice/perDiem.js';
@@ -349,9 +350,9 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       itemName: lineItem || '',
       route: findFlightRoutes(text, fileName)[0] || '',
       sellerTax: fields.sellerTax || '',
-      buyer: fields.buyer || '',
+      buyer: sanitizeEntityName(fields.buyer || ''),
       buyerTax: fields.buyerTax || '',
-      buyerAddress: fields.buyerAddress || '',
+      buyerAddress: sanitizeEntityName(fields.buyerAddress || ''),
       amountBeforeTax: resolved.amountBeforeTax,
       vatAmount: resolved.vatAmount,
       authorityCollection: resolved.authorityCollection,
@@ -436,15 +437,41 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
     ]) || '';
     const sellerName = seller;
 
-    const buyer = getText([
-      'NMua Ten', 'Buyer Ten', 'NMua > Ten', 'TenNguoiMua', 'TenDonViMua', 'BuyerName'
-    ]) || '';
-    const buyerTax = getText([
+    let buyer = getText([
+      'NMua Ten', 'Buyer Ten', 'NMua > Ten', 'TenDonViMua', 'TenNguoiMua', 'BuyerName'
+    ]);
+    if (!buyer) {
+      const nmuaMatch = xmlString.match(/<NMua>([\s\S]*?)<\/NMua>/i);
+      if (nmuaMatch) {
+        const block = nmuaMatch[1];
+        const tenMatch = block.match(/<Ten>([\s\S]*?)<\/Ten>/i) || block.match(/<TenDonViMua>([\s\S]*?)<\/TenDonViMua>/i);
+        if (tenMatch) buyer = tenMatch[1].trim();
+      }
+    }
+    buyer = sanitizeEntityName(buyer);
+
+    let buyerTax = getText([
       'NMua MST', 'Buyer MST', 'NMua > MST', 'MaSoThueNguoiMua', 'BuyerTaxCode'
-    ]) || '';
-    const buyerAddress = getText([
+    ]);
+    if (!buyerTax) {
+      const nmuaMatch = xmlString.match(/<NMua>([\s\S]*?)<\/NMua>/i);
+      if (nmuaMatch) {
+        const mstMatch = nmuaMatch[1].match(/<MST>([\s\S]*?)<\/MST>/i);
+        if (mstMatch) buyerTax = mstMatch[1].trim();
+      }
+    }
+
+    let buyerAddress = getText([
       'NMua DChi', 'Buyer DChi', 'NMua > DChi', 'DiaChiNguoiMua', 'BuyerAddress'
-    ]) || '';
+    ]);
+    if (!buyerAddress) {
+      const nmuaMatch = xmlString.match(/<NMua>([\s\S]*?)<\/NMua>/i);
+      if (nmuaMatch) {
+        const dchiMatch = nmuaMatch[1].match(/<DChi>([\s\S]*?)<\/DChi>/i);
+        if (dchiMatch) buyerAddress = dchiMatch[1].trim();
+      }
+    }
+    buyerAddress = sanitizeEntityName(buyerAddress);
 
     // 4. Trích xuất nâng cao: Taxi, Vé máy bay
     const thhdvuTexts = Array.from(xmlDoc.querySelectorAll('THHDVu, TenHHDVu, HHDVu > THHDVu, HHDVu > Ten'))
@@ -663,7 +690,7 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       missingFields,
       warnings,
       needsReview: missingFields.length > 0 || warnings.length > 0,
-      isConfirmed: false,
+      isConfirmed: !(missingFields.length > 0 || warnings.length > 0),
     };
   } catch (err) {
     return {
@@ -877,8 +904,34 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
+    // Ưu tiên phát hiện trước các file XML để loại trừ file PDF bản thể hiện trùng lặp
+    const incomingXmlBases = new Set(
+      files
+        .filter((file) => /\.xml$/i.test(file.name))
+        .map((file) => file.name.replace(/\.xml$/i, '').toLowerCase()),
+    );
+    invoicesRef.current.forEach((inv) => {
+      if (inv.rawType === 'XML') {
+        const base = String(inv.rawFileName || inv.fileName || '').replace(/\.xml$/i, '').toLowerCase();
+        if (base) incomingXmlBases.add(base);
+      }
+    });
+
+    const dedupedFiles = [];
+    const skipped = [];
+    for (const file of files) {
+      if (/\.pdf$/i.test(file.name)) {
+        const base = file.name.replace(/\.pdf$/i, '').toLowerCase();
+        if (incomingXmlBases.has(base)) {
+          skipped.push(`${file.name}: Đã có tệp XML tương ứng, tự động ưu tiên XML`);
+          continue;
+        }
+      }
+      dedupedFiles.push(file);
+    }
+
     const notes = [];
-    const accepted = files.slice(0, INVOICE_LIMITS.maxFiles).filter((file) => {
+    const accepted = dedupedFiles.slice(0, INVOICE_LIMITS.maxFiles).filter((file) => {
       const isZip = /\.zip$/i.test(file.name);
       const sizeCap = isZip ? INVOICE_LIMITS.maxZipBytes : INVOICE_LIMITS.maxFileBytes;
       if (file.size <= 0 || file.size > sizeCap) {
@@ -891,8 +944,8 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
       }
       return true;
     });
-    if (files.length > INVOICE_LIMITS.maxFiles) {
-      notes.push(`Chỉ xử lý ${INVOICE_LIMITS.maxFiles} file đầu tiên trong ${files.length} file đã chọn`);
+    if (dedupedFiles.length > INVOICE_LIMITS.maxFiles) {
+      notes.push(`Chỉ xử lý ${INVOICE_LIMITS.maxFiles} file đầu tiên trong ${dedupedFiles.length} file chứng từ đã chọn`);
     }
     setNotice(notes.join(' • '));
     if (accepted.length === 0) return;
@@ -901,7 +954,6 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
     setProgress({ done: 0, total: accepted.length, label: '' });
 
     const parsedList = [];
-    const skipped = [];
 
     const readXmlEntry = async (text, displayName, zipName) => {
       parsedList.push(parseXMLInvoice(text, displayName, zipName));
@@ -980,6 +1032,18 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
       }
     };
 
+    const xmlBaseNames = new Set(
+      accepted
+        .filter((file) => /\.xml$/i.test(file.name))
+        .map((file) => file.name.replace(/\.xml$/i, '').toLowerCase()),
+    );
+    invoicesRef.current.forEach((inv) => {
+      if (inv.rawType === 'XML') {
+        const base = String(inv.rawFileName || inv.fileName || '').replace(/\.xml$/i, '').toLowerCase();
+        if (base) xmlBaseNames.add(base);
+      }
+    });
+
     for (const [index, file] of accepted.entries()) {
       setProgress({ done: index, total: accepted.length, label: file.name });
       const lowerName = file.name.toLowerCase();
@@ -990,6 +1054,11 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
         } else if (lowerName.endsWith('.xml')) {
           await readXmlEntry(await file.text(), file.name, null);
         } else if (lowerName.endsWith('.pdf')) {
+          const base = file.name.replace(/\.pdf$/i, '').toLowerCase();
+          if (xmlBaseNames.has(base)) {
+            skipped.push(`${file.name}: Đã có tệp XML tương ứng, tự động ưu tiên XML`);
+            continue;
+          }
           if (!(await verifyDocumentSignature(file))) {
             throw new Error('Nội dung không phải PDF hợp lệ');
           }
@@ -1021,7 +1090,10 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
 
     setProgress({ done: accepted.length, total: accepted.length, label: '' });
 
-    const { invoices: merged, added } = mergeInvoiceBatch(invoicesRef.current, parsedList);
+    const currentList = invoicesRef.current.every((inv) => String(inv.id).startsWith('demo-inv-'))
+      ? []
+      : invoicesRef.current;
+    const { invoices: merged, added } = mergeInvoiceBatch(currentList, parsedList);
     setInvoices(merged);
 
     const summary = [`Đã đọc ${added} chứng từ từ ${accepted.length} tệp`];

@@ -53,21 +53,53 @@ export function invoiceIdentityKey(invoice) {
   ].join('|');
 }
 
+function getBaseFileName(item) {
+  const name = String(item?.rawFileName || item?.fileName || '').trim();
+  return name.replace(/\.(xml|pdf|zip)$/i, '').toLowerCase();
+}
+
 /**
- * Bản thể hiện PDF và file XML của cùng một hóa đơn phải khớp cả người bán lẫn
- * số tiền mới được coi là một. Khi PDF không đọc được mã số thuế thì chỉ đối
- * chiếu số hóa đơn và số tiền, chứ không mặc định là trùng.
+ * Bản thể hiện PDF và file XML của cùng một hóa đơn được coi là trùng khi:
+ * 1. Cùng tên tệp gốc (ví dụ: hoa_don_1.xml và hoa_don_1.pdf).
+ * 2. Hoặc khớp số hóa đơn + số tiền + mã số thuế người bán.
+ * 3. Hoặc cùng ngày + cùng số tiền + cùng người bán/MST khi PDF không bóc tách được số hóa đơn.
  */
 export function isSameInvoiceDocument(left, right) {
-  if (!isKnownInvoiceNumber(left?.invoiceNo) || !isKnownInvoiceNumber(right?.invoiceNo)) return false;
-  if (String(left.invoiceNo).trim().toUpperCase() !== String(right.invoiceNo).trim().toUpperCase()) return false;
-  if ((Number(left.totalAmount) || 0) !== (Number(right.totalAmount) || 0)) return false;
+  if (!left || !right) return false;
 
-  const leftTax = String(left.sellerTax ?? '').trim();
-  const rightTax = String(right.sellerTax ?? '').trim();
-  if (leftTax && rightTax && leftTax !== rightTax) return false;
+  // 1. Trùng tên tệp gốc (chỉ khác đuôi .xml và .pdf)
+  const leftBase = getBaseFileName(left);
+  const rightBase = getBaseFileName(right);
+  if (leftBase && rightBase && leftBase === rightBase) {
+    return true;
+  }
 
-  return true;
+  // 2. Cả hai đọc được số hóa đơn
+  if (isKnownInvoiceNumber(left?.invoiceNo) && isKnownInvoiceNumber(right?.invoiceNo)) {
+    if (String(left.invoiceNo).trim().toUpperCase() !== String(right.invoiceNo).trim().toUpperCase()) return false;
+    if ((Number(left.totalAmount) || 0) !== (Number(right.totalAmount) || 0)) return false;
+
+    const leftTax = String(left.sellerTax ?? '').trim();
+    const rightTax = String(right.sellerTax ?? '').trim();
+    if (leftTax && rightTax && leftTax !== rightTax) return false;
+
+    return true;
+  }
+
+  // 3. Khớp theo ngày + số tiền + người bán khi PDF chưa rõ số hóa đơn
+  const leftAmount = Number(left.totalAmount) || 0;
+  const rightAmount = Number(right.totalAmount) || 0;
+  if (leftAmount > 0 && leftAmount === rightAmount) {
+    const leftDate = String(left.date ?? '').trim();
+    const rightDate = String(right.date ?? '').trim();
+    if (leftDate && rightDate && leftDate !== '-' && leftDate === rightDate) {
+      const leftTax = String(left.sellerTax ?? '').trim();
+      const rightTax = String(right.sellerTax ?? '').trim();
+      if (leftTax && rightTax && leftTax === rightTax) return true;
+    }
+  }
+
+  return false;
 }
 
 /**

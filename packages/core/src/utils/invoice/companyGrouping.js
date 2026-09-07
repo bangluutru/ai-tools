@@ -57,11 +57,30 @@ export function describeFormContent(rows, prefix = 'Chi phí đi lại công tá
   return from === to ? `${prefix} ngày ${from}` : `${prefix} từ ${from} đến ${to}`;
 }
 
+/** Làm sạch tên pháp nhân/đơn vị bóc tách được (bỏ tiền tố rác như ): , (Company): ) */
+export function sanitizeEntityName(value) {
+  return String(value ?? '')
+    .replace(/^[\s):(\-–—\.]+/gu, '')
+    .replace(/^\(?Company\)?[:\-\s]*/iu, '')
+    .replace(/^Tên\s+đơn\s+vị[:\-\s]*/iu, '')
+    .replace(/^Đơn\s+vị[:\-\s]*/iu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Nhận diện tên đơn vị là doanh nghiệp / pháp nhân (thay vì tên cá nhân) */
+export function isCorporateName(value) {
+  const cleaned = sanitizeEntityName(value).toUpperCase();
+  if (!cleaned) return false;
+  return /CÔNG TY|TNHH|\bCP\b|CỔ PHẦN|DOANH NGHIỆP|TỔNG CÔNG TY|CHI NHÁNH|TẬP ĐOÀN|VIỆN|TRƯỜNG|BỆNH VIỆN|TRUNG TÂM/u.test(cleaned);
+}
+
 /** Tên hiển thị ngắn của đơn vị, ví dụ "HUMA MEDICAL - CHI NHÁNH ĐÀ NẴNG". */
 export function shortCompanyName(name) {
-  return String(name ?? '')
+  const sanitized = sanitizeEntityName(name);
+  return String(sanitized)
     .replace(/^\s*C[ÔO]NG\s*TY\s+(C[ỔO]\s*PH[ẦA]N|TNHH|TR[ÁA]CH\s*NHI[ỆE]M\s*H[ỮU]{1,2}\s*H[ẠA]N|S[ẢA]N\s*XU[ẤA]T\s*V[ÀA]\s*TH[ƯU]{1,2}[ƠO]NG\s*M[ẠA]I|CP)?\s*/iu, '')
-    .trim() || String(name ?? '').trim();
+    .trim() || String(sanitized).trim();
 }
 
 /**
@@ -73,31 +92,42 @@ export function groupInvoicesByCompany(invoices, overrides = {}) {
 
   for (const invoice of invoices) {
     const key = companyKeyOf(invoice);
+    const buyerClean = sanitizeEntityName(invoice.buyer);
+    const buyerAddressClean = String(invoice.buyerAddress ?? '').trim();
+    const buyerTaxClean = normalizeTaxCode(invoice.buyerTax ?? '');
+
     if (!groups.has(key)) {
       groups.set(key, {
         key,
         company: {
-          name: invoice.buyer || '',
-          taxCode: normalizeTaxCode(invoice.buyerTax ?? ''),
-          address: invoice.buyerAddress || '',
+          name: buyerClean,
+          taxCode: buyerTaxClean,
+          address: buyerAddressClean,
         },
         invoices: [],
       });
     }
     const group = groups.get(key);
-    // Hóa đơn sau có thể đọc được trường mà hóa đơn trước bỏ trống.
-    if (!group.company.name && invoice.buyer) group.company.name = invoice.buyer;
-    if (!group.company.address && invoice.buyerAddress) group.company.address = invoice.buyerAddress;
-    if (!group.company.taxCode && invoice.buyerTax) group.company.taxCode = normalizeTaxCode(invoice.buyerTax);
+    // Ưu tiên tên pháp nhân doanh nghiệp (CÔNG TY...) hơn tên cá nhân
+    if (buyerClean) {
+      if (!group.company.name) {
+        group.company.name = buyerClean;
+      } else if (isCorporateName(buyerClean) && !isCorporateName(group.company.name)) {
+        group.company.name = buyerClean;
+      }
+    }
+    if (!group.company.address && buyerAddressClean) group.company.address = buyerAddressClean;
+    if (!group.company.taxCode && buyerTaxClean) group.company.taxCode = buyerTaxClean;
     group.invoices.push(invoice);
   }
 
   return [...groups.values()].map((group) => {
     const override = overrides[group.key] ?? {};
+    const finalName = sanitizeEntityName(override.name ?? group.company.name);
     return {
       ...group,
       company: {
-        name: override.name ?? group.company.name,
+        name: finalName,
         taxCode: override.taxCode ?? group.company.taxCode,
         address: override.address ?? group.company.address,
       },
