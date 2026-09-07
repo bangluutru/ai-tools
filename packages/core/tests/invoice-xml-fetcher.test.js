@@ -304,3 +304,36 @@ Trang tra cứu: https://hoadon.petrolimex.com.vn/
   assert.equal(doc.lookupUrl, 'https://hoadon.petrolimex.com.vn/');
 });
 
+// 20. Bảo toàn nguyên vẹn ký tự '*' trong mã tra cứu bí mật Viettel S-Invoice
+test('Test Case 20: preserves asterisk (*) at end of Viettel secret code', async () => {
+  const viettelText = `
+HÓA ĐƠN GIÁ TRỊ GIA TĂNG
+Tra cứu hóa đơn điện tử tại Website: https://vinvoice.viettel.vn/utilities/invoice-search
+Mã số bí mật: 2AAT8SAU2K4STCI*
+Mã của cơ quan thuế: 00CD43590D45B14E8DABDF35297668E0FA
+Tên người bán: TẬP ĐOÀN CÔNG NGHIỆP - VIỄN THÔNG QUÂN ĐỘI
+Mã số thuế: 0100109106
+  `;
+  const doc = await parsePdfInvoiceDocument({ rawText: viettelText });
+  assert.equal(doc.providerId, 'viettel');
+  assert.equal(doc.lookupCode, '2AAT8SAU2K4STCI*');
+
+  // Test trailing sentence period after asterisk e.g. "CODE*." -> "CODE*"
+  const codeWithDot = sanitizeLookupCode('2AAT8SAU2K4STCI*.');
+  assert.equal(codeWithDot, '2AAT8SAU2K4STCI*');
+});
+
+// 21. Bảo toàn ký tự '*' trong mã tra cứu của các nhà cung cấp khác
+test('Test Case 21: preserves asterisk (*) across all provider adapters and sanitizer', () => {
+  const providers = ['vnpt', 'misa', 'easyinvoice', 'bkav', 'fpt', 'hilo', 'thaison'];
+  for (const p of providers) {
+    const text = `
+Tra cứu tại: https://example.com/
+Mã tra cứu: PROV_${p.toUpperCase()}_9988*
+    `;
+    const code = extractCandidateLookupCode(text);
+    assert.equal(code, `PROV_${p.toUpperCase()}_9988*`);
+  }
+});
+
+

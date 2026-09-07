@@ -22,8 +22,8 @@ export class HiloProviderAdapter extends BaseProviderAdapter {
   extractLookupCode(text) {
     if (!text) return null;
     const match =
-      text.match(/(?:mã\s+nhận\s+hóa\s+đơn|mã\s+tra\s+cứu|mã\s+truy\s+cập)\s*[:.]?\s*([A-Za-z0-9\-_]{6,35})/i) ||
-      text.match(/(?:mã\s+số\s+bí\s+mật)\s*[:.]?\s*([A-Za-z0-9\-_]{6,35})/i);
+      text.match(/(?:mã\s+nhận\s+hóa\s+đơn|mã\s+tra\s+cứu|mã\s+truy\s+cập)\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i) ||
+      text.match(/(?:mã\s+số\s+bí\s+mật)\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i);
     return match ? match[1].trim() : null;
   }
 

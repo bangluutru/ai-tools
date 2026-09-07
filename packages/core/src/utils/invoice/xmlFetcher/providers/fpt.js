@@ -21,7 +21,7 @@ export class FptProviderAdapter extends BaseProviderAdapter {
 
   extractLookupCode(text) {
     if (!text) return null;
-    const match = text.match(/(?:mã\s+nhận\s+hóa\s+đơn|mã\s+tra\s+cứu)\s*[:.]?\s*([A-Za-z0-9\-_]{6,32})/i);
+    const match = text.match(/(?:mã\s+nhận\s+hóa\s+đơn|mã\s+tra\s+cứu)\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i);
     return match ? match[1].trim() : null;
   }
 

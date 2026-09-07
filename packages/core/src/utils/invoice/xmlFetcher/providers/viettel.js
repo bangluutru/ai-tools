@@ -24,8 +24,8 @@ export class ViettelProviderAdapter extends BaseProviderAdapter {
     if (!text) return null;
     // Viettel uses "Mã số bí mật", "Access code", or "Mã bí mật"
     const match =
-      text.match(/(?:mã\s+số\s+bí\s+mật|mã\s+bí\s+mật|access\s+code)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_]{6,32})/i) ||
-      text.match(/(?:mã\s+tra\s+cứu)\s*[:.]?\s*([A-Za-z0-9\-_]{6,32})/i);
+      text.match(/(?:mã\s+số\s+bí\s+mật|mã\s+bí\s+mật|access\s+code)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i) ||
+      text.match(/(?:mã\s+tra\s+cứu)\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i);
     return match ? match[1].trim() : null;
   }
 

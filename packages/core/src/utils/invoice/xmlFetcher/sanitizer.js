@@ -47,8 +47,11 @@ export function sanitizeLookupCode(rawCode) {
 
   let code = rawCode.trim();
 
-  // Remove leading/trailing colons, dashes, quotes, brackets
+  // Remove leading/trailing colons, dashes, quotes, brackets (NEVER strip asterisk *)
   code = code.replace(/^[:\-\s'"`()\[\]]+/, '').replace(/[:\-\s'"`()\[\]]+$/, '');
+
+  // Strip trailing sentence period or comma if present (e.g. "ABC123*." -> "ABC123*")
+  code = code.replace(/[.,;]+$/, '');
 
   // Remove internal line breaks
   code = code.replace(/[\r\n\t]+/g, '');

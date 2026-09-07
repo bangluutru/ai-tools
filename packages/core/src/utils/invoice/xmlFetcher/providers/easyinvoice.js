@@ -20,7 +20,7 @@ export class EasyInvoiceProviderAdapter extends BaseProviderAdapter {
 
   extractLookupCode(text) {
     if (!text) return null;
-    const match = text.match(/(?:mã\s+tra\s+cứu|mã\s+nhận)\s*[:.]?\s*([A-Za-z0-9\-_]{6,32})/i);
+    const match = text.match(/(?:mã\s+tra\s+cứu|mã\s+nhận)\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i);
     return match ? match[1].trim() : null;
   }
 

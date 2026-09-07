@@ -124,7 +124,7 @@ export default function InvoiceXmlCard({ invoice, onDownload, onEdit, onDelete, 
   };
 
   return (
-    <div className="bg-surface-card border border-surface-subtle rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+    <div className="bg-surface-card border border-surface-subtle rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
       {/* Top Bar: Provider & Status */}
       <div>
         <div className="flex items-start justify-between gap-3 mb-3">
@@ -171,47 +171,83 @@ export default function InvoiceXmlCard({ invoice, onDownload, onEdit, onDelete, 
           {invoice.sellerName || invoice.fileName}
         </h4>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1.5 text-xs text-content-muted mb-4 py-2 border-y border-surface-subtle/60">
-          <div className="flex items-center gap-1 truncate" title={`Số hóa đơn: ${invoice.invoiceNumber || 'Chưa rõ'}`}>
-            <span title="Số hóa đơn" className="cursor-help inline-flex items-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 text-xs text-content-muted mb-4 py-2 border-y border-surface-subtle/60">
+          {/* Số hóa đơn */}
+          <div className="flex items-center gap-1.5 min-w-0" title={`Số hóa đơn: ${invoice.invoiceNumber || 'Chưa rõ'}`}>
+            <div className="relative group inline-flex items-center shrink-0">
               <Hash className="w-3.5 h-3.5 text-content-muted shrink-0" />
-            </span>
-            <span className="font-mono text-content">{invoice.invoiceNumber || 'Chưa rõ số'}</span>
-          </div>
-          <div className="flex items-center gap-1 truncate" title={`Ký hiệu mẫu hóa đơn (Symbol): ${invoice.invoiceSymbol || 'Chưa rõ'}`}>
-            <span title="Ký hiệu mẫu hóa đơn (Symbol)" className="cursor-help inline-flex items-center">
-              <FileCode className="w-3.5 h-3.5 text-content-muted shrink-0" />
-            </span>
-            <span className="font-mono text-content">{invoice.invoiceSymbol || 'Chưa rõ mẫu'}</span>
-          </div>
-          <div className="flex items-center justify-between gap-1 min-w-0" title={`Mã số thuế đơn vị bán hàng (MST): ${invoice.sellerTaxCode || 'Chưa rõ'}`}>
-            <div className="flex items-center gap-1 truncate min-w-0">
-              <span title="Mã số thuế đơn vị bán hàng (MST)" className="cursor-help inline-flex items-center">
-                <Building className="w-3.5 h-3.5 text-content-muted shrink-0" />
-              </span>
-              <span className="font-mono text-content truncate">{invoice.sellerTaxCode || 'Chưa rõ MST'}</span>
-            </div>
-            {invoice.sellerTaxCode && (
-              <button
-                type="button"
-                onClick={handleCopyMst}
-                className="p-1 rounded hover:bg-surface-elevated text-content-muted hover:text-content transition-colors shrink-0"
-                title={copiedMst ? 'Đã chép MST!' : 'Sao chép MST'}
-                aria-label="Sao chép MST"
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-0 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center px-2 py-0.5 text-[10px] font-medium text-white bg-slate-900/95 dark:bg-slate-800/95 border border-slate-700/50 rounded shadow-md z-30 whitespace-nowrap"
               >
-                {copiedMst ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-500" />
-                ) : (
-                  <Copy className="w-3 h-3" />
-                )}
-              </button>
+                Số hóa đơn
+              </span>
+            </div>
+            <span className="font-mono text-content truncate">{invoice.invoiceNumber || 'Chưa rõ số'}</span>
+          </div>
+
+          {/* Ký hiệu mẫu (Symbol) */}
+          <div className="flex items-center gap-1.5 min-w-0" title={`Ký hiệu mẫu hóa đơn (Symbol): ${invoice.invoiceSymbol || 'Chưa rõ'}`}>
+            <div className="relative group inline-flex items-center shrink-0">
+              <FileCode className="w-3.5 h-3.5 text-content-muted shrink-0" />
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-0 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center px-2 py-0.5 text-[10px] font-medium text-white bg-slate-900/95 dark:bg-slate-800/95 border border-slate-700/50 rounded shadow-md z-30 whitespace-nowrap"
+              >
+                Ký hiệu mẫu hóa đơn (Symbol)
+              </span>
+            </div>
+            <span className="font-mono text-content truncate">{invoice.invoiceSymbol || 'Chưa rõ mẫu'}</span>
+          </div>
+
+          {/* Mã số thuế đơn vị bán hàng (MST) + Nút Copy sát sau số MST */}
+          <div className="flex items-center gap-1.5 min-w-0" title={`Mã số thuế đơn vị bán hàng (MST): ${invoice.sellerTaxCode || 'Chưa rõ'}`}>
+            <div className="relative group inline-flex items-center shrink-0">
+              <Building className="w-3.5 h-3.5 text-content-muted shrink-0" />
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-0 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center px-2 py-0.5 text-[10px] font-medium text-white bg-slate-900/95 dark:bg-slate-800/95 border border-slate-700/50 rounded shadow-md z-30 whitespace-nowrap"
+              >
+                Mã số thuế đơn vị bán hàng (MST)
+              </span>
+            </div>
+            <span className="font-mono text-content truncate">{invoice.sellerTaxCode || 'Chưa rõ MST'}</span>
+            {invoice.sellerTaxCode && (
+              <div className="relative group inline-flex items-center ml-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleCopyMst}
+                  className="p-1 rounded hover:bg-surface-elevated text-content-muted hover:text-content transition-colors shrink-0 inline-flex items-center"
+                  aria-label="Sao chép MST"
+                >
+                  {copiedMst ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                </button>
+                <span
+                  role="tooltip"
+                  className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center px-2 py-0.5 text-[10px] font-medium text-white bg-slate-900/95 dark:bg-slate-800/95 border border-slate-700/50 rounded shadow-md z-30 whitespace-nowrap"
+                >
+                  {copiedMst ? 'Đã sao chép!' : 'Sao chép MST'}
+                </span>
+              </div>
             )}
           </div>
-          <div className="flex items-center gap-1 truncate" title={`Ngày lập hóa đơn: ${invoice.invoiceDate || 'Chưa rõ'}`}>
-            <span title="Ngày lập hóa đơn" className="cursor-help inline-flex items-center">
+
+          {/* Ngày lập hóa đơn */}
+          <div className="flex items-center gap-1.5 min-w-0" title={`Ngày lập hóa đơn: ${invoice.invoiceDate || 'Chưa rõ'}`}>
+            <div className="relative group inline-flex items-center shrink-0">
               <Calendar className="w-3.5 h-3.5 text-content-muted shrink-0" />
-            </span>
-            <span className="text-content">{invoice.invoiceDate || 'Chưa rõ ngày'}</span>
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-0 mb-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center px-2 py-0.5 text-[10px] font-medium text-white bg-slate-900/95 dark:bg-slate-800/95 border border-slate-700/50 rounded shadow-md z-30 whitespace-nowrap"
+              >
+                Ngày lập hóa đơn
+              </span>
+            </div>
+            <span className="text-content truncate">{invoice.invoiceDate || 'Chưa rõ ngày'}</span>
           </div>
         </div>
 

@@ -21,8 +21,8 @@ export class MisaProviderAdapter extends BaseProviderAdapter {
   extractLookupCode(text) {
     if (!text) return null;
     const match =
-      text.match(/(?:mã\s+tra\s+cứu|mã\s+nhận\s+hóa\s+đơn)\s*[:.]?\s*([A-Za-z0-9\-_]{6,32})/i) ||
-      text.match(/(?:tra\s+cứu\s+tại[\s\S]*?mã)\s*[:.]?\s*([A-Za-z0-9\-_]{6,32})/i);
+      text.match(/(?:mã\s+tra\s+cứu|mã\s+nhận\s+hóa\s+đơn)\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i) ||
+      text.match(/(?:tra\s+cứu\s+tại[\s\S]*?mã)\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i);
     return match ? match[1].trim() : null;
   }
 
