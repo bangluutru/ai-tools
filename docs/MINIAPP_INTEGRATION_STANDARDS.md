@@ -280,6 +280,19 @@ Các miniapp tiếp nhận tệp tin từ người dùng phải đảm bảo h�
 4. **Thu Hồi Tệp Cũ Khi Nạp Mới**:
    - Khi người dùng thả một tệp mới đè lên tệp cũ, phải tự động thu hồi Object URL và giải phóng bộ đệm của tệp cũ trước khi khởi tạo tệp mới.
 
+### 3.8. Cơ Chế Bảo Vệ Miniapp Đã Ổn Định (Verified Miniapp Protection)
+Để đảm bảo khi sửa chữa hoặc nâng cấp một miniapp thì không gây ảnh hưởng đến các miniapp khác, hệ thống áp dụng cơ chế bảo vệ phân tầng nghiêm ngặt:
+1. **Trạng Thái Verified (`verified: true`)**:
+   - Khi một miniapp đạt trạng thái `beta`, vượt qua toàn bộ các cổng kiểm duyệt và chạy ổn định trên thực tế, miniapp đó được cấp nhãn `verified: true` và ghi nhận ngày kiểm định `verifiedAt: 'YYYY-MM-DD'` trong `hub/src/config/toolsRegistry.js`.
+   - Danh sách 11 miniapp đạt chuẩn Verified hiện tại: `image-convert`, `screen-capture`, `barcode-qr`, `pdf-toolkit`, `omniconvert`, `invoice-studio`, `accounting-reconcile`, `tax-calculator`, `watermark-studio`, `id-photo-studio`, `business-card-studio`.
+   - Các công cụ đang ở trạng thái `experimental` (`excel-mapping`, `editor-studio`, `auto-bi`) hoặc `in-development` không được gán nhãn Verified.
+2. **Nguyên Tắc Bất Xâm Phạm (Zero Modification Without Explicit Instruction)**:
+   - Các trợ lý AI và lập trình viên tuyệt đối không can thiệp, sửa đổi mã nguồn của bất kỳ Verified Miniapp nào trừ khi có yêu cầu chỉ định đích danh từ Người dùng.
+3. **Cấm Cross-Domain Imports**:
+   - Nghiêm cấm import module trực tiếp giữa các thư mục chuyên biệt của các miniapp khác nhau (ví dụ: cấm import từ `packages/core/src/utils/accounting/` vào `invoice-studio`). Mọi tiện ích dùng chung phải được chuẩn hóa tại thư mục gốc `packages/core/src/utils/` (như `numbers.js`, `documentFiles.js`).
+4. **Bảo Toàn Hợp Đồng Tiện Ích Chung (Shared Utility Contract Preservation)**:
+   - Mọi thay đổi trong `packages/core/src/utils/` phải giữ nguyên signature và tính tương thích ngược 100% cho các callers hiện hữu. Bắt buộc chạy toàn bộ test suite (`npm test`) và audit (`npm run audit:miniapps`) để xác nhận không có bất kỳ miniapp nào bị ảnh hưởng.
+
 ---
 
 ## 🚦 4. QUY TRÌNH KIỂM DUYỆT 4 CỔNG (4-GATE VERIFICATION PIPELINE)

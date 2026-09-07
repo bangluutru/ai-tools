@@ -22,11 +22,31 @@ const toolGovernance = {
     readiness: 'beta',
     processing: 'browser',
     priority: 3,
-    outputPurpose: 'utility'
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-07'
   },
-  'screen-capture': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
-  'barcode-qr': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
-  'pdf-toolkit': { readiness: 'beta', processing: 'browser', outputPurpose: 'utility' },
+  'screen-capture': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-07'
+  },
+  'barcode-qr': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-07'
+  },
+  'pdf-toolkit': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-07'
+  },
   'pdf-overlay': {
     readiness: IN_DEVELOPMENT,
     processing: 'browser',
@@ -56,7 +76,9 @@ const toolGovernance = {
   'omniconvert': {
     readiness: 'beta',
     processing: 'browser',
-    outputPurpose: 'utility'
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-07'
   },
   'excel-mapping': {
     readiness: 'experimental',
@@ -68,7 +90,9 @@ const toolGovernance = {
     readiness: 'beta',
     processing: 'browser',
     priority: 2,
-    outputPurpose: 'reference'
+    outputPurpose: 'reference',
+    verified: true,
+    verifiedAt: '2026-09-07'
   },
   'contract-auditor': {
     readiness: IN_DEVELOPMENT,
@@ -87,27 +111,37 @@ const toolGovernance = {
     readiness: 'beta',
     processing: 'browser',
     priority: 1,
-    outputPurpose: 'reference'
+    outputPurpose: 'reference',
+    verified: true,
+    verifiedAt: '2026-09-07'
   },
   'tax-calculator': {
     readiness: 'beta',
     processing: 'browser',
-    outputPurpose: 'utility'
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-07'
   },
   'watermark-studio': {
     readiness: 'beta',
     processing: 'browser',
-    outputPurpose: 'utility'
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-07'
   },
   'id-photo-studio': {
     readiness: 'beta',
     processing: 'browser',
-    outputPurpose: 'utility'
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-07'
   },
   'business-card-studio': {
     readiness: 'beta',
     processing: 'browser',
-    outputPurpose: 'utility'
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-07'
   }
 };
 
@@ -438,11 +472,18 @@ export const tools = toolDefinitions.map((tool) => ({
   readiness: 'experimental',
   processing: 'browser',
   outputPurpose: 'reference',
+  verified: false,
   ...tool,
   ...toolGovernance[tool.id]
 }));
 
 export const isInDevelopment = (tool) => tool?.readiness === IN_DEVELOPMENT;
+
+/** Miniapp đã được xác nhận ổn định (verified) và được bảo vệ khỏi thay đổi không chủ đích. */
+export const isVerified = (tool) => Boolean(tool?.verified);
+
+/** Danh sách các miniapp đã đạt chuẩn verified. */
+export const verifiedTools = tools.filter(isVerified);
 
 /** Miniapp được build vào portal và mở được từ UI/URL. */
 export const activeTools = tools.filter((tool) => !isInDevelopment(tool));

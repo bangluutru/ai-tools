@@ -9,6 +9,8 @@ import {
   inDevelopmentTools,
   tools,
   categories,
+  isVerified,
+  verifiedTools,
 } from '../src/config/toolsRegistry.js';
 import { iconMap } from '../src/config/toolIcons.js';
 
@@ -264,3 +266,69 @@ test('MAIS Gate 2: Active miniapps adhere to Navbar Isolation and do not duplica
     }
   }
 });
+
+test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and ISO date', () => {
+  const expectedVerifiedIds = [
+    'image-convert',
+    'screen-capture',
+    'barcode-qr',
+    'pdf-toolkit',
+    'omniconvert',
+    'invoice-studio',
+    'accounting-reconcile',
+    'tax-calculator',
+    'watermark-studio',
+    'id-photo-studio',
+    'business-card-studio'
+  ];
+
+  assert.equal(
+    verifiedTools.length,
+    expectedVerifiedIds.length,
+    `Số lượng verified miniapp phải là ${expectedVerifiedIds.length}, hiện tại là ${verifiedTools.length}`
+  );
+
+  for (const tool of verifiedTools) {
+    assert.equal(
+      expectedVerifiedIds.includes(tool.id),
+      true,
+      `Miniapp "${tool.id}" không nằm trong danh sách được phê duyệt verified`
+    );
+    assert.equal(
+      tool.readiness,
+      'beta',
+      `Verified miniapp "${tool.id}" phải có readiness: "beta", nhận được "${tool.readiness}"`
+    );
+    assert.equal(
+      tool.verified,
+      true,
+      `Verified miniapp "${tool.id}" phải có verified: true`
+    );
+    assert.match(
+      tool.verifiedAt || '',
+      /^\d{4}-\d{2}-\d{2}$/,
+      `Verified miniapp "${tool.id}" phải có ngày verifiedAt định dạng YYYY-MM-DD`
+    );
+    assert.equal(
+      isVerified(tool),
+      true,
+      `isVerified("${tool.id}") phải trả về true`
+    );
+  }
+
+  // Ensure experimental and in-development tools are NOT verified
+  const unverifiedTools = tools.filter((t) => !expectedVerifiedIds.includes(t.id));
+  for (const tool of unverifiedTools) {
+    assert.equal(
+      Boolean(tool.verified),
+      false,
+      `Miniapp "${tool.id}" (readiness: ${tool.readiness}) không được đánh dấu verified khi chưa hoàn thiện`
+    );
+    assert.equal(
+      isVerified(tool),
+      false,
+      `isVerified("${tool.id}") phải trả về false`
+    );
+  }
+});
+

@@ -9,7 +9,7 @@ import {
   FileText, Code
 } from 'lucide-react';
 import { useLocalStorage } from '@ai-tools/core/hooks/useLocalStorage.js';
-import { parseLocalizedNumber } from '@ai-tools/core/utils/accounting/reconcile.js';
+import { parseLocalizedNumber } from '@ai-tools/core/utils/numbers.js';
 import {
   deriveInvoiceAmounts,
   INVOICE_LIMITS,
