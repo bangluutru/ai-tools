@@ -139,6 +139,22 @@ const TARGET_FORMAT_OPTIONS = [
     color: 'text-on-surface-variant bg-surface-container'
   },
   {
+    id: 'md',
+    title: 'Markdown (.md)',
+    ext: '.md',
+    desc: 'Định dạng nhẹ, giữ trọn vẹn ngữ nghĩa, đề mục & bảng biểu',
+    icon: FileCode,
+    color: 'text-indigo-400 bg-indigo-500/20'
+  },
+  {
+    id: 'html',
+    title: 'Trang Web HTML',
+    ext: '.html',
+    desc: 'Trang web độc lập có stylesheet CSS sang trọng',
+    icon: FileCode,
+    color: 'text-amber-400 bg-amber-500/20'
+  },
+  {
     id: 'csv',
     title: 'Bảng Dữ Liệu CSV',
     ext: '.csv',
@@ -271,6 +287,10 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
     } else if (preset.id === 'pdf-to-img') {
       setSourceFormat('pdf');
       handleSelectTargetFormat('png');
+      handleToggleMergeImages(false);
+    } else if (preset.id === 'to-markdown') {
+      setSourceFormat('docx');
+      handleSelectTargetFormat('md');
       handleToggleMergeImages(false);
     } else if (preset.id === 'custom') {
       setCustomSourceFilter('all');
@@ -598,7 +618,10 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
     if (activePreset === 'pdf-to-img') {
       return TARGET_FORMAT_OPTIONS.filter(opt => ['png', 'jpg', 'webp'].includes(opt.id));
     }
-    return TARGET_FORMAT_OPTIONS.filter(opt => ['pdf', 'txt'].includes(opt.id));
+    if (activePreset === 'to-markdown') {
+      return TARGET_FORMAT_OPTIONS.filter(opt => ['md', 'txt', 'html', 'pdf', 'docx'].includes(opt.id));
+    }
+    return TARGET_FORMAT_OPTIONS.filter(opt => ['pdf', 'txt', 'md'].includes(opt.id));
   })();
 
   return (
@@ -705,7 +728,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 { id: 'pptx', label: 'PowerPoint (.pptx)' },
                 { id: 'png', label: 'Ảnh (.png/.jpg)' },
                 { id: 'txt', label: 'Văn bản (.txt)' },
-                { id: 'csv', label: 'Bảng CSV' }
+                { id: 'csv', label: 'Bảng CSV' },
+                { id: 'md', label: 'Markdown (.md)' }
               ].map(f => (
                 <button
                   key={f.id}
@@ -1476,7 +1500,25 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
           return;
         }
 
-        // 6. Text
+        // 6. Markdown (.md)
+        if (ext === 'md') {
+          const text = await blob.text();
+          if (!isCancelled) {
+            setPreviewState({ type: 'markdown', markdown: text.slice(0, 50000), filename });
+          }
+          return;
+        }
+
+        // 7. HTML (.html)
+        if (ext === 'html') {
+          const text = await blob.text();
+          if (!isCancelled) {
+            setPreviewState({ type: 'html', html: text, filename });
+          }
+          return;
+        }
+
+        // 8. Text
         if (ext === 'txt') {
           const text = await blob.text();
           if (!isCancelled) {
@@ -1726,6 +1768,40 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
             style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
             dangerouslySetInnerHTML={{ __html: previewState.html }}
           />
+        ) : previewState?.type === 'markdown' ? (
+          /* Real Markdown Document Preview */
+          <div
+            className="w-full max-w-xl bg-surface-container-lowest text-on-surface p-6 rounded-xl shadow-2xl border border-border-subtle text-xs overflow-auto max-h-[460px] leading-relaxed space-y-3"
+            style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
+              <span className="font-mono text-xs font-bold text-primary truncate">{previewState.filename}</span>
+              <span className="px-2 py-0.5 rounded bg-primary/15 text-primary font-mono text-[10px] font-bold uppercase">Markdown</span>
+            </div>
+            <pre
+              tabIndex={0}
+              className="font-mono text-xs text-on-surface overflow-auto whitespace-pre-wrap select-all leading-relaxed"
+            >
+              {previewState.markdown}
+            </pre>
+          </div>
+        ) : previewState?.type === 'html' ? (
+          /* Real HTML Document Preview */
+          <div
+            className="w-full max-w-xl bg-surface-container-lowest text-on-surface p-6 rounded-xl shadow-2xl border border-border-subtle text-xs overflow-auto max-h-[460px] leading-relaxed space-y-3"
+            style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
+              <span className="font-mono text-xs font-bold text-amber-400 truncate">{previewState.filename}</span>
+              <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-400 font-mono text-[10px] font-bold uppercase">HTML</span>
+            </div>
+            <iframe
+              title="HTML Preview"
+              srcDoc={previewState.html}
+              className="w-full h-[360px] rounded border border-border-subtle bg-surface-container-lowest"
+              sandbox="allow-same-origin"
+            />
+          </div>
         ) : previewState?.type === 'text' ? (
           /* Real Text Monospace Preview */
           <pre

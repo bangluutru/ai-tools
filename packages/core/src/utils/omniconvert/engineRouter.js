@@ -8,6 +8,7 @@ const imageEngine = () => import('./imagePdfConverter.js');
 const docxEngine = () => import('./docxPdfConverter.js');
 const xlsxEngine = () => import('./xlsxPdfConverter.js');
 const pptxEngine = () => import('./pptxPdfConverter.js');
+const markdownEngine = () => import('./markdownConverter.js');
 
 const convertImagesToPdf = async (...args) => (await imageEngine()).convertImagesToPdf(...args);
 const convertPdfToImages = async (...args) => (await imageEngine()).convertPdfToImages(...args);
@@ -21,6 +22,15 @@ const convertPdfToXlsx = async (...args) => (await xlsxEngine()).convertPdfToXls
 const convertXlsxToCsv = async (...args) => (await xlsxEngine()).convertXlsxToCsv(...args);
 const convertPptxToPdf = async (...args) => (await pptxEngine()).convertPptxToPdf(...args);
 const convertPdfToPptx = async (...args) => (await pptxEngine()).convertPdfToPptx(...args);
+const convertDocxToMd = async (...args) => (await markdownEngine()).convertDocxToMd(...args);
+const convertPdfToMd = async (...args) => (await markdownEngine()).convertPdfToMd(...args);
+const convertXlsxToMd = async (...args) => (await markdownEngine()).convertXlsxToMd(...args);
+const convertCsvToMd = async (...args) => (await markdownEngine()).convertCsvToMd(...args);
+const convertTxtToMd = async (...args) => (await markdownEngine()).convertTxtToMd(...args);
+const convertMdToPdf = async (...args) => (await markdownEngine()).convertMdToPdf(...args);
+const convertMdToDocx = async (...args) => (await markdownEngine()).convertMdToDocx(...args);
+const convertMdToTxt = async (...args) => (await markdownEngine()).convertMdToTxt(...args);
+const convertMdToHtml = async (...args) => (await markdownEngine()).convertMdToHtml(...args);
 
 export async function executeConversion(file, targetFormat, options = {}, onProgress = () => {}) {
   const sourceExt = getFileExtension(file.name);
@@ -38,15 +48,18 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
   if (sourceExt === 'docx') {
     if (targetExt === 'pdf') return await convertDocxToPdf(file, options, onProgress);
     if (targetExt === 'txt') return await convertDocxToTxt(file, options, onProgress);
+    if (targetExt === 'md') return await convertDocxToMd(file, options, onProgress);
   }
 
   // 2. XLSX / CSV
   if (sourceExt === 'xlsx' || sourceExt === 'xls') {
     if (targetExt === 'pdf') return await convertXlsxToPdf(file, options, onProgress);
     if (targetExt === 'csv') return await convertXlsxToCsv(file, options, onProgress);
+    if (targetExt === 'md') return await convertXlsxToMd(file, options, onProgress);
   }
   if (sourceExt === 'csv') {
     if (targetExt === 'pdf') return await convertXlsxToPdf(file, options, onProgress);
+    if (targetExt === 'md') return await convertCsvToMd(file, options, onProgress);
     if (targetExt === 'xlsx') {
       if (onProgress) onProgress(30);
       const arrayBuffer = await file.arrayBuffer();
@@ -78,6 +91,7 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
     if (targetExt === 'docx') return await convertPdfToDocx(file, options, onProgress);
     if (targetExt === 'xlsx') return await convertPdfToXlsx(file, options, onProgress);
     if (targetExt === 'pptx') return await convertPdfToPptx(file, options, onProgress);
+    if (targetExt === 'md') return await convertPdfToMd(file, options, onProgress);
     if (['png', 'jpg', 'jpeg', 'webp'].includes(targetExt)) {
       return await convertPdfToImages(file, targetExt, options, onProgress);
     }
@@ -101,8 +115,10 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
       return await convertImageToImage(file, targetExt, options, onProgress);
     }
   }
+
   // 6. TXT
   if (sourceExt === 'txt') {
+    if (targetExt === 'md') return await convertTxtToMd(file, options, onProgress);
     if (targetExt === 'pdf') {
       if (onProgress) onProgress(20);
       const text = await file.text();
@@ -140,6 +156,14 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
         isZip: false
       };
     }
+  }
+
+  // 7. Markdown (.md)
+  if (sourceExt === 'md') {
+    if (targetExt === 'pdf') return await convertMdToPdf(file, options, onProgress);
+    if (targetExt === 'docx') return await convertMdToDocx(file, options, onProgress);
+    if (targetExt === 'txt') return await convertMdToTxt(file, options, onProgress);
+    if (targetExt === 'html') return await convertMdToHtml(file, options, onProgress);
   }
 
   throw new Error(`Chưa hỗ trợ chuyển đổi trực tiếp từ .${sourceExt.toUpperCase()} sang .${targetExt.toUpperCase()}.`);

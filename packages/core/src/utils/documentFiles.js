@@ -34,7 +34,7 @@ export const CONVERT_LIMITS = Object.freeze({
   maxFiles: 20,
   maxFileBytes: 50 * MIB,
   maxTotalBytes: 200 * MIB,
-  extensions: ['.docx', '.pptx', '.xlsx', '.pdf', '.png', '.jpg', '.jpeg', '.webp', '.svg'],
+  extensions: ['.docx', '.pptx', '.xlsx', '.pdf', '.png', '.jpg', '.jpeg', '.webp', '.svg', '.md', '.txt', '.csv'],
 });
 
 /**
@@ -147,8 +147,8 @@ export function hasExpectedDocumentSignature(bytes, extension) {
       && String.fromCharCode(...bytes.slice(4, 8)) === 'ftyp'
       && (String.fromCharCode(...bytes.slice(8, 12)) === 'avif' || String.fromCharCode(...bytes.slice(8, 12)) === 'avis');
   }
-  if (ext === '.svg') {
-    // SVG là văn bản nên không có magic byte cố định; chấp nhận theo phần mở rộng.
+  if (ext === '.svg' || ext === '.md' || ext === '.txt' || ext === '.csv') {
+    // Văn bản thuần / đánh dấu không có magic byte cố định; chấp nhận theo phần mở rộng.
     return true;
   }
   if (ext === '.xls') {

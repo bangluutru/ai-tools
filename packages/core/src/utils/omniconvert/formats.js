@@ -10,7 +10,9 @@ export const FORMAT_TYPES = {
   SVG: 'svg',
   BMP: 'bmp',
   TXT: 'txt',
-  CSV: 'csv'
+  CSV: 'csv',
+  MD: 'md',
+  HTML: 'html'
 };
 
 export const FORMAT_DETAILS = {
@@ -121,28 +123,48 @@ export const FORMAT_DETAILS = {
     category: 'spreadsheet',
     color: 'bg-teal-600/20 text-teal-300 border-teal-500/30',
     badgeColor: 'bg-teal-600 text-white'
+  },
+  md: {
+    ext: 'md',
+    name_vn: 'Tài liệu Markdown (.md)',
+    name_en: 'Markdown Document (.md)',
+    name_ja: 'Markdown 文書 (.md)',
+    category: 'document',
+    color: 'bg-indigo-600/20 text-indigo-400 border-indigo-500/30',
+    badgeColor: 'bg-indigo-600 text-white'
+  },
+  html: {
+    ext: 'html',
+    name_vn: 'Trang web HTML (.html)',
+    name_en: 'HTML Webpage (.html)',
+    name_ja: 'HTML ウェブページ (.html)',
+    category: 'document',
+    color: 'bg-amber-600/20 text-amber-400 border-amber-500/30',
+    badgeColor: 'bg-amber-600 text-white'
   }
 };
 
 export const COMPATIBILITY_MATRIX = {
-  docx: ['pdf', 'txt'],
+  docx: ['pdf', 'txt', 'md'],
   pptx: ['pdf'],
-  xlsx: ['pdf', 'csv'],
+  xlsx: ['pdf', 'csv', 'md'],
   // PDF→PPTX được dựng bằng engine OpenXML PresentationML chuẩn qua JSZip
-  pdf: ['docx', 'xlsx', 'pptx', 'png', 'jpg', 'webp', 'txt'],
+  pdf: ['docx', 'xlsx', 'pptx', 'md', 'png', 'jpg', 'webp', 'txt'],
   png: ['pdf', 'jpg', 'webp'],
   jpg: ['pdf', 'png', 'webp'],
   jpeg: ['pdf', 'png', 'webp'],
   webp: ['pdf', 'png', 'jpg'],
   svg: ['pdf', 'png'],
   bmp: ['pdf', 'png', 'jpg'],
-  txt: ['pdf'],
-  csv: ['pdf', 'xlsx']
+  txt: ['pdf', 'md'],
+  csv: ['pdf', 'xlsx', 'md'],
+  md: ['pdf', 'docx', 'txt', 'html']
 };
 
 export const POPULAR_PRESETS = [
   { id: 'all-to-pdf', label_vn: 'Tất cả ➔ PDF', label_en: 'All ➔ PDF', label_ja: 'すべて ➔ PDF', from: '*', to: 'pdf' },
   { id: 'pdf-to-office', label_vn: 'PDF ➔ Word/Excel/PPT', label_en: 'PDF ➔ Office', label_ja: 'PDF ➔ Office', from: 'pdf', to: 'docx' },
+  { id: 'to-markdown', label_vn: 'Tất cả ➔ Markdown (.md)', label_en: 'All ➔ Markdown', label_ja: 'すべて ➔ Markdown', from: '*', to: 'md' },
   { id: 'img-to-pdf', label_vn: 'Gộp ảnh ➔ PDF', label_en: 'Images ➔ PDF', label_ja: '画像結合 ➔ PDF', from: 'image', to: 'pdf' },
   { id: 'pdf-to-img', label_vn: 'PDF ➔ Bộ ảnh (PNG/JPG)', label_en: 'PDF ➔ Images', label_ja: 'PDF ➔ 画像一括', from: 'pdf', to: 'png' },
   { id: 'custom', label_vn: 'Tùy chọn tự do', label_en: 'Custom pair', label_ja: 'カスタム', from: 'custom', to: 'custom' }
