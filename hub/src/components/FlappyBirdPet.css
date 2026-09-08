@@ -1,0 +1,185 @@
+/* ==========================================================================
+   FLAPPY BIRD PET & MODAL — Styles for Easter Egg and Modal in AI-Tools Hub
+   ========================================================================== */
+
+/* ---- Flying Bird Pet ---- */
+.flappy-pet {
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* Thấp hơn header (z-50) và modal (z-[70]) để không nuốt click của thanh điều hướng */
+  z-index: 20;
+  cursor: pointer;
+  pointer-events: auto;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+  animation: petFadeIn 0.5s ease-out;
+  user-select: none;
+}
+
+@keyframes petFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.flappy-pet:hover {
+  filter: drop-shadow(0 3px 12px rgba(248, 224, 72, 0.7));
+}
+
+/* Wing flap animation */
+@keyframes wingFlap {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.6); }
+}
+
+.flappy-pet-wing {
+  animation: wingFlap 0.2s ease-in-out infinite;
+  transform-origin: center right;
+}
+
+/* Gentle bob animation */
+@keyframes gentleBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.flappy-pet-bob {
+  animation: gentleBob 2s ease-in-out infinite;
+}
+
+/* ---- Game Modal ---- */
+.flappy-game-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+  animation: flappyFadeIn 0.2s ease-out;
+}
+
+@keyframes flappyFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.flappy-game-loading {
+  color: #F8FAFC;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.flappy-game-container {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  background: #0F172A;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(112, 197, 206, 0.2);
+  overflow: hidden;
+  animation: flappyModalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes flappyModalPop {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.flappy-game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(30, 41, 59, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.flappy-game-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #F8FAFC;
+  letter-spacing: 0.05em;
+}
+
+.flappy-game-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: transparent;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.flappy-game-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #F8FAFC;
+}
+
+.flappy-game-canvas-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 360 / 540;
+  background: #DED895;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.flappy-game-canvas-wrap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  object-fit: contain;
+  object-position: center top;
+}
+
+.flappy-game-footer {
+  padding: 0.6rem 1rem;
+  background: rgba(30, 41, 59, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: #94A3B8;
+}
+
+.flappy-key-badge {
+  background: #334155;
+  border: 1px solid #475569;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.6rem;
+  color: #F8E048;
+}
+
+/* Mobile fullscreen */
+@media (max-width: 480px) {
+  .flappy-game-backdrop {
+    padding: 0;
+  }
+  .flappy-game-container {
+    max-width: 100%;
+    height: 100%;
+    border-radius: 0;
+    border: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .flappy-game-canvas-wrap {
+    flex: 1;
+    aspect-ratio: auto;
+  }
+}

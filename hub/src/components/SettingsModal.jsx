@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Eye, EyeOff, RotateCcw, Settings2, Wrench, X, Sun, Moon, Monitor } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw, Settings2, Wrench, X, Sun, Moon, Monitor, Gamepad2 } from 'lucide-react';
 import { useTheme, THEMES } from '@ai-tools/core';
 
 export default function SettingsModal({
@@ -11,6 +11,8 @@ export default function SettingsModal({
   onShowAll,
   onReset,
   displayLang,
+  showFlappyBird = true,
+  onToggleFlappyBird,
 }) {
   const { themePreference, setTheme } = useTheme();
 
@@ -147,6 +149,42 @@ export default function SettingsModal({
                 <span>Hệ thống</span>
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Flappy Bird Easter Egg Toggle */}
+        <div className="border-b border-border-subtle/80 bg-surface-subtle/30 px-5 py-3 sm:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500">
+                <Gamepad2 size={18} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-on-surface">Chim Flappy Bird</div>
+                <div className="text-[11px] text-outline mt-0.5">
+                  {showFlappyBird
+                    ? 'Chú chim đang bay trên màn hình. Nhấn vào chim để chơi game.'
+                    : 'Bật để chú chim Flappy Bird bay lượn trên màn hình.'}
+                </div>
+              </div>
+            </div>
+            {onToggleFlappyBird && (
+              <button
+                type="button"
+                onClick={onToggleFlappyBird}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                  showFlappyBird ? 'bg-secondary' : 'bg-surface-container-highest'
+                }`}
+                aria-label={showFlappyBird ? 'Tắt chim bay' : 'Bật chim bay'}
+                aria-pressed={showFlappyBird}
+              >
+                <span
+                  className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                    showFlappyBird ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            )}
           </div>
         </div>
 

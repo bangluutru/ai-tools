@@ -48,6 +48,9 @@ const IdPhotoStudioTool = lazy(() => import('./tools/id-photo-studio/IdPhotoStud
 const BusinessCardStudioTool = lazy(() => import('./tools/business-card-studio/BusinessCardStudioTool'));
 const TaxCalculatorTool = lazy(() => import('./tools/tax-calculator/TaxCalculatorTool'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
+const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
+const FlappyBirdPet = lazy(() => import('./components/FlappyBirdPet'));
+const FlappyGameModal = lazy(() => import('./components/FlappyGameModal'));
 
 const toolComponentMap = {
   'image-convert': ImageConvertTool,
@@ -65,7 +68,8 @@ const toolComponentMap = {
   'id-photo-studio': IdPhotoStudioTool,
   'business-card-studio': BusinessCardStudioTool,
   'tax-calculator': TaxCalculatorTool,
-  'invoice-xml-fetcher': InvoiceXmlFetcherTool
+  'invoice-xml-fetcher': InvoiceXmlFetcherTool,
+  'flappy-bird': FlappyBirdTool
 };
 
 export default function App() {
@@ -82,6 +86,14 @@ export default function App() {
   const [hiddenToolIds, setHiddenToolIds] = useState(() =>
     loadHiddenToolIds(window.localStorage, tools)
   );
+  const [showFlappyBird, setShowFlappyBird] = useState(() => {
+    try {
+      return localStorage.getItem('hub_show_flappy_bird') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [showFlappyGame, setShowFlappyGame] = useState(false);
 
   // Sync language
   useEffect(() => {
@@ -91,6 +103,12 @@ export default function App() {
   useEffect(() => {
     saveHiddenToolIds(window.localStorage, hiddenToolIds);
   }, [hiddenToolIds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hub_show_flappy_bird', String(showFlappyBird));
+    } catch {}
+  }, [showFlappyBird]);
 
   // Hash routes work on static hosting and preserve the selected miniapp on refresh/share.
   useEffect(() => {
@@ -219,6 +237,8 @@ export default function App() {
             categoryIds={categoryIds}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
+            showFlappyBird={showFlappyBird}
+            onOpenFlappyGame={() => setShowFlappyGame(true)}
           />
 
           <main className="flex-1 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-4">
@@ -333,7 +353,23 @@ export default function App() {
         onShowAll={() => setHiddenToolIds([])}
         onReset={() => setHiddenToolIds(defaultHiddenToolIds(tools))}
         displayLang={displayLang}
+        showFlappyBird={showFlappyBird}
+        onToggleFlappyBird={() => setShowFlappyBird((prev) => !prev)}
       />
+
+      {/* Floating Flappy Bird Easter Egg (only on Hub dashboard when enabled) */}
+      {showFlappyBird && !activeToolId && (
+        <Suspense fallback={null}>
+          <FlappyBirdPet onOpenGame={() => setShowFlappyGame(true)} />
+        </Suspense>
+      )}
+
+      {/* Flappy Bird Game Modal */}
+      {showFlappyGame && (
+        <Suspense fallback={null}>
+          <FlappyGameModal onClose={() => setShowFlappyGame(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

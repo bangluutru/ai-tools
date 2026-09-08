@@ -152,6 +152,13 @@ const toolGovernance = {
     readiness: 'beta',
     processing: 'browser',
     outputPurpose: 'utility'
+  },
+  'flappy-bird': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-09'
   }
 };
 
@@ -506,6 +513,22 @@ const toolDefinitions = [
     badge: 'NEW',
     popular: true,
     tags: ['watermark', 'stamp', 'đóng dấu', 'bản quyền', 'confidential', 'draft', 'logo', 'pdf', 'docx', 'xlsx', 'pptx', 'ảnh']
+  },
+  {
+    id: 'flappy-bird',
+    name_vn: 'Flappy Bird',
+    name_en: 'Flappy Bird',
+    name_ja: 'フラッピーバード',
+    desc_vn: 'Minigame giải trí thư giãn, điều khiển chú chim bay qua các đường ống.',
+    desc_en: 'Relaxing arcade minigame, guide the bird through the obstacle pipes.',
+    desc_ja: 'リラックスできるアーケードミニゲーム。障害物の土管を通り抜けよう。',
+    category: 'utils',
+    icon: 'Gamepad2',
+    gradient: 'from-amber-400 to-orange-500',
+    color: '#f59e0b',
+    badge: 'GAME',
+    popular: false,
+    tags: ['flappy bird', 'game', 'minigame', 'chim bay', 'arcade', 'giải trí', 'relax', 'utils']
   }
 ];
 

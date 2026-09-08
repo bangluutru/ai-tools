@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Globe, Settings2, Code2, X } from 'lucide-react';
+import { Search, Globe, Settings2, Code2, X, Gamepad2 } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import ToolioLogo from './ToolioLogo';
 
@@ -12,6 +12,8 @@ export default function Navbar({
   categoryIds,
   searchQuery = '',
   onSearchChange,
+  showFlappyBird = true,
+  onOpenFlappyGame,
 }) {
   const [langDropdown, setLangDropdown] = useState(false);
   const searchInputRef = useRef(null);
@@ -146,6 +148,19 @@ export default function Navbar({
               </>
             )}
           </div>
+
+          {/* Flappy Bird shortcut (shown when pet is disabled in settings) */}
+          {!showFlappyBird && onOpenFlappyGame && (
+            <button
+              type="button"
+              onClick={onOpenFlappyGame}
+              className="p-1.5 sm:p-2 rounded-lg bg-surface-subtle hover:bg-surface-container border border-border-subtle text-amber-500 hover:text-amber-400 transition-colors flex items-center justify-center"
+              title={displayLang === 'vi' ? 'Chơi Flappy Bird' : displayLang === 'ja' ? 'フラッピーバードをプレイ' : 'Play Flappy Bird'}
+              aria-label={displayLang === 'vi' ? 'Chơi Flappy Bird' : displayLang === 'ja' ? 'フラッピーバードをプレイ' : 'Play Flappy Bird'}
+            >
+              <Gamepad2 size={16} />
+            </button>
+          )}
 
           {/* Settings Button */}
           <button
