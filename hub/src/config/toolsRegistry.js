@@ -336,16 +336,16 @@ const toolDefinitions = [
     name_vn: 'Chuyển Đổi Đa Năng',
     name_en: 'Universal File Converter',
     name_ja: '万能ファイル変換',
-    desc_vn: 'Chuyển đổi cực nhanh các định dạng DOCX, PPTX, XLSX và hình ảnh sang PDF 100% bảo mật trên trình duyệt.',
-    desc_en: 'Lightning-fast client-side conversion of DOCX, PPTX, XLSX, and images to PDF with zero server uploads.',
-    desc_ja: 'サーバーにアップロードせずに、ブラウザ上でDOCX、PPTX、XLSX、および画像をPDFに高速変換します。',
+    desc_vn: 'Chuyển đổi linh hoạt giữa DOCX, PPTX, XLSX, PDF, Markdown (.md), ảnh và TXT 100% bảo mật trên trình duyệt.',
+    desc_en: 'Lightning-fast client-side conversion between DOCX, PPTX, XLSX, PDF, Markdown (.md), images, and TXT with zero server uploads.',
+    desc_ja: 'サーバーにアップロードせずに、ブラウザ上でDOCX、PPTX、XLSX、PDF、Markdown (.md)、画像、TXTを相互に高速変換します。',
     category: 'pdf',
     icon: 'ArrowLeftRight',
     gradient: 'from-orange-500 to-amber-600',
     color: '#f97316',
     badge: 'NEW',
     popular: true,
-    tags: ['convert', 'pdf', 'docx', 'pptx', 'xlsx', 'chuyển đổi']
+    tags: ['convert', 'pdf', 'docx', 'pptx', 'xlsx', 'markdown', 'md', 'chuyển đổi']
   },
   {
     id: 'excel-mapping',

@@ -804,7 +804,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   }
                 }}
                 className="hidden"
-                accept=".docx,.pptx,.xlsx,.xls,.pdf,.png,.jpg,.jpeg,.webp,.svg,.bmp,.txt,.csv"
+                accept=".docx,.pptx,.xlsx,.xls,.pdf,.png,.jpg,.jpeg,.webp,.svg,.bmp,.txt,.csv,.md"
               />
               <div className="w-12 h-12 rounded-full bg-surface-container border border-border-subtle flex items-center justify-center text-primary-container mb-2">
                 <UploadCloud className="w-6 h-6" />
@@ -813,10 +813,10 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 Kéo thả tài liệu vào đây, hoặc <span className="text-primary-container underline underline-offset-4">Duyệt tệp tin</span>
               </span>
               <p className="text-xs text-on-surface-variant max-w-sm">
-                Hỗ trợ Word (.docx), Excel (.xlsx, .csv), PowerPoint (.pptx), PDF, Ảnh (.png, .jpg, .webp), TXT.
+                Hỗ trợ Word (.docx), Excel (.xlsx, .csv), PowerPoint (.pptx), PDF, Markdown (.md), Ảnh (.png, .jpg, .webp), TXT.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
-                {['DOCX', 'XLSX', 'PPTX', 'PDF', 'PNG', 'JPG', 'WEBP', 'TXT', 'CSV'].map((ext) => (
+                {['DOCX', 'XLSX', 'PPTX', 'PDF', 'MD', 'PNG', 'JPG', 'WEBP', 'TXT', 'CSV'].map((ext) => (
                   <span key={ext} className="px-2 py-0.5 rounded bg-surface font-mono text-[10px] text-on-surface-variant border border-border-subtle">
                     {ext}
                   </span>
