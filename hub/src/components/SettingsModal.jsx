@@ -63,7 +63,7 @@ export default function SettingsModal({
           </div>
         </div>
         <span className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${isVisible ? 'bg-secondary' : 'bg-surface-container-highest'}`}>
-          <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${isVisible ? 'translate-x-6' : 'translate-x-1'}`} />
+          <span className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${isVisible ? 'translate-x-5' : 'translate-x-0'}`} />
         </span>
       </button>
     );
@@ -172,15 +172,15 @@ export default function SettingsModal({
               <button
                 type="button"
                 onClick={onToggleFlappyBird}
-                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                className={`relative h-6 w-11 shrink-0 rounded-full p-0 border-0 cursor-pointer transition-colors focus:outline-none ${
                   showFlappyBird ? 'bg-secondary' : 'bg-surface-container-highest'
                 }`}
                 aria-label={showFlappyBird ? 'Tắt chim bay' : 'Bật chim bay'}
                 aria-pressed={showFlappyBird}
               >
                 <span
-                  className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                    showFlappyBird ? 'translate-x-6' : 'translate-x-1'
+                  className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                    showFlappyBird ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>
