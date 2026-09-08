@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, ChevronDown, CheckCircle2, Globe, Sparkles } from 'lucide-react';
+import { ArrowLeft, ChevronDown, CheckCircle2, Globe } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import ToolioLogo from './ToolioLogo';
 
 export default function ToolContainer({
   currentTool,
@@ -59,9 +60,9 @@ export default function ToolContainer({
             {/* Brand Logo */}
             <div
               onClick={onBackToHub}
-              className="flex items-center gap-2 cursor-pointer select-none shrink-0"
-              title={displayLang === 'vi' ? 'Về trang chủ AI-Tools HUB' : displayLang === 'en' ? 'Back to AI-Tools HUB' : 'AI-Tools HUB ホームへ'}
-              aria-label={displayLang === 'vi' ? 'Về trang chủ AI-Tools HUB' : displayLang === 'en' ? 'Back to AI-Tools HUB' : 'AI-Tools HUB ホームへ'}
+              className="flex items-center gap-2 cursor-pointer select-none shrink-0 group"
+              title={displayLang === 'vi' ? 'Toolio — Về trang chủ AI-Tools HUB' : displayLang === 'en' ? 'Toolio — Back to AI-Tools HUB' : 'Toolio — AI-Tools HUB ホームへ'}
+              aria-label={displayLang === 'vi' ? 'Toolio — Về trang chủ AI-Tools HUB' : displayLang === 'en' ? 'Toolio — Back to AI-Tools HUB' : 'Toolio — AI-Tools HUB ホームへ'}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
@@ -71,14 +72,12 @@ export default function ToolContainer({
                 }
               }}
             >
-              <div className="w-8 h-8 rounded-lg bg-surface-container border border-border-subtle flex items-center justify-center text-primary-container shadow-sm">
-                <Sparkles size={18} className="text-primary-container" />
-              </div>
+              <ToolioLogo size={32} variant="app-icon" className="transition-transform group-hover:scale-105" />
               <div className="hidden sm:flex items-center gap-1.5">
                 <span className="font-bold text-base sm:text-lg tracking-tight text-on-surface">
-                  AI-Tools
+                  Toolio
                 </span>
-                <span className="hidden md:inline-block px-1.5 py-[2px] bg-primary-container text-on-primary-container font-mono text-[10px] font-bold rounded">
+                <span className="hidden md:inline-block px-1.5 py-[2px] bg-primary/15 text-primary border border-primary/25 font-mono text-[9px] font-bold rounded tracking-wider uppercase">
                   HUB
                 </span>
               </div>

@@ -1,0 +1,119 @@
+import React from 'react';
+
+/**
+ * ToolioLogo - Official Brand Icon for Toolio ('T' Puzzle Interlock)
+ * 
+ * @param {number} size - Width/height in pixels (default: 32)
+ * @param {string} className - Optional Tailwind or CSS class names
+ * @param {'app-icon' | 'mark'} variant - 'app-icon' has squircle dark base; 'mark' is the bare puzzle glyph
+ */
+export default function ToolioLogo({ size = 32, className = '', variant = 'app-icon' }) {
+  const isMarkOnly = variant === 'mark';
+
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 100 100"
+      width={size}
+      height={size}
+      className={`shrink-0 select-none ${className}`}
+      aria-label="Toolio Logo"
+    >
+      <defs>
+        {/* Background Squircle Gradient */}
+        <linearGradient id="toolioLogoBg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#141F36" />
+          <stop offset="100%" stopColor="#070B14" />
+        </linearGradient>
+
+        {/* Left Piece: Mint-Emerald Gradient */}
+        <linearGradient id="toolioLogoMint" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#4EDEA3" />
+          <stop offset="100%" stopColor="#059669" />
+        </linearGradient>
+
+        {/* Right Piece: Sky Cyan Gradient */}
+        <linearGradient id="toolioLogoCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#38BDF8" />
+          <stop offset="100%" stopColor="#0284C7" />
+        </linearGradient>
+
+        {/* Soft Depth Filter */}
+        <filter id="toolioLogoDepth" x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="0" dy="2.5" stdDeviation="2" floodColor="#000000" floodOpacity="0.45" />
+        </filter>
+      </defs>
+
+      {!isMarkOnly && (
+        <>
+          {/* Base Squircle with Subtle Chamfered Border */}
+          <rect
+            x="2"
+            y="2"
+            width="96"
+            height="96"
+            rx="22"
+            ry="22"
+            fill="url(#toolioLogoBg)"
+            stroke="#1E293B"
+            strokeWidth="1.5"
+          />
+
+          {/* Top Rim Highlight */}
+          <path
+            d="M 25 3.5 Q 50 2 75 3.5"
+            stroke="rgba(255, 255, 255, 0.2)"
+            strokeWidth="1.2"
+            strokeLinecap="round"
+            fill="none"
+          />
+        </>
+      )}
+
+      {/* Interlocking 'T' Puzzle Glyph Group */}
+      <g filter={!isMarkOnly ? "url(#toolioLogoDepth)" : undefined}>
+        {/* LEFT PIECE (Mint-Emerald with Jigsaw Tab) */}
+        <path
+          d="
+            M 49.3 18
+            L 21 18
+            A 4 4 0 0 0 17 22
+            L 17 36
+            A 4 4 0 0 0 21 40
+            L 35 40
+            L 35 78
+            A 4 4 0 0 0 39 82
+            L 49.3 82
+            L 49.3 58.5
+            C 47.8 58.0 47.0 57.0 49.48 56.9
+            A 5.8 5.8 0 1 0 49.48 51.1
+            C 47.0 51.0 47.8 50.0 49.3 49.5
+            Z
+          "
+          fill="url(#toolioLogoMint)"
+        />
+
+        {/* RIGHT PIECE (Sky Cyan with Complementary Socket) */}
+        <path
+          d="
+            M 50.7 18
+            L 79 18
+            A 4 4 0 0 1 83 22
+            L 83 36
+            A 4 4 0 0 1 79 40
+            L 65 40
+            L 65 78
+            A 4 4 0 0 1 61 82
+            L 50.7 82
+            L 50.7 59.5
+            C 49.2 59.0 48.4 58.0 50.88 56.9
+            A 5.8 5.8 0 1 1 50.88 51.1
+            C 48.4 51.0 49.2 50.0 50.7 48.5
+            Z
+          "
+          fill="url(#toolioLogoCyan)"
+        />
+      </g>
+    </svg>
+  );
+}
