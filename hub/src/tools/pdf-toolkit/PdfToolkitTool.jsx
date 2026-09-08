@@ -406,32 +406,19 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
           }
         }
         resultingPageCount = mergedDoc.getPageCount() || totalPages;
-      } else if (activeMode === 'organize') {
+      } else if (activeMode === 'merge' || activeMode === 'organize') {
         for (const f of files) {
           const srcDoc = await PDFDocument.load(f.arrayBuffer);
           const activePages = (f.pages || []).filter((p) => !p.isDeleted);
-          for (const pageConfig of activePages) {
-            const originalIndex = pageConfig.pageIndex;
-            const [copiedPage] = await mergedDoc.copyPages(srcDoc, [originalIndex]);
-            if (pageConfig.rotation) {
-              const currentRot = copiedPage.getRotation().angle || 0;
-              copiedPage.setRotation(degrees(currentRot + pageConfig.rotation));
-            }
-            mergedDoc.addPage(copiedPage);
-          }
-        }
-        pdfBytes = await mergedDoc.save({ useObjectStreams: true });
-        resultingPageCount = mergedDoc.getPageCount();
-      } else if (activeMode === 'merge') {
-        for (const f of files) {
-          const srcDoc = await PDFDocument.load(f.arrayBuffer);
-          const pageIndices = srcDoc.getPageIndices();
+          if (activePages.length === 0) continue;
 
-          for (let i = 0; i < pageIndices.length; i++) {
-            const pageConfig = f.pages?.find((p) => p.pageIndex === i);
-            if (pageConfig?.isDeleted) continue;
+          // BATCH copy all pages at once to preserve shared resources (fonts/images) and prevent file size bloating
+          const targetIndices = activePages.map((p) => p.pageIndex);
+          const copiedPages = await mergedDoc.copyPages(srcDoc, targetIndices);
 
-            const [copiedPage] = await mergedDoc.copyPages(srcDoc, [i]);
+          for (let idx = 0; idx < copiedPages.length; idx++) {
+            const copiedPage = copiedPages[idx];
+            const pageConfig = activePages[idx];
             if (pageConfig?.rotation) {
               const currentRot = copiedPage.getRotation().angle || 0;
               copiedPage.setRotation(degrees(currentRot + pageConfig.rotation));
@@ -439,7 +426,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
             mergedDoc.addPage(copiedPage);
           }
         }
-        pdfBytes = await mergedDoc.save({ useObjectStreams: true });
+        pdfBytes = await mergedDoc.save({ useObjectStreams: true, addDefaultPage: false });
         resultingPageCount = mergedDoc.getPageCount();
       } else if (activeMode === 'split') {
         // Split logic: take pages from first file according to range or split all
@@ -908,7 +895,13 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 {isExecuting
                   ? 'Đang xử lý tài liệu PDF...'
                   : files.length > 0
-                  ? `Bắt Đầu ${activeMode === 'merge' ? 'Gộp' : activeMode === 'split' ? 'Tách' : activeMode === 'compress' ? 'Nén' : 'Sắp Xếp'} (${totalPages} Trang)`
+                  ? activeMode === 'organize'
+                    ? `Bắt Đầu Sắp Xếp (${totalPages} Trang)`
+                    : activeMode === 'merge'
+                    ? (files.length === 1 ? `Lưu & Xuất File (${totalPages} Trang)` : `Bắt Đầu Gộp (${totalPages} Trang)`)
+                    : activeMode === 'split'
+                    ? `Bắt Đầu Tách (${totalPages} Trang)`
+                    : `Bắt Đầu Nén (${totalPages} Trang)`
                   : 'Tải tệp PDF để bắt đầu'}
               </span>
             </button>
@@ -1236,7 +1229,15 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                   className="h-12 w-full bg-brand-emerald-deep hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed text-surface-container-lowest font-title-sm text-title-sm font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-space-2 cursor-pointer"
                 >
                   <Zap size={22} />
-                  <span>Bắt Đầu Xử Lý & Chuẩn Bị Tải Về</span>
+                  <span>
+                    {isExecuting
+                      ? 'Đang xử lý...'
+                      : activeMode === 'organize'
+                      ? `Lưu & Tải File Đã Sắp Xếp (${totalPages} Trang)`
+                      : activeMode === 'merge'
+                      ? (files.length === 1 ? `Lưu & Tải File (${totalPages} Trang)` : `Bắt Đầu Gộp File (${totalPages} Trang)`)
+                      : 'Bắt Đầu Xử Lý & Chuẩn Bị Tải Về'}
+                  </span>
                 </button>
               )}
 
