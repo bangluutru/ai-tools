@@ -295,23 +295,41 @@ Các miniapp tiếp nhận tệp tin từ người dùng phải đảm bảo h�
 
 ---
 
-## 🚦 4. QUY TRÌNH KIỂM DUYỆT 4 CỔNG (4-GATE VERIFICATION PIPELINE)
+## 🚦 4. QUY TRÌNH KIỂM DUYỆT 5 CỔNG (5-GATE VERIFICATION PIPELINE)
 
-Trước khi một miniapp được chuyển từ trạng thái `in-development` sang `beta` và phát hành trên production, miniapp bắt buộc phải vượt qua 4 cổng kiểm duyệt:
+Trước khi một miniapp được chuyển từ trạng thái `in-development` sang `beta` và phát hành trên production, miniapp bắt buộc phải vượt qua 5 cổng kiểm duyệt khép kín:
 
 ```
 [Miniapp Code] 
       ↓
-[Gate 1: Contract & Architecture Audit]
+[Gate 0: Architectural Dependency & Boundary Audit (Đồ thị phụ thuộc Native)]
       ↓ (Pass)
-[Gate 2: Static Token & UI Linter]
+[Gate 1: Contract & Registry Audit (Hợp đồng & Đăng ký Hub)]
       ↓ (Pass)
-[Gate 3: Stability & Memory Leak Audit]
+[Gate 2: Static Token & UI Linter (Rà soát Design Token & A11y)]
       ↓ (Pass)
-[Gate 4: Automated Real-Browser Testing (Headless Chrome)]
+[Gate 3: Stability & Memory Leak Audit (Chống rò rỉ RAM & Namespace)]
+      ↓ (Pass)
+[Gate 4: Automated Real-Browser Testing (Headless Chrome & Dynamic Flow)]
       ↓ (Pass 100%)
 [Phê Duyệt Tích Hợp Chính Thức]
 ```
+
+### 🟣 CỔNG 0: ARCHITECTURAL DEPENDENCY & BOUNDARY AUDIT (KIẾN TRÚC PHỤ THUỘC & RANH GIỚI)
+Được tự động hóa qua engine native `ai-tools-graph` (`scripts/lib/ai-tools-graph/`):
+- [ ] **Bản đồ phụ thuộc 100% hợp lệ (Zero Broken Imports)**:
+  - Tất cả các lệnh `import` (tĩnh và dynamic lazy-loading) và alias `@ai-tools/core/*` bắt buộc phải trỏ đến đúng file thực tế trên đĩa. Tuyệt đối không có import hỏng.
+- [ ] **Cách ly ranh giới tên miền tuyệt đối (Zero Cross-Domain Imports)**:
+  - Miniapp A **nghiêm cấm** import trực tiếp logic, utils hoặc views nội bộ của Miniapp B (ví dụ: cấm import từ `packages/core/src/utils/accounting/` vào `invoice-studio`).
+  - Mọi tiện ích chia sẻ phải được chuẩn hóa tại thư mục gốc chung: `packages/core/src/utils/` (như `numbers.js`, `documentFiles.js`).
+- [ ] **Chống chu trình phụ thuộc (Zero Circular Dependencies)**:
+  - Cây import của miniapp không được phép chứa bất kỳ chu trình lặp nào (`A -> B -> C -> A`). Chu trình import sẽ phá vỡ cơ chế lazy-loading của Vite/Rollup và gây lỗi `undefined component`.
+- [ ] **Đánh giá vùng ảnh hưởng lan toả (Blast Radius Assessment & Risk Tiers)**:
+  - Trước khi sửa đổi file chia sẻ trong `@ai-tools/core`, bắt buộc chạy `npm run graph:impact -- <file>` để xác định cấp độ rủi ro:
+    - **`R0 (Isolated)`**: File nội bộ, không có consumer bên ngoài.
+    - **`R1 (Single Miniapp Local)`**: Chỉ ảnh hưởng 1 miniapp duy nhất.
+    - **`R2 (Shared Core Utility)`**: Ảnh hưởng 2-4 miniapp hoặc có chứa Verified Miniapp. Bắt buộc kiểm tra tương thích ngược.
+    - **`R3 (Critical Core Infrastructure)`**: Ảnh hưởng Hub Shell (`App.jsx`, `toolsRegistry.js`, `ToolContainer.jsx`) hoặc $\ge 5$ miniapp. Bắt buộc kích hoạt Escalation Protocol L3!
 
 ### 🔴 CỔNG 1: CONTRACT & REGISTRY AUDIT (KIẾN TRÚC & ĐĂNG KÝ)
 - [ ] **Khai báo Registry đầy đủ**: File `hub/src/config/toolsRegistry.js` phải có object định nghĩa hoàn chỉnh với các trường:
@@ -393,25 +411,23 @@ Trước khi một miniapp được chuyển từ trạng thái `in-development`
 Dự án đã tích hợp sẵn các lệnh CLI để lập trình viên tự kiểm duyệt nhanh:
 
 ```bash
-# 1. Rà soát tĩnh toàn bộ các miniapp theo Gate 1, 2, 3 (kèm kiểm tra class tương phản thấp)
-npm run audit:miniapps
+# 1. RÀ SOÁT KIẾN TRÚC & ĐỒ THỊ PHỤ THUỘC (GATE 0)
+npm run graph:audit                              # Rà soát toàn bộ đồ thị (chu trình, import chéo, import hỏng)
+npm run graph:impact -- <path/to/file>           # Đánh giá vùng ảnh hưởng (Blast Radius) trước khi sửa file
+npm run graph:diff                               # Đánh giá rủi ro của các thay đổi Git chưa commit
+npm run graph:map -- --tool=<tool-id>            # Xuất bản đồ quan hệ file dạng Mermaid Markdown
 
-# 2. Rà soát tĩnh một miniapp cụ thể
-node scripts/audit-miniapp.mjs <tool-id>
+# 2. RÀ SOÁT TĨNH 4 CỔNG MINIAPP (GATE 0, 1, 2, 3)
+npm run audit:miniapps                           # Rà soát toàn bộ miniapp trong repo
+node scripts/audit-miniapp.mjs <tool-id>         # Rà soát một miniapp cụ thể
 
-# 3. Chạy kiểm thử tự động trên trình duyệt thật (Gate 4 cơ bản)
-npm run test:browser
+# 3. KIỂM THỬ TRÌNH DUYỆT THẬT (GATE 4)
+npm run test:browser                             # Kiểm thử render cơ bản trên trình duyệt headless
+node scripts/verify-miniapp-browser.mjs --flow   # Kiểm thử luồng sâu & quét trợ năng động (Dynamic axe-core)
+npm run test:browser:tool -- <tool-id>           # Kiểm thử chuyên sâu cho riêng một miniapp
 
-# 4. Chạy kiểm thử trình duyệt toàn diện kèm luồng sâu & quét trợ năng động (Dynamic State A11y Audit)
-node scripts/verify-miniapp-browser.mjs --flow
-
-# 5. Chạy kiểm thử trình duyệt & trợ năng chuyên sâu cho riêng một miniapp đang phát triển
-npm run test:browser:tool -- <tool-id>
-# Hoặc:
-node scripts/verify-miniapp-browser.mjs --tool=<tool-id>
-
-# 6. Chạy toàn bộ unit test & contract tests (kèm kiểm tra toán học độ tương phản CSS tokens)
-npm test
+# 4. KIỂM THỬ ĐƠN VỊ & HỢP ĐỒNG (UNIT & CONTRACT TESTS)
+npm test                                         # Chạy toàn bộ test suites (60+ tests)
 ```
 
 ---
@@ -420,19 +436,21 @@ npm test
 
 | Hạng mục kiểm tra | Đạt chuẩn | Ghi chú |
 |---|:---:|---|
-| Đã khai báo đầy đủ 3 ngôn ngữ trong `toolsRegistry.js` | [ ] | VN, EN, JA |
-| Tên gọi miniapp chuẩn hóa 3 ngôn ngữ, không chứa từ cấm tiếp thị (`PRO`, `Master`, `Craft`...) | [ ] | Naming Convention & Zero-Fluff |
-| Không tự dựng Navbar/Header riêng, tuân thủ Navbar Contract từ `ToolContainer` | [ ] | Navbar Isolation |
-| Đã bọc trong `StandardToolLayout` hoặc `MiniAppLayout` | [ ] | Max 1240px |
-| 100% sử dụng CSS semantic tokens (không có `bg-white`, `text-black`) | [ ] | Tương thích cả Dark/Light |
-| Tỷ lệ tương phản chữ $\ge 4.5:1$ theo ma trận phối màu an toàn (không dùng `text-*-400`) | [ ] | Chuẩn WCAG 2.1 AA |
-| 100% dùng `lucide-react` (không có emoji làm icon trong nút bấm) | [ ] | Đảm bảo tính chuyên nghiệp |
-| 100% các nút icon và form slider/color controls có thuộc tính `aria-label` | [ ] | Accessible names |
-| 100% vùng cuộn nội bộ có `tabIndex={0} role="region" aria-label="..."` | [ ] | Keyboard navigation |
-| Không sử dụng class active tint mờ (`bg-*/20 text-*`) cho các nút bấm / tab được chọn | [ ] | Chống rớt tương phản Light Mode |
-| Mọi Blob URL đều có `URL.revokeObjectURL` | [ ] | Chống rò rỉ RAM |
-| LocalStorage có prefix `ai_tools_<id>_` | [ ] | Không đè dữ liệu miniapp khác |
-| Chạy `npm run audit:miniapps` trả về 0 lỗi | [ ] | Đạt Gate 1, 2, 3 |
-| Chạy `node scripts/verify-miniapp-browser.mjs --tool=<id>` đạt `✔ Init+Dyn` (0 vi phạm axe-core) | [ ] | Đạt Gate 4 Trợ năng |
-| Zero Horizontal Overflow trên iOS Safari (390px) và Android (393px) sau khi nạp tệp | [ ] | Không tràn ngang màn hình |
-| Chạy `npm test` 100% xanh (bao gồm kiểm tra toán học tương phản token) | [ ] | Toàn vẹn hệ thống |
+| **[Gate 0]** Chạy `npm run graph:audit` trả về 100% SẠCH | [ ] | 0 cross-domain, 0 circular, 0 broken imports |
+| **[Gate 0]** Nếu sửa file shared, đã chạy `npm run graph:impact` xác nhận rủi ro | [ ] | R0-R3 Blast Radius analysis |
+| **[Gate 1]** Đã khai báo đầy đủ 3 ngôn ngữ trong `toolsRegistry.js` | [ ] | VN, EN, JA |
+| **[Gate 1]** Tên gọi miniapp chuẩn hóa 3 ngôn ngữ, không chứa từ cấm tiếp thị (`PRO`, `Master`, `Craft`...) | [ ] | Naming Convention & Zero-Fluff |
+| **[Gate 1]** Không tự dựng Navbar/Header riêng, tuân thủ Navbar Contract từ `ToolContainer` | [ ] | Navbar Isolation |
+| **[Gate 2]** Đã bọc trong `StandardToolLayout` hoặc `MiniAppLayout` | [ ] | Max 1240px |
+| **[Gate 2]** 100% sử dụng CSS semantic tokens (không có `bg-white`, `text-black`) | [ ] | Tương thích cả Dark/Light |
+| **[Gate 2]** Tỷ lệ tương phản chữ $\ge 4.5:1$ theo ma trận phối màu an toàn (không dùng `text-*-400`) | [ ] | Chuẩn WCAG 2.1 AA |
+| **[Gate 2]** 100% dùng `lucide-react` (không có emoji làm icon trong nút bấm) | [ ] | Đảm bảo tính chuyên nghiệp |
+| **[Gate 2]** 100% các nút icon và form slider/color controls có thuộc tính `aria-label` | [ ] | Accessible names |
+| **[Gate 2]** 100% vùng cuộn nội bộ có `tabIndex={0} role="region" aria-label="..."` | [ ] | Keyboard navigation |
+| **[Gate 2]** Không sử dụng class active tint mờ (`bg-*/20 text-*`) cho các nút bấm / tab được chọn | [ ] | Chống rớt tương phản Light Mode |
+| **[Gate 3]** Mọi Blob URL đều có `URL.revokeObjectURL` | [ ] | Chống rò rỉ RAM |
+| **[Gate 3]** LocalStorage có prefix `ai_tools_<id>_` | [ ] | Không đè dữ liệu miniapp khác |
+| **[Audit]** Chạy `npm run audit:miniapps` trả về 0 lỗi (Đạt Gate 0, 1, 2, 3) | [ ] | Pass 100% 4 cổng tĩnh |
+| **[Gate 4]** Chạy `node scripts/verify-miniapp-browser.mjs --tool=<id>` đạt `✔ Init+Dyn` | [ ] | 0 vi phạm axe-core |
+| **[Gate 4]** Zero Horizontal Overflow trên iOS Safari (390px) và Android (393px) sau khi nạp tệp | [ ] | Không tràn ngang màn hình |
+| **[Tests]** Chạy `npm test` 100% xanh (bao gồm kiểm tra toán học tương phản token) | [ ] | Toàn vẹn hệ thống |

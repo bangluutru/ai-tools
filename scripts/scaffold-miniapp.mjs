@@ -678,8 +678,9 @@ async function run() {
     console.log(`\n${c.bold}${c.green}🎉 KHỞI TẠO MINIAPP THÀNH CÔNG!${c.reset}`);
     console.log(`\n${c.bold}Các bước tiếp theo:${c.reset}`);
     console.log(`  1. Mở code tại: ${c.cyan}packages/core/src/components/${pascalName}View.jsx${c.reset} để phát triển logic`);
-    console.log(`  2. Chạy rà soát tĩnh (Gate 1, 2, 3): ${c.cyan}node scripts/audit-miniapp.mjs ${toolId}${c.reset}`);
-    console.log(`  3. Kiểm thử trình duyệt thật & luồng sâu (Gate 4): ${c.cyan}node scripts/verify-miniapp-browser.mjs --tool=${toolId} --flow${c.reset}`);
+    console.log(`  2. Kiểm tra kiến trúc & ranh giới (Gate 0, 1, 2, 3): ${c.cyan}node scripts/audit-miniapp.mjs ${toolId}${c.reset}`);
+    console.log(`  3. Đánh giá tác động lan toả: ${c.cyan}npm run graph:impact -- packages/core/src/components/${pascalName}View.jsx${c.reset}`);
+    console.log(`  4. Kiểm thử trình duyệt thật & luồng sâu (Gate 4): ${c.cyan}node scripts/verify-miniapp-browser.mjs --tool=${toolId} --flow${c.reset}`);
     return;
   }
 
@@ -799,8 +800,9 @@ async function run() {
     console.log(`  1. Đọc cẩm nang đối chiếu quy tắc tại: ${c.cyan}docs/MINIAPP_DEV_GUIDE.md${c.reset}`);
     console.log(`  2. Di chuyển logic nghiệp vụ từ codebase ngoài vào: ${c.cyan}packages/core/src/components/${pascalName}View.jsx${c.reset}`);
     console.log(`  3. Áp dụng bảng tra cứu ${c.cyan}docs/DESIGN_SYSTEM_REFERENCE.md${c.reset} để thay thế các class màu/icon`);
-    console.log(`  4. Chạy kiểm tra tĩnh (Gate 1, 2, 3): ${c.cyan}node scripts/audit-miniapp.mjs ${toolId}${c.reset}`);
-    console.log(`  5. Kiểm thử trình duyệt thật & luồng sâu (Gate 4): ${c.cyan}node scripts/verify-miniapp-browser.mjs --tool=${toolId} --flow${c.reset}`);
+    console.log(`  4. Chạy kiểm tra kiến trúc & ranh giới (Gate 0, 1, 2, 3): ${c.cyan}node scripts/audit-miniapp.mjs ${toolId}${c.reset}`);
+    console.log(`  5. Đánh giá tác động lan toả: ${c.cyan}npm run graph:impact -- packages/core/src/components/${pascalName}View.jsx${c.reset}`);
+    console.log(`  6. Kiểm thử trình duyệt thật & luồng sâu (Gate 4): ${c.cyan}node scripts/verify-miniapp-browser.mjs --tool=${toolId} --flow${c.reset}`);
   }
 }
 

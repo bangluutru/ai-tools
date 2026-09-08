@@ -32,15 +32,21 @@ Khi phát triển, sửa lỗi hoặc refactor một miniapp hay tính năng b�
 - **NGHIÊM CẤM** tự ý sửa đổi code, layout, logic, hoặc dependencies của 11 miniapp trên khi user đang yêu cầu làm task khác.
 - Chỉ can thiệp vào code của Verified Miniapp khi User **nêu rõ tên hoặc ID** của miniapp đó trong yêu cầu hiện tại.
 
-### Quy tắc 2: Cấm Cross-Domain Imports
+### Quy tắc 2: Cấm Cross-Domain Imports (Được kiểm tra tự động qua Gate 0)
 - Không import trực tiếp file logic hoặc view của một miniapp vào miniapp khác.
 - Ví dụ: `invoice-studio` KHÔNG ĐƯỢC import từ `packages/core/src/utils/accounting/`.
 - Nếu có tiện ích chung thuần túy (ví dụ xử lý chuỗi số, file I/O), hàm đó PHẢI nằm tại thư mục gốc chung: `packages/core/src/utils/numbers.js`, `packages/core/src/utils/documentFiles.js`.
+- *Quy tắc này được kiểm tra tự động 100% bằng lệnh `npm run graph:audit` và Cổng Gate 0 trong `npm run audit:miniapps`.*
 
-### Quy tắc 3: Bảo Toàn Tương Thích Ngược Tuyệt Đối Khi Sửa Shared Utilities
-- Khi buộc phải sửa đổi một shared utility trong `packages/core/src/utils/`, phải đảm bảo:
-  1. Signature, input/output contract của hàm cũ không thay đổi.
-  2. Toàn bộ 200+ unit test của toàn monorepo (`npm test`) và audit kiểm duyệt (`npm run audit:miniapps`) phải PASS 100% trước khi kết thúc task.
+### Quy tắc 3: Bắt Buộc Đánh Giá Tác Động (Blast Radius) Trước Khi Sửa Shared Utilities
+- Trước khi can thiệp vào bất kỳ file nào trong `packages/core/src/utils/` hoặc `packages/core/src/components/`, AI Agent/Lập trình viên **BẮT BUỘC** phải chạy:
+  ```bash
+  npm run graph:impact -- <đường_dẫn_file>
+  ```
+- Nếu kết quả hiển thị mức độ rủi ro **`R2`** hoặc **`R3`** (ảnh hưởng đến $\ge 1$ Verified Miniapp):
+  1. Signature, input/output contract của hàm cũ bắt buộc phải giữ nguyên tính tương thích ngược 100%.
+  2. Bắt buộc kiểm tra `npm run graph:diff` trước khi commit để xác nhận phạm vi thay đổi không tràn ngoài tầm kiểm soát.
+  3. Toàn bộ unit tests (`npm test`) và audit kiểm duyệt 5 cổng (`npm run audit:miniapps`) phải PASS 100% trước khi hoàn tất task.
 
 ### Quy tắc 4: Mức Độ Leo Thang L3 (Escalation Level L3)
-- Nếu việc thực hiện một yêu cầu mới đòi hỏi phải sửa đổi cấu trúc hoặc logic của bất kỳ Verified Miniapp nào, AI Agent phải **DỪNG LẠI**, giải thích lý do cho User, và chỉ tiếp tục sau khi User phê duyệt rõ ràng.
+- Nếu việc thực hiện một yêu cầu mới đòi hỏi phải sửa đổi cấu trúc hoặc logic của bất kỳ Verified Miniapp nào (hoặc lệnh `graph:impact` / `graph:diff` cảnh báo R3 có nguy cơ phá vỡ Verified Miniapps), AI Agent phải **DỪNG LẠI**, giải thích bảng phân tích tác động cho User, và chỉ tiếp tục sau khi User phê duyệt rõ ràng.

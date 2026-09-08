@@ -13,7 +13,7 @@
  * và mọi trường thiếu đều được đánh dấu thay vì suy diễn.
  */
 
-import { parseLocalizedNumber } from '../accounting/reconcile.js';
+import { parseLocalizedNumber } from '../numbers.js';
 import { parseVietnameseAmountWords } from './amountWords.js';
 
 export const INVOICE_RULE_VERSION = 'tt91-2026-invoice-v1';

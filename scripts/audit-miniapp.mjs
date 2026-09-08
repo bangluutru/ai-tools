@@ -48,9 +48,11 @@ async function loadRegistry() {
   };
 }
 
-// Find all source files related to a miniapp
-function getToolSourceFiles(toolId) {
-  const files = [];
+import { buildGraph } from './lib/ai-tools-graph/index.mjs';
+
+// Find all source files related to a miniapp (enhanced with Dependency Graph)
+function getToolSourceFiles(toolId, graph = null) {
+  const files = new Set();
 
   // 1. Check hub/src/tools/<id>
   const activeToolDir = path.join(hubDir, 'src/tools', toolId);
@@ -61,34 +63,103 @@ function getToolSourceFiles(toolId) {
     const list = fs.readdirSync(toolDir);
     for (const f of list) {
       if (f.endsWith('.jsx') || f.endsWith('.js')) {
-        files.push(path.join(toolDir, f));
+        files.add(path.join(toolDir, f));
       }
     }
   }
 
-  // 2. Check if wrapper delegates to @ai-tools/core/components/
-  for (const filePath of [...files]) {
-    try {
-      const content = fs.readFileSync(filePath, 'utf8');
-      const coreImports = content.matchAll(/from\s+['"]@ai-tools\/core\/components\/([^'"]+)['"]/g);
-      for (const m of coreImports) {
-        let subPath = m[1];
-        if (!subPath.endsWith('.jsx') && !subPath.endsWith('.js')) {
-          if (fs.existsSync(path.join(coreDir, 'src/components', `${subPath}.jsx`))) {
-            subPath = `${subPath}.jsx`;
-          } else if (fs.existsSync(path.join(coreDir, 'src/components', `${subPath}.js`))) {
-            subPath = `${subPath}.js`;
+  // 2. Query graph if available to find core views and sub-components
+  if (graph) {
+    for (const [fPath, meta] of graph.nodes.entries()) {
+      if (meta.toolId === toolId) {
+        files.add(fPath);
+      }
+    }
+  } else {
+    // Fallback: Check if wrapper delegates to @ai-tools/core/components/
+    for (const filePath of [...files]) {
+      try {
+        const content = fs.readFileSync(filePath, 'utf8');
+        const coreImports = content.matchAll(/from\s+['"]@ai-tools\/core\/components\/([^'"]+)['"]/g);
+        for (const m of coreImports) {
+          let subPath = m[1];
+          if (!subPath.endsWith('.jsx') && !subPath.endsWith('.js')) {
+            if (fs.existsSync(path.join(coreDir, 'src/components', `${subPath}.jsx`))) {
+              subPath = `${subPath}.jsx`;
+            } else if (fs.existsSync(path.join(coreDir, 'src/components', `${subPath}.js`))) {
+              subPath = `${subPath}.js`;
+            }
+          }
+          const resolved = path.join(coreDir, 'src/components', subPath);
+          if (fs.existsSync(resolved)) {
+            files.add(resolved);
           }
         }
-        const resolved = path.join(coreDir, 'src/components', subPath);
-        if (fs.existsSync(resolved) && !files.includes(resolved)) {
-          files.push(resolved);
-        }
-      }
-    } catch {}
+      } catch {}
+    }
   }
 
-  return { toolDir, files };
+  return { toolDir, files: Array.from(files) };
+}
+
+// Gate 0: Architectural Dependency & Boundary Audit
+function auditGate0(tool, graph, files) {
+  const issues = [];
+  const warnings = [];
+
+  const auditRes = graph.audit();
+
+  // 1. Check Domain Boundary Violations
+  for (const v of auditRes.boundaryViolations) {
+    if (files.includes(v.from)) {
+      issues.push(`Gate 0: ${v.message} (Line ${v.line})`);
+    }
+  }
+
+  // 2. Check Circular Dependencies
+  for (const cycle of auditRes.cycles) {
+    const cycleHasToolFile = cycle.some((f) => files.some((tf) => tf.replace(/\\/g, '/').endsWith(f)));
+    if (cycleHasToolFile) {
+      issues.push(`Gate 0: Phát hiện chu trình phụ thuộc (Circular Dependency): ${cycle.join(' ➔ ')}`);
+    }
+  }
+
+  // 3. Check Broken / Unresolved Imports
+  for (const m of auditRes.missingImports) {
+    if (files.includes(m.from)) {
+      issues.push(`Gate 0: Import hỏng / không tìm thấy file: [Line ${m.line}] import "${m.source}"`);
+    }
+  }
+
+  // 4. Dependency Footprint Metrics
+  let coreUtilsCount = 0;
+  let coreViewsCount = 0;
+  const externalPkgs = new Set();
+
+  for (const f of files) {
+    const deps = graph.forwardMap.get(f) || new Set();
+    for (const d of deps) {
+      const dNode = graph.nodes.get(d);
+      if (dNode) {
+        if (dNode.zone === 'CORE_SHARED_UTIL' || dNode.zone === 'CORE_DOMAIN_UTIL') coreUtilsCount++;
+        if (dNode.zone === 'CORE_VIEW') coreViewsCount++;
+      }
+    }
+    const ext = graph.externalDeps.get(f) || new Set();
+    for (const p of ext) externalPkgs.add(p);
+  }
+
+  return {
+    name: 'Gate 0: Architectural Dependency & Boundary',
+    passed: issues.length === 0,
+    issues,
+    warnings,
+    metrics: {
+      coreUtilsCount,
+      coreViewsCount,
+      externalPkgsCount: externalPkgs.size,
+    },
+  };
 }
 
 // Gate 1: Contract & Architecture Audit
@@ -358,8 +429,12 @@ async function main() {
   const isAll = args.includes('--all') || args.length === 0;
   const targetId = !isAll ? args[0] : null;
 
+  const t0 = performance.now();
+  const graph = buildGraph(rootDir);
+  const tGraph = (performance.now() - t0).toFixed(1);
+
   console.log(`\n${colors.bold}${colors.cyan}=== 🛡️ MINIAPP ARCHITECTURE & INTEGRATION AUDIT (MAIS) ===${colors.reset}`);
-  console.log(`${colors.gray}Tiêu chuẩn kiểm duyệt 3 cổng tĩnh (Gate 1, Gate 2, Gate 3)${colors.reset}\n`);
+  console.log(`${colors.gray}Tiêu chuẩn kiểm duyệt 4 cổng tĩnh (Gate 0, 1, 2, 3) — Đồ thị khởi tạo trong ${tGraph}ms${colors.reset}\n`);
 
   const registry = await loadRegistry();
   const toolsToAudit = isAll
@@ -376,16 +451,17 @@ async function main() {
   const summaryRows = [];
 
   for (const tool of toolsToAudit) {
-    const { files } = getToolSourceFiles(tool.id);
+    const { files } = getToolSourceFiles(tool.id, graph);
+    const g0 = auditGate0(tool, graph, files);
     const g1 = auditGate1(tool, registry);
     const g2 = auditGate2(tool, files);
     const g3 = auditGate3(tool, files);
 
     const isToolActive = tool.readiness !== 'in-development';
-    const toolPassed = g1.passed && g2.passed && g3.passed;
+    const toolPassed = g0.passed && g1.passed && g2.passed && g3.passed;
     if (!toolPassed && isToolActive) totalFailed++;
 
-    const toolWarningsCount = g1.warnings.length + g2.warnings.length + g3.warnings.length;
+    const toolWarningsCount = g0.warnings.length + g1.warnings.length + g2.warnings.length + g3.warnings.length;
     totalWarnings += toolWarningsCount;
 
     let statusBadge;
@@ -399,32 +475,34 @@ async function main() {
       id: tool.id,
       name: tool.name_vn || tool.id,
       readiness: tool.readiness,
+      filesCount: files.length,
+      g0: g0.passed ? '✔' : '✖',
       g1: g1.passed ? '✔' : '✖',
       g2: g2.passed ? '✔' : '✖',
       g3: g3.passed ? '✔' : '✖',
       status: statusBadge,
-      issues: [...g1.issues, ...g2.issues, ...g3.issues],
-      warnings: [...g1.warnings, ...g2.warnings, ...g3.warnings],
+      issues: [...g0.issues, ...g1.issues, ...g2.issues, ...g3.issues],
+      warnings: [...g0.warnings, ...g1.warnings, ...g2.warnings, ...g3.warnings],
     });
   }
 
-  // Print Summary Table
-  console.log('┌───────────────────────┬──────────────┬────────┬────┬────┬────┬──────────────┐');
-  console.log('│ Miniapp ID            │ Trạng thái   │ Files  │ G1 │ G2 │ G3 │ Kết quả      │');
-  console.log('├───────────────────────┼──────────────┼────────┼────┼────┼────┼──────────────┤');
+  // Print Summary Table (with G0 column)
+  console.log('┌───────────────────────┬──────────────┬────────┬────┬────┬────┬────┬──────────────┐');
+  console.log('│ Miniapp ID            │ Trạng thái   │ Files  │ G0 │ G1 │ G2 │ G3 │ Kết quả      │');
+  console.log('├───────────────────────┼──────────────┼────────┼────┼────┼────┼────┼──────────────┤');
 
   for (const row of summaryRows) {
-    const { files } = getToolSourceFiles(row.id);
     const idCol = row.id.padEnd(21).slice(0, 21);
     const readinessCol = row.readiness.padEnd(12).slice(0, 12);
-    const filesCol = String(files.length).padStart(6);
+    const filesCol = String(row.filesCount).padStart(6);
+    const g0Col = row.g0 === '✔' ? `${colors.green}PASS${colors.reset}` : `${colors.red}FAIL${colors.reset}`;
     const g1Col = row.g1 === '✔' ? `${colors.green}PASS${colors.reset}` : `${colors.red}FAIL${colors.reset}`;
     const g2Col = row.g2 === '✔' ? `${colors.green}PASS${colors.reset}` : `${colors.red}FAIL${colors.reset}`;
     const g3Col = row.g3 === '✔' ? `${colors.green}PASS${colors.reset}` : `${colors.red}FAIL${colors.reset}`;
 
-    console.log(`│ ${idCol} │ ${readinessCol} │ ${filesCol} │ ${g1Col} │ ${g2Col} │ ${g3Col} │ ${row.status.padEnd(21)}│`);
+    console.log(`│ ${idCol} │ ${readinessCol} │ ${filesCol} │ ${g0Col} │ ${g1Col} │ ${g2Col} │ ${g3Col} │ ${row.status.padEnd(21)}│`);
   }
-  console.log('└───────────────────────┴──────────────┴────────┴────┴────┴────┴──────────────┘');
+  console.log('└───────────────────────┴──────────────┴────────┴────┴────┴────┴────┴──────────────┘');
 
   // Print Detailed Issues / Warnings if requested or on failure
   let hasDetails = false;
