@@ -50,6 +50,16 @@ test('pdf-toolkit modes has Merge note for Gộp PDF and proper mode labels', ()
   assert.doesNotMatch(content, /sizeReductionMultiplier/);
 });
 
+test('pdf-toolkit organize mode supports page reordering, tactile buttons and custom order execution', () => {
+  const pdfToolkitPath = path.join(repoRoot, 'hub/src/tools/pdf-toolkit/PdfToolkitTool.jsx');
+  const content = fs.readFileSync(pdfToolkitPath, 'utf8');
+  assert.match(content, /id:\s*['"]organize['"],\s*label:\s*['"]Sắp xếp['"],\s*sub:\s*['"]Organize['"]/);
+  assert.match(content, /handleMovePage/);
+  assert.match(content, /handleResetPageOrder/);
+  assert.match(content, /handlePageDrop/);
+  assert.match(content, /activeMode === ['"]organize['"]/);
+});
+
 test('ToolContainer header matches Navbar h-16 style with theme toggle and language selector', () => {
   const containerPath = path.join(repoRoot, 'hub/src/components/ToolContainer.jsx');
   const content = fs.readFileSync(containerPath, 'utf8');

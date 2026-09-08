@@ -26,7 +26,10 @@ import {
   ArrowDownUp,
   ZoomIn,
   X,
-  GripVertical
+  GripVertical,
+  ArrowLeft,
+  ArrowRight,
+  Undo2
 } from 'lucide-react';
 import {
   PDF_MERGE_LIMITS,
@@ -81,6 +84,8 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
   const [outputResult, setOutputResult] = useState(null); // { url, name, size, pageCount, originalSize }
   const [outputFileName, setOutputFileName] = useState('Tai_Lieu_Tong_Hop_2025.pdf');
   const [isDragging, setIsDragging] = useState(false);
+  const [draggedPage, setDraggedPage] = useState(null); // { fileId, index }
+  const [dragOverTarget, setDragOverTarget] = useState(null); // { fileId, index }
 
   // Settings
   const [keepBookmarks, setKeepBookmarks] = useState(true);
@@ -121,35 +126,34 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
-  // Render quick thumbnail for first few pages using pdfjs
+  // Render thumbnails for all pages (canvas preview for first 30 pages, placeholder for remainder)
   const renderThumbnails = async (pdfDoc, numPages) => {
     const pages = [];
-    const maxPreview = Math.min(numPages, 12);
-    for (let i = 1; i <= maxPreview; i++) {
-      try {
-        const page = await pdfDoc.getPage(i);
-        const viewport = page.getViewport({ scale: 0.3 });
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        pages.push({
-          pageIndex: i - 1,
-          pageNumber: i,
-          rotation: 0,
-          thumbnail: canvas.toDataURL('image/jpeg', 0.6),
-          isDeleted: false,
-        });
-      } catch {
-        pages.push({
-          pageIndex: i - 1,
-          pageNumber: i,
-          rotation: 0,
-          thumbnail: null,
-          isDeleted: false,
-        });
+    const maxPreview = Math.min(numPages, 30);
+    for (let i = 1; i <= numPages; i++) {
+      let thumbnail = null;
+      if (i <= maxPreview) {
+        try {
+          const page = await pdfDoc.getPage(i);
+          const viewport = page.getViewport({ scale: 0.3 });
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          thumbnail = canvas.toDataURL('image/jpeg', 0.6);
+        } catch {
+          thumbnail = null;
+        }
       }
+      pages.push({
+        id: `page-${i}-${Math.random().toString(36).slice(2, 8)}`,
+        pageIndex: i - 1,
+        pageNumber: i,
+        rotation: 0,
+        thumbnail,
+        isDeleted: false,
+      });
     }
     return pages;
   };
@@ -188,6 +192,11 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
           arrayBuffer,
           pages,
         });
+
+        if (files.length === 0 && newItems.length === 1) {
+          const rawName = file.name.replace(/\.[^/.]+$/, '');
+          setOutputFileName(activeMode === 'organize' ? `${rawName}_Organized.pdf` : `${rawName}_Processed.pdf`);
+        }
       } catch (err) {
         setNotice(`Không thể đọc file ${file.name}: ${err.message}`);
       }
@@ -244,6 +253,57 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
         return { ...f, pages: updatedPages };
       })
     );
+  };
+
+  const handleRestorePage = (fileId, pageIndex) => {
+    setFiles((prev) =>
+      prev.map((f) => {
+        if (f.id !== fileId || !f.pages) return f;
+        const updatedPages = f.pages.map((p) => {
+          if (p.pageIndex !== pageIndex) return p;
+          return { ...p, isDeleted: false };
+        });
+        return { ...f, pages: updatedPages };
+      })
+    );
+  };
+
+  // Page reordering handlers
+  const handleMovePage = (fileId, fromIndex, toIndex) => {
+    setFiles((prev) =>
+      prev.map((f) => {
+        if (f.id !== fileId || !f.pages) return f;
+        if (toIndex < 0 || toIndex >= f.pages.length || fromIndex === toIndex) return f;
+        const newPages = [...f.pages];
+        const [movedItem] = newPages.splice(fromIndex, 1);
+        newPages.splice(toIndex, 0, movedItem);
+        return { ...f, pages: newPages };
+      })
+    );
+  };
+
+  const handleResetPageOrder = (fileId) => {
+    setFiles((prev) =>
+      prev.map((f) => {
+        if (f.id !== fileId || !f.pages) return f;
+        const sortedPages = [...f.pages].sort((a, b) => a.pageIndex - b.pageIndex);
+        return { ...f, pages: sortedPages };
+      })
+    );
+  };
+
+  const handlePageDrop = (targetFileId, targetIndex) => {
+    if (!draggedPage) return;
+    if (draggedPage.fileId === targetFileId) {
+      handleMovePage(targetFileId, draggedPage.index, targetIndex);
+    }
+    setDraggedPage(null);
+    setDragOverTarget(null);
+  };
+
+  const handlePageDragEnd = () => {
+    setDraggedPage(null);
+    setDragOverTarget(null);
   };
 
   // Batch actions
@@ -346,7 +406,23 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
           }
         }
         resultingPageCount = mergedDoc.getPageCount() || totalPages;
-      } else if (activeMode === 'merge' || activeMode === 'organize') {
+      } else if (activeMode === 'organize') {
+        for (const f of files) {
+          const srcDoc = await PDFDocument.load(f.arrayBuffer);
+          const activePages = (f.pages || []).filter((p) => !p.isDeleted);
+          for (const pageConfig of activePages) {
+            const originalIndex = pageConfig.pageIndex;
+            const [copiedPage] = await mergedDoc.copyPages(srcDoc, [originalIndex]);
+            if (pageConfig.rotation) {
+              const currentRot = copiedPage.getRotation().angle || 0;
+              copiedPage.setRotation(degrees(currentRot + pageConfig.rotation));
+            }
+            mergedDoc.addPage(copiedPage);
+          }
+        }
+        pdfBytes = await mergedDoc.save({ useObjectStreams: true });
+        resultingPageCount = mergedDoc.getPageCount();
+      } else if (activeMode === 'merge') {
         for (const f of files) {
           const srcDoc = await PDFDocument.load(f.arrayBuffer);
           const pageIndices = srcDoc.getPageIndices();
@@ -634,7 +710,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
             </div>
 
             {/* MODE SELECTOR TABS */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-2 bg-surface-subtle p-1 rounded-lg border border-border-subtle">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-2 bg-surface-subtle p-1 rounded-lg border border-border-subtle">
               {MODES.map((m) => {
                 const isActive = activeMode === m.id;
                 return (
@@ -774,6 +850,35 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 </div>
               )}
 
+              {activeMode === 'organize' && (
+                <div className="space-y-space-3">
+                  <div className="p-space-3 bg-surface-subtle border border-border-subtle rounded-lg space-y-space-2">
+                    <div className="flex items-center gap-space-2 text-primary font-semibold text-body-sm">
+                      <Layers size={16} />
+                      <span>Hướng dẫn sắp xếp trang</span>
+                    </div>
+                    <ul className="text-body-sm text-on-surface-variant space-y-1 text-[13px] leading-relaxed">
+                      <li>• <strong>Kéo thả</strong> thẻ trang chuột để đổi vị trí trực quan.</li>
+                      <li>• Hoặc bấm nút mũi tên <strong>⬅️ ➡️</strong> trên từng thẻ trang (thuận tiện trên điện thoại/cảm ứng).</li>
+                      <li>• <strong>Huy hiệu xanh (#01, #02...)</strong> là thứ tự trang mới sẽ xuất bản.</li>
+                      <li>• Có thể xoay 90° hoặc xóa bớt các trang không cần thiết.</li>
+                    </ul>
+                  </div>
+
+                  <label className="flex items-center justify-between p-space-2 bg-surface-subtle border border-border-subtle rounded-lg cursor-pointer">
+                    <span className="font-body-md text-body-md text-on-surface">
+                      Tự động chuẩn hóa khổ giấy về A4 đồng nhất
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={normalizeA4}
+                      onChange={(e) => setNormalizeA4(e.target.checked)}
+                      className="w-4 h-4 rounded bg-surface-subtle text-primary-container accent-primary-container"
+                    />
+                  </label>
+                </div>
+              )}
+
               {/* OUTPUT FILE NAME */}
               <div className="space-y-space-1 pt-space-1">
                 <label className="font-label-sm text-label-sm text-outline uppercase tracking-wider">
@@ -834,7 +939,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 <button
                   type="button"
                   onClick={handleRotateAll}
-                  className="px-space-2 py-space-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-sm text-label-sm rounded flex items-center gap-1 transition-colors"
+                  className="px-space-2 py-space-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-sm text-label-sm rounded flex items-center gap-1 transition-colors cursor-pointer"
                   title="Xoay toàn bộ các trang 90 độ"
                 >
                   <RotateCw size={14} />
@@ -843,13 +948,30 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 <button
                   type="button"
                   onClick={handleReversePages}
-                  className="px-space-2 py-space-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-sm text-label-sm rounded flex items-center gap-1 transition-colors"
+                  className="px-space-2 py-space-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-sm text-label-sm rounded flex items-center gap-1 transition-colors cursor-pointer"
                   title="Đảo ngược thứ tự trang"
                 >
                   <ArrowDownUp size={14} />
                   Đảo thứ tự
                 </button>
+                {activeMode === 'organize' && files.some((f) => f.pages?.length > 1) && (
+                  <button
+                    type="button"
+                    onClick={() => files.forEach((f) => handleResetPageOrder(f.id))}
+                    className="px-space-2 py-space-1 bg-surface-container hover:bg-surface-container-high border border-border-subtle text-on-surface font-label-sm text-label-sm rounded flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Khôi phục thứ tự các trang về ban đầu"
+                  >
+                    <Undo2 size={14} />
+                    Thứ tự gốc
+                  </button>
+                )}
               </div>
+              {activeMode === 'organize' && (
+                <span className="text-[11px] font-label-sm text-primary flex items-center gap-1">
+                  <Layers size={13} />
+                  Kéo thả hoặc dùng ⬅️ ➡️ để đổi vị trí
+                </span>
+              )}
             </div>
 
             {/* THUMBNAILS GRID */}
@@ -859,58 +981,169 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                   <div key={file.id} className="space-y-space-2">
                     <div className="flex items-center justify-between text-xs text-outline font-label-sm px-1">
                       <span className="truncate max-w-[280px] font-semibold text-on-surface">{file.name}</span>
-                      <span>{file.pages?.filter((p) => !p.isDeleted).length} trang</span>
+                      <div className="flex items-center gap-2">
+                        <span>{file.pages?.filter((p) => !p.isDeleted).length} trang hoạt động</span>
+                        {activeMode === 'organize' && (
+                          <button
+                            type="button"
+                            onClick={() => handleResetPageOrder(file.id)}
+                            className="text-primary hover:underline cursor-pointer text-[11px]"
+                            title="Khôi phục thứ tự gốc của tệp này"
+                          >
+                            Đặt lại
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-space-4">
-                      {file.pages?.map((page) => {
-                        if (page.isDeleted) return null;
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-space-4">
+                      {file.pages?.map((page, pageIdx) => {
+                        const isDeleted = page.isDeleted;
+                        const isBeingDragged = draggedPage?.fileId === file.id && draggedPage?.index === pageIdx;
+                        const isDropTarget = dragOverTarget?.fileId === file.id && dragOverTarget?.index === pageIdx;
+
                         return (
                           <div
-                            key={page.pageIndex}
-                            className="group bg-surface-subtle border border-border-subtle rounded-lg p-space-2 flex flex-col gap-space-2 relative hover:bg-surface-container-high transition-all shadow-sm"
+                            key={page.id || `${page.pageIndex}-${pageIdx}`}
+                            draggable={!isDeleted}
+                            onDragStart={(e) => {
+                              if (isDeleted) return;
+                              setDraggedPage({ fileId: file.id, index: pageIdx });
+                              e.dataTransfer.effectAllowed = 'move';
+                              e.dataTransfer.setData('text/plain', String(pageIdx));
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                              if (dragOverTarget?.index !== pageIdx || dragOverTarget?.fileId !== file.id) {
+                                setDragOverTarget({ fileId: file.id, index: pageIdx });
+                              }
+                            }}
+                            onDragLeave={() => {
+                              if (dragOverTarget?.index === pageIdx && dragOverTarget?.fileId === file.id) {
+                                setDragOverTarget(null);
+                              }
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              handlePageDrop(file.id, pageIdx);
+                            }}
+                            onDragEnd={handlePageDragEnd}
+                            className={`group bg-surface-subtle border rounded-lg p-space-2 flex flex-col gap-space-2 relative transition-all shadow-sm ${
+                              isBeingDragged
+                                ? 'opacity-40 scale-95 border-dashed border-primary-container'
+                                : isDropTarget
+                                ? 'border-primary-container ring-2 ring-primary-container/40 bg-primary-container/10 scale-[1.02]'
+                                : 'border-border-subtle hover:bg-surface-container-high'
+                            } ${isDeleted ? 'opacity-50 grayscale' : ''}`}
                           >
                             <div className="aspect-[3/4] bg-surface-light rounded p-space-2 text-surface-container-lowest flex flex-col justify-between overflow-hidden relative shadow-inner">
                               {page.thumbnail ? (
                                 <img
                                   src={page.thumbnail}
                                   alt={`Page ${page.pageNumber}`}
-                                  className="w-full h-full object-contain transition-transform"
+                                  draggable={false}
+                                  className="w-full h-full object-contain transition-transform select-none pointer-events-none"
                                   style={{ transform: `rotate(${page.rotation}deg)` }}
                                 />
                               ) : (
-                                <div className="h-full flex flex-col justify-center items-center text-slate-400">
+                                <div className="h-full flex flex-col justify-center items-center text-outline select-none">
                                   <FileText size={28} />
                                   <span className="text-[10px] mt-1">Trang {page.pageNumber}</span>
                                 </div>
                               )}
-                              <span className="absolute top-1 left-1 px-1 py-0.5 bg-surface-canvas/80 text-on-surface font-label-sm text-[9px] rounded">
-                                P.{page.pageNumber < 10 ? `0${page.pageNumber}` : page.pageNumber}
+
+                              {/* Top-left: New order position badge */}
+                              <span
+                                className="absolute top-1 left-1 px-1.5 py-0.5 bg-primary-container text-on-primary-container font-label-sm text-[10px] font-bold rounded shadow-sm flex items-center gap-0.5"
+                                title={`Thứ tự trang mới: Vị trí #${pageIdx + 1}`}
+                              >
+                                #{pageIdx + 1 < 10 ? `0${pageIdx + 1}` : pageIdx + 1}
                               </span>
+
+                              {/* Top-right: Drag handle indicator */}
+                              {!isDeleted && (
+                                <span
+                                  className="absolute top-1 right-1 p-0.5 bg-surface-canvas/70 hover:bg-surface-canvas text-on-surface rounded cursor-grab active:cursor-grabbing transition-colors"
+                                  title="Kéo thả để đổi vị trí"
+                                >
+                                  <GripVertical size={13} />
+                                </span>
+                              )}
+
+                              {/* Deleted indicator overlay */}
+                              {isDeleted && (
+                                <div className="absolute inset-0 bg-surface-canvas/85 flex flex-col items-center justify-center gap-1 p-2 text-center">
+                                  <span className="text-[11px] font-semibold text-error">Đã loại bỏ</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRestorePage(file.id, page.pageIndex)}
+                                    className="px-2 py-0.5 bg-primary-container text-on-primary-container text-[10px] font-medium rounded hover:bg-brand-cyan-bright transition-colors cursor-pointer"
+                                  >
+                                    Khôi phục
+                                  </button>
+                                </div>
+                              )}
                             </div>
 
-                            <div className="flex items-center justify-between px-1">
-                              <span className="font-label-sm text-label-sm text-outline">
-                                Trang {page.pageNumber}
+                            {/* Card Footer: Original Page Info & Control Buttons */}
+                            <div className="flex items-center justify-between px-1 gap-1">
+                              <span
+                                className="font-label-sm text-[11px] text-outline truncate"
+                                title={`Trang gốc: P.${page.pageNumber}`}
+                              >
+                                Gốc: P.{page.pageNumber < 10 ? `0${page.pageNumber}` : page.pageNumber}
                               </span>
-                              <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRotatePage(file.id, page.pageIndex)}
-                                  className="p-0.5 hover:text-primary transition-colors"
-                                  title="Xoay 90 độ"
-                                >
-                                  <RotateCw size={14} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeletePage(file.id, page.pageIndex)}
-                                  className="p-0.5 hover:text-error transition-colors"
-                                  title="Xóa trang"
-                                >
-                                  <X size={14} />
-                                </button>
-                              </div>
+
+                              {!isDeleted && (
+                                <div className="flex items-center gap-0.5 opacity-90 group-hover:opacity-100 transition-opacity">
+                                  {/* Move Previous (Left) Button */}
+                                  <button
+                                    type="button"
+                                    disabled={pageIdx === 0}
+                                    onClick={() => handleMovePage(file.id, pageIdx, pageIdx - 1)}
+                                    className="p-1 hover:text-primary disabled:opacity-30 disabled:hover:text-inherit transition-colors cursor-pointer"
+                                    title="Di chuyển sang trước (⬅️)"
+                                    aria-label="Di chuyển sang trước"
+                                  >
+                                    <ArrowLeft size={13} />
+                                  </button>
+
+                                  {/* Move Next (Right) Button */}
+                                  <button
+                                    type="button"
+                                    disabled={pageIdx === file.pages.length - 1}
+                                    onClick={() => handleMovePage(file.id, pageIdx, pageIdx + 1)}
+                                    className="p-1 hover:text-primary disabled:opacity-30 disabled:hover:text-inherit transition-colors cursor-pointer"
+                                    title="Di chuyển sang sau (➡️)"
+                                    aria-label="Di chuyển sang sau"
+                                  >
+                                    <ArrowRight size={13} />
+                                  </button>
+
+                                  {/* Rotate Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRotatePage(file.id, page.pageIndex)}
+                                    className="p-1 hover:text-primary transition-colors cursor-pointer"
+                                    title="Xoay 90 độ"
+                                    aria-label="Xoay trang 90 độ"
+                                  >
+                                    <RotateCw size={13} />
+                                  </button>
+
+                                  {/* Delete / Exclude Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeletePage(file.id, page.pageIndex)}
+                                    className="p-1 hover:text-error transition-colors cursor-pointer"
+                                    title="Loại bỏ trang này khỏi file xuất"
+                                    aria-label="Loại bỏ trang"
+                                  >
+                                    <X size={13} />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
