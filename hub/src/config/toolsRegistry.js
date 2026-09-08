@@ -33,6 +33,11 @@ const toolGovernance = {
     verified: true,
     verifiedAt: '2026-09-07'
   },
+  'screen-recorder': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility'
+  },
   'barcode-qr': {
     readiness: 'beta',
     processing: 'browser',
@@ -214,6 +219,21 @@ const toolDefinitions = [
     badge: 'CLIPBOARD',
     popular: true,
     tags: ['screenshot', 'capture', 'chụp màn hình', 'clipboard', 'snip', 'annotate', 'mũi tên', 'arrow', 'blur']
+  },
+  {
+    id: 'screen-recorder',
+    name_vn: 'Quay Màn Hình',
+    name_en: 'Screen Recorder',
+    name_ja: '画面録画',
+    desc_vn: 'Ghi video màn hình, cửa sổ hoặc thẻ trình duyệt kèm âm thanh. Hoạt động 100% trên trình duyệt, không tốn RAM, tối ưu cho máy cấu hình thấp.',
+    desc_en: 'Record screen, window or tab with audio. 100% client-side, zero RAM bloat, optimized for low-spec devices.',
+    desc_ja: '画面・ウィンドウ・タブを音声付きで録画。100%ブラウザ完結、低スペック端末でも超軽量動作。',
+    category: 'utils',
+    icon: 'Video',
+    gradient: 'from-rose-500 to-amber-500',
+    color: '#ef4444',
+    badge: 'LIGHTWEIGHT',
+    tags: ['screen-recorder', 'record', 'video', 'quay màn hình', 'recording', 'low-spec', 'screen', 'audio']
   },
   {
     id: 'barcode-qr',

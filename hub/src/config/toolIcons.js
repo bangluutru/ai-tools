@@ -26,7 +26,8 @@ import {
   ArrowLeftRight,
   Stamp,
   FileDown,
-  Sparkles
+  Sparkles,
+  Video
 } from 'lucide-react';
 
 export const iconMap = {
@@ -56,7 +57,8 @@ export const iconMap = {
   RefreshCw,
   ArrowLeftRight,
   Stamp,
-  Sparkles
+  Sparkles,
+  Video
 };
 
 /**

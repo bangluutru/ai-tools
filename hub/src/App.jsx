@@ -34,6 +34,7 @@ import { lazyWithRetry as lazy } from './utils/lazyWithRetry';
 // =========================================================================
 const ImageConvertTool = lazy(() => import('./tools/image-convert/ImageConvertTool'));
 const ScreenCaptureTool = lazy(() => import('./tools/screen-capture/ScreenCaptureTool'));
+const ScreenRecorderTool = lazy(() => import('./tools/screen-recorder/ScreenRecorderTool'));
 const BarcodeQrTool = lazy(() => import('./tools/barcode-qr/BarcodeQrTool'));
 const PdfToolkitTool = lazy(() => import('./tools/pdf-toolkit/PdfToolkitTool'));
 const OmniConvertTool = lazy(() => import('./tools/omniconvert/OmniConvertTool'));
@@ -51,6 +52,7 @@ const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/Inv
 const toolComponentMap = {
   'image-convert': ImageConvertTool,
   'screen-capture': ScreenCaptureTool,
+  'screen-recorder': ScreenRecorderTool,
   'barcode-qr': BarcodeQrTool,
   'pdf-toolkit': PdfToolkitTool,
   'omniconvert': OmniConvertTool,
