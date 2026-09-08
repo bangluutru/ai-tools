@@ -20,6 +20,7 @@ const convertXlsxToPdf = async (...args) => (await xlsxEngine()).convertXlsxToPd
 const convertPdfToXlsx = async (...args) => (await xlsxEngine()).convertPdfToXlsx(...args);
 const convertXlsxToCsv = async (...args) => (await xlsxEngine()).convertXlsxToCsv(...args);
 const convertPptxToPdf = async (...args) => (await pptxEngine()).convertPptxToPdf(...args);
+const convertPdfToPptx = async (...args) => (await pptxEngine()).convertPdfToPptx(...args);
 
 export async function executeConversion(file, targetFormat, options = {}, onProgress = () => {}) {
   const sourceExt = getFileExtension(file.name);
@@ -46,6 +47,25 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
   }
   if (sourceExt === 'csv') {
     if (targetExt === 'pdf') return await convertXlsxToPdf(file, options, onProgress);
+    if (targetExt === 'xlsx') {
+      if (onProgress) onProgress(30);
+      const arrayBuffer = await file.arrayBuffer();
+      const XLSX = await import('xlsx');
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      if (onProgress) onProgress(70);
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([excelBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'data';
+      if (onProgress) onProgress(100);
+      return {
+        blob,
+        filename: `${baseName}.xlsx`,
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        isZip: false
+      };
+    }
   }
 
   // 3. PPTX
@@ -57,6 +77,7 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
   if (sourceExt === 'pdf') {
     if (targetExt === 'docx') return await convertPdfToDocx(file, options, onProgress);
     if (targetExt === 'xlsx') return await convertPdfToXlsx(file, options, onProgress);
+    if (targetExt === 'pptx') return await convertPdfToPptx(file, options, onProgress);
     if (['png', 'jpg', 'jpeg', 'webp'].includes(targetExt)) {
       return await convertPdfToImages(file, targetExt, options, onProgress);
     }

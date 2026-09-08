@@ -5,7 +5,8 @@
  * Bidirectional conversion between Office formats (DOCX, PPTX, XLSX),
  * Images, Markdown, and PDF using in-browser WebAssembly engines.
  *
- * Redesigned to strictly match Modern Utility Workspace Design System.
+ * Fully reactive queue grouping, multiple re-conversions, dynamic real-time
+ * preview (PDF canvas, Excel sheets, Word text, Images), and custom pairs.
  *
  * @module OmniConvertView
  */
@@ -19,6 +20,8 @@ import {
 import confetti from 'canvas-confetti';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
+import mammoth from 'mammoth';
+import * as XLSX from 'xlsx';
 import { 
   FileStack, 
   UploadCloud, 
@@ -39,6 +42,7 @@ import {
   File, 
   ShieldCheck, 
   RefreshCw, 
+  RotateCcw,
   Check,
   Home,
   CheckSquare,
@@ -48,7 +52,9 @@ import {
   Sparkles,
   Zap,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 import { 
@@ -61,30 +67,110 @@ import {
   executeConversion, 
   mergeMultipleImagesToPdf 
 } from '../utils/omniconvert/engineRouter.js';
+import { 
+  loadPdfDocument, 
+  renderPdfPageToCanvas 
+} from '../utils/omniconvert/pdfHelper.js';
+
+// Target Format Definitions with Rich Metadata
+const TARGET_FORMAT_OPTIONS = [
+  {
+    id: 'pdf',
+    title: 'PDF Tài Liệu & In Ấn',
+    ext: '.pdf',
+    desc: 'Chuẩn A4 vector, dàn trang pixel-perfect',
+    icon: FileCode,
+    color: 'text-red-400 bg-red-500/20'
+  },
+  {
+    id: 'docx',
+    title: 'Microsoft Word',
+    ext: '.docx',
+    desc: 'Giữ nguyên đề mục, văn bản & bảng biểu',
+    icon: FileText,
+    color: 'text-sky-400 bg-sky-500/20'
+  },
+  {
+    id: 'xlsx',
+    title: 'Excel Bảng Tính',
+    ext: '.xlsx',
+    desc: 'Bóc tách cấu trúc bảng sang các sheet',
+    icon: FileSpreadsheet,
+    color: 'text-emerald-400 bg-emerald-500/20'
+  },
+  {
+    id: 'pptx',
+    title: 'PowerPoint Thuyết Trình',
+    ext: '.pptx',
+    desc: 'Tạo slide trình chiếu 16:9 sắc nét từ các trang',
+    icon: Presentation,
+    color: 'text-orange-400 bg-orange-500/20'
+  },
+  {
+    id: 'png',
+    title: 'Ảnh PNG Trong Suốt',
+    ext: '.png',
+    desc: 'Trích xuất ảnh phân giải cao, hỗ trợ alpha',
+    icon: ImageIcon,
+    color: 'text-purple-400 bg-purple-500/20'
+  },
+  {
+    id: 'jpg',
+    title: 'Ảnh JPEG Chất Lượng Cao',
+    ext: '.jpg',
+    desc: 'Nén chất lượng cao, tối ưu dung lượng',
+    icon: ImageIcon,
+    color: 'text-pink-400 bg-pink-500/20'
+  },
+  {
+    id: 'webp',
+    title: 'Ảnh WebP Thế Hệ Mới',
+    ext: '.webp',
+    desc: 'Siêu nhẹ, tốc độ tải tối ưu cho web',
+    icon: ImageIcon,
+    color: 'text-cyan-400 bg-cyan-500/20'
+  },
+  {
+    id: 'txt',
+    title: 'Văn Bản Thuần',
+    ext: '.txt',
+    desc: 'Trích xuất toàn bộ văn bản nhanh gọn',
+    icon: FileText,
+    color: 'text-on-surface-variant bg-surface-container'
+  },
+  {
+    id: 'csv',
+    title: 'Bảng Dữ Liệu CSV',
+    ext: '.csv',
+    desc: 'Bảng phân tách dấu phẩy cho hệ thống dữ liệu',
+    icon: FileSpreadsheet,
+    color: 'text-teal-400 bg-teal-500/20'
+  }
+];
 
 export default function OmniConvertView({ displayLang = 'vi' }) {
   const [activePreset, setActivePreset] = useState('all-to-pdf');
   const [_sourceFormat, setSourceFormat] = useState('docx');
   const [targetFormat, setTargetFormat] = useState('pdf');
   const [mergeImagesToPdf, setMergeImagesToPdf] = useState(false);
+  const [customSourceFilter, setCustomSourceFilter] = useState('all');
 
   const [queue, setQueue] = useState([]);
   const [fileError, setFileError] = useState('');
   const [isProcessingAll, setIsProcessingAll] = useState(false);
 
-  // Preview & Viewport states
-  const [previewTab, setPreviewTab] = useState('pdf');
-  const [previewItem, setPreviewItem] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [previewText, setPreviewText] = useState(null);
-  const [copiedMd, setCopiedMd] = useState(false);
+  // Active Preview selection
+  const [activePreviewId, setActivePreviewId] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(100);
 
-  // Advanced toggles
+  // Modal preview item
+  const [previewModalItem, setPreviewModalItem] = useState(null);
+  const [previewModalUrl, setPreviewModalUrl] = useState(null);
+
+  // Advanced toggles & settings
   const [keepHyperlinks, setKeepHyperlinks] = useState(true);
   const [embedFonts, setEmbedFonts] = useState(true);
   const [compressImages, setCompressImages] = useState(true);
-  const [cleanLlmMarkdown, setCleanLlmMarkdown] = useState(true);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settings, setSettings] = useState({
@@ -98,33 +184,144 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
   const fileInputRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Reactive Merge Toggle Handler
+  const handleToggleMergeImages = (shouldMerge) => {
+    setMergeImagesToPdf(shouldMerge);
+
+    setQueue((prevQueue) => {
+      const imageExts = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'bmp'];
+
+      if (shouldMerge) {
+        // Collect all image files to merge into 1 item
+        const imageFilesToMerge = [];
+        const nonMergeItems = [];
+
+        for (const item of prevQueue) {
+          if (item.isMergeGroup) {
+            imageFilesToMerge.push(...(item.rawImageFiles || []));
+          } else if (imageExts.includes(item.sourceFormat)) {
+            imageFilesToMerge.push(item.file);
+          } else {
+            nonMergeItems.push(item);
+          }
+        }
+
+        if (imageFilesToMerge.length > 0) {
+          const mergedItem = {
+            id: `merged-${Date.now()}`,
+            file: new File(
+              [imageFilesToMerge[0]],
+              `Merged_${imageFilesToMerge.length}_Images.pdf`,
+              { type: 'application/pdf' }
+            ),
+            rawImageFiles: imageFilesToMerge,
+            isMergeGroup: true,
+            sourceFormat: 'image',
+            targetFormat: 'pdf',
+            status: 'queued',
+            progress: 0,
+            error: null,
+            result: null
+          };
+          return [mergedItem, ...nonMergeItems];
+        }
+        return prevQueue;
+      } else {
+        // Unbundle any merged groups back into individual items
+        const unbundledItems = [];
+        for (const item of prevQueue) {
+          if (item.isMergeGroup && item.rawImageFiles) {
+            item.rawImageFiles.forEach((f) => {
+              const ext = getFileExtension(f.name);
+              unbundledItems.push({
+                id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                file: f,
+                sourceFormat: ext,
+                targetFormat: 'pdf',
+                status: 'queued',
+                progress: 0,
+                error: null,
+                result: null
+              });
+            });
+          } else {
+            unbundledItems.push(item);
+          }
+        }
+        return unbundledItems;
+      }
+    });
+  };
+
   // Preset Selection
   const handleSelectPreset = (preset) => {
     setActivePreset(preset.id);
     if (preset.id === 'all-to-pdf') {
       setSourceFormat('docx');
-      setTargetFormat('pdf');
-      setMergeImagesToPdf(false);
+      handleSelectTargetFormat('pdf');
+      handleToggleMergeImages(false);
     } else if (preset.id === 'pdf-to-office') {
       setSourceFormat('pdf');
-      setTargetFormat('docx');
-      setMergeImagesToPdf(false);
+      handleSelectTargetFormat('docx');
+      handleToggleMergeImages(false);
     } else if (preset.id === 'img-to-pdf') {
       setSourceFormat('png');
-      setTargetFormat('pdf');
-      setMergeImagesToPdf(true);
+      handleSelectTargetFormat('pdf');
+      handleToggleMergeImages(true);
     } else if (preset.id === 'pdf-to-img') {
       setSourceFormat('pdf');
-      setTargetFormat('png');
-      setMergeImagesToPdf(false);
+      handleSelectTargetFormat('png');
+      handleToggleMergeImages(false);
+    } else if (preset.id === 'custom') {
+      setCustomSourceFilter('all');
     }
   };
 
+  // Select target format and update compatible items in queue
   const handleSelectTargetFormat = (newTarget) => {
     setTargetFormat(newTarget);
-    setActivePreset('custom');
+    setQueue((prevQueue) =>
+      prevQueue.map((item) => {
+        if (item.isMergeGroup) return item; // Merge groups always target PDF
+        const validTargets = getSupportedTargets(item.sourceFormat);
+        if (validTargets.includes(newTarget)) {
+          return {
+            ...item,
+            targetFormat: newTarget,
+            status: 'queued',
+            progress: 0,
+            result: null,
+            error: null
+          };
+        }
+        return item;
+      })
+    );
   };
 
+  // Handle individual item target format change
+  const handleItemTargetChange = (id, newTarget) => {
+    setQueue((prev) =>
+      prev.map((q) =>
+        q.id === id
+          ? { ...q, targetFormat: newTarget, status: 'queued', progress: 0, result: null, error: null }
+          : q
+      )
+    );
+  };
+
+  // Handle individual item reset / re-convert
+  const handleResetSingle = (id) => {
+    setQueue((prev) =>
+      prev.map((q) =>
+        q.id === id
+          ? { ...q, status: 'queued', progress: 0, result: null, error: null }
+          : q
+      )
+    );
+  };
+
+  // Handle files upload
   const handleFilesSelected = useCallback(async (files) => {
     if (!files || files.length === 0) return;
 
@@ -143,29 +340,72 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
     const imageFiles = files.filter(f => imageExts.includes(getFileExtension(f.name)));
     const otherFiles = files.filter(f => !imageExts.includes(getFileExtension(f.name)));
 
-    const newItems = [];
+    setQueue((prevQueue) => {
+      let updatedQueue = [...prevQueue];
 
-    if (mergeImagesToPdf && imageFiles.length > 1) {
-      const virtualFile = new File([imageFiles[0]], `Merged_${imageFiles.length}_Images.pdf`, { type: 'application/pdf' });
-      newItems.push({
-        id: `merged-${Date.now()}`,
-        file: virtualFile,
-        rawImageFiles: imageFiles,
-        isMergeGroup: true,
-        sourceFormat: 'image',
-        targetFormat: 'pdf',
-        status: 'queued',
-        progress: 0,
-        error: null,
-        result: null
-      });
-    } else {
-      imageFiles.forEach(file => {
+      // Handle image files
+      if (imageFiles.length > 0) {
+        if (mergeImagesToPdf) {
+          const existingMergeIdx = updatedQueue.findIndex((q) => q.isMergeGroup);
+          if (existingMergeIdx >= 0) {
+            const existing = updatedQueue[existingMergeIdx];
+            const combinedImages = [...existing.rawImageFiles, ...imageFiles];
+            updatedQueue[existingMergeIdx] = {
+              ...existing,
+              rawImageFiles: combinedImages,
+              file: new File(
+                [combinedImages[0]],
+                `Merged_${combinedImages.length}_Images.pdf`,
+                { type: 'application/pdf' }
+              ),
+              status: 'queued',
+              progress: 0,
+              result: null,
+              error: null
+            };
+          } else {
+            updatedQueue.unshift({
+              id: `merged-${Date.now()}`,
+              file: new File(
+                [imageFiles[0]],
+                `Merged_${imageFiles.length}_Images.pdf`,
+                { type: 'application/pdf' }
+              ),
+              rawImageFiles: imageFiles,
+              isMergeGroup: true,
+              sourceFormat: 'image',
+              targetFormat: 'pdf',
+              status: 'queued',
+              progress: 0,
+              error: null,
+              result: null
+            });
+          }
+        } else {
+          imageFiles.forEach((file) => {
+            const ext = getFileExtension(file.name);
+            const validTargets = getSupportedTargets(ext);
+            const defaultTarget = validTargets.includes(targetFormat) ? targetFormat : (validTargets[0] || 'pdf');
+            updatedQueue.push({
+              id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              file,
+              sourceFormat: ext,
+              targetFormat: defaultTarget,
+              status: 'queued',
+              progress: 0,
+              error: null,
+              result: null
+            });
+          });
+        }
+      }
+
+      // Handle other non-image files
+      otherFiles.forEach((file) => {
         const ext = getFileExtension(file.name);
         const validTargets = getSupportedTargets(ext);
         const defaultTarget = validTargets.includes(targetFormat) ? targetFormat : (validTargets[0] || 'pdf');
-
-        newItems.push({
+        updatedQueue.push({
           id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           file,
           sourceFormat: ext,
@@ -176,26 +416,9 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
           result: null
         });
       });
-    }
 
-    otherFiles.forEach(file => {
-      const ext = getFileExtension(file.name);
-      const validTargets = getSupportedTargets(ext);
-      const defaultTarget = validTargets.includes(targetFormat) ? targetFormat : (validTargets[0] || 'pdf');
-
-      newItems.push({
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        file,
-        sourceFormat: ext,
-        targetFormat: defaultTarget,
-        status: 'queued',
-        progress: 0,
-        error: null,
-        result: null
-      });
+      return updatedQueue;
     });
-
-    setQueue(prev => [...prev, ...newItems]);
   }, [mergeImagesToPdf, targetFormat]);
 
   // Handle Clipboard Paste
@@ -221,39 +444,49 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
     return () => window.removeEventListener('paste', handlePaste);
   }, [handleFilesSelected]);
 
+  // Convert Single Item
   const handleConvertSingle = async (id) => {
     const item = queue.find(q => q.id === id);
     if (!item || item.status === 'converting') return;
 
-    setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'converting', progress: 5, error: null } : q));
+    setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'converting', progress: 10, error: null } : q));
 
     try {
       let result;
       if (item.isMergeGroup && item.rawImageFiles) {
         result = await mergeMultipleImagesToPdf(item.rawImageFiles, settings, (p) => {
-          setQueue(prev => prev.map(q => q.id === id ? { ...q, progress: p } : q));
+          setQueue(prev => prev.map(q => q.id === id ? { ...q, progress: Math.max(10, p) } : q));
         });
+        result.filename = item.file.name;
       } else {
         result = await executeConversion(item.file, item.targetFormat, settings, (p) => {
-          setQueue(prev => prev.map(q => q.id === id ? { ...q, progress: p } : q));
+          setQueue(prev => prev.map(q => q.id === id ? { ...q, progress: Math.max(10, p) } : q));
         });
       }
 
       setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'completed', progress: 100, result } : q));
-
-      confetti({ particleCount: 30, spread: 60, origin: { y: 0.85 } });
+      confetti({ particleCount: 35, spread: 60, origin: { y: 0.85 } });
     } catch (err) {
-      console.error(err);
-      setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'error', error: err.message || 'Lỗi chuyển đổi' } : q));
+      console.error('Conversion failed for item:', item, err);
+      setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'error', error: err.message || 'Lỗi chuyển đổi tệp' } : q));
     }
   };
 
+  // Convert All Items (Supports Re-conversion)
   const handleConvertAll = async () => {
-    const queuedItems = queue.filter(q => q.status === 'queued' || q.status === 'error');
-    if (queuedItems.length === 0) return;
+    if (queue.length === 0 || isProcessingAll) return;
+
+    // If all items are completed or no queued/error items, reset all to queued
+    const hasPending = queue.some(q => q.status === 'queued' || q.status === 'error');
+    let itemsToProcess = queue;
+
+    if (!hasPending) {
+      itemsToProcess = queue.map(q => ({ ...q, status: 'queued', progress: 0, result: null, error: null }));
+      setQueue(itemsToProcess);
+    }
 
     setIsProcessingAll(true);
-    for (const item of queuedItems) {
+    for (const item of itemsToProcess) {
       await handleConvertSingle(item.id);
     }
     setIsProcessingAll(false);
@@ -288,30 +521,20 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
     saveAs(zipBlob, `OmniConvert_Bundle_${Date.now()}.zip`);
   };
 
-  // Preview management
-  const openPreview = (item) => {
-    setPreviewItem(item);
+  // Preview Modal management
+  const openModalPreview = (item) => {
+    setPreviewModalItem(item);
     const blob = item.result?.blob || item.file;
     if (blob) {
       const url = URL.createObjectURL(blob);
-      setPreviewUrl(url);
-
-      const ext = (item.result?.filename || item.file?.name || '').split('.').pop()?.toLowerCase();
-      if (['txt', 'csv', 'md'].includes(ext)) {
-        const reader = new FileReader();
-        reader.onload = (e) => setPreviewText(e.target?.result);
-        reader.readAsText(blob);
-      } else {
-        setPreviewText(null);
-      }
+      setPreviewModalUrl(url);
     }
   };
 
-  const closePreview = () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewItem(null);
-    setPreviewUrl(null);
-    setPreviewText(null);
+  const closeModalPreview = () => {
+    if (previewModalUrl) URL.revokeObjectURL(previewModalUrl);
+    setPreviewModalItem(null);
+    setPreviewModalUrl(null);
   };
 
   const formatFileSize = (bytes) => {
@@ -338,9 +561,45 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
   const queuedCount = queue.filter(q => q.status === 'queued').length;
   const errorCount = queue.filter(q => q.status === 'error').length;
   const isAllDone = totalCount > 0 && completedCount === totalCount;
-  const totalSize = queue.reduce((acc, q) => acc + (q.file?.size || 0), 0);
+  const totalSize = queue.reduce((acc, q) => {
+    if (q.isMergeGroup && q.rawImageFiles) {
+      return acc + q.rawImageFiles.reduce((sub, f) => sub + (f.size || 0), 0);
+    }
+    return acc + (q.file?.size || 0);
+  }, 0);
 
-  const activePreviewFile = queue.find(q => q.status === 'completed') || queue[0] || null;
+  // Active preview item
+  const currentPreviewItem = queue.find(q => q.id === activePreviewId) || queue[0] || null;
+
+  // Determine available target format choices for Step 2
+  const availableTargetOptions = (() => {
+    if (activePreset === 'custom') {
+      if (customSourceFilter === 'all') return TARGET_FORMAT_OPTIONS;
+      const validForFilter = getSupportedTargets(customSourceFilter);
+      return TARGET_FORMAT_OPTIONS.filter(opt => validForFilter.includes(opt.id));
+    }
+
+    if (queue.length > 0) {
+      const allValidTargets = Array.from(new Set(queue.flatMap(q => {
+        if (q.isMergeGroup) return ['pdf'];
+        return getSupportedTargets(q.sourceFormat);
+      })));
+      const filtered = TARGET_FORMAT_OPTIONS.filter(opt => allValidTargets.includes(opt.id));
+      if (filtered.length > 0) return filtered;
+    }
+
+    // Default by preset
+    if (activePreset === 'pdf-to-office') {
+      return TARGET_FORMAT_OPTIONS.filter(opt => ['docx', 'xlsx', 'pptx', 'png', 'txt'].includes(opt.id));
+    }
+    if (activePreset === 'img-to-pdf') {
+      return TARGET_FORMAT_OPTIONS.filter(opt => ['pdf', 'png', 'jpg', 'webp'].includes(opt.id));
+    }
+    if (activePreset === 'pdf-to-img') {
+      return TARGET_FORMAT_OPTIONS.filter(opt => ['png', 'jpg', 'webp'].includes(opt.id));
+    }
+    return TARGET_FORMAT_OPTIONS.filter(opt => ['pdf', 'txt'].includes(opt.id));
+  })();
 
   return (
     <div className="w-full flex flex-col space-y-8 pb-12">
@@ -364,7 +623,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
           </nav>
           <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] text-on-surface-variant">
             <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-            <span>WASM ENGINE v3.1.8 ACTIVE</span>
+            <span>WASM ENGINE v3.2.0 ACTIVE</span>
           </div>
         </div>
 
@@ -381,11 +640,11 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   {displayLang === 'en' ? 'Universal File Converter' : displayLang === 'ja' ? '万能ファイル変換' : 'Chuyển Đổi Đa Năng'}
                 </h1>
                 <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-                  Chuyển đổi tức thì tài liệu văn phòng Office (Word .docx, Excel .xlsx, PowerPoint .pptx, TXT, HTML) sang PDF chuẩn in ấn hoặc Markdown / Clean HTML tối ưu cho LLM/AI prompt mà không làm mất định dạng bảng biểu hay tiêu đề.
+                  Chuyển đổi đa chiều tài liệu văn phòng Office (Word .docx, Excel .xlsx, PowerPoint .pptx, TXT, CSV), bộ ảnh và PDF chuẩn vector. Hỗ trợ gộp ảnh, xuất slide thuyết trình, bóc tách bảng tính và xem trước trực tiếp 100% trên trình duyệt.
                 </p>
                 <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
-                  <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
+                  <span>Xử lý trực tiếp trên trình duyệt bằng WebAssembly — tệp không tải lên máy chủ.</span>
                 </div>
               </div>
             </div>
@@ -428,6 +687,42 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
             );
           })}
         </div>
+
+        {/* Custom Mode Filter Sub-bar */}
+        {activePreset === 'custom' && (
+          <div className="p-3 rounded-xl bg-surface-container border border-border-subtle flex flex-wrap items-center justify-between gap-3 animate-in fade-in duration-200">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-xs font-bold text-on-surface">Chế độ Tùy chọn tự do:</span>
+              <span className="text-xs text-on-surface-variant">Lọc tệp nguồn mong muốn:</span>
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+              {[
+                { id: 'all', label: 'Tất cả' },
+                { id: 'pdf', label: 'PDF' },
+                { id: 'docx', label: 'Word (.docx)' },
+                { id: 'xlsx', label: 'Excel (.xlsx)' },
+                { id: 'pptx', label: 'PowerPoint (.pptx)' },
+                { id: 'png', label: 'Ảnh (.png/.jpg)' },
+                { id: 'txt', label: 'Văn bản (.txt)' },
+                { id: 'csv', label: 'Bảng CSV' }
+              ].map(f => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setCustomSourceFilter(f.id)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition-colors ${
+                    customSourceFilter === f.id
+                      ? 'bg-primary text-on-primary font-bold shadow-sm'
+                      : 'bg-surface text-on-surface-variant hover:bg-surface-bright hover:text-on-surface border border-border-subtle'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ==================================================================== */}
@@ -443,7 +738,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 rounded bg-primary text-on-primary font-mono text-xs font-bold flex items-center justify-center">1</span>
-                <h2 className="text-sm font-semibold text-on-surface">Tải Tệp Tin Văn Phòng Nguồn</h2>
+                <h2 className="text-sm font-semibold text-on-surface">Tải Tệp Tin Văn Phòng &amp; Ảnh</h2>
               </div>
               <span className="font-mono text-xs text-on-surface-variant">Tối đa 50MB / tệp</span>
             </div>
@@ -494,10 +789,10 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 Kéo thả tài liệu vào đây, hoặc <span className="text-primary-container underline underline-offset-4">Duyệt tệp tin</span>
               </span>
               <p className="text-xs text-on-surface-variant max-w-sm">
-                Hỗ trợ Word (.docx), Excel (.xlsx, .csv), PowerPoint (.pptx), Ảnh (.png, .jpg), HTML, TXT.
+                Hỗ trợ Word (.docx), Excel (.xlsx, .csv), PowerPoint (.pptx), PDF, Ảnh (.png, .jpg, .webp), TXT.
               </p>
-              <div className="flex items-center gap-2 mt-3">
-                {['DOCX', 'XLSX', 'PPTX', 'PNG', 'PDF'].map((ext) => (
+              <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
+                {['DOCX', 'XLSX', 'PPTX', 'PDF', 'PNG', 'JPG', 'WEBP', 'TXT', 'CSV'].map((ext) => (
                   <span key={ext} className="px-2 py-0.5 rounded bg-surface font-mono text-[10px] text-on-surface-variant border border-border-subtle">
                     {ext}
                   </span>
@@ -505,106 +800,147 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               </div>
             </div>
 
-            {/* Merge Images Toggle */}
+            {/* Merge Images Toggle with Active Count */}
             <div className="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-surface border border-border-subtle text-xs text-on-surface-variant">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-primary-container" />
-                <span className="text-on-surface">Gộp nhiều tệp ảnh thành 1 tài liệu PDF duy nhất</span>
+                <span className="text-on-surface font-medium">Gộp nhiều tệp ảnh thành 1 tài liệu PDF duy nhất</span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   aria-label="Gộp nhiều tệp ảnh thành 1 tài liệu PDF duy nhất"
                   checked={mergeImagesToPdf}
-                  onChange={(e) => setMergeImagesToPdf(e.target.checked)}
+                  onChange={(e) => handleToggleMergeImages(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-surface-container peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container" />
+                <div className="w-9 h-5 bg-surface-container peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-surface-container-lowest after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-container-lowest after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container" />
               </label>
             </div>
 
             {/* Staged Files List */}
             {queue.length > 0 && (
               <div className="space-y-2 pt-1">
-                <div tabIndex={0} role="region" aria-label="Danh sách tệp chờ chuyển đổi" className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                <div tabIndex={0} role="region" aria-label="Danh sách tệp chờ chuyển đổi" className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                   {queue.map((item) => {
+                    const isSelected = item.id === (activePreviewId || queue[0]?.id);
                     const sourceDetails = FORMAT_DETAILS[item.sourceFormat] || {};
+                    const validTargets = item.isMergeGroup ? ['pdf'] : getSupportedTargets(item.sourceFormat);
+
                     return (
                       <div
                         key={item.id}
-                        className="p-3 rounded-lg bg-surface border border-border-subtle flex items-center justify-between gap-3 hover:border-slate-600 transition-colors"
+                        onClick={() => setActivePreviewId(item.id)}
+                        className={`p-3 rounded-lg bg-surface border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-primary shadow-sm bg-primary-container/5'
+                            : 'border-border-subtle hover:border-slate-600'
+                        }`}
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-9 rounded-lg bg-surface-container border border-border-subtle flex items-center justify-center shrink-0">
-                            {renderIcon(sourceDetails.category)}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-xs font-medium text-on-surface truncate">{item.file.name}</div>
-                            <div className="font-mono text-[11px] text-on-surface-variant flex items-center gap-2 mt-0.5">
-                              <span>{formatFileSize(item.file.size)}</span>
-                              <span>•</span>
-                              <span className="uppercase text-primary font-semibold">.{item.sourceFormat}</span>
-                              <span>➔</span>
-                              <span className="uppercase text-secondary font-semibold">.{item.targetFormat}</span>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className="w-9 h-9 rounded-lg bg-surface-container border border-border-subtle flex items-center justify-center shrink-0">
+                              {item.isMergeGroup ? <Layers className="w-5 h-5 text-primary" /> : renderIcon(sourceDetails.category)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-semibold text-on-surface truncate flex items-center gap-1.5">
+                                <span className="truncate">{item.file.name}</span>
+                                {item.isMergeGroup && (
+                                  <span className="px-1.5 py-0.2 rounded bg-primary text-on-primary font-mono text-[10px] shrink-0">
+                                    {item.rawImageFiles?.length || 0} ảnh
+                                  </span>
+                                )}
+                              </div>
+                              <div className="font-mono text-[11px] text-on-surface-variant flex items-center gap-2 mt-1 flex-wrap">
+                                <span>{formatFileSize(item.file.size)}</span>
+                                <span>•</span>
+                                <span className="uppercase text-primary font-semibold">.{item.sourceFormat}</span>
+                                <span>➔</span>
+                                {/* Per-item target selector */}
+                                <select
+                                  value={item.targetFormat}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => handleItemTargetChange(item.id, e.target.value)}
+                                  className="bg-surface-container border border-border-subtle rounded px-1.5 py-0.5 text-[11px] font-mono font-bold text-secondary uppercase cursor-pointer hover:border-secondary transition-colors"
+                                  aria-label={`Chọn định dạng xuất cho tệp ${item.file.name}`}
+                                >
+                                  {validTargets.map((t) => (
+                                    <option key={t} value={t}>.{t.toUpperCase()}</option>
+                                  ))}
+                                </select>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {item.status === 'converting' && (
-                            <span className="font-mono text-xs text-primary flex items-center gap-1">
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              <span>{item.progress}%</span>
-                            </span>
-                          )}
-                          {item.status === 'completed' && (
-                            <span className="px-2 py-0.5 bg-emerald-500/15 text-secondary font-mono text-[11px] rounded flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Xong
-                            </span>
-                          )}
-                          {item.status === 'queued' && (
-                            <span className="px-2 py-0.5 bg-emerald-500/10 text-secondary font-mono text-[11px] rounded flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Sẵn sàng
-                            </span>
-                          )}
-                          {item.status === 'error' && (
-                            <span className="px-2 py-0.5 bg-red-500/15 text-red-400 font-mono text-[11px] rounded">
-                              Lỗi
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {item.status === 'converting' && (
+                              <span className="font-mono text-xs text-primary flex items-center gap-1">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>{item.progress}%</span>
+                              </span>
+                            )}
+                            {item.status === 'completed' && (
+                              <span className="px-2 py-0.5 bg-emerald-500/15 text-secondary font-mono text-[11px] rounded flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-secondary" /> Xong
+                              </span>
+                            )}
+                            {item.status === 'queued' && (
+                              <span className="px-2 py-0.5 bg-surface-container text-on-surface-variant font-mono text-[11px] rounded flex items-center gap-1">
+                                Sẵn sàng
+                              </span>
+                            )}
+                            {item.status === 'error' && (
+                              <span className="px-2 py-0.5 bg-red-500/15 text-red-400 font-mono text-[11px] rounded" title={item.error || 'Lỗi'}>
+                                Lỗi
+                              </span>
+                            )}
 
-                          {item.status === 'completed' && (
-                            <>
+                            {/* Re-convert single button */}
+                            {item.status === 'completed' && (
                               <button
                                 type="button"
-                                onClick={() => openPreview(item)}
+                                onClick={() => handleResetSingle(item.id)}
                                 className="p-1 rounded bg-surface-container hover:bg-surface-bright text-on-surface-variant transition-colors"
-                                aria-label={`Xem trước chi tiết tệp ${item.file.name}`}
-                                title="Xem trước chi tiết"
+                                aria-label={`Chuyển đổi lại ${item.file.name}`}
+                                title="Chuyển đổi lại tệp này"
                               >
-                                <Eye className="w-3.5 h-3.5" />
+                                <RotateCcw className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDownloadSingle(item)}
-                                className="p-1 rounded bg-emerald-500/20 text-secondary hover:bg-emerald-500/30 transition-colors"
-                                aria-label={`Tải tệp ${item.file.name}`}
-                                title="Tải tệp này"
-                              >
-                                <Download className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          )}
+                            )}
 
-                          <button
-                            type="button"
-                            onClick={() => setQueue(prev => prev.filter(q => q.id !== item.id))}
-                            className="text-on-surface-variant hover:text-red-400 p-1 transition-colors"
-                            aria-label={`Xóa tệp ${item.file.name}`}
-                            title="Xóa tệp"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                            {item.status === 'completed' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => openModalPreview(item)}
+                                  className="p-1 rounded bg-surface-container hover:bg-surface-bright text-on-surface-variant transition-colors"
+                                  aria-label={`Xem trước chi tiết tệp ${item.file.name}`}
+                                  title="Xem trước chi tiết"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadSingle(item)}
+                                  className="p-1 rounded bg-emerald-500/20 text-secondary hover:bg-emerald-500/30 transition-colors"
+                                  aria-label={`Tải tệp ${item.file.name}`}
+                                  title="Tải tệp này"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => setQueue(prev => prev.filter(q => q.id !== item.id))}
+                              className="text-on-surface-variant hover:text-red-400 p-1 transition-colors"
+                              aria-label={`Xóa tệp ${item.file.name}`}
+                              title="Xóa tệp"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -615,12 +951,12 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 <div className="flex items-center justify-between pt-1 text-xs text-on-surface-variant">
                   <div className="flex items-center gap-2">
                     <CheckSquare className="w-4 h-4 text-secondary" />
-                    <span>{queue.length} tệp đã chọn • {formatFileSize(totalSize)}</span>
+                    <span>{queue.length} mục trong hàng đợi • {formatFileSize(totalSize)}</span>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setQueue([])}
-                    className="text-error font-medium hover:underline text-xs"
+                    onClick={() => { setQueue([]); setActivePreviewId(null); }}
+                    className="text-error font-medium hover:underline text-xs cursor-pointer"
                   >
                     Xóa tất cả
                   </button>
@@ -629,116 +965,60 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
             )}
           </div>
 
-          {/* STEP 2 CARD: Target Output & Tuning Configuration */}
+          {/* STEP 2 CARD: Dynamic Target Output Configuration */}
           <div className="bg-surface-container/60 border border-border-subtle/70 rounded-xl p-5 shadow-sm flex flex-col gap-5">
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 rounded bg-primary text-on-primary font-mono text-xs font-bold flex items-center justify-center">2</span>
-                <h2 className="text-sm font-semibold text-on-surface">Cấu Hình Định Dạng Đích & Tinh Chỉnh</h2>
+                <h2 className="text-sm font-semibold text-on-surface">Cấu Hình Định Dạng Đích &amp; Tinh Chỉnh</h2>
               </div>
-              <span className="font-mono text-xs text-secondary font-bold">CHẤT LƯỢNG CAO NHẤT</span>
+              <span className="font-mono text-xs text-secondary font-bold">100% CLIENT-SIDE</span>
             </div>
 
             {/* Target Format Selector Buttons */}
             <div className="space-y-2">
               <label className="font-mono text-[10px] text-on-surface-variant block uppercase tracking-wider">
-                Định dạng đầu ra mong muốn
+                Định dạng đầu ra mong muốn ({availableTargetOptions.length} định dạng hỗ trợ)
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Format 1: PDF */}
-                <button
-                  type="button"
-                  onClick={() => handleSelectTargetFormat('pdf')}
-                  className={`p-3 rounded-lg text-left transition-all border flex items-start gap-3 ${
-                    targetFormat === 'pdf'
-                      ? 'bg-primary-container/15 border-primary-container/60 shadow-sm'
-                      : 'bg-surface border-border-subtle hover:bg-surface-container hover:border-slate-600'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded bg-primary-container/20 text-primary-container flex items-center justify-center shrink-0">
-                    <FileCode className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-on-surface">PDF In Ấn & Vector</span>
-                      {targetFormat === 'pdf' && (
-                        <span className="px-1.5 py-0.5 rounded bg-primary text-on-primary font-mono text-[10px] font-bold">
-                          Đã chọn
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-on-surface-variant line-clamp-1 mt-0.5">Chuẩn A4, dàn trang pixel-perfect</p>
-                  </div>
-                </button>
-
-                {/* Format 2: Markdown LLM */}
-                <button
-                  type="button"
-                  onClick={() => { handleSelectTargetFormat('md'); setPreviewTab('md'); }}
-                  className={`p-3 rounded-lg text-left transition-all border flex items-start gap-3 ${
-                    targetFormat === 'md'
-                      ? 'bg-secondary/15 border-secondary/60 shadow-sm'
-                      : 'bg-surface border-border-subtle hover:bg-surface-container hover:border-slate-600'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded bg-secondary/20 text-secondary flex items-center justify-center shrink-0">
-                    <FileText className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-on-surface">Markdown LLM</span>
-                      <span className="px-1.5 py-0.5 rounded bg-secondary/20 text-secondary font-mono text-[10px] font-bold">
-                        AI Ready
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-on-surface-variant line-clamp-1 mt-0.5">Tối ưu nạp ChatGPT, Claude, RAG</p>
-                  </div>
-                </button>
-
-                {/* Format 3: Clean HTML */}
-                <button
-                  type="button"
-                  onClick={() => handleSelectTargetFormat('html')}
-                  className={`p-3 rounded-lg text-left transition-all border flex items-start gap-3 ${
-                    targetFormat === 'html'
-                      ? 'bg-primary-container/15 border-primary-container/60 shadow-sm'
-                      : 'bg-surface border-border-subtle hover:bg-surface-container hover:border-slate-600'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded bg-surface-bright text-on-surface-variant flex items-center justify-center shrink-0">
-                    <Code className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-on-surface">Clean HTML Semantic</span>
-                    <p className="text-[11px] text-on-surface-variant line-clamp-1 mt-0.5">Giữ nguyên cấu trúc thẻ chuẩn web</p>
-                  </div>
-                </button>
-
-                {/* Format 4: Images Package */}
-                <button
-                  type="button"
-                  onClick={() => handleSelectTargetFormat('png')}
-                  className={`p-3 rounded-lg text-left transition-all border flex items-start gap-3 ${
-                    targetFormat === 'png'
-                      ? 'bg-tertiary/15 border-tertiary/60 shadow-sm'
-                      : 'bg-surface border-border-subtle hover:bg-surface-container hover:border-slate-600'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded bg-tertiary/20 text-tertiary flex items-center justify-center shrink-0">
-                    <FolderArchive className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-semibold text-on-surface">Trích xuất ảnh minh họa</span>
-                    <p className="text-[11px] text-on-surface-variant line-clamp-1 mt-0.5">Gói ảnh gốc phân giải cao .ZIP</p>
-                  </div>
-                </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[320px] overflow-y-auto pr-1">
+                {availableTargetOptions.map((opt) => {
+                  const IconComponent = opt.icon;
+                  const isSelected = targetFormat === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => handleSelectTargetFormat(opt.id)}
+                      className={`p-3 rounded-xl text-left transition-all border flex items-start gap-3 cursor-pointer ${
+                        isSelected
+                          ? 'bg-primary-container/15 border-primary shadow-sm ring-1 ring-primary/50'
+                          : 'bg-surface border-border-subtle hover:bg-surface-container hover:border-slate-600'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg ${opt.color} flex items-center justify-center shrink-0`}>
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-on-surface truncate">{opt.title}</span>
+                          {isSelected && (
+                            <span className="px-1.5 py-0.5 rounded bg-primary text-on-primary font-mono text-[9px] font-bold shrink-0">
+                              Đã chọn
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-on-surface-variant line-clamp-1 mt-0.5">{opt.desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {/* Advanced Tuning Options */}
-            <div className="space-y-3 pt-1">
+            <div className="space-y-3 pt-1 border-t border-border-subtle">
               <label className="font-mono text-[10px] text-on-surface-variant block uppercase tracking-wider">
-                Tùy chọn nâng cao khi xuất
+                Tùy chọn xuất nâng cao
               </label>
 
               <label className="flex items-start gap-3 cursor-pointer select-none">
@@ -750,61 +1030,38 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary"
                 />
                 <div className="text-xs">
-                  <span className="text-on-surface font-medium block">Giữ nguyên siêu liên kết (Hyperlinks) & Bookmark mục lục</span>
-                  <span className="text-on-surface-variant text-[11px]">Tạo mục lục thông minh (TOC) trong PDF để điều hướng click nhanh chóng.</span>
+                  <span className="text-on-surface font-medium block">Giữ nguyên siêu liên kết (Hyperlinks) &amp; Mục lục</span>
+                  <span className="text-on-surface-variant text-[11px]">Bảo toàn liên kết web và dàn mục lục phân cấp của tài liệu nguồn.</span>
                 </div>
               </label>
 
               <label className="flex items-start gap-3 cursor-pointer select-none">
                 <input
                   type="checkbox"
-                  aria-label="Tự động nhúng toàn bộ font chữ (Font Subsetting 100%)"
+                  aria-label="Tự động nhúng font chữ Unicode toàn diện"
                   checked={embedFonts}
                   onChange={(e) => setEmbedFonts(e.target.checked)}
                   className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary"
                 />
                 <div className="text-xs">
-                  <span className="text-on-surface font-medium block">Tự động nhúng toàn bộ font chữ (Font Subsetting 100%)</span>
-                  <span className="text-on-surface-variant text-[11px]">Tránh lỗi mất font Tiếng Việt hoặc hiển thị sai ký tự khi mở máy khác.</span>
+                  <span className="text-on-surface font-medium block">Tự động nhúng font chữ Unicode toàn diện</span>
+                  <span className="text-on-surface-variant text-[11px]">Tránh lỗi nhảy dòng hoặc hiển thị ô vuông khi mở file trên máy tính khác.</span>
                 </div>
               </label>
 
               <label className="flex items-start gap-3 cursor-pointer select-none">
                 <input
                   type="checkbox"
-                  aria-label="Tối ưu nén hình ảnh nhúng trong tài liệu (DPR 2.0x)"
+                  aria-label="Tối ưu nén hình ảnh nhúng trong tài liệu"
                   checked={compressImages}
                   onChange={(e) => setCompressImages(e.target.checked)}
                   className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary"
                 />
                 <div className="text-xs">
-                  <span className="text-on-surface font-medium block">Tối ưu nén hình ảnh nhúng trong tài liệu (DPR 2.0x)</span>
-                  <span className="text-on-surface-variant text-[11px]">Giảm 40-60% kích cỡ tệp PDF đầu ra mà vẫn bảo toàn độ nét khi in ấn.</span>
+                  <span className="text-on-surface font-medium block">Tối ưu dung lượng hình ảnh nhúng</span>
+                  <span className="text-on-surface-variant text-[11px]">Tự động nén thông minh giảm kích cỡ tệp mà vẫn đảm bảo độ nét in ấn.</span>
                 </div>
               </label>
-
-              {/* AI Markdown Toggle */}
-              <div className="p-3 rounded-lg bg-surface border border-border-subtle flex items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-secondary" />
-                    <span className="text-xs font-semibold text-on-surface">Chế độ Clean LLM Markdown</span>
-                  </div>
-                  <p className="text-[11px] text-on-surface-variant">
-                    Tự động chuẩn hóa tiêu đề (#, ##), chuyển đổi bảng phức tạp sang cú pháp Markdown Table (|---|).
-                  </p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                  <input
-                    type="checkbox"
-                    aria-label="Tối ưu Markdown chuẩn LLM/RAG"
-                    checked={cleanLlmMarkdown}
-                    onChange={(e) => setCleanLlmMarkdown(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-10 h-5 bg-surface-container peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-secondary" />
-                </label>
-              </div>
             </div>
 
             {/* Primary Execution CTA */}
@@ -812,22 +1069,29 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               type="button"
               disabled={queue.length === 0 || isProcessingAll}
               onClick={handleConvertAll}
-              className={`w-full py-3 px-6 rounded-lg font-mono text-xs font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${
+              className={`w-full py-3.5 px-6 rounded-xl font-mono text-xs font-bold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 queue.length === 0 || isProcessingAll
                   ? 'bg-surface text-on-surface-variant/50 border border-border-subtle cursor-not-allowed'
-                  : 'bg-primary hover:bg-primary/90 text-on-primary shadow-primary/20 active:scale-[0.99] cursor-pointer'
+                  : isAllDone
+                  ? 'bg-secondary hover:bg-secondary/90 text-on-secondary shadow-secondary/20 active:scale-[0.99]'
+                  : 'bg-primary hover:bg-primary/90 text-on-primary shadow-primary/20 active:scale-[0.99]'
               }`}
             >
               {isProcessingAll ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Đang xử lý chuyển đổi tài liệu ({completedCount}/{totalCount})...</span>
+                  <span>Đang xử lý chuyển đổi ({completedCount}/{totalCount})...</span>
+                </>
+              ) : isAllDone ? (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Chuyển Đổi Lại {queue.length} Tệp Tin (Sang .{targetFormat.toUpperCase()})</span>
                 </>
               ) : (
                 <>
                   <Zap className="w-4 h-4 fill-current" />
                   <span>
-                    Bắt Đầu Chuyển Đổi {queue.length} Tệp Tin (Sang {targetFormat.toUpperCase()})
+                    Bắt Đầu Chuyển Đổi {queuedCount > 0 ? queuedCount : queue.length} Tệp Tin (Sang .{targetFormat.toUpperCase()})
                   </span>
                 </>
               )}
@@ -836,7 +1100,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
         </div>
 
         {/* ================================================================== */}
-        {/* CỘT PHẢI: LIVE PREVIEW & OUTPUT ACTIONS (Steps 3 & 4)              */}
+        {/* CỘT PHẢI: REALTIME PREVIEW VIEWPORT & PROGRESS                     */}
         {/* ================================================================== */}
         <div className="lg:col-span-6 flex flex-col gap-6">
           {/* Processing Progress & Status Summary */}
@@ -851,11 +1115,11 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                     ? `Đã chuyển đổi hoàn tất ${completedCount}/${totalCount} tệp`
                     : queue.length > 0
                       ? `Hàng đợi: ${totalCount} tệp (${queuedCount} chờ, ${completedCount} xong${errorCount > 0 ? `, ${errorCount} lỗi` : ''})`
-                      : 'Chưa có tệp tin nào được chuyển đổi'}
+                      : 'Chưa có tệp tin nào trong hàng đợi'}
                 </span>
               </div>
               <span className="font-mono text-xs text-secondary bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded self-start sm:self-auto">
-                Thời gian: 0.85s (Client WASM)
+                Client-Side WASM
               </span>
             </div>
 
@@ -868,36 +1132,18 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 />
               </div>
               <div className="flex justify-between text-xs font-mono text-on-surface-variant pt-0.5">
-                <span>{totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}% Tiến trình</span>
-                <span>Khởi chạy trên luồng WebWorker song song</span>
-              </div>
-            </div>
-
-            {/* Results Metrics Grid */}
-            <div className="grid grid-cols-3 gap-3 pt-1">
-              <div className="p-3 rounded-lg bg-surface border border-border-subtle text-center">
-                <div className="text-xl font-bold text-on-surface font-mono">
-                  {completedCount} / {totalCount}
-                </div>
-                <div className="text-[11px] text-on-surface-variant mt-0.5">Tệp thành công</div>
-              </div>
-              <div className="p-3 rounded-lg bg-surface border border-border-subtle text-center">
-                <div className="text-xl font-bold text-secondary font-mono">100%</div>
-                <div className="text-[11px] text-on-surface-variant mt-0.5">Bảo toàn Format</div>
-              </div>
-              <div className="p-3 rounded-lg bg-surface border border-border-subtle text-center">
-                <div className="text-xl font-bold text-primary font-mono">-34%</div>
-                <div className="text-[11px] text-on-surface-variant mt-0.5">Nén dung lượng</div>
+                <span>{totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}% Hoàn thành</span>
+                <span>{completedCount} / {totalCount} tệp sẵn sàng</span>
               </div>
             </div>
 
             {/* Download Zip CTA if finished */}
             {completedCount > 0 && (
-              <div className="pt-2">
+              <div className="pt-1">
                 <button
                   type="button"
                   onClick={handleDownloadAllZip}
-                  className="w-full py-3 px-6 rounded-lg bg-secondary hover:bg-secondary/90 text-on-secondary font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-secondary/20 transition-all cursor-pointer"
+                  className="w-full py-3 px-6 rounded-xl bg-secondary hover:bg-secondary/90 text-on-secondary font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-secondary/20 transition-all cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
                   <span>Tải Về Toàn Bộ Tệp Đã Chuyển Đổi (.ZIP)</span>
@@ -907,180 +1153,13 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
           </div>
 
           {/* Realtime Live Preview Viewport */}
-          <div className="bg-surface-container/60 border border-border-subtle/70 rounded-xl shadow-sm overflow-hidden flex flex-col">
-            {/* Preview Navigation Header & Tabs */}
-            <div className="p-3 bg-surface border-b border-border-subtle flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setPreviewTab('pdf')}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 transition-colors ${
-                    previewTab === 'pdf'
-                      ? 'bg-primary text-on-primary font-bold shadow-sm'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  <FileCode className="w-3.5 h-3.5" />
-                  <span>Xem trước PDF</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewTab('md')}
-                  className={`px-3 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 transition-colors ${
-                    previewTab === 'md'
-                      ? 'bg-secondary text-on-secondary font-bold shadow-sm'
-                      : 'text-on-surface-variant hover:text-on-surface'
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Xem trước Markdown / AI Prompt</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 font-mono text-xs text-on-surface-variant">
-                <span className="hidden sm:inline">Zoom: {zoomLevel}%</span>
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel(z => Math.max(50, z - 10))}
-                  className="p-1 rounded hover:bg-surface-container text-on-surface-variant"
-                  aria-label="Thu nhỏ xem trước"
-                >
-                  <ZoomOut className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setZoomLevel(z => Math.min(150, z + 10))}
-                  className="p-1 rounded hover:bg-surface-container text-on-surface-variant"
-                  aria-label="Phóng to xem trước"
-                >
-                  <ZoomIn className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Viewport Content */}
-            <div className="p-6 bg-[#060e20] min-h-[440px] flex items-center justify-center overflow-auto border-t border-border-subtle/50">
-              {previewTab === 'pdf' ? (
-                /* PDF Document Simulation Screen */
-                <div
-                  className="w-full max-w-md bg-white text-slate-900 rounded p-6 shadow-2xl space-y-4 text-xs transition-transform duration-100"
-                  style={{ transform: `scale(${zoomLevel / 100})` }}
-                >
-                  {/* Simulated PDF Letterhead */}
-                  <div className="flex items-start justify-between pb-3 border-b border-slate-200">
-                    <div>
-                      <div className="font-bold text-sm tracking-tight text-slate-900">
-                        CÔNG TY CỔ PHẦN CÔNG NGHỆ OMNI
-                      </div>
-                      <div className="text-[10px] text-slate-600 font-mono mt-0.5">
-                        BÁO CÁO KẾ HOẠCH TÀI CHÍNH CHIẾN LƯỢC QUÝ 3 - 2026
-                      </div>
-                    </div>
-                    <div className="w-7 h-7 rounded bg-sky-600 text-white flex items-center justify-center font-bold text-[10px]">
-                      WASM
-                    </div>
-                  </div>
-
-                  {/* Simulated Heading & Summary */}
-                  <div className="space-y-1">
-                    <h3 className="font-bold text-xs text-slate-900">
-                      1. Tóm tắt chỉ tiêu chuyển đổi tài liệu ({activePreviewFile ? activePreviewFile.file.name : 'Ke_Hoach_2026.docx'})
-                    </h3>
-                    <p className="text-[11px] text-slate-700 leading-relaxed">
-                      Tài liệu trích xuất chuẩn vector từ tệp Word nguồn. Cấu trúc bảng và đồ thị được giữ nguyên tỷ lệ với độ nét 100%.
-                    </p>
-                  </div>
-
-                  {/* Inline Chart Simulation */}
-                  <div className="p-3 bg-slate-50 rounded border border-slate-200">
-                    <div className="flex justify-between items-center text-[10px] text-slate-600 font-semibold mb-2 font-mono">
-                      <span>DOANH THU DỰ KIẾN (TỶ VNĐ)</span>
-                      <span className="text-emerald-700 font-bold">+28.4%</span>
-                    </div>
-                    <svg className="w-full h-16" fill="none" viewBox="0 0 320 80">
-                      <rect fill="#64748b" height="30" rx="3" width="36" x="10" y="45" />
-                      <rect fill="#64748b" height="43" rx="3" width="36" x="70" y="32" />
-                      <rect fill="#0284c7" height="53" rx="3" width="36" x="130" y="22" />
-                      <rect fill="#0284c7" height="60" rx="3" width="36" x="190" y="15" />
-                      <rect fill="#059669" height="67" rx="3" width="36" x="250" y="8" />
-                      <line stroke="#cbd5e1" strokeWidth="1.5" x1="5" x2="310" y1="76" y2="76" />
-                      <text fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle" x="28" y="72">Q1</text>
-                      <text fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle" x="88" y="72">Q2</text>
-                      <text fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle" x="148" y="72">Q3</text>
-                      <text fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle" x="208" y="72">Q4</text>
-                      <text fill="#ffffff" fontSize="8" fontWeight="bold" textAnchor="middle" x="268" y="72">MỤC TIÊU</text>
-                    </svg>
-                  </div>
-
-                  {/* High Fidelity Table Simulation */}
-                  <div className="rounded overflow-hidden border border-slate-200">
-                    <table className="w-full text-left text-[10px]">
-                      <thead className="bg-slate-100 font-semibold text-slate-800">
-                        <tr>
-                          <th className="p-1.5">Hạng mục chi phí</th>
-                          <th className="p-1.5 text-right">Ngân sách</th>
-                          <th className="p-1.5 text-right">Tỷ trọng</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-slate-700">
-                        <tr>
-                          <td className="p-1.5 font-medium">Hạ tầng Cloud & AI GPU</td>
-                          <td className="p-1.5 text-right">4.200.000.000 đ</td>
-                          <td className="p-1.5 text-right font-semibold text-sky-700">45.0%</td>
-                        </tr>
-                        <tr>
-                          <td className="p-1.5 font-medium">Nghiên cứu & Phát triển (R&D)</td>
-                          <td className="p-1.5 text-right">3.150.000.000 đ</td>
-                          <td className="p-1.5 text-right font-semibold text-sky-700">33.7%</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Footer Pagination */}
-                  <div className="flex justify-between items-center pt-2 text-[9px] text-slate-600 font-mono">
-                    <span>BẢO MẬT NỘI BỘ — AI-TOOLS MASTER HUB</span>
-                    <span>Trang 1 / 1</span>
-                  </div>
-                </div>
-              ) : (
-                /* Markdown AI Prompt Viewport */
-                <div className="w-full h-full p-4 rounded-lg bg-surface border border-border-subtle font-mono text-xs text-on-surface space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-border-subtle text-on-surface-variant text-[11px]">
-                    <span className="flex items-center gap-1.5 text-secondary">
-                      <span className="w-2 h-2 rounded-full bg-secondary" />
-                      MARKDOWN EXTRACTED — OPTIMIZED FOR RAG & CLAUDE 3.7 / GPT-4o
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const mdContent = `# BÁO CÁO KẾ HOẠCH TÀI CHÍNH CHIẾN LƯỢC QUÝ 3 - 2026\n> Trích xuất tự động qua WASM OmniConvert Engine lúc 14:20:05\n\n## 1. Tóm tắt chỉ tiêu tăng trưởng doanh thu theo sản phẩm\nTài liệu trích xuất chuẩn vector từ tệp Word nguồn \`Ke_Hoach_2026.docx\`.\n\n| Hạng mục chi phí | Ngân sách (VNĐ) | Tỷ trọng | Trạng thái |\n| :--- | :---: | :---: | :--- |\n| **Hạ tầng Cloud & AI GPU** | \`4.200.000.000\` | 45.0% | [Xúc tiến] |\n| **Nghiên cứu & Phát triển** | \`3.150.000.000\` | 33.7% | [Đang giải ngân] |`;
-                        navigator.clipboard.writeText(mdContent);
-                        setCopiedMd(true);
-                        setTimeout(() => setCopiedMd(false), 2000);
-                      }}
-                      className="text-primary-container hover:underline flex items-center gap-1"
-                    >
-                      {copiedMd ? <Check className="w-3.5 h-3.5 text-secondary" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedMd ? 'Đã chép!' : 'Sao chép Markdown'}</span>
-                    </button>
-                  </div>
-
-                  <pre tabIndex={0} role="region" aria-label="Nội dung Markdown xem trước" className="overflow-x-auto text-on-surface-variant font-mono text-[11px] leading-relaxed select-all">
-                    <span className="text-amber-500 font-bold"># BÁO CÁO KẾ HOẠCH TÀI CHÍNH CHIẾN LƯỢC QUÝ 3 - 2026</span>{'\n'}
-                    <span className="text-on-surface-variant/70">&gt; Trích xuất tự động qua WASM OmniConvert Engine lúc 14:20:05</span>{'\n\n'}
-                    <span className="text-primary font-bold">## 1. Tóm tắt chỉ tiêu tăng trưởng doanh thu theo sản phẩm</span>{'\n'}
-                    Tài liệu trích xuất chuẩn vector từ tệp Word nguồn. Toàn bộ cấu trúc phân cấp tiêu đề được giữ nguyên theo chuẩn CommonMark.{'\n\n'}
-                    <span className="text-secondary font-bold">### Bảng phân bổ nguồn vốn đầu tư:</span>{'\n'}
-                    | Hạng mục chi phí | Ngân sách (VNĐ) | Tỷ trọng | Trạng thái |{'\n'}
-                    | :--- | :---: | :---: | :--- |{'\n'}
-                    | **Hạ tầng Cloud & AI GPU** | `4.200.000.000` | 45.0% | [Xúc tiến] |{'\n'}
-                    | **Nghiên cứu & Phát triển** | `3.150.000.000` | 33.7% | [Đang giải ngân] |
-                  </pre>
-                </div>
-              )}
-            </div>
-          </div>
+          <DynamicRealtimePreviewViewport
+            activeItem={currentPreviewItem}
+            zoomLevel={zoomLevel}
+            setZoomLevel={setZoomLevel}
+            onDownloadSingle={handleDownloadSingle}
+            displayLang={displayLang}
+          />
         </div>
       </div>
 
@@ -1092,7 +1171,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
           <div className="relative w-full max-w-lg bg-surface border border-border-subtle rounded-2xl shadow-2xl overflow-hidden flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface-container/60">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-primary-container/20 text-primary-container">
+                <div className="p-2 rounded-xl bg-primary text-on-primary">
                   <Sliders className="w-4 h-4" />
                 </div>
                 <div>
@@ -1104,7 +1183,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
                 aria-label="Đóng cửa sổ cài đặt"
-                className="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-subtle transition-colors"
+                className="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-subtle transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1113,13 +1192,13 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
             <div className="p-6 space-y-5 text-xs text-on-surface">
               <div className="space-y-1.5">
                 <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Khổ giấy PDF</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[{ id: 'a4', label: 'A4' }, { id: 'letter', label: 'US Letter' }, { id: 'fit', label: 'Fit Image' }].map(opt => (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[{ id: 'a4', label: 'A4' }, { id: 'letter', label: 'US Letter' }, { id: 'fit', label: 'Khớp kích thước ảnh' }].map(opt => (
                     <button
                       key={opt.id}
                       type="button"
                       onClick={() => setSettings(s => ({ ...s, pageSize: opt.id }))}
-                      className={`py-2 px-3 rounded-lg font-medium border transition-all ${
+                      className={`py-2 px-3 rounded-lg font-medium border transition-all cursor-pointer ${
                         settings.pageSize === opt.id
                           ? 'bg-primary text-on-primary font-bold border-primary'
                           : 'bg-surface-container text-on-surface-variant border-border-subtle hover:bg-surface-bright'
@@ -1133,13 +1212,13 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
               <div className="space-y-1.5">
                 <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Hướng trang giấy</label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[{ id: 'auto', label: 'Tự động' }, { id: 'portrait', label: 'Dọc (Portrait)' }, { id: 'landscape', label: 'Ngang (Landscape)' }].map(opt => (
                     <button
                       key={opt.id}
                       type="button"
                       onClick={() => setSettings(s => ({ ...s, orientation: opt.id }))}
-                      className={`py-2 px-3 rounded-lg font-medium border transition-all ${
+                      className={`py-2 px-3 rounded-lg font-medium border transition-all cursor-pointer ${
                         settings.orientation === opt.id
                           ? 'bg-primary text-on-primary font-bold border-primary'
                           : 'bg-surface-container text-on-surface-variant border-border-subtle hover:bg-surface-bright'
@@ -1152,14 +1231,14 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Độ nét trích xuất trang PDF ➔ Ảnh</label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Độ nét trích xuất trang PDF ➔ Ảnh / PPTX</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[{ val: 1.5, label: '1.5x (Web)' }, { val: 2.0, label: '2.0x (150 DPI)' }, { val: 3.0, label: '3.0x (300 DPI)' }].map(opt => (
                     <button
                       key={opt.val}
                       type="button"
                       onClick={() => setSettings(s => ({ ...s, scale: opt.val }))}
-                      className={`py-2 px-3 rounded-lg font-medium border transition-all ${
+                      className={`py-2 px-3 rounded-lg font-medium border transition-all cursor-pointer ${
                         settings.scale === opt.val
                           ? 'bg-primary text-on-primary font-bold border-primary'
                           : 'bg-surface-container text-on-surface-variant border-border-subtle hover:bg-surface-bright'
@@ -1173,7 +1252,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Chất lượng ảnh JPG/WebP</label>
+                  <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Chất lượng nén ảnh JPG / WebP</label>
                   <span className="font-mono text-primary font-bold">{Math.round(settings.quality * 100)}%</span>
                 </div>
                 <input
@@ -1193,14 +1272,14 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               <button
                 type="button"
                 onClick={() => setSettings({ pageSize: 'a4', orientation: 'auto', scale: 2.0, quality: 0.92, margin: 20 })}
-                className="text-xs text-on-surface-variant hover:text-on-surface transition-colors"
+                className="text-xs text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
               >
                 Mặc định
               </button>
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(false)}
-                className="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold shadow-md transition-colors"
+                className="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold shadow-md transition-colors cursor-pointer"
               >
                 Áp Dụng
               </button>
@@ -1210,23 +1289,23 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
       )}
 
       {/* ==================================================================== */}
-      {/* 4. PREVIEW MODAL (Single Item)                                       */}
+      {/* 4. PREVIEW MODAL (Full Window Inspector)                             */}
       {/* ==================================================================== */}
-      {previewItem && (
+      {previewModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="relative w-full max-w-4xl h-[85vh] bg-surface border border-border-subtle rounded-2xl shadow-2xl flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle bg-surface-container/60">
               <div className="truncate">
                 <h3 className="text-sm font-bold text-on-surface truncate">
-                  {previewItem.result?.filename || previewItem.file?.name}
+                  {previewModalItem.result?.filename || previewModalItem.file?.name}
                 </h3>
               </div>
               <div className="flex items-center gap-2">
-                {previewItem.result && (
+                {previewModalItem.result && (
                   <button
                     type="button"
-                    onClick={() => handleDownloadSingle(previewItem)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/90 text-on-secondary text-xs font-bold shadow-md transition-colors"
+                    onClick={() => handleDownloadSingle(previewModalItem)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/90 text-on-secondary text-xs font-bold shadow-md transition-colors cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Tải về</span>
@@ -1234,9 +1313,9 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 )}
                 <button
                   type="button"
-                  onClick={closePreview}
+                  onClick={closeModalPreview}
                   aria-label="Đóng cửa sổ xem trước"
-                  className="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-subtle transition-colors"
+                  className="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-subtle transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1244,29 +1323,26 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
             </div>
 
             <div className="flex-1 bg-surface-container/40 p-4 overflow-auto flex items-center justify-center">
-              {previewUrl && (
+              {previewModalUrl && (
                 (() => {
-                  const ext = (previewItem.result?.filename || previewItem.file?.name || '').split('.').pop()?.toLowerCase();
+                  const ext = (previewModalItem.result?.filename || previewModalItem.file?.name || '').split('.').pop()?.toLowerCase();
                   if (['png', 'jpg', 'jpeg', 'webp', 'svg', 'bmp'].includes(ext)) {
-                    return <img src={previewUrl} alt="Preview" className="max-h-full max-w-full object-contain rounded-lg shadow-lg border border-border-subtle" />;
+                    return <img src={previewModalUrl} alt="Preview" className="max-h-full max-w-full object-contain rounded-lg shadow-lg border border-border-subtle" />;
                   }
                   if (ext === 'pdf') {
-                    return <iframe src={previewUrl} title="PDF Preview" className="w-full h-full rounded-lg border border-border-subtle bg-white" />;
-                  }
-                  if (previewText !== null) {
-                    return <pre className="w-full h-full p-4 rounded-xl bg-surface border border-border-subtle text-xs font-mono text-on-surface overflow-auto whitespace-pre-wrap">{previewText}</pre>;
+                    return <iframe src={previewModalUrl} title="PDF Preview" className="w-full h-full rounded-lg border border-border-subtle bg-surface-container-lowest" />;
                   }
                   return (
                     <div className="text-center p-8 space-y-3">
-                      <div className="w-16 h-16 rounded-2xl bg-primary-container/20 text-primary border border-primary-container/30 flex items-center justify-center mx-auto">
+                      <div className="w-16 h-16 rounded-2xl bg-primary text-on-primary flex items-center justify-center mx-auto shadow-md">
                         <FileText className="w-8 h-8" />
                       </div>
-                      <h4 className="text-base font-bold text-on-surface">Tệp đã sẵn sàng tải về</h4>
-                      {previewItem.result && (
+                      <h4 className="text-base font-bold text-on-surface">Tệp đã sẵn sàng</h4>
+                      {previewModalItem.result && (
                         <button
                           type="button"
-                          onClick={() => handleDownloadSingle(previewItem)}
-                          className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold shadow-lg"
+                          onClick={() => handleDownloadSingle(previewModalItem)}
+                          className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold shadow-lg cursor-pointer"
                         >
                           Tải tệp .{ext?.toUpperCase()}
                         </button>
@@ -1279,6 +1355,422 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Realtime Dynamic Preview Viewport
+ * Renders actual uploaded file contents (images, rendered PDF canvas, Excel tables, Docx text)
+ */
+function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, onDownloadSingle, displayLang }) {
+  const [previewTab, setPreviewTab] = useState('source'); // 'source' or 'result'
+  const [isLoading, setIsLoading] = useState(false);
+  const [previewState, setPreviewState] = useState(null);
+  const [pdfPage, setPdfPage] = useState(1);
+  const [pdfTotalPages, setPdfTotalPages] = useState(1);
+  const [activeSheetIdx, setActiveSheetIdx] = useState(0);
+
+  // Auto switch tab when completed
+  useEffect(() => {
+    if (activeItem?.result?.blob) {
+      setPreviewTab('result');
+    } else {
+      setPreviewTab('source');
+    }
+  }, [activeItem?.id, activeItem?.status]);
+
+  useEffect(() => {
+    setPdfPage(1);
+    setActiveSheetIdx(0);
+  }, [activeItem?.id, previewTab]);
+
+  useEffect(() => {
+    if (!activeItem) {
+      setPreviewState(null);
+      return;
+    }
+
+    let isCancelled = false;
+    const isResult = previewTab === 'result' && activeItem.result?.blob;
+    const blob = isResult ? activeItem.result.blob : activeItem.file;
+    const filename = isResult ? activeItem.result.filename : (activeItem.file?.name || '');
+    const ext = getFileExtension(filename) || (isResult ? activeItem.targetFormat : activeItem.sourceFormat);
+
+    const loadContent = async () => {
+      setIsLoading(true);
+      try {
+        // 1. Merge Group Source Preview
+        if (activeItem.isMergeGroup && !isResult) {
+          const thumbnails = (activeItem.rawImageFiles || []).map(f => ({
+            name: f.name,
+            size: f.size,
+            url: URL.createObjectURL(f)
+          }));
+          if (!isCancelled) {
+            setPreviewState({ type: 'merge-group', thumbnails, filename });
+          }
+          return;
+        }
+
+        // 2. Images
+        const imageExts = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'bmp'];
+        if (imageExts.includes(ext)) {
+          const url = URL.createObjectURL(blob);
+          if (!isCancelled) {
+            setPreviewState({ type: 'image', url, filename });
+          }
+          return;
+        }
+
+        // 3. PDF
+        if (ext === 'pdf') {
+          const pdfDoc = await loadPdfDocument(blob);
+          if (isCancelled) return;
+          setPdfTotalPages(pdfDoc.numPages);
+          const safePage = Math.min(Math.max(1, pdfPage), pdfDoc.numPages);
+          const canvas = await renderPdfPageToCanvas(pdfDoc, safePage, 1.5);
+          if (isCancelled) return;
+          const dataUrl = canvas.toDataURL('image/png');
+          if (!isCancelled) {
+            setPreviewState({ type: 'pdf', dataUrl, page: safePage, total: pdfDoc.numPages, filename });
+          }
+          return;
+        }
+
+        // 4. Excel / Spreadsheet
+        if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
+          const arrayBuffer = await blob.arrayBuffer();
+          if (isCancelled) return;
+          const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+          const sheetNames = workbook.SheetNames || [];
+          const sheetName = sheetNames[activeSheetIdx] || sheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
+          if (!isCancelled) {
+            setPreviewState({
+              type: 'spreadsheet',
+              sheetNames,
+              activeSheetName: sheetName,
+              headers: rawData[0] || [],
+              rows: rawData.slice(1, 40),
+              totalRows: Math.max(0, rawData.length - 1),
+              filename
+            });
+          }
+          return;
+        }
+
+        // 5. Word DOCX
+        if (ext === 'docx') {
+          const arrayBuffer = await blob.arrayBuffer();
+          if (isCancelled) return;
+          const mammothResult = await mammoth.convertToHtml({ arrayBuffer });
+          if (!isCancelled) {
+            setPreviewState({
+              type: 'docx',
+              html: mammothResult.value || '<p>Không có nội dung văn bản trong tệp.</p>',
+              filename
+            });
+          }
+          return;
+        }
+
+        // 6. Text
+        if (ext === 'txt') {
+          const text = await blob.text();
+          if (!isCancelled) {
+            setPreviewState({ type: 'text', text: text.slice(0, 30000), filename });
+          }
+          return;
+        }
+
+        // 7. PPTX
+        if (ext === 'pptx') {
+          const arrayBuffer = await blob.arrayBuffer();
+          if (isCancelled) return;
+          const zip = await JSZip.loadAsync(arrayBuffer);
+          const slideEntries = [];
+          zip.folder('ppt/slides')?.forEach((_rel, entry) => {
+            if (/slide\d+\.xml$/i.test(entry.name)) slideEntries.push(entry);
+          });
+          let slideTexts = [];
+          if (slideEntries.length > 0) {
+            const slideXml = await slideEntries[0].async('text');
+            const textMatches = slideXml.match(/<a:t>([^<]+)<\/a:t>/g) || [];
+            slideTexts = textMatches.map(m => m.replace(/<\/?a:t>/g, '').trim()).filter(Boolean);
+          }
+          if (!isCancelled) {
+            setPreviewState({
+              type: 'pptx',
+              totalSlides: slideEntries.length,
+              slideTitle: slideTexts[0] || 'Slide 1',
+              slideBody: slideTexts.slice(1),
+              filename
+            });
+          }
+          return;
+        }
+
+        // Default Fallback
+        if (!isCancelled) {
+          setPreviewState({ type: 'ready', filename, ext, size: blob.size });
+        }
+      } catch (err) {
+        console.warn('Preview error:', err);
+        if (!isCancelled) {
+          setPreviewState({ type: 'error', error: err.message || 'Không thể xem trước tệp này', filename });
+        }
+      } finally {
+        if (!isCancelled) setIsLoading(false);
+      }
+    };
+
+    loadContent();
+
+    return () => {
+      isCancelled = true;
+      if (previewState?.url) URL.revokeObjectURL(previewState.url);
+      if (previewState?.thumbnails) {
+        previewState.thumbnails.forEach(t => URL.revokeObjectURL(t.url));
+      }
+    };
+  }, [activeItem?.id, activeItem?.status, previewTab, pdfPage, activeSheetIdx]);
+
+  return (
+    <div className="bg-surface-container/60 border border-border-subtle/70 rounded-xl shadow-sm overflow-hidden flex flex-col">
+      {/* Viewport Header */}
+      <div className="p-3 bg-surface border-b border-border-subtle flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setPreviewTab('source')}
+            className={`px-3 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+              previewTab === 'source'
+                ? 'bg-primary text-on-primary font-bold shadow-sm'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span>Tệp Nguồn {activeItem ? `(.${activeItem.sourceFormat?.toUpperCase()})` : ''}</span>
+          </button>
+          {activeItem?.result && (
+            <button
+              type="button"
+              onClick={() => setPreviewTab('result')}
+              className={`px-3 py-1.5 rounded-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                previewTab === 'result'
+                  ? 'bg-secondary text-on-secondary font-bold shadow-sm'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Kết Quả Đã Xuất (.{activeItem.targetFormat?.toUpperCase()})</span>
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 font-mono text-xs text-on-surface-variant">
+          <span className="hidden sm:inline">Zoom: {zoomLevel}%</span>
+          <button
+            type="button"
+            onClick={() => setZoomLevel(z => Math.max(50, z - 10))}
+            className="p-1 rounded hover:bg-surface-container text-on-surface-variant cursor-pointer"
+            aria-label="Thu nhỏ xem trước"
+            title="Thu nhỏ"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setZoomLevel(z => Math.min(150, z + 10))}
+            className="p-1 rounded hover:bg-surface-container text-on-surface-variant cursor-pointer"
+            aria-label="Phóng to xem trước"
+            title="Phóng to"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Viewport Content */}
+      <div className="p-6 bg-surface-container-high min-h-[460px] flex items-center justify-center overflow-auto border-t border-border-subtle/50 relative">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center gap-3 text-on-surface-variant">
+            <Loader2 className="w-7 h-7 animate-spin text-primary" />
+            <span className="text-xs font-mono">Đang đọc và dựng nội dung xem trước...</span>
+          </div>
+        ) : !activeItem ? (
+          <div className="flex flex-col items-center justify-center text-center p-8 text-on-surface-variant">
+            <div className="w-16 h-16 rounded-2xl bg-surface-container border border-border-subtle flex items-center justify-center text-primary-container mb-3 shadow-inner">
+              <FileStack className="w-8 h-8 opacity-60" />
+            </div>
+            <h3 className="text-sm font-bold text-on-surface mb-1">Chưa Có Tệp Tin Xem Trước</h3>
+            <p className="text-xs text-on-surface-variant max-w-sm leading-relaxed">
+              Tải lên tài liệu Word, Excel, PowerPoint, PDF hoặc hình ảnh để xem trước trực tiếp tại khung này.
+            </p>
+          </div>
+        ) : previewState?.type === 'merge-group' ? (
+          /* Group of Images Preview */
+          <div className="w-full max-w-2xl space-y-4" style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}>
+            <div className="p-3 bg-surface-container/80 rounded-xl border border-border-subtle flex items-center justify-between text-xs text-on-surface">
+              <span className="font-semibold">Bộ ảnh chuẩn bị gộp ({previewState.thumbnails.length} tệp)</span>
+              <span className="text-primary font-mono font-bold">➔ Xuất sang 1 file PDF</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {previewState.thumbnails.map((img, idx) => (
+                <div key={idx} className="bg-surface rounded-lg p-2 border border-border-subtle flex flex-col items-center gap-1.5">
+                  <div className="w-full h-24 bg-surface-container rounded overflow-hidden flex items-center justify-center">
+                    <img src={img.url} alt={img.name} className="max-h-full max-w-full object-cover" />
+                  </div>
+                  <span className="text-[10px] font-mono text-on-surface truncate w-full text-center">{img.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : previewState?.type === 'image' ? (
+          /* Real Image Preview */
+          <div className="flex flex-col items-center justify-center" style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}>
+            <img
+              src={previewState.url}
+              alt={previewState.filename}
+              className="max-h-[460px] max-w-full object-contain rounded-xl shadow-2xl border border-border-subtle"
+            />
+            <span className="font-mono text-[11px] text-on-surface-variant mt-2">{previewState.filename}</span>
+          </div>
+        ) : previewState?.type === 'pdf' ? (
+          /* Real PDF Canvas Preview with Page Controls */
+          <div className="flex flex-col items-center justify-center space-y-3" style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}>
+            {previewState.total > 1 && (
+              <div className="flex items-center gap-3 bg-surface-container/90 px-3 py-1.5 rounded-xl border border-border-subtle text-xs font-mono text-on-surface">
+                <button
+                  type="button"
+                  disabled={pdfPage <= 1}
+                  onClick={() => setPdfPage(p => Math.max(1, p - 1))}
+                  className="p-1 rounded hover:bg-surface disabled:opacity-30 cursor-pointer"
+                  title="Trang trước"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span>Trang {pdfPage} / {previewState.total}</span>
+                <button
+                  type="button"
+                  disabled={pdfPage >= previewState.total}
+                  onClick={() => setPdfPage(p => Math.min(previewState.total, p + 1))}
+                  className="p-1 rounded hover:bg-surface disabled:opacity-30 cursor-pointer"
+                  title="Trang sau"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            <img
+              src={previewState.dataUrl}
+              alt={`PDF Page ${pdfPage}`}
+              className="max-h-[500px] max-w-full rounded shadow-2xl border border-border-subtle bg-surface-container-lowest"
+            />
+          </div>
+        ) : previewState?.type === 'spreadsheet' ? (
+          /* Real Spreadsheet Table Preview */
+          <div className="w-full max-w-2xl bg-surface rounded-xl border border-border-subtle p-4 space-y-3 text-xs text-on-surface" style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}>
+            {previewState.sheetNames.length > 1 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-border-subtle">
+                {previewState.sheetNames.map((name, sIdx) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setActiveSheetIdx(sIdx)}
+                    className={`px-2.5 py-1 rounded text-xs font-mono transition-colors cursor-pointer ${
+                      activeSheetIdx === sIdx
+                        ? 'bg-secondary text-on-secondary font-bold'
+                        : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="overflow-x-auto max-h-[380px] rounded border border-border-subtle">
+              <table className="w-full text-left font-mono text-[11px] border-collapse">
+                <thead className="bg-surface-container font-bold text-on-surface sticky top-0">
+                  <tr>
+                    <th className="p-2 border border-border-subtle text-center w-8 bg-surface-container-high">#</th>
+                    {previewState.headers.map((h, i) => (
+                      <th key={i} className="p-2 border border-border-subtle truncate max-w-[140px]">{String(h)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewState.rows.map((row, rIdx) => (
+                    <tr key={rIdx} className={rIdx % 2 === 0 ? 'bg-surface' : 'bg-surface-container/40'}>
+                      <td className="p-2 border border-border-subtle text-center text-on-surface-variant">{rIdx + 1}</td>
+                      {previewState.headers.map((_, cIdx) => (
+                        <td key={cIdx} className="p-2 border border-border-subtle truncate max-w-[140px]">
+                          {String(row[cIdx] !== undefined ? row[cIdx] : '')}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-between text-[11px] text-on-surface-variant font-mono">
+              <span>Hiển thị tối đa 40 dòng đầu</span>
+              <span>Tổng: {previewState.totalRows} hàng</span>
+            </div>
+          </div>
+        ) : previewState?.type === 'docx' ? (
+          /* Real Word Document Preview in Sheet Container */
+          <div
+            className="w-full max-w-xl bg-surface-container-lowest text-on-surface p-8 rounded-xl shadow-2xl text-xs overflow-auto max-h-[460px] leading-relaxed prose prose-sm"
+            style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
+            dangerouslySetInnerHTML={{ __html: previewState.html }}
+          />
+        ) : previewState?.type === 'text' ? (
+          /* Real Text Monospace Preview */
+          <pre
+            tabIndex={0}
+            className="w-full max-w-xl max-h-[440px] p-4 bg-surface rounded-xl border border-border-subtle font-mono text-xs text-on-surface overflow-auto whitespace-pre-wrap select-all"
+            style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
+          >
+            {previewState.text}
+          </pre>
+        ) : previewState?.type === 'pptx' ? (
+          /* Real PPTX Slide Preview */
+          <div className="w-full max-w-lg bg-surface-container-lowest text-on-surface rounded-xl p-6 shadow-2xl border-t-8 border-orange-500 space-y-3 text-xs" style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}>
+            <div className="flex items-center justify-between pb-2 border-b border-border-subtle">
+              <span className="font-bold text-sm text-on-surface truncate">{previewState.slideTitle}</span>
+              <span className="text-[10px] font-mono text-on-surface-variant">{previewState.totalSlides} Slide</span>
+            </div>
+            <div className="space-y-1.5 text-on-surface max-h-[260px] overflow-auto py-2">
+              {previewState.slideBody.length > 0 ? (
+                previewState.slideBody.map((b, idx) => (
+                  <p key={idx} className="leading-relaxed">• {b}</p>
+                ))
+              ) : (
+                <p className="italic text-on-surface-variant">Slide không chứa nội dung văn bản ngoài tiêu đề.</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center p-8 space-y-3">
+            <div className="w-16 h-16 rounded-2xl bg-surface-container text-primary border border-border-subtle flex items-center justify-center mx-auto">
+              <File className="w-8 h-8" />
+            </div>
+            <h4 className="text-sm font-bold text-on-surface">{previewState?.filename || activeItem.file.name}</h4>
+            <p className="text-xs text-on-surface-variant">Tệp đã sẵn sàng trong hàng đợi.</p>
+            {activeItem.result && (
+              <button
+                type="button"
+                onClick={() => onDownloadSingle(activeItem)}
+                className="px-4 py-2 rounded-xl bg-secondary hover:bg-secondary/90 text-on-secondary text-xs font-bold shadow-md cursor-pointer"
+              >
+                Tải về tệp kết quả
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
