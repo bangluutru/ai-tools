@@ -9,13 +9,15 @@
 
 import React, { useLayoutEffect, useRef } from 'react';
 import { Swords } from 'lucide-react';
+import { getNinjaStrings } from '@ai-tools/core/utils/ninja/ninjaI18n.js';
 import './ToolioNinjaPet.css';
 
 const WALK_SPEED = 0.45; // Tốc độ bước chân chậm rãi (~27px/s tại 60fps)
 const SLASH_DURATION_MS = 600; // Thời gian vung kiếm chém thị uy (0.6s)
 const IDLE_DURATION_MS = 700;  // Thời gian đứng thế thủ sau khi chém trước khi quay đầu (0.7s)
 
-export default function ToolioNinjaPet({ onOpenGame }) {
+export default function ToolioNinjaPet({ onOpenGame, displayLang = 'vi' }) {
+  const i18n = getNinjaStrings(displayLang);
   const posRef = useRef({ x: 20 });
   const velRef = useRef(WALK_SPEED);
   const elemRef = useRef(null);
@@ -135,9 +137,9 @@ export default function ToolioNinjaPet({ onOpenGame }) {
       onClick={onOpenGame}
       onMouseEnter={() => { isHoveredRef.current = true; }}
       onMouseLeave={() => { isHoveredRef.current = false; }}
-      title="Toolio Ninja Run — Click để chơi!"
+      title={i18n.pet.title}
       role="button"
-      aria-label="Toolio Ninja Run — Click để chơi game"
+      aria-label={i18n.pet.ariaLabel}
       tabIndex={0}
       onKeyDown={(e) => {
         if (e.code === 'Enter' || e.code === 'Space') {
@@ -149,7 +151,7 @@ export default function ToolioNinjaPet({ onOpenGame }) {
       {/* Tooltip khi hover */}
       <div className="ninja-pet-tooltip">
         <Swords size={11} />
-        <span>Chơi Ninja Run!</span>
+        <span>{i18n.pet.tooltip}</span>
       </div>
 
       <div className="ninja-pet-bob">

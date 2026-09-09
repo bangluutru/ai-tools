@@ -15,9 +15,11 @@ import {
   GAME_HEIGHT,
   MAX_DPR,
 } from '@ai-tools/core/utils/ninja/ninjaEngine.js';
+import { getNinjaStrings } from '@ai-tools/core/utils/ninja/ninjaI18n.js';
 import './ToolioNinjaPet.css';
 
-export default function ToolioNinjaModal({ onClose }) {
+export default function ToolioNinjaModal({ onClose, displayLang = 'vi' }) {
+  const i18n = getNinjaStrings(displayLang);
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const containerRef = useRef(null);
@@ -46,6 +48,11 @@ export default function ToolioNinjaModal({ onClose }) {
       window.__toolio_ninja_engine = null;
     };
   }, []);
+
+  // Sync language changes in real-time
+  useEffect(() => {
+    engineRef.current?.setLanguage(displayLang);
+  }, [displayLang]);
 
   // Lock background scrolling
   useEffect(() => {
@@ -117,7 +124,7 @@ export default function ToolioNinjaModal({ onClose }) {
         className="ninja-game-container"
         role="dialog"
         aria-modal="true"
-        aria-label="Toolio Ninja Run Game"
+        aria-label={i18n.meta.gameTitle}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
@@ -125,8 +132,8 @@ export default function ToolioNinjaModal({ onClose }) {
         <div className="ninja-game-header">
           <div className="ninja-game-title">
             <Swords size={18} className="text-primary" />
-            <span>TOOLIO NINJA RUN</span>
-            <span className="ninja-game-badge">Arcade 16:9</span>
+            <span>{i18n.meta.gameTitle}</span>
+            <span className="ninja-game-badge">{i18n.meta.badge}</span>
           </div>
 
           <div className="ninja-game-actions">
@@ -134,16 +141,16 @@ export default function ToolioNinjaModal({ onClose }) {
               type="button"
               className="ninja-game-action-btn"
               onClick={handleOpenFullscreen}
-              title="Mở toàn màn hình tại miniapp Toolio Ninja"
+              title={i18n.controls.fullscreenTitle}
             >
               <ExternalLink size={13} />
-              <span>Toàn màn hình</span>
+              <span>{i18n.controls.fullscreen}</span>
             </button>
             <button
               type="button"
               className="ninja-game-close"
               onClick={onClose}
-              aria-label="Đóng game"
+              aria-label={i18n.controls.closeAria}
             >
               <X size={16} />
             </button>
@@ -167,19 +174,19 @@ export default function ToolioNinjaModal({ onClose }) {
               type="button"
               className="ninja-touch-btn"
               onPointerDown={handleJumpTouch}
-              aria-label="Nhảy"
+              aria-label={i18n.controls.jump}
             >
               <ArrowUp size={14} />
-              <span>NHẢY</span>
+              <span>{i18n.controls.jump}</span>
             </button>
             <button
               type="button"
               className="ninja-touch-btn"
               onPointerDown={handleSlashTouch}
-              aria-label="Chém"
+              aria-label={i18n.controls.slash}
             >
               <Swords size={14} />
-              <span>CHÉM</span>
+              <span>{i18n.controls.slash}</span>
             </button>
           </div>
         </div>
@@ -187,12 +194,12 @@ export default function ToolioNinjaModal({ onClose }) {
         {/* Footer info */}
         <div className="ninja-game-footer">
           <div>
-            <span className="ninja-key-badge">SPACE / CHẠM TRÁI</span> Nhảy
+            <span className="ninja-key-badge">{i18n.controls.footerJumpKey}</span> {i18n.controls.footerJumpAction}
             <span style={{ margin: '0 8px' }}>•</span>
-            <span className="ninja-key-badge">X / J / CHẠM PHẢI</span> Chém
+            <span className="ninja-key-badge">{i18n.controls.footerSlashKey}</span> {i18n.controls.footerSlashAction}
           </div>
           <div>
-            <span className="ninja-key-badge">ESC</span> để đóng
+            <span className="ninja-key-badge">{i18n.controls.footerCloseKey}</span> {i18n.controls.footerCloseAction}
           </div>
         </div>
       </div>

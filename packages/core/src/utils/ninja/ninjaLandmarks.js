@@ -18,7 +18,7 @@
  * ============================================================================ */
 
 /**
- * Núi Phú Sĩ tuyết phủ với tỷ lệ đối xứng và răng cưa tự nhiên
+ * Núi Phú Sĩ tuyết phủ với vầng thái dương Ukiyo-e và dải mây cuộn Yamato-e
  */
 export function drawMountFuji(ctx, x, groundY) {
   ctx.save();
@@ -27,7 +27,23 @@ export function drawMountFuji(ctx, x, groundY) {
   const baseHalfWidth = 175;
   const peakHalfWidth = 30;
 
-  // Thân núi hùng vĩ với gradient ánh hoàng hôn/bình minh
+  // 1. Vầng thái dương đỏ rực (Rising Sun) khổng lồ phong cách mộc bản Nhật Bản
+  const sunGrad = ctx.createLinearGradient(x, peakY - 45, x, peakY + 45);
+  sunGrad.addColorStop(0, '#f43f5e');
+  sunGrad.addColorStop(0.6, '#dc2626');
+  sunGrad.addColorStop(1, '#991b1b');
+  ctx.fillStyle = sunGrad;
+  ctx.beginPath();
+  ctx.arc(x, peakY - 12, 42, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Quầng hào quang thái dương tỏa rộng mềm mại
+  ctx.fillStyle = 'rgba(254, 205, 211, 0.22)';
+  ctx.beginPath();
+  ctx.arc(x, peakY - 12, 60, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. Thân núi hùng vĩ với gradient ánh hoàng hôn/bình minh mộc bản Ukiyo-e
   const mtnGrad = ctx.createLinearGradient(x - baseHalfWidth, baseY, x + baseHalfWidth, peakY);
   mtnGrad.addColorStop(0, '#1e1b4b');
   mtnGrad.addColorStop(0.55, '#312e81');
@@ -42,7 +58,7 @@ export function drawMountFuji(ctx, x, groundY) {
   ctx.closePath();
   ctx.fill();
 
-  // Nón tuyết trắng đỉnh núi có các đường răng cưa tự nhiên
+  // 3. Nón tuyết trắng đỉnh núi có các đường răng cưa tự nhiên
   const snowBaseY = peakY + 40;
   const snowGrad = ctx.createLinearGradient(x, peakY, x, snowBaseY);
   snowGrad.addColorStop(0, '#ffffff');
@@ -66,14 +82,113 @@ export function drawMountFuji(ctx, x, groundY) {
   ctx.closePath();
   ctx.fill();
 
-  // Quầng sáng đỏ rực mặt trời mọc sau đỉnh Phú Sĩ
-  ctx.fillStyle = 'rgba(254, 205, 211, 0.28)';
+  // 4. Dải mây cuộn Ukiyo-e ngang lưng chừng núi (Yamato-e / Kumadori clouds)
+  const drawUkiyoeCloud = (cx, cy, scale) => {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+
+    // Thân mây trắng ngà xếp lớp
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.beginPath();
+    ctx.arc(-24, 0, 10, 0, Math.PI * 2);
+    ctx.arc(-10, -5, 13, 0, Math.PI * 2);
+    ctx.arc(8, -4, 12, 0, Math.PI * 2);
+    ctx.arc(24, 1, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Viền vàng kim nghệ thuật phong cách tranh cổ Hokusai
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.restore();
+  };
+
+  drawUkiyoeCloud(x - 90, peakY + 54, 1.1);
+  drawUkiyoeCloud(x + 85, peakY + 62, 0.95);
+
+  ctx.restore();
+}
+
+/**
+ * Chùa 5 tầng Nhật Bản (Gojūnotō Five-Story Pagoda)
+ * Kiến trúc mái ngói cong 5 tầng xếp lớp, cột đỏ son và ngọn sōrin đồng 9 vòng tròn.
+ */
+export function drawGojunotoPagoda(ctx, x, groundY) {
+  ctx.save();
+  const y = groundY;
+  const totalH = 150;
+
+  // Bệ đá móng chùa (Kidan)
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(x - 26, y - 8, 52, 8);
+  ctx.fillStyle = '#475569';
+  ctx.fillRect(x - 22, y - 12, 44, 4);
+
+  // 5 Tầng mái ngói cong xếp lớp giật cấp từ lớn đến nhỏ
+  const tiers = [
+    { w: 46, h: 10, eaveY: y - 24, colH: 14 },
+    { w: 40, h: 9, eaveY: y - 44, colH: 12 },
+    { w: 34, h: 9, eaveY: y - 64, colH: 12 },
+    { w: 28, h: 8, eaveY: y - 83, colH: 11 },
+    { w: 22, h: 8, eaveY: y - 101, colH: 11 },
+  ];
+
+  for (const tier of tiers) {
+    // Cột trụ sơn đỏ son và tường gỗ nâu
+    ctx.fillStyle = '#991b1b';
+    ctx.fillRect(x - tier.w * 0.35, tier.eaveY, tier.w * 0.7, tier.colH);
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(x - tier.w * 0.35 + 2, tier.eaveY, 3, tier.colH);
+    ctx.fillRect(x + tier.w * 0.35 - 5, tier.eaveY, 3, tier.colH);
+
+    // Mái ngói cong vút hai đầu (Nokiba)
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.moveTo(x - tier.w / 2 - 6, tier.eaveY);
+    ctx.quadraticCurveTo(x, tier.eaveY - 4, x + tier.w / 2 + 6, tier.eaveY);
+    ctx.lineTo(x + tier.w / 2 + 4, tier.eaveY - tier.h);
+    ctx.quadraticCurveTo(x, tier.eaveY - tier.h - 3, x - tier.w / 2 - 4, tier.eaveY - tier.h);
+    ctx.closePath();
+    ctx.fill();
+
+    // Viền vàng kim đầu mái cong
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(x - tier.w / 2 - 5, tier.eaveY - 1, 2, 0, Math.PI * 2);
+    ctx.arc(x + tier.w / 2 + 5, tier.eaveY - 1, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Ngọn tháp đồng sōrin linh thiêng đỉnh chùa (9 vòng đồng Kurumahō)
+  const spireBaseY = y - 109;
+  const spireTopY = y - totalH;
+
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(x, peakY - 10, 36, 0, Math.PI * 2);
+  ctx.moveTo(x, spireBaseY);
+  ctx.lineTo(x, spireTopY);
+  ctx.stroke();
+
+  // 9 Vòng tròn đồng nhỏ xếp trên ngọn sōrin
+  ctx.fillStyle = '#fbbf24';
+  for (let i = 0; i < 9; i++) {
+    const ringY = spireBaseY - 6 - i * 3.2;
+    const ringW = 7 - i * 0.3;
+    ctx.fillRect(x - ringW / 2, ringY, ringW, 1.5);
+  }
+
+  // Viên ngọc Hōju rực sáng đỉnh tháp
+  ctx.fillStyle = '#f59e0b';
+  ctx.beginPath();
+  ctx.arc(x, spireTopY, 3, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
 }
+
 
 /**
  * Tháp truyền hình Tokyo Skytree kết cấu mắt cáo đan chéo vươn cao
@@ -148,7 +263,7 @@ export function drawTokyoSkytree(ctx, x, groundY, time = 0) {
 }
 
 /**
- * Cổng Torii đền Thần Đạo truyền thống Nhật Bản
+ * Cổng Torii đền Thần Đạo truyền thống Nhật Bản (kèm dây bện Shimenawa & dải giấy Shide)
  */
 export function drawToriiGate(ctx, x, groundY) {
   ctx.save();
@@ -202,11 +317,37 @@ export function drawToriiGate(ctx, x, groundY) {
   ctx.lineWidth = 1;
   ctx.strokeRect(x - 6, y - h + 8, 12, 14);
 
+  // Dây rơm bện thiêng liêng (Shimenawa) uốn lượn dưới thanh Nuki
+  ctx.strokeStyle = '#d97706';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(x - w / 2 + 17, y - h + 24);
+  ctx.quadraticCurveTo(x, y - h + 31, x + w / 2 - 17, y - h + 24);
+  ctx.stroke();
+
+  // Dải giấy trắng gấp nếp Shide linh thiêng
+  const drawShide = (sx, sy) => {
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(sx - 3, sy);
+    ctx.lineTo(sx + 3, sy + 3);
+    ctx.lineTo(sx - 2, sy + 6);
+    ctx.lineTo(sx + 3, sy + 10);
+    ctx.lineTo(sx, sy + 10);
+    ctx.lineTo(sx - 4, sy + 6);
+    ctx.lineTo(sx + 1, sy + 3);
+    ctx.closePath();
+    ctx.fill();
+  };
+  drawShide(x - 16, y - h + 27);
+  drawShide(x, y - h + 29);
+  drawShide(x + 16, y - h + 27);
+
   ctx.restore();
 }
 
 /**
- * Cây hoa anh đào (Sakura) nở rộ
+ * Cây hoa anh đào (Sakura) nở rộ mùa xuân Nhật Bản
  */
 export function drawSakuraTree(ctx, x, groundY) {
   ctx.save();
@@ -241,6 +382,60 @@ export function drawSakuraTree(ctx, x, groundY) {
 
   ctx.restore();
 }
+
+/**
+ * Cây lá phong đỏ Momiji mùa thu Nhật Bản
+ * Thân cây bonsai sẫm màu và các tán lá đỏ rực, cam cháy phong cách tranh khắc gỗ Ukiyo-e
+ */
+export function drawMomijiTree(ctx, x, groundY) {
+  ctx.save();
+  // Thân cây bonsai uốn lượn tự nhiên
+  const trunkGrad = ctx.createLinearGradient(x, groundY, x - 18, groundY - 65);
+  trunkGrad.addColorStop(0, '#292524');
+  trunkGrad.addColorStop(1, '#57534e');
+
+  ctx.fillStyle = trunkGrad;
+  ctx.beginPath();
+  ctx.moveTo(x + 7, groundY);
+  ctx.quadraticCurveTo(x + 2, groundY - 30, x + 10, groundY - 58);
+  ctx.lineTo(x + 3, groundY - 60);
+  ctx.quadraticCurveTo(x - 5, groundY - 30, x - 7, groundY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cành vươn ngang
+  ctx.strokeStyle = '#44403c';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x + 6, groundY - 45);
+  ctx.lineTo(x - 20, groundY - 68);
+  ctx.moveTo(x + 8, groundY - 52);
+  ctx.lineTo(x + 26, groundY - 72);
+  ctx.stroke();
+
+  // Tán lá đỏ thắm Momiji nhiều lớp chuyển màu
+  const drawMomijiCluster = (bx, by, r, color) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Vài đốm lá điểm xuyết
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath();
+    ctx.arc(bx + r * 0.3, by - r * 0.3, r * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  drawMomijiCluster(x - 24, groundY - 72, 22, '#991b1b');
+  drawMomijiCluster(x + 22, groundY - 76, 24, '#dc2626');
+  drawMomijiCluster(x - 2, groundY - 92, 26, '#ef4444');
+  drawMomijiCluster(x - 14, groundY - 80, 18, '#f97316');
+  drawMomijiCluster(x + 12, groundY - 84, 20, '#ea580c');
+  drawMomijiCluster(x - 2, groundY - 96, 22, '#f59e0b');
+
+  ctx.restore();
+}
+
 
 /* ============================================================================
  * 2. VỊNH HẠ LONG (VIỆT NAM)
@@ -356,6 +551,20 @@ export function drawHaLongJunkBoat(ctx, x, groundY, time = 0) {
   ctx.lineTo(x + 20, y - 48);
   ctx.stroke();
 
+  // Cờ đỏ sao vàng Việt Nam tung bay trên đỉnh cột buồm chính
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath();
+  ctx.moveTo(x + 4, y - 72);
+  ctx.lineTo(x + 16, y - 68);
+  ctx.lineTo(x + 4, y - 64);
+  ctx.closePath();
+  ctx.fill();
+  // Ngôi sao vàng trên cờ
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.arc(x + 8, y - 68, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+
   // 3 Cánh buồm nan cánh dơi nâu đỏ (Batwing Sails)
   const drawSail = (sx, sy, w, h) => {
     ctx.fillStyle = '#c2410c';
@@ -422,6 +631,97 @@ export function drawHaLongKarsts(ctx, x, groundY) {
   ctx.restore();
 }
 
+/**
+ * Ruộng bậc thang Mù Cang Chải / Sa Pa & Nón Lá Việt Nam
+ * Các đường cong đồng mức mềm mại xếp tầng, dải chuyển màu mạ non sang lúa chín,
+ * mặt nước lấp lánh phản chiếu và hình bóng nón lá tre truyền thống.
+ */
+export function drawTerracedFields(ctx, x, groundY) {
+  ctx.save();
+  const y = groundY;
+  const w = 180;
+
+  // 1. Dãy sườn đồi với các bậc thang uốn lượn nhiều tầng
+  const tiers = [
+    { dy: 68, c1: '#059669', c2: '#10b981', waterW: 130 }, // Tầng cao nhất: Mạ non xanh biếc
+    { dy: 46, c1: '#16a34a', c2: '#22c55e', waterW: 150 }, // Tầng giữa: Lúa thì con gái
+    { dy: 24, c1: '#ca8a04', c2: '#eab308', waterW: 165 }, // Tầng dưới: Lúa ngả vàng chín óng
+    { dy: 6,  c1: '#b45309', c2: '#d97706', waterW: 175 }, // Bậc chân ruộng: Vàng rực mùa gặt
+  ];
+
+  for (const t of tiers) {
+    const tierGrad = ctx.createLinearGradient(x - w / 2, y - t.dy, x + w / 2, y);
+    tierGrad.addColorStop(0, t.c1);
+    tierGrad.addColorStop(1, t.c2);
+
+    ctx.fillStyle = tierGrad;
+    ctx.beginPath();
+    ctx.moveTo(x - w / 2, y);
+    ctx.quadraticCurveTo(x - w / 4, y - t.dy, x, y - t.dy + 6);
+    ctx.quadraticCurveTo(x + w / 4, y - t.dy - 8, x + w / 2, y - t.dy + 4);
+    ctx.lineTo(x + w / 2, y);
+    ctx.closePath();
+    ctx.fill();
+
+    // Vệt nước phẳng lặng phản chiếu ánh trời trên mặt ruộng bậc thang
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - t.waterW / 2 + 10, y - t.dy + 4);
+    ctx.quadraticCurveTo(x, y - t.dy + 7, x + t.waterW / 2 - 10, y - t.dy + 3);
+    ctx.stroke();
+
+    // Bờ ruộng đắp đất nâu sẫm giữ nước
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x - t.waterW / 2, y - t.dy + 2);
+    ctx.quadraticCurveTo(x, y - t.dy + 6, x + t.waterW / 2, y - t.dy + 2);
+    ctx.stroke();
+  }
+
+  // 2. Hình bóng người nông dân đội Nón Lá tre nghiêng che nắng
+  const farmerX = x - 25;
+  const farmerY = y - 48;
+
+  // Thân áo bà ba chàm / đen
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath();
+  ctx.ellipse(farmerX, farmerY + 11, 4, 8, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Nón lá hình chóp nón truyền thống vàng nhạt
+  ctx.fillStyle = '#fef08a';
+  ctx.beginPath();
+  ctx.moveTo(farmerX - 9, farmerY + 4);
+  ctx.lineTo(farmerX, farmerY - 6);
+  ctx.lineTo(farmerX + 9, farmerY + 4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Vành nón lá tre
+  ctx.strokeStyle = '#ca8a04';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Đòn gánh tre uốn cong với 2 quang gánh
+  ctx.strokeStyle = '#b45309';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(farmerX - 16, farmerY + 8);
+  ctx.quadraticCurveTo(farmerX, farmerY + 4, farmerX + 16, farmerY + 9);
+  ctx.stroke();
+
+  // 2 Thúng thóc nan tre
+  ctx.fillStyle = '#d97706';
+  ctx.beginPath();
+  ctx.ellipse(farmerX - 16, farmerY + 12, 4, 3, 0, 0, Math.PI * 2);
+  ctx.ellipse(farmerX + 16, farmerY + 13, 4, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
 /* ============================================================================
  * 3. PHỐ CỔ HỘI AN (VIỆT NAM)
  * ============================================================================ */
@@ -447,18 +747,22 @@ export function drawChuaCauHoiAn(ctx, x, groundY) {
   ctx.closePath();
   ctx.fill();
 
+  // Vệt nước sông Hoài phản chiếu bóng cầu đá
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+  ctx.fillRect(x - w / 2, y, w, 14);
+
   // 2. Thân cầu gỗ sơn son nâu đỏ
   ctx.fillStyle = '#7f1d1d';
   ctx.fillRect(x - w / 2 + 6, y - 36, w - 12, 18);
 
-  // Lan can và chấn song cầu
+  // Lan can và chấn song cầu gỗ gụ
   ctx.strokeStyle = '#991b1b';
   ctx.lineWidth = 1.5;
   for (let c = x - w / 2 + 12; c < x + w / 2 - 12; c += 10) {
     ctx.strokeRect(c, y - 34, 6, 14);
   }
 
-  // 3. Mái ngói cong âm dương cổ kính
+  // 3. Mái ngói vảy cá âm dương cổ kính 2 tầng (Mái thượng gia hạ kiều)
   ctx.fillStyle = '#451a03';
   ctx.beginPath();
   ctx.moveTo(x - w / 2 - 8, y - 36);
@@ -468,13 +772,33 @@ export function drawChuaCauHoiAn(ctx, x, groundY) {
   ctx.closePath();
   ctx.fill();
 
-  // Đỉnh mái có linh thú chầu rực sáng
+  // Tầng mái phụ cổ kính bên trên
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath();
+  ctx.moveTo(x - 28, y - 48);
+  ctx.quadraticCurveTo(x, y - 64, x + 28, y - 48);
+  ctx.lineTo(x + 24, y - 52);
+  ctx.quadraticCurveTo(x, y - 68, x - 24, y - 52);
+  ctx.closePath();
+  ctx.fill();
+
+  // Đỉnh nóc: Phù điêu Lưỡng long chầu nguyệt chạm vàng
   ctx.fillStyle = '#fbbf24';
   ctx.beginPath();
   ctx.arc(x - w / 2 - 6, y - 40, 3, 0, Math.PI * 2);
   ctx.arc(x + w / 2 + 6, y - 40, 3, 0, Math.PI * 2);
-  ctx.arc(x, y - 62, 4, 0, Math.PI * 2);
+  ctx.arc(x, y - 68, 4, 0, Math.PI * 2);
   ctx.fill();
+
+  // Đầu rồng nhỏ hai bên vút cong
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 6, y - 68);
+  ctx.lineTo(x - 14, y - 72);
+  ctx.moveTo(x + 6, y - 68);
+  ctx.lineTo(x + 14, y - 72);
+  ctx.stroke();
 
   // 4. Đèn lồng đỏ dưới mái hiên Chùa Cầu
   ctx.fillStyle = '#ef4444';
@@ -592,10 +916,16 @@ export function drawLandmark81(ctx, x, groundY, time = 0) {
     ctx.fillStyle = glassGrad;
     ctx.fillRect(tx, ty, tube.w, tube.h);
 
-    // Kẻ viền kính xanh cyan
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    // Kẻ viền kính xanh cyan và đường gân LED chiếu sáng thẳng đứng
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.lineWidth = 1;
     ctx.strokeRect(tx, ty, tube.w, tube.h);
+
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+    ctx.beginPath();
+    ctx.moveTo(tx + tube.w / 2, ty);
+    ctx.lineTo(tx + tube.w / 2, y);
+    ctx.stroke();
   }
 
   // Đỉnh tháp Spire vút cao
@@ -612,6 +942,10 @@ export function drawLandmark81(ctx, x, groundY, time = 0) {
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.arc(x, y - h, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.3)';
+    ctx.beginPath();
+    ctx.arc(x, y - h, 8, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -640,6 +974,14 @@ export function drawBitexcoTower(ctx, x, groundY) {
   ctx.closePath();
   ctx.fill();
 
+  // Đường viền kính phản quang
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x - 6, y - h);
+  ctx.quadraticCurveTo(x - 2, y - h * 0.5, x - 4, y);
+  ctx.stroke();
+
   // Sân đỗ trực thăng cantilevered tầng 52
   const heliY = y - 105;
   ctx.fillStyle = '#94a3b8';
@@ -647,8 +989,15 @@ export function drawBitexcoTower(ctx, x, groundY) {
   ctx.ellipse(x + 14, heliY, 14, 4, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = '#ef4444';
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1.2;
   ctx.stroke();
+
+  // Vòng chữ H trên sân bay trực thăng
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 5px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('H', x + 14, heliY);
 
   ctx.restore();
 }
@@ -669,8 +1018,8 @@ export function drawBaSonBridge(ctx, x, groundY) {
   ctx.stroke();
 
   // Chùm dây văng rẻ quạt
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.lineWidth = 1.2;
   for (let i = 0; i < 6; i++) {
     const py = y - 60 - i * 8;
     const px = x - 18 + i * 7;
@@ -679,6 +1028,10 @@ export function drawBaSonBridge(ctx, x, groundY) {
     ctx.lineTo(x - 60 + i * 22, y);
     ctx.stroke();
   }
+
+  // Phản chiếu mờ trên mặt nước sông Sài Gòn
+  ctx.fillStyle = 'rgba(3, 105, 161, 0.25)';
+  ctx.fillRect(x - 65, y, 110, 10);
 
   ctx.restore();
 }

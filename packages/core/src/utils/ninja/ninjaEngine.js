@@ -15,14 +15,18 @@
  */
 
 import { NinjaSoundPlayer } from './ninjaSounds.js';
+import { getNinjaStrings, normalizeLang } from './ninjaI18n.js';
 import {
   drawMountFuji,
   drawTokyoSkytree,
   drawToriiGate,
   drawSakuraTree,
+  drawMomijiTree,
+  drawGojunotoPagoda,
   drawTrongMaiRocks,
   drawHaLongJunkBoat,
   drawHaLongKarsts,
+  drawTerracedFields,
   drawChuaCauHoiAn,
   drawHoiAnHousesAndLanterns,
   drawLandmark81,
@@ -223,11 +227,13 @@ function writeBestScore(score) {
 }
 
 export class NinjaEngine {
-  constructor(ctx) {
+  constructor(ctx, options = {}) {
     this.ctx = ctx;
     this.width = GAME_WIDTH;
     this.height = GAME_HEIGHT;
     this.state = GAME_STATE.READY;
+    this.lang = normalizeLang(options.lang || 'vi');
+    this.i18n = getNinjaStrings(this.lang);
 
     // Metrics & Score
     this.distance = 0;
@@ -316,6 +322,20 @@ export class NinjaEngine {
 
   isSoundEnabled() {
     return this.sounds.enabled;
+  }
+
+  setLanguage(lang) {
+    this.lang = normalizeLang(lang);
+    this.i18n = getNinjaStrings(this.lang);
+    if (this.obstacles && Array.isArray(this.obstacles)) {
+      for (const obs of this.obstacles) {
+        const m = this.i18n?.monsters?.[obs.type];
+        if (m) {
+          obs.name = m.name;
+          obs.toast = m.toast;
+        }
+      }
+    }
   }
 
   handleJump() {
@@ -457,8 +477,22 @@ export class NinjaEngine {
     const nextIdx = (currentIdx + 1) % BIOMES.length;
     const biomeProgress = cyclePos % BIOME_DISTANCE;
 
-    const currentBiome = BIOMES[currentIdx] || BIOMES[0];
-    const nextBiome = BIOMES[nextIdx] || BIOMES[0];
+    const rawCurrent = BIOMES[currentIdx] || BIOMES[0];
+    const rawNext = BIOMES[nextIdx] || BIOMES[0];
+
+    const currentI18n = this.i18n?.biomes?.[rawCurrent.id] || {};
+    const nextI18n = this.i18n?.biomes?.[rawNext.id] || {};
+
+    const currentBiome = {
+      ...rawCurrent,
+      name: currentI18n.name || rawCurrent.name,
+      banner: currentI18n.banner || rawCurrent.banner,
+    };
+    const nextBiome = {
+      ...rawNext,
+      name: nextI18n.name || rawNext.name,
+      banner: nextI18n.banner || rawNext.banner,
+    };
 
     // Cửa sổ chuyển cảnh mượt mà: 60m cuối mỗi vùng
     let t = 0;
@@ -564,19 +598,22 @@ export class NinjaEngine {
     ctx.save();
     ctx.globalAlpha = Math.min(1, alpha * 1.25);
 
-    const bannerW = 280;
+    const bannerText = biome.banner || biome.name;
+    ctx.font = 'bold 11px sans-serif';
+    const textW = ctx.measureText(bannerText).width;
+    const bannerW = Math.max(280, textW + 36);
     const bannerH = 32;
     const bx = (this.width - bannerW) / 2;
     const by = 16;
 
     // Nền panel kính mờ tối màu sang trọng
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
     ctx.beginPath();
     ctx.roundRect(bx, by, bannerW, bannerH, 8);
     ctx.fill();
 
     // Viền phát sáng cyan Toolio
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
@@ -585,7 +622,7 @@ export class NinjaEngine {
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(biome.banner || biome.name, this.width / 2, by + bannerH / 2);
+    ctx.fillText(bannerText, this.width / 2, by + bannerH / 2);
 
     ctx.restore();
   }
@@ -743,11 +780,14 @@ export class NinjaEngine {
   }
 
   spawnObstacle(isTutorial) {
+    const spikeInfo = this.i18n?.monsters?.spikes || {};
+
     if (isTutorial && this.distance < 35) {
       // First obstacle: Simple spike to teach JUMP
       this.obstacles.push({
         type: 'spikes',
-        name: 'Spike Barricade',
+        name: spikeInfo.name || 'Spike Barricade',
+        toast: spikeInfo.toast || 'Avoid spikes! ⚠️',
         x: GAME_WIDTH + 20,
         y: GROUND_Y - 26,
         width: 32,
@@ -761,8 +801,12 @@ export class NinjaEngine {
 
     if (isTutorial && this.distance >= 35) {
       // Second obstacle: PDF Bloat to teach SLASH
+      const t0 = TOOLIO_PROBLEM_TYPES[0];
+      const m0 = this.i18n?.monsters?.[t0.type] || {};
       this.obstacles.push({
-        ...TOOLIO_PROBLEM_TYPES[0],
+        ...t0,
+        name: m0.name || t0.name,
+        toast: m0.toast || t0.toast,
         x: GAME_WIDTH + 20,
         y: GROUND_Y - 48,
         canSlash: true,
@@ -774,7 +818,8 @@ export class NinjaEngine {
     if (Math.random() < 0.18) {
       this.obstacles.push({
         type: 'spikes',
-        name: 'Spike Barricade',
+        name: spikeInfo.name || 'Spike Barricade',
+        toast: spikeInfo.toast || 'Avoid spikes! ⚠️',
         x: GAME_WIDTH + 20,
         y: GROUND_Y - 26,
         width: 32,
@@ -785,9 +830,12 @@ export class NinjaEngine {
       });
     } else {
       const template = TOOLIO_PROBLEM_TYPES[Math.floor(Math.random() * TOOLIO_PROBLEM_TYPES.length)];
+      const mInfo = this.i18n?.monsters?.[template.type] || {};
       const y = template.fly ? GROUND_Y - template.height - 38 : GROUND_Y - template.height;
       this.obstacles.push({
         ...template,
+        name: mInfo.name || template.name,
+        toast: mInfo.toast || template.toast,
         x: GAME_WIDTH + 20,
         y,
         canSlash: true,
@@ -1182,18 +1230,20 @@ export class NinjaEngine {
       const baseX = offset - scroll;
 
       if (biome.id === 'japan-tokyo-fuji' || biome.fuji) {
-        // Núi Phú Sĩ tuyết phủ & Tháp Tokyo Skytree
+        // Núi Phú Sĩ tuyết phủ mây Ukiyo-e, Tháp Skytree & Chùa 5 tầng Gojūnotō
         drawMountFuji(ctx, baseX + 340, GROUND_Y);
         drawTokyoSkytree(ctx, baseX + 130, GROUND_Y, this.time);
+        drawGojunotoPagoda(ctx, baseX + 530, GROUND_Y);
       } else if (biome.id === 'vietnam-halong' || biome.halong) {
-        // Dãy núi đá vôi Karst vịnh Hạ Long nhiều tầng
-        drawHaLongKarsts(ctx, baseX + 160, GROUND_Y);
-        drawHaLongKarsts(ctx, baseX + 480, GROUND_Y);
+        // Dãy núi đá vôi Karst vịnh Hạ Long & Ruộng bậc thang Sa Pa / Mù Cang Chải
+        drawHaLongKarsts(ctx, baseX + 130, GROUND_Y);
+        drawTerracedFields(ctx, baseX + 350, GROUND_Y);
+        drawHaLongKarsts(ctx, baseX + 560, GROUND_Y);
       } else if (biome.id === 'vietnam-hoian' || biome.hoian) {
         // Phố Cổ Hội An: Nhà cổ tường vàng & đèn lồng
         drawHoiAnHousesAndLanterns(ctx, baseX + 260, GROUND_Y);
       } else if (biome.id === 'vietnam-saigon' || biome.landmark) {
-        // Sài Gòn Skyline: Bitexco & Landmark 81 vươn cao
+        // Sài Gòn Skyline: Bitexco búp sen & Landmark 81 bó tre vươn cao
         drawBitexcoTower(ctx, baseX + 170, GROUND_Y);
         drawLandmark81(ctx, baseX + 430, GROUND_Y, this.time);
       }
@@ -1210,15 +1260,16 @@ export class NinjaEngine {
       const baseX = offset - scroll;
 
       if (biome.id === 'japan-tokyo-fuji' || biome.fuji) {
-        // Cổng Torii Đỏ truyền thống & Cây hoa anh đào Sakura nở rộ
-        drawToriiGate(ctx, baseX + 190, GROUND_Y);
-        drawSakuraTree(ctx, baseX + 460, GROUND_Y);
+        // Cổng Torii Shinto, Cây hoa anh đào Sakura & Cây lá phong Momiji đỏ
+        drawToriiGate(ctx, baseX + 160, GROUND_Y);
+        drawSakuraTree(ctx, baseX + 380, GROUND_Y);
+        drawMomijiTree(ctx, baseX + 540, GROUND_Y);
       } else if (biome.id === 'vietnam-halong' || biome.halong) {
-        // Thuyền buồm nâu cánh dơi & Hòn Trống Mái thắt eo rêu phong
+        // Thuyền buồm nâu cánh dơi cờ đỏ sao vàng & Hòn Trống Mái thắt eo rêu phong
         drawHaLongJunkBoat(ctx, baseX + 140, GROUND_Y, this.time);
         drawTrongMaiRocks(ctx, baseX + 420, GROUND_Y, this.time);
       } else if (biome.id === 'vietnam-hoian' || biome.hoian) {
-        // Chùa Cầu Hội An mái ngói âm dương cong vút
+        // Chùa Cầu Hội An mái ngói vảy cá cổ kính
         drawChuaCauHoiAn(ctx, baseX + 290, GROUND_Y);
       } else if (biome.id === 'vietnam-saigon' || biome.landmark) {
         // Cầu Ba Son dây văng bắc qua sông Sài Gòn
@@ -1499,58 +1550,83 @@ export class NinjaEngine {
     const ctx = this.ctx;
     ctx.save();
 
-    // Top Left: Biome info badge
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
+    // Top Left: Biome info badge (dynamically sized)
+    const biomeText = `${biome.country === 'JP' ? '🗾' : '🇻🇳'} ${biome.name}`;
+    ctx.font = 'bold 10px sans-serif';
+    const textW = ctx.measureText(biomeText).width;
+    const badgeW = Math.max(160, textW + 20);
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
     ctx.beginPath();
-    ctx.roundRect(14, 12, 150, 22, 6);
+    ctx.roundRect(14, 12, badgeW, 22, 6);
     ctx.fill();
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${biome.country === 'JP' ? '🗾' : '🇻🇳'} ${biome.name}`, 22, 23);
+    ctx.fillText(biomeText, 22, 23);
 
     // Top Right: Realtime Distance & Problems Solved
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+    const distUnit = this.i18n?.hud?.distanceUnit || 'm';
+    const bugsWord = this.i18n?.hud?.bugsResolved || 'Solved';
+    const distStr = `${Math.floor(this.distance)} ${distUnit}`;
+    const solvedStr = `✓ ${this.problemsSolved} ${bugsWord}`;
+
+    ctx.font = 'bold 11px sans-serif';
+    const solvedW = ctx.measureText(solvedStr).width;
+    const rightBoxW = Math.max(185, 85 + solvedW);
+    const rx = this.width - rightBoxW - 14;
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
     ctx.beginPath();
-    ctx.roundRect(this.width - 190, 12, 176, 26, 8);
+    ctx.roundRect(rx, 12, rightBoxW, 26, 8);
     ctx.fill();
 
     ctx.fillStyle = '#38bdf8';
     ctx.font = 'bold 13px monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`${Math.floor(this.distance)} m`, this.width - 180, 25);
+    ctx.fillText(distStr, rx + 10, 25);
 
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`✓ ${this.problemsSolved}`, this.width - 24, 25);
+    ctx.fillText(solvedStr, rx + rightBoxW - 10, 25);
 
     // Combo Floating Indicator
     if (this.combo >= 2 && this.state === GAME_STATE.PLAYING) {
+      const comboWord = this.i18n?.hud?.combo || 'COMBO!';
       ctx.fillStyle = '#f59e0b';
       ctx.font = 'bold 14px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`${this.combo}x COMBO!`, 14, 52);
+      ctx.fillText(`${this.combo}x ${comboWord}`, 14, 52);
     }
 
     // Ready State Tutorial prompt
     if (this.state === GAME_STATE.READY) {
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      const tutTitle = this.i18n?.hud?.tutorialReadyTitle || 'TOOLIO NINJA RUN';
+      const tutKeys = this.i18n?.hud?.tutorialReadyKeys || 'SPACE / TAP = JUMP  •  X / J = SLASH';
+
+      ctx.font = 'bold 11px monospace';
+      const tutW = Math.max(260, ctx.measureText(tutKeys).width + 36);
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
       ctx.beginPath();
-      ctx.roundRect(this.width / 2 - 130, this.height / 2 - 35, 260, 70, 14);
+      ctx.roundRect(this.width / 2 - tutW / 2, this.height / 2 - 35, tutW, 70, 14);
       ctx.fill();
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
 
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 14px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('TOOLIO NINJA RUN', this.width / 2, this.height / 2 - 12);
+      ctx.fillText(tutTitle, this.width / 2, this.height / 2 - 12);
 
       ctx.fillStyle = '#38bdf8';
       ctx.font = 'bold 11px monospace';
-      ctx.fillText('SPACE / TAP = JUMP  •  X / J = SLASH', this.width / 2, this.height / 2 + 12);
+      ctx.fillText(tutKeys, this.width / 2, this.height / 2 + 12);
     }
 
     ctx.restore();

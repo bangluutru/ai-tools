@@ -396,14 +396,20 @@ export default function App() {
       {/* Floating Toolio Ninja Pet (only on Hub dashboard when enabled) */}
       {showToolioNinja && !activeToolId && (
         <Suspense fallback={null}>
-          <ToolioNinjaPet onOpenGame={() => setShowNinjaGame(true)} />
+          <ToolioNinjaPet
+            displayLang={displayLang}
+            onOpenGame={() => setShowNinjaGame(true)}
+          />
         </Suspense>
       )}
 
       {/* Toolio Ninja Game Modal */}
       {showNinjaGame && (
         <Suspense fallback={null}>
-          <ToolioNinjaModal onClose={() => setShowNinjaGame(false)} />
+          <ToolioNinjaModal
+            displayLang={displayLang}
+            onClose={() => setShowNinjaGame(false)}
+          />
         </Suspense>
       )}
     </div>

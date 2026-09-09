@@ -28,6 +28,7 @@ import {
   GAME_STATE,
   TOOLIO_PROBLEM_TYPES,
 } from '../utils/ninja/ninjaEngine.js';
+import { getNinjaStrings } from '../utils/ninja/ninjaI18n.js';
 
 const i18n = {
   vi: {
@@ -124,6 +125,7 @@ const TOOL_NAMES = {
 
 export default function ToolioNinjaView({ displayLang = 'vi' }) {
   const t = i18n[displayLang] || i18n.vi;
+  const ninjaStrings = getNinjaStrings(displayLang);
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const containerRef = useRef(null);
@@ -175,6 +177,11 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
       engineRef.current = null;
     };
   }, []);
+
+  // Sync real-time language changes to game engine
+  useEffect(() => {
+    engineRef.current?.setLanguage(displayLang);
+  }, [displayLang]);
 
   // Keyboard controls listener
   useEffect(() => {
@@ -381,13 +388,13 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
                 type="button"
                 onPointerDown={handleJump}
                 className="py-3 px-4 rounded-2xl bg-secondary/15 hover:bg-secondary/25 border-2 border-secondary/40 active:scale-95 transition-all flex items-center justify-center gap-2 select-none"
-                aria-label="Jump / Nhảy"
+                aria-label={ninjaStrings.controls.jump}
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-secondary text-white shadow-sm">
                   <ArrowUp size={16} />
                 </div>
                 <div className="text-left">
-                  <div className="text-xs font-bold text-on-surface">JUMP</div>
+                  <div className="text-xs font-bold text-on-surface">{ninjaStrings.controls.jump}</div>
                   <div className="text-[10px] text-outline font-mono">SPACE / ↑</div>
                 </div>
               </button>
@@ -397,13 +404,13 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
                 type="button"
                 onPointerDown={handleSlash}
                 className="py-3 px-4 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border-2 border-rose-500/40 active:scale-95 transition-all flex items-center justify-center gap-2 select-none"
-                aria-label="Slash / Chém"
+                aria-label={ninjaStrings.controls.slash}
               >
                 <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-rose-500 text-white shadow-sm">
                   <Swords size={16} />
                 </div>
                 <div className="text-left">
-                  <div className="text-xs font-bold text-on-surface">SLASH</div>
+                  <div className="text-xs font-bold text-on-surface">{ninjaStrings.controls.slash}</div>
                   <div className="text-[10px] text-outline font-mono">X / J KEY</div>
                 </div>
               </button>
