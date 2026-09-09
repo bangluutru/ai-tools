@@ -72,7 +72,13 @@ export function sanitizeLookupCode(rawCode) {
  * @param {string} [params.fallbackName] - Base name if fields are missing
  * @returns {string}
  */
-export function buildStandardXmlFilename({ issueDate, taxCode, symbol, invoiceNumber, fallbackName } = {}) {
+export function buildStandardXmlFilename(params = {}) {
+  const issueDate = params.issueDate || params.invoiceDate;
+  const taxCode = params.taxCode || params.sellerTaxCode;
+  const symbol = params.symbol || params.invoiceSymbol;
+  const invoiceNumber = params.invoiceNumber;
+  const fallbackName = params.fallbackName;
+
   // Normalize date to YYYY-MM-DD
   let datePart = '0000-00-00';
   if (issueDate) {

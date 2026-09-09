@@ -27,7 +27,49 @@ import { STATUS_TYPES, XML_FETCHER_LIMITS } from './types.js';
  * }>}
  */
 export async function attemptDirectXmlDownload(invoiceItem, timeoutMs = XML_FETCHER_LIMITS.directDownloadTimeoutMs) {
-  const { lookupUrl, lookupCode, sellerTaxCode, invoiceNumber, invoiceSymbol } = invoiceItem;
+  const provider = invoiceItem.provider;
+  const lookupUrl = invoiceItem.lookupUrl || invoiceItem.url || '';
+  const lookupCode = invoiceItem.lookupCode || invoiceItem.code || '';
+  const sellerTaxCode =
+    invoiceItem.sellerTaxCode || invoiceItem.taxCode || invoiceItem.expectedInvoice?.sellerTaxCode || '';
+  const invoiceNumber = invoiceItem.invoiceNumber || invoiceItem.expectedInvoice?.invoiceNumber || '';
+  const invoiceSymbol = invoiceItem.invoiceSymbol || invoiceItem.expectedInvoice?.invoiceSymbol || '';
+
+  const metadata = {
+    sellerTaxCode,
+    taxCode: sellerTaxCode,
+    invoiceNumber,
+    invoiceSymbol,
+    symbol: invoiceSymbol,
+    ...(invoiceItem.expectedInvoice || {}),
+  };
+
+  // 1. If provider adapter has custom direct XML download (e.g. Minvoice)
+  if (provider && typeof provider.tryDirectXml === 'function') {
+    try {
+      const xmlFromProvider = await provider.tryDirectXml(lookupUrl, lookupCode, metadata);
+      if (xmlFromProvider && typeof xmlFromProvider === 'string') {
+        const validation = validateInvoiceXml(xmlFromProvider, {
+          taxCode: sellerTaxCode,
+          symbol: invoiceSymbol,
+          invoiceNumber,
+        });
+
+        if (validation.isValid) {
+          const blob = new Blob([xmlFromProvider], { type: 'application/xml;charset=utf-8' });
+          return {
+            success: true,
+            xmlContent: xmlFromProvider,
+            xmlBlob: blob,
+            hasMismatch: validation.hasMismatch,
+            mismatchDetails: validation.mismatchDetails,
+          };
+        }
+      }
+    } catch {
+      // Fallback to standard fetch
+    }
+  }
 
   if (!lookupUrl) {
     return {

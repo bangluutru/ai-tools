@@ -71,6 +71,22 @@ export async function extractTextFromPdfBuffer(arrayBuffer, pdfjsLibInstance = n
     }
 
     pageText = pageText.replace(/ {2,}/g, ' ');
+
+    // Collect clickable link annotations embedded in PDF
+    try {
+      const annotations = await page.getAnnotations();
+      for (const ann of annotations) {
+        if (ann && (ann.url || ann.unsafeUrl)) {
+          const u = ann.url || ann.unsafeUrl;
+          if (/^https?:\/\//i.test(u) && !pageText.includes(u)) {
+            pageText += `\n${u}\n`;
+          }
+        }
+      }
+    } catch {
+      // Annotations are optional
+    }
+
     fullText += pageText + '\n';
     page.cleanup();
   }
@@ -89,10 +105,10 @@ export const parsePdfToText = extractTextFromPdfBuffer;
 export function extractCandidateUrls(text) {
   if (!text) return [];
 
-  // Normalize URLs wrapped across lines (e.g. line ending in '-' or '/' or next line starting with '/')
+  // Normalize URLs wrapped across lines (hyphen '-' at line end, or next line starting with '/')
   // and remove spaces after protocol: "https:// 1602066708..." -> "https://1602066708..."
   const normalizedText = text
-    .replace(/(https?:\/\/[^\s]+[-/])\r?\n\s*([a-zA-Z0-9_.~!*';:@&=+$,/?%#-]+)/gi, '$1$2')
+    .replace(/(https?:\/\/[^\s]+-)\r?\n\s*([a-zA-Z0-9_.~!*';:@&=+$,/?%#-]+)/gi, '$1$2')
     .replace(/(https?:\/\/[^\s]+)\r?\n\s*(\/[a-zA-Z0-9_.~!*';:@&=+$,/?%#-]+)/gi, '$1$2')
     .replace(/(https?:\/\/)\s+([a-zA-Z0-9_.~!*';:@&=+$,/?%#-]+)/gi, '$1$2');
 
@@ -107,8 +123,22 @@ export function extractCandidateUrls(text) {
     }
   }
 
+  // Handle spaced-out URLs (kerning/font tracking artifacts like "h t t p s : / / t r a c u u h o a d o n . m i n v o i c e . c o m . v n /")
+  const textSegments = normalizedText.split(/\s{2,}|\r?\n/);
+  for (const seg of textSegments) {
+    const spacedMatch = seg.match(/h\s*t\s*t\s*p\s*s?\s*:\s*\/\s*\/[a-zA-Z0-9.\-_/ ]+/i);
+    if (spacedMatch) {
+      const beforeLabel = spacedMatch[0].split(/(?:m\s*ã|s\s*ố|n\s*g\s*à\s*y|t\s*ê\s*n)/i)[0];
+      const cleaned = beforeLabel.replace(/\s+/g, '');
+      const sanitized = sanitizeLookupUrl(cleaned);
+      if (sanitized && !candidates.includes(sanitized) && !sanitized.endsWith('-/')) {
+        candidates.push(sanitized);
+      }
+    }
+  }
+
   // Also check for common domain-style lookup portals with full subdomains
-  const domainRegex = /\b(?:[a-zA-Z0-9_.-]+\.)*(?:tracuu|tracuuhoadon|tra-cuu|einvoice|hoadon|sinvoice|meinvoice|vnpt-invoice|easyinvoice|ehoadon|hilo)\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s"'<>]*)?/gi;
+  const domainRegex = /\b(?:[a-zA-Z0-9_.-]+\.)*(?:tracuu|tracuuhoadon|tra-cuu|einvoice|hoadon|sinvoice|meinvoice|vnpt-invoice|easyinvoice|ehoadon|hilo|minvoice)\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\/[^\s"'<>]*)?/gi;
   const domainMatches = normalizedText.match(domainRegex) || [];
   for (const dm of domainMatches) {
     const sanitized = sanitizeLookupUrl(dm);
@@ -131,6 +161,8 @@ export function extractCandidateUrls(text) {
     'mobifoneinvoice.vn',
     'vietjetair.com',
     'petrolimex.com.vn',
+    'minvoice.com.vn',
+    'minvoice.vn',
   ];
 
   for (const domain of knownDomains) {
@@ -165,17 +197,29 @@ export function extractCandidateLookupCode(text, providerAdapter = null) {
 
   // 2. Common Vietnamese e-invoice lookup labels (including bilingual brackets like "(Invoice code)")
   const labelPatterns = [
-    /(?:mã\s+tra\s+cứu(?:\s+hóa\s+đơn|\s+hđđt)?|mã\s+tra\s+cứu)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i,
-    /(?:mã\s+nhận\s+hóa\s+đơn|mã\s+nhận\s+hđ)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i,
-    /(?:mã\s+số\s+bí\s+mật\s*(?:\(access\s*code\))?|mã\s+số\s+bí\s+mật|mã\s+bí\s+mật)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i,
-    /(?:lookup\s*code|access\s*code|invoice\s*code)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i,
-    /(?:mã\s+kiểm\s+tra|mã\s+truy\s+cập)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_*]{5,40})/i,
+    /(?:mã\s+tra\s+cứu(?:\s+hóa\s+đơn|\s+hđđt)?|mã\s+tra\s+cứu)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_* ]{5,60})/i,
+    /(?:mã\s+nhận\s+hóa\s+đơn|mã\s+nhận\s+hđ)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_* ]{5,60})/i,
+    /(?:mã\s+số\s+bí\s+mật\s*(?:\(access\s*code\))?|mã\s+số\s+bí\s+mật|mã\s+bí\s+mật)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_* ]{5,60})/i,
+    /(?:lookup\s*code|access\s*code|invoice\s*code)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_* ]{5,60})/i,
+    /(?:mã\s+kiểm\s+tra|mã\s+truy\s+cập)\s*(?:\([^)]*\))?\s*[:.]?\s*([A-Za-z0-9\-_* ]{5,60})/i,
   ];
 
   for (const regex of labelPatterns) {
     const match = text.match(regex);
     if (match && match[1]) {
-      return sanitizeLookupCode(match[1]);
+      let rawCandidate = match[1].trim();
+      // Handle kerning/spaced single characters: "J Y R E 6 7 V G 1 2 E T M 8 0 P D B R Y"
+      if (rawCandidate.includes(' ')) {
+        const tokens = rawCandidate.split(/\s+/);
+        if (tokens.every((t) => t.length <= 2)) {
+          rawCandidate = rawCandidate.replace(/\s+/g, '');
+        } else {
+          rawCandidate = tokens[0];
+        }
+      }
+      if (rawCandidate.length >= 5) {
+        return sanitizeLookupCode(rawCandidate);
+      }
     }
   }
 
@@ -191,9 +235,20 @@ export function extractCandidateLookupCode(text, providerAdapter = null) {
       line.includes('invoice code')
     ) {
       const nextLine = lines[i + 1].trim();
-      const codeCandidate = nextLine.match(/^([A-Za-z0-9\-_*]{5,40})$/);
+      const codeCandidate = nextLine.match(/^([A-Za-z0-9\-_* ]{5,60})$/);
       if (codeCandidate) {
-        return sanitizeLookupCode(codeCandidate[1]);
+        let rawCode = codeCandidate[1];
+        if (rawCode.includes(' ')) {
+          const tokens = rawCode.split(/\s+/);
+          if (tokens.every((t) => t.length <= 2)) {
+            rawCode = rawCode.replace(/\s+/g, '');
+          } else {
+            rawCode = tokens[0];
+          }
+        }
+        if (rawCode.length >= 5) {
+          return sanitizeLookupCode(rawCode);
+        }
       }
     }
   }
@@ -240,7 +295,10 @@ export function extractInvoiceMetadataFromText(text) {
     }
   }
 
-  const buyerName = fields.buyer || '';
+  let buyerName = fields.buyer || '';
+  if (buyerName) {
+    buyerName = buyerName.replace(/^(?:Tên\s+đơn\s+vị|Đơn\s+vị|Công\s+ty)\s*(?:\([^)]*\))?\s*[:.]?\s*/i, '').trim();
+  }
   const totalAmount = fields.totalAmount || 0;
   return {
     symbol,

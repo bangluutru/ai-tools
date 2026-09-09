@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -8,9 +9,11 @@ import {
   buildStandardXmlFilename,
   validateInvoiceXml,
   detectProvider,
+  getProviderById,
   extractCandidateUrls,
   extractCandidateLookupCode,
   parsePdfInvoiceDocument,
+  attemptDirectXmlDownload,
 } from '../src/utils/invoice/xmlFetcher/index.js';
 
 // 1. PDF có URL + mã rõ
@@ -335,5 +338,133 @@ Mã tra cứu: PROV_${p.toUpperCase()}_9988*
     assert.equal(code, `PROV_${p.toUpperCase()}_9988*`);
   }
 });
+
+// 22. Nhận diện nhà cung cấp Minvoice (M-Invoice)
+test('Test Case 22: detects Minvoice provider adapter from URL and text', async () => {
+  const minvoiceText = `
+HÓA ĐƠN GIÁ TRỊ GIA TĂNG
+Ký hiệu : 1C26MBB
+Số : 16752
+Đơn vị bán hàng : CÔNG TY CỔ PHẦN BIGSTAR VIỆT NAM
+Mã số thuế : 0106852727
+Tra cứu hóa đơn tại website: https://tracuuhoadon.minvoice.com.vn/
+Mã tra cứu: JYRE67VG12ETM80PDBRY
+(Khởi tạo từ Phần mềm MINVOICE CÔNG TY TNHH HÓA ĐƠN ĐIỆN TỬ MINVOICE)
+  `;
+  const doc = await parsePdfInvoiceDocument({ rawText: minvoiceText });
+  assert.equal(doc.providerId, 'minvoice');
+  assert.equal(doc.providerName, 'Minvoice (M-Invoice)');
+  assert.equal(doc.lookupCode, 'JYRE67VG12ETM80PDBRY');
+  assert.equal(doc.lookupUrl, 'https://tracuuhoadon.minvoice.com.vn/');
+  assert.equal(doc.sellerTaxCode, '0106852727');
+  assert.equal(doc.invoiceSymbol, '1C26MBB');
+  assert.equal(doc.invoiceNumber, '00016752');
+  assert.equal(doc.status, STATUS_TYPES.READY);
+});
+
+// 23. Trích xuất URL và mã tra cứu bị giãn cách từng ký tự (kerning / spaced layout Minvoice)
+test('Test Case 23: extracts spaced URL and spaced lookup code correctly', () => {
+  const spacedText = `
+Tra cứu hóa đơn tại website: h t t p s : / / t r a c u u h o a d o n . m i n v o i c e . c o m . v n /  Mã tra cứu:  J Y R E 6 7 V G 1 2 E T M 8 0 P D B R Y
+(Khởi tạo từ Phần mềm MINVOICE)
+  `;
+  const urls = extractCandidateUrls(spacedText);
+  assert.ok(urls.includes('https://tracuuhoadon.minvoice.com.vn/'));
+
+  const code = extractCandidateLookupCode(spacedText);
+  assert.equal(code, 'JYRE67VG12ETM80PDBRY');
+
+  const provider = detectProvider(urls[0], spacedText);
+  assert.equal(provider.id, 'minvoice');
+});
+
+// 24. Ghép chuẩn ký hiệu hóa đơn TT78 <KHMSHDon> + <KHHDon>
+test('Test Case 24: extracts and combines TT78 invoice symbol (KHMSHDon + KHHDon)', () => {
+  const minvoiceXml = `<?xml version="1.0" encoding="utf-8"?>
+<HDon>
+  <DLHDon>
+    <TTChung>
+      <PBan>2.1.0</PBan>
+      <THDon>Hóa đơn giá trị gia tăng</THDon>
+      <KHMSHDon>1</KHMSHDon>
+      <KHHDon>C26MBB</KHHDon>
+      <SHDon>16752</SHDon>
+      <NLap>2026-08-20</NLap>
+    </TTChung>
+    <NDHDon>
+      <NBan>
+        <Ten>CÔNG TY CỔ PHẦN BIGSTAR VIỆT NAM</Ten>
+        <MST>0106852727</MST>
+      </NBan>
+    </NDHDon>
+  </DLHDon>
+</HDon>`;
+
+  const result = validateInvoiceXml(minvoiceXml, {
+    taxCode: '0106852727',
+    symbol: '1C26MBB',
+    invoiceNumber: '00016752',
+  });
+
+  assert.equal(result.isValid, true);
+  assert.equal(result.hasMismatch, false);
+  assert.equal(result.parsedMetadata.taxCode, '0106852727');
+  assert.equal(result.parsedMetadata.symbol, '1C26MBB');
+  assert.equal(result.parsedMetadata.invoiceNumber, '16752');
+});
+
+// 25. Kiểm chứng trực tiếp trên tệp hóa đơn PDF thật nếu tồn tại
+test('Test Case 25: parses real invoice PDF from Downloads folder successfully', async () => {
+  const realPdfPath = '/Users/tranhaibang/Downloads/invoice/0106852727_1C26MBB_16752_0109006313_20-08-2026.pdf';
+  if (!fs.existsSync(realPdfPath)) {
+    return; // Bỏ qua nếu môi trường test không có file
+  }
+
+  const buffer = fs.readFileSync(realPdfPath);
+  const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+
+  const doc = await parsePdfInvoiceDocument({
+    arrayBuffer,
+    fileName: '0106852727_1C26MBB_16752_0109006313_20-08-2026.pdf',
+    fileSize: buffer.length,
+  });
+
+  assert.equal(doc.providerId, 'minvoice');
+  assert.equal(doc.providerName, 'Minvoice (M-Invoice)');
+  assert.equal(doc.lookupCode, 'JYRE67VG12ETM80PDBRY');
+  assert.equal(doc.lookupUrl, 'https://tracuuhoadon.minvoice.com.vn/');
+  assert.equal(doc.sellerTaxCode, '0106852727');
+  assert.equal(doc.invoiceSymbol, '1C26MBB');
+  assert.equal(doc.invoiceNumber, '00016752');
+  assert.equal(doc.invoiceDate, '20/08/2026');
+  assert.equal(doc.status, STATUS_TYPES.READY);
+  assert.ok(doc.buyerName.includes('CÔNG TY CỔ PHẦN GENKI FAMI VIỆT NAM'));
+});
+
+// 26. Tải và giải nén trực tiếp file XML từ API Minvoice không cần captcha
+test('Test Case 26: directly downloads and unzips authentic XML from Minvoice API', async () => {
+  const provider = getProviderById('minvoice');
+  assert.equal(provider.id, 'minvoice');
+
+  const downloadResult = await attemptDirectXmlDownload({
+    provider,
+    url: 'https://tracuuhoadon.minvoice.com.vn/',
+    lookupUrl: 'https://tracuuhoadon.minvoice.com.vn/',
+    code: 'JYRE67VG12ETM80PDBRY',
+    lookupCode: 'JYRE67VG12ETM80PDBRY',
+    sellerTaxCode: '0106852727',
+    taxCode: '0106852727',
+    invoiceSymbol: '1C26MBB',
+    invoiceNumber: '00016752',
+  });
+
+  assert.equal(downloadResult.success, true);
+  assert.ok(downloadResult.xmlContent.includes('<HDon>'));
+  assert.ok(downloadResult.xmlContent.includes('0106852727'));
+  assert.ok(downloadResult.xmlContent.includes('16752'));
+  assert.equal(downloadResult.hasMismatch, false);
+});
+
+
 
 

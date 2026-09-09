@@ -100,7 +100,12 @@ export function validateInvoiceXml(xmlText, pdfMetadata = null) {
       const cleanXmlSym = String(parsedMetadata.symbol).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
       if (cleanPdfSym && cleanXmlSym && cleanPdfSym !== cleanXmlSym) {
         // Some systems separate form and symbol e.g. 1 + C26TAA vs C26TAA
-        if (!cleanPdfSym.endsWith(cleanXmlSym) && !cleanXmlSym.endsWith(cleanPdfSym)) {
+        if (
+          !cleanPdfSym.endsWith(cleanXmlSym) &&
+          !cleanXmlSym.endsWith(cleanPdfSym) &&
+          !cleanPdfSym.includes(cleanXmlSym) &&
+          !cleanXmlSym.includes(cleanPdfSym)
+        ) {
           hasMismatch = true;
           mismatchDetails.push(
             `Ký hiệu hóa đơn không khớp (PDF: ${pdfMetadata.symbol}, XML: ${parsedMetadata.symbol})`
@@ -133,12 +138,22 @@ function extractMetadataFromXmlString(xml) {
     xml.match(/<(?:SellerTaxCode|TaxCode)>([^<]+)<\/(?:SellerTaxCode|TaxCode)>/i);
   if (mstMatch) metadata.taxCode = mstMatch[1].trim();
 
-  // Invoice Symbol
-  const symMatch =
+  // Invoice Symbol (Circular 78: <KHMSHDon>1</KHMSHDon> + <KHHDon>C26MBB</KHHDon> => 1C26MBB)
+  const khmsMatch = xml.match(/<KHMSHDon>([^<]+)<\/KHMSHDon>/i);
+  const khhMatch = xml.match(/<KHHDon>([^<]+)<\/KHHDon>/i);
+  const khieuMatch =
     xml.match(/<KHieu>([^<]+)<\/KHieu>/i) ||
-    xml.match(/<(?:InvoiceSeries|Serial)>([^<]+)<\/(?:InvoiceSeries|Serial)>/i) ||
-    xml.match(/<KHMSHDon>([^<]+)<\/KHMSHDon>/i);
-  if (symMatch) metadata.symbol = symMatch[1].trim();
+    xml.match(/<(?:InvoiceSeries|Serial)>([^<]+)<\/(?:InvoiceSeries|Serial)>/i);
+
+  if (khmsMatch && khhMatch) {
+    metadata.symbol = `${khmsMatch[1].trim()}${khhMatch[1].trim()}`;
+  } else if (khieuMatch) {
+    metadata.symbol = khieuMatch[1].trim();
+  } else if (khhMatch) {
+    metadata.symbol = khhMatch[1].trim();
+  } else if (khmsMatch) {
+    metadata.symbol = khmsMatch[1].trim();
+  }
 
   // Invoice Number
   const numMatch =

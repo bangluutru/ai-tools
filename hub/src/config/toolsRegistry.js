@@ -419,7 +419,7 @@ const toolDefinitions = [
     color: '#2563eb',
     badge: 'XML GET',
     popular: true,
-    tags: ['invoice', 'hóa đơn', 'xml', 'tra cứu', 'pdf', 'hilo', 'vnpt', 'viettel', 'misa']
+    tags: ['invoice', 'hóa đơn', 'xml', 'tra cứu', 'pdf', 'minvoice', 'hilo', 'vnpt', 'viettel', 'misa']
   },
   {
     id: 'contract-auditor',

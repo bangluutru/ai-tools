@@ -145,6 +145,7 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
         if (downloadResult.success) {
           xmlContent = downloadResult.xmlContent;
           xmlFilename = buildStandardXmlFilename(metadata);
+          note = 'Đã tải thành công file XML tự động';
         } else {
           status = downloadResult.status || STATUS_TYPES.MANUAL_REQUIRED;
           note = downloadResult.note || 'Cần truy cập website nhà cung cấp để tải file XML.';
@@ -342,6 +343,7 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
       if (downloadResult.success) {
         xmlContent = downloadResult.xmlContent;
         xmlFilename = buildStandardXmlFilename(metadata);
+        note = 'Đã tải thành công file XML tự động';
       } else {
         status = downloadResult.status || STATUS_TYPES.MANUAL_REQUIRED;
         note = downloadResult.note || note;
