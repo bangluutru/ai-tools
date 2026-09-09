@@ -32,6 +32,13 @@ import {
   drawLandmark81,
   drawBitexcoTower,
   drawBaSonBridge,
+  drawChuaMotCot,
+  drawThapRua,
+  drawNgoMonHue,
+  drawBaiDinhPagoda,
+  drawGoldenBridgeHands,
+  drawPhongNhaCave,
+  drawGhenhDaDia,
   drawObstacleMonster,
 } from './ninjaLandmarks.js';
 
@@ -152,11 +159,81 @@ export const TOOLIO_PROBLEM_TYPES = [
   },
 ];
 
-export const BIOMES = [
+export const BIOMES_VI_EN = [
+  {
+    id: 'vietnam-hanoi',
+    name: 'Hà Nội & Tháp Rùa Hồ Gươm',
+    banner: '🇻🇳 HÀ NỘI — THÁP RÙA & CHÙA MỘT CỘT',
+    country: 'VN',
+    skyTop: '#0f172a',
+    skyBottom: '#fdba74',
+    hanoi: true,
+  },
+  {
+    id: 'vietnam-halong-baidinh',
+    name: 'Hạ Long & Bái Đính Ninh Bình',
+    banner: '🇻🇳 HẠ LONG & BÁI ĐÍNH — KỲ QUAN NON NƯỚC',
+    country: 'VN',
+    skyTop: '#09203f',
+    skyBottom: '#537895',
+    halong: true,
+    baidinh: true,
+  },
+  {
+    id: 'vietnam-phongnha',
+    name: 'Quảng Bình & Động Phong Nha',
+    banner: '🇻🇳 PHONG NHA — KỲ QUAN ĐỆ NHẤT ĐỘNG',
+    country: 'VN',
+    skyTop: '#022c22',
+    skyBottom: '#14b8a6',
+    phongnha: true,
+  },
+  {
+    id: 'vietnam-hue-danang',
+    name: 'Huế & Đà Nẵng (Cầu Bàn Tay)',
+    banner: '🇻🇳 HUẾ & ĐÀ NẴNG — ĐẠI NỘI & CẦU BÀN TAY',
+    country: 'VN',
+    skyTop: '#3b0764',
+    skyBottom: '#f472b6',
+    hue: true,
+    danang: true,
+  },
+  {
+    id: 'vietnam-hoian-da-dia',
+    name: 'Hội An & Ghềnh Đá Đĩa Phú Yên',
+    banner: '🇻🇳 HỘI AN & GHỀNH ĐÁ ĐĨA — PHỐ CỔ & BIỂN XANH',
+    country: 'VN',
+    skyTop: '#1e1b4b',
+    skyBottom: '#f59e0b',
+    hoian: true,
+    dadia: true,
+  },
+  {
+    id: 'vietnam-saigon',
+    name: 'Sài Gòn & Landmark 81',
+    banner: '🇻🇳 SÀI GÒN METROPOLIS & LANDMARK 81',
+    country: 'VN',
+    skyTop: '#0b132b',
+    skyBottom: '#1c2541',
+    landmark: true,
+  },
   {
     id: 'japan-tokyo-fuji',
     name: 'Tokyo Skytree & Núi Phú Sĩ',
-    banner: '🗾 TOKYO & PHÚ SĨ — NIPPON DAWN',
+    banner: '🗾 TOKYO & PHÚ SĨ — BÌNH MINH XỨ PHÙ TANG',
+    country: 'JP',
+    skyTop: '#1e1b4b',
+    skyBottom: '#fda4af',
+    fuji: true,
+    sakura: true,
+  },
+];
+
+export const BIOMES_JA = [
+  {
+    id: 'japan-tokyo-fuji',
+    name: 'Tokyo Skytree & Núi Phú Sĩ',
+    banner: '🗾 TOKYO & PHÚ SĨ — BÌNH MINH XỨ PHÙ TANG',
     country: 'JP',
     skyTop: '#1e1b4b',
     skyBottom: '#fda4af',
@@ -164,22 +241,52 @@ export const BIOMES = [
     sakura: true,
   },
   {
-    id: 'vietnam-halong',
-    name: 'Vịnh Hạ Long & Hòn Trống Mái',
-    banner: '🇻🇳 VỊNH HẠ LONG — KỲ QUAN THẾ GIỚI',
+    id: 'vietnam-hanoi',
+    name: 'Hà Nội & Tháp Rùa Hồ Gươm',
+    banner: '🇻🇳 HÀ NỘI — THÁP RÙA & CHÙA MỘT CỘT',
+    country: 'VN',
+    skyTop: '#0f172a',
+    skyBottom: '#fdba74',
+    hanoi: true,
+  },
+  {
+    id: 'vietnam-halong-baidinh',
+    name: 'Hạ Long & Bái Đính Ninh Bình',
+    banner: '🇻🇳 HẠ LONG & BÁI ĐÍNH — KỲ QUAN NON NƯỚC',
     country: 'VN',
     skyTop: '#09203f',
     skyBottom: '#537895',
     halong: true,
+    baidinh: true,
   },
   {
-    id: 'vietnam-hoian',
-    name: 'Phố Cổ Hội An & Chùa Cầu',
-    banner: '🇻🇳 PHỐ CỔ HỘI AN — DI SẢN VĂN HOÁ',
+    id: 'vietnam-hue-danang',
+    name: 'Huế & Đà Nẵng (Cầu Bàn Tay)',
+    banner: '🇻🇳 HUẾ & ĐÀ NẴNG — ĐẠI NỘI & CẦU BÀN TAY',
     country: 'VN',
-    skyTop: '#2e1065',
+    skyTop: '#3b0764',
+    skyBottom: '#f472b6',
+    hue: true,
+    danang: true,
+  },
+  {
+    id: 'vietnam-phongnha',
+    name: 'Quảng Bình & Động Phong Nha',
+    banner: '🇻🇳 PHONG NHA — KỲ QUAN ĐỆ NHẤT ĐỘNG',
+    country: 'VN',
+    skyTop: '#022c22',
+    skyBottom: '#14b8a6',
+    phongnha: true,
+  },
+  {
+    id: 'vietnam-hoian-da-dia',
+    name: 'Hội An & Ghềnh Đá Đĩa Phú Yên',
+    banner: '🇻🇳 HỘI AN & GHỀNH ĐÁ ĐĨA — PHỐ CỔ & BIỂN XANH',
+    country: 'VN',
+    skyTop: '#1e1b4b',
     skyBottom: '#f59e0b',
     hoian: true,
+    dadia: true,
   },
   {
     id: 'vietnam-saigon',
@@ -191,6 +298,14 @@ export const BIOMES = [
     landmark: true,
   },
 ];
+
+export function getBiomesForLang(lang) {
+  const norm = normalizeLang(lang);
+  if (norm === 'ja') return BIOMES_JA;
+  return BIOMES_VI_EN;
+}
+
+export const BIOMES = BIOMES_VI_EN;
 
 /**
  * Nội suy màu mượt mà giữa hai mã màu Hex
@@ -470,15 +585,16 @@ export class NinjaEngine {
   }
 
   getCurrentBiomeInfo() {
+    const biomes = getBiomesForLang(this.lang);
     const BIOME_DISTANCE = 400;
-    const totalDist = BIOMES.length * BIOME_DISTANCE;
+    const totalDist = biomes.length * BIOME_DISTANCE;
     const cyclePos = ((this.distance % totalDist) + totalDist) % totalDist;
     const currentIdx = Math.floor(cyclePos / BIOME_DISTANCE);
-    const nextIdx = (currentIdx + 1) % BIOMES.length;
+    const nextIdx = (currentIdx + 1) % biomes.length;
     const biomeProgress = cyclePos % BIOME_DISTANCE;
 
-    const rawCurrent = BIOMES[currentIdx] || BIOMES[0];
-    const rawNext = BIOMES[nextIdx] || BIOMES[0];
+    const rawCurrent = biomes[currentIdx] || biomes[0];
+    const rawNext = biomes[nextIdx] || biomes[0];
 
     const currentI18n = this.i18n?.biomes?.[rawCurrent.id] || {};
     const nextI18n = this.i18n?.biomes?.[rawNext.id] || {};
@@ -568,17 +684,37 @@ export class NinjaEngine {
         ctx.beginPath();
         ctx.ellipse(0, 0, p.size * 1.6, p.size * 0.8, 0, 0, Math.PI * 2);
         ctx.fill();
-      } else if (biome.id === 'vietnam-halong' || biome.halong) {
+      } else if (biome.id === 'vietnam-hanoi' || biome.hanoi) {
+        // Cánh hoa sen & bụi phấn vàng mùa thu Hà Nội
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.rot > 0 ? '#f472b6' : '#fde047';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, p.size * 1.4, p.size * 0.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (biome.id === 'vietnam-halong-baidinh' || biome.id === 'vietnam-halong' || biome.halong) {
         // Hạt sương mù biển & ánh lân tinh ngọc bích Hạ Long
         ctx.fillStyle = '#6ee7b7';
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size * 0.85, 0, Math.PI * 2);
         ctx.fill();
-      } else if (biome.id === 'vietnam-hoian' || biome.hoian) {
-        // Đốm đom đóm & tàn sáng đèn lồng Hội An ấm áp
-        ctx.fillStyle = '#fbbf24';
+      } else if (biome.id === 'vietnam-phongnha' || biome.phongnha) {
+        // Hạt tinh thể thạch nhũ phát quang & giọt nước ngọc bích động Phong Nha
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (biome.id === 'vietnam-hue-danang' || biome.hue || biome.danang) {
+        // Mây bồng bềnh đỉnh Bà Nà & cánh hoa tím Lobelia
+        ctx.fillStyle = '#e879f9';
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size * 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (biome.id === 'vietnam-hoian-da-dia' || biome.id === 'vietnam-hoian' || biome.hoian) {
+        // Đốm đom đóm đèn lồng Hội An & bọt sóng biển Phú Yên
+        ctx.fillStyle = p.x % 2 === 0 ? '#fbbf24' : '#bae6fd';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 1.05, 0, Math.PI * 2);
         ctx.fill();
       } else {
         // Vệt neon bokeh đô thị Sài Gòn
@@ -1234,14 +1370,28 @@ export class NinjaEngine {
         drawMountFuji(ctx, baseX + 340, GROUND_Y);
         drawTokyoSkytree(ctx, baseX + 130, GROUND_Y, this.time);
         drawGojunotoPagoda(ctx, baseX + 530, GROUND_Y);
-      } else if (biome.id === 'vietnam-halong' || biome.halong) {
-        // Dãy núi đá vôi Karst vịnh Hạ Long & Ruộng bậc thang Sa Pa / Mù Cang Chải
-        drawHaLongKarsts(ctx, baseX + 130, GROUND_Y);
-        drawTerracedFields(ctx, baseX + 350, GROUND_Y);
-        drawHaLongKarsts(ctx, baseX + 560, GROUND_Y);
-      } else if (biome.id === 'vietnam-hoian' || biome.hoian) {
-        // Phố Cổ Hội An: Nhà cổ tường vàng & đèn lồng
-        drawHoiAnHousesAndLanterns(ctx, baseX + 260, GROUND_Y);
+      } else if (biome.id === 'vietnam-hanoi' || biome.hanoi) {
+        // Hà Nội: Tháp Rùa Hồ Gươm cổ kính giữa gò xanh & liễu rủ
+        drawTerracedFields(ctx, baseX + 100, GROUND_Y);
+        drawThapRua(ctx, baseX + 330, GROUND_Y);
+        drawThapRua(ctx, baseX + 590, GROUND_Y);
+      } else if (biome.id === 'vietnam-halong-baidinh' || biome.id === 'vietnam-halong' || biome.halong) {
+        // Bảo Tháp Chùa Bái Đính 13 tầng & Dãy núi Karst non nước Tràng An / Hạ Long
+        drawBaiDinhPagoda(ctx, baseX + 160, GROUND_Y);
+        drawHaLongKarsts(ctx, baseX + 370, GROUND_Y);
+        drawTerracedFields(ctx, baseX + 560, GROUND_Y);
+      } else if (biome.id === 'vietnam-phongnha' || biome.phongnha) {
+        // Động Phong Nha: Dãy núi đá vôi Karst Kẻ Bàng & Vòm miệng hang động kỳ vĩ
+        drawHaLongKarsts(ctx, baseX + 140, GROUND_Y);
+        drawPhongNhaCave(ctx, baseX + 400, GROUND_Y, this.time);
+      } else if (biome.id === 'vietnam-hue-danang' || biome.hue || biome.danang) {
+        // Huế & Đà Nẵng: Cửa Ngọ Môn Đại Nội Lầu Ngũ Phụng & Cầu Bàn Tay Bà Nà
+        drawNgoMonHue(ctx, baseX + 240, GROUND_Y);
+        drawGoldenBridgeHands(ctx, baseX + 500, GROUND_Y, this.time);
+      } else if (biome.id === 'vietnam-hoian-da-dia' || biome.id === 'vietnam-hoian' || biome.hoian) {
+        // Phố Cổ Hội An nhà vàng đèn lồng & Cột đá bazan lục lăng Ghềnh Đá Đĩa
+        drawHoiAnHousesAndLanterns(ctx, baseX + 180, GROUND_Y);
+        drawGhenhDaDia(ctx, baseX + 450, GROUND_Y, this.time);
       } else if (biome.id === 'vietnam-saigon' || biome.landmark) {
         // Sài Gòn Skyline: Bitexco búp sen & Landmark 81 bó tre vươn cao
         drawBitexcoTower(ctx, baseX + 170, GROUND_Y);
@@ -1264,13 +1414,25 @@ export class NinjaEngine {
         drawToriiGate(ctx, baseX + 160, GROUND_Y);
         drawSakuraTree(ctx, baseX + 380, GROUND_Y);
         drawMomijiTree(ctx, baseX + 540, GROUND_Y);
-      } else if (biome.id === 'vietnam-halong' || biome.halong) {
+      } else if (biome.id === 'vietnam-hanoi' || biome.hanoi) {
+        // Chùa Một Cột trên hồ sen Linh Chiểu
+        drawChuaMotCot(ctx, baseX + 230, GROUND_Y);
+        drawChuaMotCot(ctx, baseX + 510, GROUND_Y);
+      } else if (biome.id === 'vietnam-halong-baidinh' || biome.id === 'vietnam-halong' || biome.halong) {
         // Thuyền buồm nâu cánh dơi cờ đỏ sao vàng & Hòn Trống Mái thắt eo rêu phong
         drawHaLongJunkBoat(ctx, baseX + 140, GROUND_Y, this.time);
         drawTrongMaiRocks(ctx, baseX + 420, GROUND_Y, this.time);
-      } else if (biome.id === 'vietnam-hoian' || biome.hoian) {
-        // Chùa Cầu Hội An mái ngói vảy cá cổ kính
-        drawChuaCauHoiAn(ctx, baseX + 290, GROUND_Y);
+      } else if (biome.id === 'vietnam-phongnha' || biome.phongnha) {
+        // Thuyền nan lướt nhẹ trên sông Son & Karsts
+        drawHaLongJunkBoat(ctx, baseX + 180, GROUND_Y, this.time);
+        drawHaLongKarsts(ctx, baseX + 460, GROUND_Y);
+      } else if (biome.id === 'vietnam-hue-danang' || biome.hue || biome.danang) {
+        // Cầu Bàn Tay Vàng Bà Nà Hills giữa biển mây
+        drawGoldenBridgeHands(ctx, baseX + 280, GROUND_Y, this.time);
+      } else if (biome.id === 'vietnam-hoian-da-dia' || biome.id === 'vietnam-hoian' || biome.hoian) {
+        // Chùa Cầu Hội An mái cong & Ghềnh Đá Đĩa sóng biển vỗ bờ
+        drawChuaCauHoiAn(ctx, baseX + 180, GROUND_Y);
+        drawGhenhDaDia(ctx, baseX + 460, GROUND_Y, this.time);
       } else if (biome.id === 'vietnam-saigon' || biome.landmark) {
         // Cầu Ba Son dây văng bắc qua sông Sài Gòn
         drawBaSonBridge(ctx, baseX + 320, GROUND_Y);

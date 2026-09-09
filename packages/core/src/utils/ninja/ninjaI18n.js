@@ -29,6 +29,36 @@ export const NINJA_I18N = {
       subtitle: 'Endless runner vui nhộn: cùng Ninja chạy xuyên Nhật - Việt và chém tan mọi vấn đề văn phòng!',
     },
     biomes: {
+      'vietnam-hanoi': {
+        name: 'Hà Nội & Tháp Rùa Hồ Gươm',
+        banner: '🇻🇳 HÀ NỘI — THÁP RÙA & CHÙA MỘT CỘT',
+        countryName: 'Việt Nam',
+      },
+      'vietnam-halong-baidinh': {
+        name: 'Hạ Long & Bái Đính Ninh Bình',
+        banner: '🇻🇳 HẠ LONG & BÁI ĐÍNH — KỲ QUAN NON NƯỚC',
+        countryName: 'Việt Nam',
+      },
+      'vietnam-phongnha': {
+        name: 'Quảng Bình & Động Phong Nha',
+        banner: '🇻🇳 PHONG NHA — KỲ QUAN ĐỆ NHẤT ĐỘNG',
+        countryName: 'Việt Nam',
+      },
+      'vietnam-hue-danang': {
+        name: 'Huế & Đà Nẵng (Cầu Bàn Tay)',
+        banner: '🇻🇳 HUẾ & ĐÀ NẴNG — ĐẠI NỘI & CẦU BÀN TAY',
+        countryName: 'Việt Nam',
+      },
+      'vietnam-hoian-da-dia': {
+        name: 'Hội An & Ghềnh Đá Đĩa Phú Yên',
+        banner: '🇻🇳 HỘI AN & GHỀNH ĐÁ ĐĨA — PHỐ CỔ & BIỂN XANH',
+        countryName: 'Việt Nam',
+      },
+      'vietnam-saigon': {
+        name: 'Sài Gòn & Landmark 81',
+        banner: '🇻🇳 SÀI GÒN METROPOLIS & LANDMARK 81',
+        countryName: 'Việt Nam',
+      },
       'japan-tokyo-fuji': {
         name: 'Tokyo Skytree & Núi Phú Sĩ',
         banner: '🗾 TOKYO & PHÚ SĨ — BÌNH MINH XỨ PHÙ TANG',
@@ -42,11 +72,6 @@ export const NINJA_I18N = {
       'vietnam-hoian': {
         name: 'Phố Cổ Hội An & Chùa Cầu',
         banner: '🇻🇳 PHỐ CỔ HỘI AN — DI SẢN VĂN HOÁ',
-        countryName: 'Việt Nam',
-      },
-      'vietnam-saigon': {
-        name: 'Sài Gòn & Landmark 81',
-        banner: '🇻🇳 SÀI GÒN METROPOLIS & LANDMARK 81',
         countryName: 'Việt Nam',
       },
     },
@@ -160,6 +185,36 @@ export const NINJA_I18N = {
       subtitle: 'Fun endless runner: run across Japan & Vietnam and slash away office file problems!',
     },
     biomes: {
+      'vietnam-hanoi': {
+        name: 'Hanoi & Turtle Tower',
+        banner: '🇻🇳 HANOI — TURTLE TOWER & ONE PILLAR PAGODA',
+        countryName: 'Vietnam',
+      },
+      'vietnam-halong-baidinh': {
+        name: 'Ha Long Bay & Bai Dinh Pagoda',
+        banner: '🇻🇳 HA LONG & BAI DINH — KARST WONDERS',
+        countryName: 'Vietnam',
+      },
+      'vietnam-phongnha': {
+        name: 'Phong Nha Cave & Son River',
+        banner: '🇻🇳 PHONG NHA — FIRST WONDER UNDERGROUND CAVE',
+        countryName: 'Vietnam',
+      },
+      'vietnam-hue-danang': {
+        name: 'Hue Citadel & Golden Hand Bridge',
+        banner: '🇻🇳 HUE & DA NANG — MERIDIAN GATE & GOLDEN BRIDGE',
+        countryName: 'Vietnam',
+      },
+      'vietnam-hoian-da-dia': {
+        name: 'Hoi An & Ganh Da Dia Basalt Rocks',
+        banner: '🇻🇳 HOI AN & GANH DA DIA — ANCIENT TOWN & OCEAN CLIFFS',
+        countryName: 'Vietnam',
+      },
+      'vietnam-saigon': {
+        name: 'Saigon Metropolis & Landmark 81',
+        banner: '🇻🇳 SAIGON METROPOLIS & LANDMARK 81',
+        countryName: 'Vietnam',
+      },
       'japan-tokyo-fuji': {
         name: 'Tokyo Skytree & Mount Fuji',
         banner: '🗾 TOKYO & FUJI — NIPPON DAWN',
@@ -173,11 +228,6 @@ export const NINJA_I18N = {
       'vietnam-hoian': {
         name: 'Hoi An Ancient Town & Covered Bridge',
         banner: '🇻🇳 HOI AN ANCIENT TOWN — WORLD HERITAGE',
-        countryName: 'Vietnam',
-      },
-      'vietnam-saigon': {
-        name: 'Saigon Metropolis & Landmark 81',
-        banner: '🇻🇳 SAIGON METROPOLIS & LANDMARK 81',
         countryName: 'Vietnam',
       },
     },
@@ -296,6 +346,36 @@ export const NINJA_I18N = {
         banner: '🗾 東京＆富士山 — 日本の夜明け',
         countryName: '日本',
       },
+      'vietnam-hanoi': {
+        name: 'ハノイ＆亀の塔・一柱寺',
+        banner: '🇻🇳 ハノイ — 亀の塔と一柱寺の千年の古都',
+        countryName: 'ベトナム',
+      },
+      'vietnam-halong-baidinh': {
+        name: 'ハロン湾＆バイディン寺',
+        banner: '🇻🇳 ハロン湾とバイディン寺 — 雄大なカルストの奇観',
+        countryName: 'ベトナム',
+      },
+      'vietnam-phongnha': {
+        name: 'フォンニャ洞窟＆ソン川',
+        banner: '🇻🇳 フォンニャ洞窟 — 世界遺産の地底探検',
+        countryName: 'ベトナム',
+      },
+      'vietnam-hue-danang': {
+        name: 'フエ王宮＆ダナン神の手橋',
+        banner: '🇻🇳 フエとダナン — 午門王宮と天空の黄金橋',
+        countryName: 'ベトナム',
+      },
+      'vietnam-hoian-da-dia': {
+        name: 'ホイアン古都＆ダディア岩礁',
+        banner: '🇻🇳 ホイアンとダディア岩礁 — 古都の灯りと六角玄武岩',
+        countryName: 'ベトナム',
+      },
+      'vietnam-saigon': {
+        name: 'サイゴン・メトロポリス＆ランドマーク81',
+        banner: '🇻🇳 サイゴン — ランドマーク81とビテクスコ',
+        countryName: 'ベトナム',
+      },
       'vietnam-halong': {
         name: 'ハロン湾＆夫婦岩（チョンマイ）',
         banner: '🇻🇳 ハロン湾 — 世界の絶景奇観',
@@ -304,11 +384,6 @@ export const NINJA_I18N = {
       'vietnam-hoian': {
         name: 'ホイアン古街＆日本橋',
         banner: '🇻🇳 ホイアン古街 — 世界文化遺産',
-        countryName: 'ベトナム',
-      },
-      'vietnam-saigon': {
-        name: 'サイゴン・メトロポリス＆ランドマーク81',
-        banner: '🇻🇳 サイゴン・メトロポリス＆ランドマーク81',
         countryName: 'ベトナム',
       },
     },

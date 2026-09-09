@@ -6,7 +6,13 @@ import {
   getNinjaStrings,
   NINJA_I18N,
 } from '../src/utils/ninja/ninjaI18n.js';
-import { BIOMES, TOOLIO_PROBLEM_TYPES } from '../src/utils/ninja/ninjaEngine.js';
+import {
+  BIOMES,
+  BIOMES_VI_EN,
+  BIOMES_JA,
+  getBiomesForLang,
+  TOOLIO_PROBLEM_TYPES,
+} from '../src/utils/ninja/ninjaEngine.js';
 
 test('ninjaI18n: supported languages and normalization', () => {
   assert.deepEqual(SUPPORTED_LANGS, ['vi', 'en', 'ja']);
@@ -105,3 +111,34 @@ test('ninjaI18n: real-time language switching returns distinct translations', ()
   assert.equal(en.controls.slash, 'SLASH');
   assert.equal(ja.controls.slash, '斬撃');
 });
+
+test('ninjaEngine: language-based biome ordering starts with VN for vi/en and JP for ja', () => {
+  const viBiomes = getBiomesForLang('vi');
+  const enBiomes = getBiomesForLang('en');
+  const jaBiomes = getBiomesForLang('ja');
+
+  // VI and EN must start with Vietnam landmark (Hà Nội)
+  assert.equal(viBiomes[0].id, 'vietnam-hanoi');
+  assert.equal(viBiomes[0].country, 'VN');
+  assert.equal(enBiomes[0].id, 'vietnam-hanoi');
+  assert.equal(enBiomes[0].country, 'VN');
+
+  // JA must start with Japan landmark (Tokyo Skytree & Mount Fuji)
+  assert.equal(jaBiomes[0].id, 'japan-tokyo-fuji');
+  assert.equal(jaBiomes[0].country, 'JP');
+
+  // Ensure all 7 biomes exist in both lists
+  assert.equal(BIOMES_VI_EN.length, 7);
+  assert.equal(BIOMES_JA.length, 7);
+
+  // Ensure all biomes are translated in NINJA_I18N
+  for (const b of BIOMES_VI_EN) {
+    for (const lang of SUPPORTED_LANGS) {
+      assert.ok(NINJA_I18N[lang].biomes[b.id], `Biome ${b.id} missing in NINJA_I18N[${lang}]`);
+      assert.ok(NINJA_I18N[lang].biomes[b.id].name, `Biome ${b.id} name missing in ${lang}`);
+      assert.ok(NINJA_I18N[lang].biomes[b.id].banner, `Biome ${b.id} banner missing in ${lang}`);
+    }
+  }
+});
+
+
