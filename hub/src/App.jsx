@@ -51,6 +51,9 @@ const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/Inv
 const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
 const FlappyBirdPet = lazy(() => import('./components/FlappyBirdPet'));
 const FlappyGameModal = lazy(() => import('./components/FlappyGameModal'));
+const ToolioNinjaTool = lazy(() => import('./tools/toolio-ninja/ToolioNinjaTool'));
+const ToolioNinjaPet = lazy(() => import('./components/ToolioNinjaPet'));
+const ToolioNinjaModal = lazy(() => import('./components/ToolioNinjaModal'));
 
 const toolComponentMap = {
   'image-convert': ImageConvertTool,
@@ -69,7 +72,8 @@ const toolComponentMap = {
   'business-card-studio': BusinessCardStudioTool,
   'tax-calculator': TaxCalculatorTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,
-  'flappy-bird': FlappyBirdTool
+  'flappy-bird': FlappyBirdTool,
+  'toolio-ninja': ToolioNinjaTool
 };
 
 export default function App() {
@@ -94,6 +98,14 @@ export default function App() {
     }
   });
   const [showFlappyGame, setShowFlappyGame] = useState(false);
+  const [showToolioNinja, setShowToolioNinja] = useState(() => {
+    try {
+      return localStorage.getItem('hub_show_toolio_ninja') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [showNinjaGame, setShowNinjaGame] = useState(false);
 
   // Sync language
   useEffect(() => {
@@ -109,6 +121,12 @@ export default function App() {
       localStorage.setItem('hub_show_flappy_bird', String(showFlappyBird));
     } catch {}
   }, [showFlappyBird]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('hub_show_toolio_ninja', String(showToolioNinja));
+    } catch {}
+  }, [showToolioNinja]);
 
   // Hash routes work on static hosting and preserve the selected miniapp on refresh/share.
   useEffect(() => {
@@ -239,6 +257,8 @@ export default function App() {
             onSearchChange={setSearchQuery}
             showFlappyBird={showFlappyBird}
             onOpenFlappyGame={() => setShowFlappyGame(true)}
+            showToolioNinja={showToolioNinja}
+            onOpenNinjaGame={() => setShowNinjaGame(true)}
           />
 
           <main className="flex-1 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-4">
@@ -355,6 +375,8 @@ export default function App() {
         displayLang={displayLang}
         showFlappyBird={showFlappyBird}
         onToggleFlappyBird={() => setShowFlappyBird((prev) => !prev)}
+        showToolioNinja={showToolioNinja}
+        onToggleToolioNinja={() => setShowToolioNinja((prev) => !prev)}
       />
 
       {/* Floating Flappy Bird Easter Egg (only on Hub dashboard when enabled) */}
@@ -368,6 +390,20 @@ export default function App() {
       {showFlappyGame && (
         <Suspense fallback={null}>
           <FlappyGameModal onClose={() => setShowFlappyGame(false)} />
+        </Suspense>
+      )}
+
+      {/* Floating Toolio Ninja Pet (only on Hub dashboard when enabled) */}
+      {showToolioNinja && !activeToolId && (
+        <Suspense fallback={null}>
+          <ToolioNinjaPet onOpenGame={() => setShowNinjaGame(true)} />
+        </Suspense>
+      )}
+
+      {/* Toolio Ninja Game Modal */}
+      {showNinjaGame && (
+        <Suspense fallback={null}>
+          <ToolioNinjaModal onClose={() => setShowNinjaGame(false)} />
         </Suspense>
       )}
     </div>

@@ -27,7 +27,9 @@ import {
   Stamp,
   FileDown,
   Sparkles,
-  Video
+  Video,
+  Gamepad2,
+  Swords
 } from 'lucide-react';
 
 export const iconMap = {
@@ -58,7 +60,9 @@ export const iconMap = {
   ArrowLeftRight,
   Stamp,
   Sparkles,
-  Video
+  Video,
+  Gamepad2,
+  Swords
 };
 
 /**

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Eye, EyeOff, RotateCcw, Settings2, Wrench, X, Sun, Moon, Monitor, Gamepad2 } from 'lucide-react';
+import { Eye, EyeOff, RotateCcw, Settings2, Wrench, X, Sun, Moon, Monitor, Gamepad2, Swords } from 'lucide-react';
 import { useTheme, THEMES } from '@ai-tools/core';
 
 export default function SettingsModal({
@@ -13,6 +13,8 @@ export default function SettingsModal({
   displayLang,
   showFlappyBird = true,
   onToggleFlappyBird,
+  showToolioNinja = true,
+  onToggleToolioNinja,
 }) {
   const { themePreference, setTheme } = useTheme();
 
@@ -181,6 +183,42 @@ export default function SettingsModal({
                 <span
                   className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
                     showFlappyBird ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Toolio Ninja Run Toggle */}
+        <div className="border-b border-border-subtle/80 bg-surface-subtle/30 px-5 py-3 sm:px-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <Swords size={18} />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-on-surface">Ninja Toolio Run</div>
+                <div className="text-[11px] text-outline mt-0.5">
+                  {showToolioNinja
+                    ? 'Chú Ninja đang chạy trên màn hình. Nhấn vào Ninja để chơi game.'
+                    : 'Bật để chú Ninja chạy lướt trên màn hình Dashboard.'}
+                </div>
+              </div>
+            </div>
+            {onToggleToolioNinja && (
+              <button
+                type="button"
+                onClick={onToggleToolioNinja}
+                className={`relative h-6 w-11 shrink-0 rounded-full p-0 border-0 cursor-pointer transition-colors focus:outline-none ${
+                  showToolioNinja ? 'bg-secondary' : 'bg-surface-container-highest'
+                }`}
+                aria-label={showToolioNinja ? 'Tắt ninja' : 'Bật ninja'}
+                aria-pressed={showToolioNinja}
+              >
+                <span
+                  className={`absolute top-1 left-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                    showToolioNinja ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>

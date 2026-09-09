@@ -156,9 +156,12 @@ const toolGovernance = {
   'flappy-bird': {
     readiness: 'beta',
     processing: 'browser',
-    outputPurpose: 'utility',
-    verified: true,
-    verifiedAt: '2026-09-09'
+    outputPurpose: 'utility'
+  },
+  'toolio-ninja': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility'
   }
 };
 
@@ -529,6 +532,22 @@ const toolDefinitions = [
     badge: 'GAME',
     popular: false,
     tags: ['flappy bird', 'game', 'minigame', 'chim bay', 'arcade', 'giải trí', 'relax', 'utils']
+  },
+  {
+    id: 'toolio-ninja',
+    name_vn: 'Toolio Ninja Run',
+    name_en: 'Toolio Ninja Run',
+    name_ja: 'ツーリオ・ニンジャ ラン',
+    desc_vn: 'Endless runner vui nhộn: cùng Ninja vượt dặm trường Nhật - Việt, né tránh và chém tan các vấn đề văn phòng!',
+    desc_en: 'Fun endless runner: run across Japan & Vietnam, slash and solve real office file problems!',
+    desc_ja: '爽快エンドレスランナー：日本とベトナムを駆け抜け、オフィスの課題を一刀両断！',
+    category: 'utils',
+    icon: 'Swords',
+    gradient: 'from-blue-600 via-cyan-500 to-amber-500',
+    color: '#0284c7',
+    badge: 'NEW GAME',
+    popular: true,
+    tags: ['game', 'minigame', 'ninja', 'runner', 'endless runner', 'arcade', 'giải trí', 'relax', 'chém', 'jump', 'slash', 'pdf', 'toolio']
   }
 ];
 

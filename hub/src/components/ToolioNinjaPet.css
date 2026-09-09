@@ -1,0 +1,455 @@
+/**
+ * @file hub/src/components/ToolioNinjaPet.css
+ * ============================================================================
+ * Styles cho Chú Ninja Pet tuần tra thanh menu và Game Modal Toolio Ninja Run.
+ * Tối ưu kích thước ~1/2 màn hình desktop, responsive toàn diện cho mobile & PC.
+ * ============================================================================
+ */
+
+/* ============================================================================
+ * 1. Chú Ninja Pet trên Thanh Menu (Navbar Patrol)
+ * ============================================================================ */
+.ninja-pet {
+  position: fixed;
+  top: 74px;
+  left: 16px;
+  z-index: 55;
+  width: 36px;
+  height: 38px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  filter: drop-shadow(0 2px 8px rgba(2, 132, 199, 0.35));
+  transition: transform 0.15s ease-out, filter 0.15s ease-out;
+  outline: none;
+}
+
+.ninja-pet:hover {
+  transform: translateY(-2px) scale(1.08);
+  filter: drop-shadow(0 4px 12px rgba(2, 132, 199, 0.55));
+}
+
+.ninja-pet:focus-visible {
+  outline: 2px solid #38bdf8;
+  border-radius: 9999px;
+}
+
+/* Walking Step Bob - Chậm rãi, nhịp nhàng 1.5px */
+.ninja-pet-bob {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: ninjaWalkStep 0.38s ease-in-out infinite alternate;
+}
+
+.ninja-pet.idle .ninja-pet-bob,
+.ninja-pet.slashing .ninja-pet-bob {
+  animation: none;
+}
+
+@keyframes ninjaWalkStep {
+  0% {
+    transform: translateY(0px);
+  }
+  100% {
+    transform: translateY(-1.5px);
+  }
+}
+
+/* Walking Gait - Chân bước luân phiên tự nhiên */
+.ninja-pet:not(.idle):not(.slashing) .leg-left {
+  animation: ninjaWalkLegLeft 0.38s ease-in-out infinite alternate;
+  transform-origin: 18px 36px;
+}
+
+.ninja-pet:not(.idle):not(.slashing) .leg-right {
+  animation: ninjaWalkLegRight 0.38s ease-in-out infinite alternate;
+  transform-origin: 28px 36px;
+}
+
+@keyframes ninjaWalkLegLeft {
+  0% {
+    transform: rotate(-24deg) translateY(-2px);
+  }
+  100% {
+    transform: rotate(24deg) translateY(0px);
+  }
+}
+
+@keyframes ninjaWalkLegRight {
+  0% {
+    transform: rotate(24deg) translateY(0px);
+  }
+  100% {
+    transform: rotate(-24deg) translateY(-2px);
+  }
+}
+
+/* Thở nhẹ khi dừng lại (Idle) */
+.ninja-pet.idle .ninja-pet-bob {
+  animation: ninjaIdleBreathe 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes ninjaIdleBreathe {
+  from {
+    transform: translateY(0px) scale(1);
+  }
+  to {
+    transform: translateY(-1px) scale(1.02);
+  }
+}
+
+/* Động Tác Chém Thị Uy Khi Chạm Rìa Màn Hình (Katana Slash Flourish) */
+.katana-slash-fx,
+.katana-slashed {
+  display: none;
+}
+
+.katana-sheathed {
+  display: block;
+}
+
+.ninja-pet.slashing .katana-sheathed {
+  display: none;
+}
+
+.ninja-pet.slashing .katana-slashed {
+  display: block;
+  animation: ninjaSlashThrust 0.45s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+  transform-origin: 20px 24px;
+}
+
+.ninja-pet.slashing .katana-slash-fx {
+  display: block;
+  animation: ninjaSlashArcFlash 0.5s ease-out forwards;
+}
+
+.ninja-pet.slashing {
+  filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.8));
+}
+
+@keyframes ninjaSlashThrust {
+  0% {
+    transform: rotate(-35deg) scale(0.9);
+  }
+  40% {
+    transform: rotate(18deg) scale(1.15);
+  }
+  100% {
+    transform: rotate(6deg) scale(1.05);
+  }
+}
+
+@keyframes ninjaSlashArcFlash {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  80% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+
+/* Headband Ribbon Gentle Breeze */
+.ninja-ribbon-tail {
+  transform-origin: left center;
+  animation: ninjaRibbonBreeze 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes ninjaRibbonBreeze {
+  from {
+    transform: rotate(-3deg) scaleY(0.95);
+  }
+  to {
+    transform: rotate(4deg) scaleY(1.05);
+  }
+}
+
+/* Tooltip thoại nổi khi hover */
+.ninja-pet-tooltip {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background-color: rgba(15, 23, 42, 0.94);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  font-size: 10.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.ninja-pet:hover .ninja-pet-tooltip,
+.ninja-pet:focus-visible .ninja-pet-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
+}
+
+/* ============================================================================
+ * 2. Game Modal: Kích thước ~1/2 màn hình Desktop & 16:9 Canvas
+ * ============================================================================ */
+.ninja-game-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background-color: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: ninjaFadeIn 0.2s ease-out;
+}
+
+@keyframes ninjaFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Modal chiếm khoảng 1/2 kích thước desktop (980px / 16:9 canvas) */
+.ninja-game-container {
+  width: min(980px, 94vw);
+  max-height: 92vh;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle, #334155);
+  background-color: var(--surface-container, #1e293b);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(56, 189, 248, 0.15);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: ninjaPopIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  outline: none;
+}
+
+@keyframes ninjaPopIn {
+  from {
+    transform: scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.ninja-game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-subtle, #334155);
+  background-color: var(--surface-subtle, #0f172a);
+  flex-shrink: 0;
+}
+
+.ninja-game-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--on-surface, #f8fafc);
+  letter-spacing: -0.01em;
+}
+
+.ninja-game-badge {
+  font-size: 10px;
+  font-family: monospace;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  text-transform: uppercase;
+}
+
+.ninja-game-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ninja-game-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle, #334155);
+  background-color: transparent;
+  color: var(--outline, #94a3b8);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ninja-game-action-btn:hover {
+  background-color: var(--surface-container-high, #334155);
+  color: var(--on-surface, #ffffff);
+}
+
+.ninja-game-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle, #334155);
+  background-color: transparent;
+  color: var(--outline, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ninja-game-close:hover {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+/* Khung Canvas tỷ lệ chuẩn 16:9 sắc nét */
+.ninja-game-canvas-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: #0f172a;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ninja-game-canvas-wrap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Nút cảm ứng nhanh trên canvas dành cho Mobile/Tablet */
+.ninja-touch-overlay {
+  position: absolute;
+  inset-x: 12px;
+  bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  gap: 12px;
+}
+
+.ninja-touch-btn {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 0.1s ease, background-color 0.1s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.ninja-touch-btn:active {
+  transform: scale(0.94);
+  background: rgba(2, 132, 199, 0.8);
+}
+
+/* Footer điều khiển & phím tắt */
+.ninja-game-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  border-top: 1px solid var(--border-subtle, #334155);
+  background-color: var(--surface-subtle, #0f172a);
+  font-size: 12px;
+  color: var(--outline, #94a3b8);
+  flex-shrink: 0;
+}
+
+.ninja-key-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background-color: var(--surface-container, #1e293b);
+  border: 1px solid var(--border-subtle, #334155);
+  color: #38bdf8;
+  font-weight: 700;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+/* ============================================================================
+ * 3. Responsive Mobile (< 640px)
+ * ============================================================================ */
+@media (max-width: 640px) {
+  .ninja-pet {
+    top: 92px;
+    width: 28px;
+    height: 30px;
+    filter: drop-shadow(0 2px 6px rgba(2, 132, 199, 0.3));
+  }
+
+  .ninja-game-container {
+    width: 96vw;
+    border-radius: 16px;
+  }
+
+  .ninja-game-header {
+    padding: 10px 14px;
+  }
+
+  .ninja-game-title {
+    font-size: 13px;
+  }
+
+  .ninja-game-badge {
+    display: none;
+  }
+
+  .ninja-game-action-btn span {
+    display: none;
+  }
+
+  .ninja-touch-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  .ninja-game-footer {
+    padding: 8px 12px;
+    font-size: 11px;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+}

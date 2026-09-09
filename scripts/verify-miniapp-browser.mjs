@@ -724,7 +724,7 @@ async function run() {
         // Ensure starting in clean Light mode for baseline accessibility
         await page.evaluate(() => {
           document.documentElement.setAttribute('data-theme', 'light');
-          try { localStorage.setItem('ai_tools_theme', 'light'); } catch (e) {}
+          try { localStorage.setItem('ai_tools_theme', 'light'); } catch (_e) {}
         });
         await new Promise((r) => setTimeout(r, 200));
 

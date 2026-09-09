@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Globe, Settings2, Code2, X, Gamepad2 } from 'lucide-react';
+import { Search, Globe, Settings2, Code2, X, Gamepad2, Swords } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import ToolioLogo from './ToolioLogo';
 
@@ -14,6 +14,8 @@ export default function Navbar({
   onSearchChange,
   showFlappyBird = true,
   onOpenFlappyGame,
+  showToolioNinja = true,
+  onOpenNinjaGame,
 }) {
   const [langDropdown, setLangDropdown] = useState(false);
   const searchInputRef = useRef(null);
@@ -159,6 +161,19 @@ export default function Navbar({
               aria-label={displayLang === 'vi' ? 'Chơi Flappy Bird' : displayLang === 'ja' ? 'フラッピーバードをプレイ' : 'Play Flappy Bird'}
             >
               <Gamepad2 size={16} />
+            </button>
+          )}
+
+          {/* Toolio Ninja shortcut (shown when pet is disabled in settings) */}
+          {!showToolioNinja && onOpenNinjaGame && (
+            <button
+              type="button"
+              onClick={onOpenNinjaGame}
+              className="p-1.5 sm:p-2 rounded-lg bg-surface-subtle hover:bg-surface-container border border-border-subtle text-primary hover:text-brand-cyan-bright transition-colors flex items-center justify-center"
+              title={displayLang === 'vi' ? 'Chơi Toolio Ninja Run' : displayLang === 'ja' ? 'ツーリオ・ニンジャをプレイ' : 'Play Toolio Ninja Run'}
+              aria-label={displayLang === 'vi' ? 'Chơi Toolio Ninja Run' : displayLang === 'ja' ? 'ツーリオ・ニンジャをプレイ' : 'Play Toolio Ninja Run'}
+            >
+              <Swords size={16} />
             </button>
           )}
 
