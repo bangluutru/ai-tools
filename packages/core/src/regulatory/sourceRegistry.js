@@ -742,6 +742,8 @@ export const SOURCE_ALIASES = Object.freeze({
   'isa-act-art19-16': 'isa-ica-art19-16-notification',
   'isa-act-art22-4-para1-item6': 'isa-ica-art19-16-notification',
   'isa-act-art19-2': 'isa-ica-art19-work-scope',
+  'isa-family-guidelines': 'isa-family-stay-table',
+  'isa-pr-guidelines': 'isa-pr-guidelines-current',
 });
 
 /**
