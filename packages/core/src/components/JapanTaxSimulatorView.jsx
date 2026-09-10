@@ -34,6 +34,7 @@ import TaxBreakdownTable from './tax/TaxBreakdownTable.jsx';
 import TaxDetailDrawer from './tax/TaxDetailDrawer.jsx';
 import TaxFilingAdvisorModal from './tax/TaxFilingAdvisorModal.jsx';
 import TaxScenarioSimulator from './tax/TaxScenarioSimulator.jsx';
+import RegulatorySourceSection from './tax/RegulatorySourceSection.jsx';
 
 const DEFAULT_FORM_VALUES = {
   year: 2025,
@@ -415,6 +416,13 @@ export default function JapanTaxSimulatorView({ displayLang = 'vi' }) {
         onSelectTaxDetail={(taxId) => setActiveTaxDetailId(taxId)}
         lang={currentLang}
         t={t}
+      />
+
+      {/* Regulatory Source & Statutory Baseline Disclosure */}
+      <RegulatorySourceSection
+        rules={simulationResult.rules}
+        result={simulationResult}
+        lang={currentLang}
       />
 
       {/* Legal & Educational Disclaimer */}

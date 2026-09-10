@@ -37,6 +37,9 @@ export function calculateSocialInsurance({
     profile === 'corporate_executive' ||
     (profile === 'part_time' && isEnrolledCompanySocial);
 
+  const is2026OrLater = (_rules?.year && _rules.year >= 2026) || Boolean(_rules?.socialInsurance);
+  const siRules = _rules?.socialInsurance;
+
   // -------------------------------------------------------------
   // TRƯỜNG HỢP 1: Nhân viên công ty (Bảo hiểm xã hội đoàn thể - 労使折半)
   // -------------------------------------------------------------
@@ -48,38 +51,56 @@ export function calculateSocialInsurance({
     const kenpoEmployeeRate = kenpoTotalRate / 2;
     const healthInsurance = Math.floor(salary * kenpoEmployeeRate);
 
-    // 2. 介護保険 (Nursing Care Insurance) - Dành cho người từ 40 - 64 tuổi (~1.60%, chia đôi -> 0.8%)
-    const careTotalRate = loc.socialInsurance.careInsuranceRate || 0.0160;
+    // 2. 子ども・子育て支援金 (Child & Family Support Contribution) - Áp dụng từ 2026-04-01 (0.23% toàn quốc, chia đôi 0.115%)
+    const childSupportTotalRate = siRules?.kyokaiKenpo?.childSupportContributionRate ?? (is2026OrLater ? 0.0023 : 0);
+    const childSupportEmployeeRate = childSupportTotalRate / 2;
+    const childSupportContribution = Math.floor(salary * childSupportEmployeeRate);
+
+    // 3. 介護保険 (Nursing Care Insurance) - Dành cho người từ 40 - 64 tuổi (2026: 1.62% chia đôi -> 0.81%; 2025: 1.60% chia đôi -> 0.8%)
+    const careTotalRate = siRules?.kyokaiKenpo?.careInsuranceRate ?? (is2026OrLater ? 0.0162 : (loc.socialInsurance.careInsuranceRate || 0.0160));
     const careInsurance = isOver40 ? Math.floor(salary * (careTotalRate / 2)) : 0;
 
-    // 3. 厚生年金 (Welfare Pension) - 18.3% chia đôi = 9.15% (Trần mức lương tháng 65万円 = 780万円/năm)
+    // 4. 厚生年金 (Welfare Pension) - 18.3% chia đôi = 9.15% (Trần mức lương tháng 65万円 = 780万円/năm)
     const PENSION_MAX_BASE = 7800000;
     const pensionBaseSalary = Math.min(salary, PENSION_MAX_BASE);
     const pensionEmployeeRate = (loc.socialInsurance.pensionRate || 0.183) / 2;
     const welfarePension = Math.floor(pensionBaseSalary * pensionEmployeeRate);
 
-    // 4. 雇用保険 (Employment Insurance) - 0.6% phần nhân viên
-    const empRate = loc.socialInsurance.employmentRate || 0.006;
+    // 5. 雇用保険 (Employment Insurance) - 2026: 0.5% (5/1000) phần nhân viên; 2025: 0.6% phần nhân viên
+    const empRate = siRules?.employmentInsurance?.employeeRate ?? (is2026OrLater ? 0.005 : (loc.socialInsurance.employmentRate || 0.006));
     const employmentInsurance = Math.floor(salary * empRate);
 
     // Tổng phí bảo hiểm người lao động chịu
     const totalSocialInsurance =
       healthInsurance +
+      childSupportContribution +
       careInsurance +
       welfarePension +
       employmentInsurance;
+
+    // Chủ sử dụng trả phần tương đương + bảo hiểm thất nghiệp/tai nạn lao động
+    const employerEmploymentRate = siRules?.employmentInsurance?.employerRate ?? 0.0095;
+    const employerContribution =
+      healthInsurance +
+      childSupportContribution +
+      careInsurance +
+      welfarePension +
+      Math.floor(salary * employerEmploymentRate);
 
     return {
       type: 'company_employee',
       isCompanyEmployee: true,
       healthInsurance,
+      childSupportContribution,
       careInsurance,
       welfarePension,
       employmentInsurance,
       nationalHealthInsurance: 0,
       nationalPension: 0,
       totalSocialInsurance,
-      employerContribution: healthInsurance + careInsurance + welfarePension + Math.floor(salary * 0.0095), // Chủ sử dụng trả phần tương đương
+      employerContribution,
+      isEstimated: false,
+      rulesYear: _rules?.year || 2025,
     };
   }
 
@@ -98,8 +119,8 @@ export function calculateSocialInsurance({
   // Áp dụng trần tối đa (賦課限度額 khoảng 104万円/năm)
   const nationalHealthInsurance = Math.min(1040000, rawKokuminKenpo);
 
-  // 2. 国民年金 (National Pension): Khoảng 17,510円/tháng = 210,120円/năm
-  const monthlyPension = loc.socialInsurance.nationalPensionMonthly || 17510;
+  // 2. 国民年金 (National Pension): 2026: 17,920円/tháng (215,040円/năm); 2025: 17,510円/tháng (210,120円/năm)
+  const monthlyPension = siRules?.nationalPension?.monthlyPremium ?? (is2026OrLater ? 17920 : (loc.socialInsurance.nationalPensionMonthly || 17510));
   const nationalPension = monthlyPension * 12;
 
   const totalSocialInsurance = nationalHealthInsurance + nationalPension;
@@ -108,6 +129,7 @@ export function calculateSocialInsurance({
     type: 'national_self_employed',
     isCompanyEmployee: false,
     healthInsurance: 0,
+    childSupportContribution: 0,
     careInsurance: 0,
     welfarePension: 0,
     employmentInsurance: 0,
@@ -115,5 +137,9 @@ export function calculateSocialInsurance({
     nationalPension,
     totalSocialInsurance,
     employerContribution: 0,
+    isEstimated: true,
+    estimatedLabel: 'Estimated National Health Insurance / 国民健康保険（概算）',
+    disclosureNote: '実際の保険料は市区町村によって異なります。',
+    rulesYear: _rules?.year || 2025,
   };
 }

@@ -422,7 +422,7 @@ export const PrefectureLocations = {
     name_en: 'Fukuoka',
     region: 'Kyushu',
     residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 福岡県森林環境税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1025 },
+    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1011 },
   },
   saga: {
     code: 'saga',
