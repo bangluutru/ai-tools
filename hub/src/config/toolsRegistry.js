@@ -423,7 +423,19 @@ const toolGovernance = {
     country: 'JP',
     type: 'wizard',
     regulatory: true,
-  }
+  },
+  'work-scope-checker-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+  },
 };
 
 
@@ -1161,6 +1173,27 @@ const toolDefinitions = [
     badge: '総合ガイド',
     popular: true,
     tags: ['引越し', '手続き', 'ガイド', '転入届', '転出届', '過料', '児童手当', 'ライフライン', 'e転居', 'moving guide', 'chuyển nhà', 'japan life', 'housing']
+  },
+  {
+    id: 'work-scope-checker-jp',
+    name_vn: 'Kiểm Tra Phạm Vi Làm Việc Visa',
+    name_en: 'Residence Status & Work Scope Checker',
+    name_ja: '在留資格・就労範囲チェッカー',
+    desc_vn: 'Đối chiếu tư cách lưu trú (kỹ sư, du học, gia đình, vĩnh trú...) với công việc dự kiến theo chuẩn ISA. Xác định điều kiện Giấy phép làm thêm (資格外活動許可) và trần 28h/tuần.',
+    desc_en: 'Check work permissions under Japanese residence statuses against ISA statutory tables. Evaluate part-time permit (Shikakugai) requirements and 28-hour caps.',
+    desc_ja: '出入国在留管理庁の公表基準に基づき、在留資格と予定職種の適合性を事前確認。資格外活動許可の要否や週28時間制限、風俗営業禁止を整理。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+    icon: 'Briefcase',
+    gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
+    color: '#059669',
+    badge: '入管・在留',
+    popular: true,
+    tags: ['在留資格', '就労範囲', 'ビザ', '資格外活動許可', '週28時間', '技人国', '留学', '家族滞在', '永住者', '入管', 'work scope', 'residence status', 'visa nhật', 'phạm vi làm việc', 'japan life', 'immigration']
   },
   {
     id: 'watermark-studio',

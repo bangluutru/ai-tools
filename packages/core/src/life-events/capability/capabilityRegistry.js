@@ -40,6 +40,16 @@ const DEFAULT_CAPABILITY_MAP = {
   'housing.address.change.check': 'address-change-checklist-jp',
   'housing.moving.guide': 'moving-wizard-jp',
 
+  // Tên miền Quản lý Cư trú & Xuất nhập cảnh (Residence & Immigration)
+  'immigration.workScope.check': 'work-scope-checker-jp',
+  'immigration.residenceRenewal.guide': 'residence-renewal-guide-jp',
+  'immigration.affiliationChange.check': 'affiliation-change-checker-jp',
+  'immigration.statusChange.guide': 'status-change-guide-jp',
+  'immigration.familyImmigration.guide': 'family-immigration-guide-jp',
+  'immigration.permanentResidence.check': 'pr-readiness-checker-jp',
+  'immigration.arrivingInJapan.guide': 'arriving-in-japan-wizard-jp',
+  'immigration.leavingJapan.guide': 'leaving-japan-wizard-jp',
+
   // Biến thể tương thích (Compatibility Aliases)
   'family.maternityAllowance.simulate': 'maternity-allowance-jp',
   'family.childcareLeave.check': 'childcare-leave-eligibility-jp',

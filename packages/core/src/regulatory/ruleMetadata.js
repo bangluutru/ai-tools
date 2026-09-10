@@ -24,6 +24,8 @@ import { isValidJurisdiction } from './jurisdiction.js';
  */
 
 export const ALLOWED_RULE_STATUSES = Object.freeze(['research', 'beta', 'verified', 'stale']);
+export const ALLOWED_RULE_NATURES = Object.freeze(['deterministic', 'prerequisite', 'guidance', 'administrative-discretion']);
+export const ALLOWED_EFFECTIVE_BY = Object.freeze(['calendarDate', 'applicationDate', 'decisionDate', 'issuanceDate', 'eventDate']);
 
 /**
  * Tạo một RuleMetadata được kiểm tra hợp lệ.
@@ -58,9 +60,19 @@ export function defineRuleMetadata(def) {
     throw new Error(`Rule "${def.id}" has invalid status: "${status}". Allowed: ${ALLOWED_RULE_STATUSES.join(', ')}`);
   }
 
+  const ruleNature = def.ruleNature || 'deterministic';
+  if (!ALLOWED_RULE_NATURES.includes(ruleNature)) {
+    throw new Error(`Rule "${def.id}" has invalid ruleNature: "${ruleNature}". Allowed: ${ALLOWED_RULE_NATURES.join(', ')}`);
+  }
+
+  if (def.effectiveBy && !ALLOWED_EFFECTIVE_BY.includes(def.effectiveBy)) {
+    throw new Error(`Rule "${def.id}" has invalid effectiveBy: "${def.effectiveBy}". Allowed: ${ALLOWED_EFFECTIVE_BY.join(', ')}`);
+  }
+
   return Object.freeze({
     ...def,
     status,
+    ruleNature,
   });
 }
 

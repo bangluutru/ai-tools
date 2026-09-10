@@ -136,7 +136,7 @@ test('every miniapp has a valid product group defaulting safely to common', () =
   const japanLifeTools = tools.filter((t) => t.group === 'japan-life');
   assert.deepEqual(
     japanLifeTools.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp', 'moving-cost-jp', 'moving-admin-checker-jp', 'address-change-checklist-jp', 'moving-wizard-jp'].sort(),
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp', 'moving-cost-jp', 'moving-admin-checker-jp', 'address-change-checklist-jp', 'moving-wizard-jp', 'work-scope-checker-jp'].sort(),
     'japan-life group contains verified japan life tools',
   );
 

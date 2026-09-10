@@ -7,7 +7,7 @@
 
 /**
  * @typedef {'law' | 'regulation' | 'official-guidance' | 'official-table' | 'official-faq'} RegulatorySourceType
- * @typedef {'official-primary' | 'official-secondary' | 'deprecated'} RegulatorySourceStatus
+ * @typedef {'official-current' | 'official-proposed' | 'official-historical' | 'official-primary' | 'official-secondary' | 'deprecated'} RegulatorySourceStatus
  * @typedef {'ja' | 'vi' | 'en'} RegulatoryLanguage
  * @typedef {'JP' | 'VN'} RegulatoryCountry
  *
@@ -507,13 +507,215 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     title: 'e転居（郵便物等の転送サービス・1年間無料転送制度）',
     url: 'https://www.post.japanpost.jp/service/tenkyo/',
     sourceType: 'official-guidance',
-    language: 'ja',
-    lastVerifiedAt: '2026-09-11',
     status: 'official-primary',
     notes: 'Dịch vụ chuyển tiếp thư từ bưu điện (e転居): Miễn phí chuyển tiếp thư từ nội địa Nhật Bản trong 1 năm kể từ ngày chuyển đi đăng ký. Chỉ áp dụng thư từ nội địa, không áp dụng chuyển tiếp ra nước ngoài.'
+  },
+
+  // =========================================================================
+  // JAPAN LIFE - RESIDENCE & IMMIGRATION (出入国在留管理庁 / 法務省 / e-Gov)
+  // =========================================================================
+  'isa-ica-annexed-table-1': {
+    id: 'isa-ica-annexed-table-1',
+    country: 'JP',
+    authority: '出入国在留管理庁 / e-Gov',
+    title: '出入国管理及び難民認定法 別表第一（活動に基づく在留資格）',
+    url: 'https://laws.e-gov.go.jp/law/326CO0000000319#Mp-At_2_2-Pr_1-It_1',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Bảng 1 Luật Nhập quản: Các tư cách lưu trú dựa trên hoạt động (Lao động, Du học, Nghiên cứu, v.v.) và phạm vi hoạt động được phép.'
+  },
+  'isa-ica-annexed-table-2': {
+    id: 'isa-ica-annexed-table-2',
+    country: 'JP',
+    authority: '出入国在留管理庁 / e-Gov',
+    title: '出入国管理及び難民認定法 別表第二（身分・地位に基づく在留資格）',
+    url: 'https://laws.e-gov.go.jp/law/326CO0000000319#Mp-At_2_2-Pr_1-It_2',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Bảng 2 Luật Nhập quản: Tư cách lưu trú dựa trên thân phận (永住者, 日本人の配偶者等, 永住者の配偶者等, 定住者). Hoạt động lao động không bị giới hạn.'
+  },
+  'isa-ica-art19-work-scope': {
+    id: 'isa-ica-art19-work-scope',
+    country: 'JP',
+    authority: '出入国在留管理庁 / e-Gov',
+    title: '出入国管理及び難民認定法 第19条（活動の範囲及び資格外活動許可）',
+    url: 'https://laws.e-gov.go.jp/law/326CO0000000319#Mp-At_19',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Điều 19 Luật Nhập quản: Người cư trú theo Bảng 1 không được làm việc ngoài phạm vi tư cách nếu chưa có 資格外活動許可 theo khoản 2.'
+  },
+  'isa-extra-activity-perm': {
+    id: 'isa-extra-activity-perm',
+    country: 'JP',
+    authority: '出入国在留管理庁 (ISA)',
+    title: '資格外活動の許可手続案内（包括許可・個別許可・風俗営業禁止）',
+    url: 'https://www.moj.go.jp/isa/applications/procedures/16-8.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Giấy phép hoạt động ngoài tư cách (資格外活動許可): Du học & Gia đình tối đa 28h/tuần trong học kỳ. Nghiêm cấm tuyệt đối ngành nghề 風俗営業.'
+  },
+  'isa-ica-art21-renewal': {
+    id: 'isa-ica-art21-renewal',
+    country: 'JP',
+    authority: '出入国在留管理庁 / e-Gov',
+    title: '出入国管理及び難民認定法 第21条（在留期間の更新許可）及び特例期間',
+    url: 'https://laws.e-gov.go.jp/law/326CO0000000319#Mp-At_21',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Gia hạn thời hạn lưu trú: Yêu cầu có 相当の理由. Tiếp nhận trước 3 tháng, áp dụng Đặc lệ (特例期間) tối đa 2 tháng sau ngày hết hạn chờ quyết định.'
+  },
+  'isa-photo-req-2026': {
+    id: 'isa-photo-req-2026',
+    country: 'JP',
+    authority: '出入国在留管理庁 (ISA)',
+    title: '出入国管理及び難民認定法施行規則改正（提出写真の規格及び1歳未満免除：令和8年6月14日施行）',
+    url: 'https://www.moj.go.jp/isa/applications/procedures/photo_info.html',
+    sourceType: 'regulation',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Quy định ảnh thẻ ngoại kiều cấp từ 14/06/2026: Miễn nộp ảnh cho trẻ dưới 1 tuổi (trước đó là dưới 16 tuổi). Trẻ từ 1 tuổi trở lên bắt buộc nộp ảnh cỡ 40x30mm trong vòng 3 tháng.'
+  },
+  'isa-fee-schedule-2026': {
+    id: 'isa-fee-schedule-2026',
+    country: 'JP',
+    authority: '法務省 / 出入国在留管理庁',
+    title: '出入国管理及び難民認定法関係手数料令改正（令和8年10月1日施行・申請日基準）',
+    url: 'https://www.moj.go.jp/isa/applications/resources/fee_revision.html',
+    sourceType: 'regulation',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Lệ phí nhập quản sửa đổi có hiệu lực từ 01/10/2026: Gia hạn/Đổi tư cách 4,000円 -> 6,000円. Áp dụng theo ngày nộp đơn (applicationDate), đơn nộp đến 30/09/2026 vẫn áp dụng 4,000円.'
+  },
+  'isa-ica-art19-16-notification': {
+    id: 'isa-ica-art19-16-notification',
+    country: 'JP',
+    authority: '出入国在留管理庁 / e-Gov',
+    title: '出入国管理及び難民認定法 第19条の16（所属機関等に関する届出）',
+    url: 'https://laws.e-gov.go.jp/law/326CO0000000319#Mp-At_19_16',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Thông báo cơ quan trực thuộc (所属機関等に関する届出): Nghỉ việc, chuyển việc, nhập học trong vòng 14 ngày. Phạt tiền tới 20 vạn yên nếu không nộp.'
+  },
+  'isa-electronic-notification': {
+    id: 'isa-electronic-notification',
+    country: 'JP',
+    authority: '出入国在留管理庁 (ISA)',
+    title: '出入国在留管理庁 電子届出システム（所属機関の届出オンライン受付）',
+    url: 'https://www.ens-immi.moj.go.jp/',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Hệ thống thông báo điện tử ISA: Thực hiện thông báo thay đổi cơ quan trực thuộc trực tuyến 24/7 không mất phí.'
+  },
+  'isa-ica-art20-change': {
+    id: 'isa-ica-art20-change',
+    country: 'JP',
+    authority: '出入国在留管理庁 / e-Gov',
+    title: '出入国管理及び難民認定法 第20条（在留資格の変更許可）',
+    url: 'https://laws.e-gov.go.jp/law/326CO0000000319#Mp-At_20',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Thay đổi tư cách lưu trú (在留資格変更許可): Bắt buộc xin phép và nhận kết quả trước khi bắt đầu hoạt động của tư cách mới.'
+  },
+  'isa-family-stay-table': {
+    id: 'isa-family-stay-table',
+    country: 'JP',
+    authority: '出入国在留管理庁 (ISA)',
+    title: '在留資格「家族滞在」の基準及び立証資料案内',
+    url: 'https://www.moj.go.jp/isa/applications/status/dependent.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Tiêu chuẩn tư cách 家族滞在: Chỉ áp dụng cho vợ/chồng hợp pháp và con cái phụ thuộc do người có tư cách lao động trình độ cao/chuyên môn chu cấp.'
+  },
+  'isa-pr-guidelines-current': {
+    id: 'isa-pr-guidelines-current',
+    country: 'JP',
+    authority: '出入国在留管理庁 (ISA)',
+    title: '永住許可に関するガイドライン（令和元年改正・現行適用版）',
+    url: 'https://www.moj.go.jp/isa/publications/materials/nyukan_nyukan50.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Hướng dẫn xin vĩnh trú hiện hành: Cư trú 10 năm (5 năm đi làm); vợ/chồng công dân Nhật/vĩnh trú 3 năm kết hôn + 1 năm cư trú; nộp thuế và bảo hiểm/nenkin đầy đủ, đúng hạn trong 5 năm gần nhất.'
+  },
+  'isa-pr-proposal-2026-draft': {
+    id: 'isa-pr-proposal-2026-draft',
+    country: 'JP',
+    authority: '出入国在留管理庁 (ISA)',
+    title: '永住許可制度の見直しに係る意見公募案（パブリックコメント・未発効検討案）',
+    url: 'https://public-comment.e-gov.go.jp/servlet/Public?CLASSNAME=PCMMSTDETAIL&id=020026001',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-proposed',
+    notes: 'Dự thảo lấy ý kiến công chúng năm 2026 về sửa đổi cơ chế vĩnh trú (thu hồi vĩnh trú khi cố tình trốn thuế/nenkin). LƯU Ý: Đây là bản dự thảo, KHÔNG áp dụng như luật hiện hành.'
+  },
+  'isa-online-system': {
+    id: 'isa-online-system',
+    country: 'JP',
+    authority: '出入国在留管理庁 (ISA)',
+    title: '在留申請オンラインシステム（マイナンバーカード等によるオンライン申請ポータル）',
+    url: 'https://www.ras-immi.moj.go.jp/',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Cổng nộp hồ sơ cư trú trực tuyến của ISA cho cá nhân có thẻ My Number hoặc tổ chức/người đại diện được ủy quyền.'
+  },
+  'isa-reentry-art26': {
+    id: 'isa-reentry-art26',
+    country: 'JP',
+    authority: '出入国在留管理庁 / e-Gov',
+    title: '出入国管理及び難民認定法 第26条（再入国許可）及び第26条の2（みなし再入国許可）',
+    url: 'https://laws.e-gov.go.jp/law/326CO0000000319#Mp-At_26',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Quy định tái nhập cảnh: みなし再入国許可 cho người rời Nhật dưới 1 năm (đánh dấu thẻ ED tại sân bay); 再入国許可 cho chuyến đi 1-5 năm.'
+  },
+  'jps-lump-sum-withdrawal': {
+    id: 'jps-lump-sum-withdrawal',
+    country: 'JP',
+    authority: '日本年金機構 (Japan Pension Service)',
+    title: '短期在留外国人の脱退一時金制度（国民年金・厚生年金保険）',
+    url: 'https://www.nenkin.go.jp/service/jukyu/sonota-kyufu/dattai-ichiji/20150406.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Tiền rút một lần hưu trí (脱退一時金): Dành cho người nước ngoài không có quốc tịch Nhật, đã đóng Nenkin từ 6 tháng trở lên, nộp đơn trong vòng 2 năm sau khi rời Nhật.'
   }
 });
 
+export const ALLOWED_SOURCE_STATUSES = Object.freeze([
+  'official-current',
+  'official-proposed',
+  'official-historical',
+  'official-primary',
+  'official-secondary',
+  'deprecated',
+]);
 
 /**
  * Tra cứu thông tin nguồn chính thức theo id.
@@ -535,6 +737,18 @@ export function hasSource(sourceId) {
 }
 
 /**
+ * Kiểm tra xem một nguồn có đang là luật/văn bản có hiệu lực hiện hành hay không.
+ * Các nguồn 'official-proposed' (dự thảo) và 'deprecated' (hết hiệu lực) trả về false.
+ * @param {string} sourceId
+ * @returns {boolean}
+ */
+export function isSourceActive(sourceId) {
+  const source = getSource(sourceId);
+  if (!source) return false;
+  return source.status === 'official-current' || source.status === 'official-primary' || source.status === 'official-secondary';
+}
+
+/**
  * Lấy danh sách tất cả các nguồn theo quốc gia hoặc trạng thái.
  * @param {Object} [filter]
  * @param {RegulatoryCountry} [filter.country]
@@ -553,6 +767,7 @@ export function getAllSources(filter = {}) {
 export const OfficialSourceRegistry = {
   get: getSource,
   has: hasSource,
+  isActive: isSourceActive,
   getAll: getAllSources,
   all: OFFICIAL_SOURCE_REGISTRY,
 };

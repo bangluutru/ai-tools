@@ -54,12 +54,17 @@ export function createApplicablePeriod(typeOrObj, from, to = null) {
 export function isRuleApplicable(rule, context = {}) {
   if (!rule) return false;
 
-  const { applicablePeriod, effectiveFrom, effectiveTo } = rule;
+  const { applicablePeriod, effectiveFrom, effectiveTo, effectiveBy } = rule;
 
-  // 1. Kiểm tra ngày hiệu lực tuyệt đối nếu có date trong context
-  if (context.date) {
-    if (effectiveFrom && context.date < effectiveFrom) return false;
-    if (effectiveTo && context.date > effectiveTo) return false;
+  // Resolve target date according to effectiveBy anchor, context.date, or specific date keys
+  const targetDate = (effectiveBy && context[effectiveBy])
+    ? context[effectiveBy]
+    : (context.date || context.applicationDate || context.eventDate || context.issuanceDate || context.calendarDate);
+
+  // 1. Kiểm tra ngày hiệu lực tuyệt đối nếu có targetDate trong context
+  if (targetDate) {
+    if (effectiveFrom && targetDate < effectiveFrom) return false;
+    if (effectiveTo && targetDate > effectiveTo) return false;
   }
 
   // 2. Nếu không có applicablePeriod, fallback theo effectiveFrom/effectiveTo

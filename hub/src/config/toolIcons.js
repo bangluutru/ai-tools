@@ -45,7 +45,11 @@ import {
   Home,
   ClipboardCheck,
   Boxes,
-  Building2
+  Building2,
+  Briefcase,
+  PlaneTakeoff,
+  PlaneLanding,
+  FileCheck
 } from 'lucide-react';
 
 
@@ -96,7 +100,11 @@ export const iconMap = {
   Home,
   ClipboardCheck,
   Boxes,
-  Building2
+  Building2,
+  Briefcase,
+  PlaneTakeoff,
+  PlaneLanding,
+  FileCheck
 };
 
 
