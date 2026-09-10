@@ -288,6 +288,30 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     status: 'official-primary',
     notes: 'Căn cứ pháp lý Điều 39 Luật Tiêu chuẩn Lao động Nhật Bản về quyền nghỉ phép năm có lương sau 6 tháng, bảng lũy tiến theo thâm niên và thời hiệu hết hạn 2 năm theo Điều 115.'
   },
+  'mhlw-hellowork-unemployment-guide': {
+    id: 'mhlw-hellowork-unemployment-guide',
+    country: 'JP',
+    authority: '厚生労働省・ハローワーク (MHLW / Hello Work)',
+    title: '雇用保険の基本手当（失業給付）受給資格・給付制限・受給期間延長手続ガイド',
+    url: 'https://www.hellowork.mhlw.go.jp/insurance/insurance_basicbenefit.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Tiêu chuẩn thụ hưởng trợ cấp thất nghiệp: điều kiện đóng bảo hiểm (6 tháng hoặc 12 tháng), phân loại thôi việc (công ty, lý do chính đáng, tự ý), thời gian chờ 7 ngày, thời gian hạn chế chi trả (給付制限 2 tháng) và gia hạn nhận trợ cấp tối đa 4 năm.'
+  },
+  'egov-employment-insurance-act': {
+    id: 'egov-employment-insurance-act',
+    country: 'JP',
+    authority: 'e-Gov 法令検索 / 厚生労働省',
+    title: '雇用保険法（昭和49年法律第116号）第13条（受給資格）、第23条、第33条（給付制限）',
+    url: 'https://elaws.e-gov.go.jp/document?lawid=349AC0000000116',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Căn cứ pháp điển gốc của Luật Bảo hiểm Việc làm Nhật Bản về điều kiện hưởng trợ cấp cơ bản (基本手当), định nghĩa người hưởng đặc định (特定受給資格者), người thôi việc có lý do đặc định (特定理由離職者) và các quy định hạn chế chi trả.'
+  },
 
   // =========================================================================
   // VIETNAM LIFE - TAX & SOCIAL INSURANCE (Tổng cục Thuế / BHXH Việt Nam)

@@ -136,8 +136,8 @@ test('every miniapp has a valid product group defaulting safely to common', () =
   const japanLifeTools = tools.filter((t) => t.group === 'japan-life');
   assert.deepEqual(
     japanLifeTools.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp'].sort(),
-    'japan-life group contains japan-tax-simulator, social-insurance-jp, social-insurance-eligibility-jp, national-pension-jp, dependent-insurance-jp, overtime-calculator-jp and paid-leave-checker-jp',
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp'].sort(),
+    'japan-life group contains japan-tax-simulator, social-insurance-jp, social-insurance-eligibility-jp, national-pension-jp, dependent-insurance-jp, overtime-calculator-jp, paid-leave-checker-jp and unemployment-eligibility-jp',
   );
 
   const jTax = tools.find((t) => t.id === 'japan-tax-simulator');

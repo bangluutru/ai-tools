@@ -7,3 +7,5 @@ export * from './rules/overtimeRates.js';
 export * from './engines/overtimeEngine.js';
 export * from './rules/paidLeaveTables.js';
 export * from './engines/paidLeaveEngine.js';
+export * from './rules/unemploymentEligibilityRules.js';
+export * from './engines/unemploymentEligibilityEngine.js';

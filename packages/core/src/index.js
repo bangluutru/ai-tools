@@ -24,6 +24,8 @@ export { default as SocialInsuranceEligibilityView } from './components/insuranc
 export { NationalPensionView } from './components/insurance/NationalPensionView.jsx';
 export { default as DependentInsuranceView } from './components/insurance/DependentInsuranceView.jsx';
 export { default as OvertimeCalculatorView } from './components/employment/OvertimeCalculatorView.jsx';
+export { default as PaidLeaveCheckerView } from './components/employment/PaidLeaveCheckerView.jsx';
+export { default as UnemploymentEligibilityView } from './components/employment/UnemploymentEligibilityView.jsx';
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 
 // Core Hooks

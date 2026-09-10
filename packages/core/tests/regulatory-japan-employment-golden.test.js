@@ -16,6 +16,8 @@ import {
   lookupStatutoryGrantDays,
   isProportionalGrant,
   calculateServiceDuration,
+  checkUnemploymentEligibility,
+  classifySeparationReason,
 } from '../src/japan/employment/index.js';
 
 test('Golden Test 1: Base hourly wage calculation for monthly salaried worker', () => {
@@ -275,4 +277,85 @@ test('Golden Test 16: Part-time worker receiving under 10 days does not trigger 
   assert.equal(res.mandatory5Days.isApplicable, false);
   assert.equal(res.mandatory5Days.targetDays, 0);
 });
+
+test('Golden Test 17: Company Cause (特定受給資格者) requires 6 months, 0 restriction months, 7 days waiting', () => {
+  const res = checkUnemploymentEligibility({
+    reasonId: 'dismissal_restructure',
+    totalInsuredMonths: 8,
+    isAbleToWorkImmediately: true,
+  });
+
+  assert.equal(res.status, 'QUALIFIED');
+  assert.equal(res.categoryKey, 'COMPANY_CAUSE');
+  assert.equal(res.requiredInsuredMonths, 6);
+  assert.equal(res.timeline.waitingPeriodDays, 7);
+  assert.equal(res.timeline.benefitRestrictionMonths, 0);
+  assert.equal(res.timeline.hasBenefitRestriction, false);
+  assert.equal(res.sources.includes('mhlw-hellowork-unemployment-guide'), true);
+});
+
+test('Golden Test 18: Specific Justified Cause (特定理由離職者 - 雇止め) requires 6 months, 0 restriction', () => {
+  const res = checkUnemploymentEligibility({
+    reasonId: 'contract_expired_refused',
+    totalInsuredMonths: 6,
+    isAbleToWorkImmediately: true,
+  });
+
+  assert.equal(res.status, 'QUALIFIED');
+  assert.equal(res.categoryKey, 'SPECIFIC_REASONS');
+  assert.equal(res.requiredInsuredMonths, 6);
+  assert.equal(res.timeline.benefitRestrictionMonths, 0);
+});
+
+test('Golden Test 19: Personal Voluntary Resignation (一般離職者) requires 12 months, 2 months restriction', () => {
+  const res = checkUnemploymentEligibility({
+    reasonId: 'personal_choice',
+    totalInsuredMonths: 14,
+    isAbleToWorkImmediately: true,
+  });
+
+  assert.equal(res.status, 'QUALIFIED');
+  assert.equal(res.categoryKey, 'PERSONAL_VOLUNTARY');
+  assert.equal(res.requiredInsuredMonths, 12);
+  assert.equal(res.timeline.waitingPeriodDays, 7);
+  assert.equal(res.timeline.benefitRestrictionMonths, 2);
+  assert.equal(res.timeline.hasBenefitRestriction, true);
+});
+
+test('Golden Test 20: Personal Voluntary Resignation with under 12 months -> NOT_QUALIFIED', () => {
+  const res = checkUnemploymentEligibility({
+    reasonId: 'personal_choice',
+    totalInsuredMonths: 10,
+    isAbleToWorkImmediately: true,
+  });
+
+  assert.equal(res.status, 'NOT_QUALIFIED');
+  assert.equal(res.isInsuredMonthsSufficient, false);
+  assert.equal(res.warnings.some((w) => w.code === 'INSUFFICIENT_INSURED_MONTHS'), true);
+});
+
+test('Golden Test 21: Gross Disciplinary Dismissal (重責解雇) incurs 3 months restriction', () => {
+  const res = checkUnemploymentEligibility({
+    reasonId: 'disciplinary_dismissal',
+    totalInsuredMonths: 24,
+    isAbleToWorkImmediately: true,
+  });
+
+  assert.equal(res.status, 'QUALIFIED');
+  assert.equal(res.categoryKey, 'DISCIPLINARY');
+  assert.equal(res.timeline.benefitRestrictionMonths, 3);
+});
+
+test('Golden Test 22: Unable to work due to temporary illness -> ACTION_EXTENSION_REQUIRED', () => {
+  const res = checkUnemploymentEligibility({
+    reasonId: 'illness_injury',
+    totalInsuredMonths: 12,
+    isAbleToWorkImmediately: false,
+    isInabilityTemporary: true,
+  });
+
+  assert.equal(res.status, 'EXTENSION_REQUIRED');
+  assert.equal(res.warnings.some((w) => w.code === 'ACTION_EXTENSION_REQUIRED'), true);
+});
+
 

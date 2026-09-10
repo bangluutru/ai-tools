@@ -279,6 +279,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'checker',
     regulatory: true,
+  },
+  'unemployment-eligibility-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'employment',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
   }
 };
 
@@ -764,6 +776,27 @@ const toolDefinitions = [
     badge: '労働基準法',
     popular: true,
     tags: ['有給休暇チェッカー', '有給休暇', '年次有給休暇', '有給', '年5日取得義務', '比例付与', '出勤率8割', 'paid leave', 'annual leave', 'phép năm', 'nghỉ phép', 'yukyu', 'japan life', 'office']
+  },
+  {
+    id: 'unemployment-eligibility-jp',
+    name_vn: 'Điều Kiện Trợ Cấp Thất Nghiệp (失業給付)',
+    name_en: 'Japan Unemployment Eligibility Checker',
+    name_ja: '失業給付受給資格チェッカー',
+    desc_vn: 'Kiểm tra điều kiện hưởng trợ cấp thất nghiệp, phân loại diện thôi việc (công ty sa thải 6 tháng vs tự ý nghỉ 12 tháng), thời gian hạn chế chi trả (0 vs 2 tháng), và thủ tục gia hạn tối đa 4 năm.',
+    desc_en: 'Check statutory employment insurance eligibility, separation classification (company dismissal 6 mos vs voluntary 12 mos), benefit restriction periods (none vs 2 mos), and up to 4-year extension.',
+    desc_ja: '雇用保険法に基づく離職理由別の受給資格判定（会社都合6ヶ月 vs 自己都合12ヶ月）、給付制限期間（なし vs 2ヶ月）、受給期間延長（最大4年）を判定。100%ブラウザ完結。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'employment',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+    icon: 'FileSearch',
+    gradient: 'from-blue-700 via-indigo-700 to-teal-600',
+    color: '#1d4ed8',
+    badge: '雇用保険法',
+    popular: true,
+    tags: ['失業給付受給資格チェッカー', '失業給付', '受給資格', '基本手当', '雇用保険', '特定受給資格者', '特定理由離職者', '給付制限', '受給期間延長', '離職票', 'unemployment', 'thất nghiệp', 'trợ cấp thất nghiệp', 'hello work', 'japan life', 'office']
   },
   {
     id: 'watermark-studio',
