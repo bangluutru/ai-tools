@@ -43,3 +43,5 @@ fixtures/generated/
 populate_part1.mjs
 docs/reports/screenshots/*.png
 *.traineddata
+hub/japan_tax_report_*.pdf
+*.pdf

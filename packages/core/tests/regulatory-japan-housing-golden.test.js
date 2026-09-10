@@ -19,6 +19,11 @@ import {
   // Moving Admin
   evaluateMovingAdminProcedures,
   STATUTORY_DEADLINES,
+
+  // Address Change
+  generateAddressChangeChecklist,
+  ADDRESS_CHANGE_CATEGORIES,
+  TIMING_BANDS,
 } from '../src/japan/housing/index.js';
 
 test('Milestone 4: 引越し費用シミュレーター (Moving Cost Simulator Golden Tests)', async (t) => {
@@ -229,4 +234,80 @@ test('Milestone 5: 引越し行政手続きナビ (Moving Admin Procedures Golde
     assert.equal(result.steps.some((s) => s.id === 'step_tenshutsu'), false);
   });
 });
+
+test('Milestone 6: 住所変更チェックリスト (Address Change Checklist Golden Tests)', async (t) => {
+  // Case 1: Full profile checklist generation
+  await t.test('M6-01: Sinh checklist đầy đủ: bao gồm Bưu điện (e-Tenkyo), Điện, Ga, Nước, Internet, Bằng lái, Ngân hàng, Xe cộ', () => {
+    const checklist = generateAddressChangeChecklist({
+      hasDriversLicense: true,
+      hasMyNumberCard: true,
+      hasVehicle: true,
+      hasBicycle: true,
+      hasFiberInternet: true,
+      moveDate: '2026-10-01',
+    });
+
+    assert.ok(checklist.items.length >= 10);
+    assert.equal(checklist.stats.totalCount, checklist.items.length);
+    assert.equal(checklist.stats.completedCount, 0);
+    assert.equal(checklist.stats.progressPercent, 0);
+
+    // Japan post
+    const eTenkyo = checklist.items.find((i) => i.id === 'japan_post_e_tenkyo');
+    assert.ok(eTenkyo);
+    assert.equal(eTenkyo.isCritical, true);
+
+    // Gas valve opening
+    const gas = checklist.items.find((i) => i.id === 'gas_valve_opening');
+    assert.ok(gas);
+    assert.equal(gas.requiresPresence, true); // Bắt buộc có mặt
+    assert.equal(gas.isCritical, true);
+  });
+
+  // Case 2: Vehicle condition filtering
+  await t.test('M6-02: Lọc điều kiện: Người không có ô tô (hasVehicle: false) sẽ không xuất hiện thủ tục Đăng kiểm xe', () => {
+    const checklist = generateAddressChangeChecklist({
+      hasVehicle: false,
+    });
+
+    assert.equal(checklist.items.some((i) => i.id === 'vehicle_inspection_cert_change'), false);
+  });
+
+  // Case 3: Progress and completion tracking
+  await t.test('M6-03: Theo dõi tiến độ: đánh dấu hoàn thành tính chính xác progressPercent và criticalPendingCount', () => {
+    const checked = {
+      japan_post_e_tenkyo: true,
+      electricity_change: true,
+    };
+
+    const checklist = generateAddressChangeChecklist(
+      {
+        hasVehicle: false,
+        hasBicycle: false,
+      },
+      checked
+    );
+
+    assert.equal(checklist.stats.completedCount, 2);
+    assert.ok(checklist.stats.progressPercent > 0);
+
+    const checkedPost = checklist.items.find((i) => i.id === 'japan_post_e_tenkyo');
+    assert.equal(checkedPost.isCompleted, true);
+  });
+
+  // Case 4: Grouping by Timing Bands and Categories
+  await t.test('M6-04: Phân nhóm trực quan: hiển thị đúng theo mốc thời gian (byTiming) và theo nhóm dịch vụ (byCategory)', () => {
+    const checklist = generateAddressChangeChecklist({
+      moveDate: '2026-10-01',
+    });
+
+    assert.ok(checklist.byTiming.length >= 3);
+    assert.ok(checklist.byCategory.length >= 4);
+
+    const lifelineGroup = checklist.byCategory.find((g) => g.category.id === 'lifeline');
+    assert.ok(lifelineGroup);
+    assert.ok(lifelineGroup.items.some((i) => i.id === 'gas_valve_opening'));
+  });
+});
+
 

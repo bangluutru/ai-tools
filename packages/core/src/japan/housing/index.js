@@ -11,3 +11,7 @@ export * from './engines/movingCostEngine.js';
 // M5: Moving Admin Procedure Checker (引越し行政手続きナビ)
 export * from './rules/movingAdminRules.js';
 export * from './engines/movingAdminEngine.js';
+
+// M6: Address Change Multi-channel Checklist (住所変更チェックリスト)
+export * from './rules/addressChangeRules.js';
+export * from './engines/addressChangeEngine.js';

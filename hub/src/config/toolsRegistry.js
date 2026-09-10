@@ -399,6 +399,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'checker',
     regulatory: true,
+  },
+  'address-change-checklist-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'housing',
+    country: 'JP',
+    type: 'checklist',
+    regulatory: true,
   }
 };
 
@@ -1095,6 +1107,27 @@ const toolDefinitions = [
     badge: '行政ナビ',
     popular: true,
     tags: ['引越し', '転出届', '転入届', '転居届', 'マイナポータル', 'ワンストップ', '住民基本台帳法', 'moving procedure', 'thủ tục chuyển nhà', 'chuyển khẩu', 'japan life', 'housing']
+  },
+  {
+    id: 'address-change-checklist-jp',
+    name_vn: 'Checklist Đổi Địa Chỉ Đa Kênh',
+    name_en: 'Address Change Checklist',
+    name_ja: '住所変更チェックリスト',
+    desc_vn: 'Quản lý đổi địa chỉ chuyển tiếp Bưu điện (e-Tenkyo 1 năm), Điện, Ga (đặt hẹn mở van an toàn), Nước, Internet cáp quang, Bằng lái, Ngân hàng và Thẻ.',
+    desc_en: 'Interactive checklist for Japan Post 1-year forwarding (e-Tenkyo), lifelines (electricity, in-person gas inspection, water, fiber internet), driver license, banks, cards.',
+    desc_ja: '日本郵便「e転居」（1年間無料転送）、電気・ガス（開栓立ち会い）・水道・光回線、免許証、銀行、クレカの住所変更管理チェックリスト。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'housing',
+    country: 'JP',
+    type: 'checklist',
+    regulatory: true,
+    icon: 'ClipboardCheck',
+    gradient: 'from-cyan-600 via-teal-600 to-emerald-600',
+    color: '#06b6d4',
+    badge: '手続きリスト',
+    popular: true,
+    tags: ['引越し', '住所変更', 'e転居', '郵便局', 'ライフライン', '電気', 'ガス', '水道', 'address change', 'đổi địa chỉ', 'chuyển nhà', 'japan life', 'housing']
   },
   {
     id: 'watermark-studio',
