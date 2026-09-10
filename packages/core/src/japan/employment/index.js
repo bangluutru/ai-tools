@@ -9,3 +9,5 @@ export * from './rules/paidLeaveTables.js';
 export * from './engines/paidLeaveEngine.js';
 export * from './rules/unemploymentEligibilityRules.js';
 export * from './engines/unemploymentEligibilityEngine.js';
+export * from './rules/unemploymentBenefitTables.js';
+export * from './engines/unemploymentBenefitEngine.js';

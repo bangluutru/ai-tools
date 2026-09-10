@@ -312,6 +312,18 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     status: 'official-primary',
     notes: 'Căn cứ pháp điển gốc của Luật Bảo hiểm Việc làm Nhật Bản về điều kiện hưởng trợ cấp cơ bản (基本手当), định nghĩa người hưởng đặc định (特定受給資格者), người thôi việc có lý do đặc định (特定理由離職者) và các quy định hạn chế chi trả.'
   },
+  'mhlw-basic-allowance-rates-2026': {
+    id: 'mhlw-basic-allowance-rates-2026',
+    country: 'JP',
+    authority: '厚生労働省 (Ministry of Health, Labour and Welfare)',
+    title: '雇用保険の基本手当日額の変更・賃金日額の上限・下限額算定基準（毎年8月1日改定）',
+    url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000160564_00030.html',
+    sourceType: 'official-table',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Quy chuẩn mức trợ cấp cơ bản hàng ngày (基本手当日額), trần và sàn tiền lương ngày (賃金日額) theo độ tuổi, đường cong tỷ lệ hưởng trợ cấp 50%〜80% và bảng số ngày hưởng trợ cấp tối đa (90〜330 ngày) áp dụng từ ngày 1/8 hàng năm.'
+  },
 
   // =========================================================================
   // VIETNAM LIFE - TAX & SOCIAL INSURANCE (Tổng cục Thuế / BHXH Việt Nam)

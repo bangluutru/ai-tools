@@ -110,7 +110,7 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   const japanTools = toolsForGroup(tools, 'japan-life');
   assert.deepEqual(
     japanTools.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp'].sort()
   );
 
   const commonTools = toolsForGroup(tools, 'common');
@@ -118,13 +118,13 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   assert.equal(commonTools.every((t) => t.group === 'common'), true);
 
   const allTools = toolsForGroup(tools, ALL_GROUPS);
-  assert.equal(allTools.length, 26);
+  assert.equal(allTools.length, 27);
 
   // filterTools combined
   const officeJapan = filterTools(tools, { category: 'office', group: 'japan-life' });
   assert.deepEqual(
     officeJapan.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp'].sort()
   );
 
   const officeCommon = filterTools(tools, { category: 'office', group: 'common' });
@@ -211,14 +211,17 @@ test('search finds Japan Insurance and Employment miniapps across ja, en, and vi
   // 失業
   const shitsugyou = search('失業');
   assert.ok(shitsugyou.some((t) => t.id === 'unemployment-eligibility-jp'));
+  assert.ok(shitsugyou.some((t) => t.id === 'unemployment-benefit-jp'));
 
   // thất nghiệp
   const thatNghiep = search('thất nghiệp');
   assert.ok(thatNghiep.some((t) => t.id === 'unemployment-eligibility-jp'));
+  assert.ok(thatNghiep.some((t) => t.id === 'unemployment-benefit-jp'));
 
   // unemployment
   const unemp = search('unemployment');
   assert.ok(unemp.some((t) => t.id === 'unemployment-eligibility-jp'));
+  assert.ok(unemp.some((t) => t.id === 'unemployment-benefit-jp'));
 });
 
 

@@ -291,6 +291,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'checker',
     regulatory: true,
+  },
+  'unemployment-benefit-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'employment',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
   }
 };
 
@@ -797,6 +809,27 @@ const toolDefinitions = [
     badge: '雇用保険法',
     popular: true,
     tags: ['失業給付受給資格チェッカー', '失業給付', '受給資格', '基本手当', '雇用保険', '特定受給資格者', '特定理由離職者', '給付制限', '受給期間延長', '離職票', 'unemployment', 'thất nghiệp', 'trợ cấp thất nghiệp', 'hello work', 'japan life', 'office']
+  },
+  {
+    id: 'unemployment-benefit-jp',
+    name_vn: 'Mô Phỏng Trợ Cấp Thất Nghiệp (失業給付)',
+    name_en: 'Japan Unemployment Benefit Simulator',
+    name_ja: '失業給付シミュレーター',
+    desc_vn: 'Tính toán chính xác mức trợ cấp cơ bản hàng ngày (基本手当日額), số ngày hưởng (90〜330 ngày), tổng số tiền nhận và tỷ lệ trượt 50%〜80% theo luật MHLW. 100% xử lý trên trình duyệt.',
+    desc_en: 'Statutory calculation of Basic Daily Allowance, prescribed benefit days (90 to 330 days), total payouts, and 50% to 80% sliding scale rates under MHLW regulations. 100% client-side.',
+    desc_ja: '雇用保険法に基づく基本手当日額、所定給付日数（90日〜330日）、受給総額、50%〜80%スライド給付率を正確に試算。100%ブラウザ完結。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'employment',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
+    icon: 'Coins',
+    gradient: 'from-blue-600 via-indigo-600 to-emerald-600',
+    color: '#2563eb',
+    badge: '雇用保険法',
+    popular: true,
+    tags: ['失業給付シミュレーター', '失業手当', '失業保険', '基本手当日額', '賃金日額', '所定給付日数', '受給総額', '給付率', 'unemployment', 'trợ cấp thất nghiệp', 'tiền thất nghiệp', 'thất nghiệp', 'japan life', 'office']
   },
   {
     id: 'watermark-studio',

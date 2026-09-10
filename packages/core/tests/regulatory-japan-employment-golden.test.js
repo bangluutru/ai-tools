@@ -18,6 +18,8 @@ import {
   calculateServiceDuration,
   checkUnemploymentEligibility,
   classifySeparationReason,
+  calculateUnemploymentBenefit,
+  calculatePrescribedBenefitDays,
 } from '../src/japan/employment/index.js';
 
 test('Golden Test 1: Base hourly wage calculation for monthly salaried worker', () => {
@@ -357,5 +359,127 @@ test('Golden Test 22: Unable to work due to temporary illness -> ACTION_EXTENSIO
   assert.equal(res.status, 'EXTENSION_REQUIRED');
   assert.equal(res.warnings.some((w) => w.code === 'ACTION_EXTENSION_REQUIRED'), true);
 });
+
+test('Golden Test 23: Low wage worker receives statutory maximum 80% benefit rate', () => {
+  // Lương 150.000 JPY/tháng -> 6 tháng = 900.000 JPY -> Tiền lương ngày = 5.000 JPY (<= 5.280 JPY ngưỡng A)
+  // Tỷ lệ hưởng luật định = 80% -> Trợ cấp ngày = 4.000 JPY/ngày
+  const res = calculateUnemploymentBenefit({
+    monthlyWage: 150000,
+    age: 26,
+    insuredYears: 2,
+    separationCategory: 'COMPANY_CAUSE',
+    targetDate: '2026-09-01',
+  });
+
+  assert.equal(res.dailyWage, 5000);
+  assert.equal(res.basicDailyBenefit, 4000);
+  assert.equal(res.effectiveBenefitRatePercent, 80);
+  assert.equal(res.prescribedBenefitDays, 90);
+  assert.equal(res.totalBenefitAmount, 4000 * 90); // 360,000 JPY
+});
+
+test('Golden Test 24: Middle wage worker receives statutory sliding scale benefit rate (50%〜80%)', () => {
+  // Lương 300.000 JPY/tháng -> 6 tháng = 1.800.000 JPY -> Tiền lương ngày = 10.000 JPY (giữa 5.280 và 12.980)
+  // Công thức: 0.8 - (0.3 * (10000 - 5280) / (12980 - 5280)) = 0.8 - (0.3 * 4720 / 7700) = 0.8 - 0.18389 = 0.6161
+  // Trợ cấp ngày = Math.floor(10000 * 0.6161) = 6.161 JPY
+  const res = calculateUnemploymentBenefit({
+    monthlyWage: 300000,
+    age: 35,
+    insuredYears: 6,
+    separationCategory: 'COMPANY_CAUSE',
+    targetDate: '2026-09-01',
+  });
+
+  assert.equal(res.dailyWage, 10000);
+  assert.equal(res.basicDailyBenefit, 6161);
+  assert.equal(res.effectiveBenefitRatePercent, 61.6);
+  assert.equal(res.prescribedBenefitDays, 180); // 35-44 tuổi, 6 năm tham gia diện công ty = 180 ngày
+  assert.equal(res.totalBenefitAmount, 6161 * 180);
+});
+
+test('Golden Test 25: High wage worker capped at statutory maximum benefit amount', () => {
+  // Lương 800.000 JPY/tháng -> 6 tháng = 4.800.000 JPY -> Tiền lương ngày tính thô = 26.666 JPY
+  // Tuổi 35 (nhóm age_30_44) -> Trần lương ngày = 15.940 JPY (kỳ 2026_08)
+  // Trần trợ cấp ngày = 7.970 JPY
+  const res = calculateUnemploymentBenefit({
+    monthlyWage: 800000,
+    age: 35,
+    insuredYears: 12,
+    separationCategory: 'PERSONAL_VOLUNTARY',
+    targetDate: '2026-09-01',
+  });
+
+  assert.equal(res.dailyWage, 15940);
+  assert.equal(res.basicDailyBenefit, 7970);
+  assert.equal(res.isCapped, true);
+  assert.equal(res.prescribedBenefitDays, 120); // Tự nguyện, 12 năm = 120 ngày
+  assert.equal(res.totalBenefitAmount, 7970 * 120);
+});
+
+test('Golden Test 26: Minimum floor protection prevents benefits below statutory minimum', () => {
+  // Lương thấp bất thường 50.000 JPY/tháng -> Tiền lương ngày tính thô = 1.666 JPY (< sàn 2.869 JPY)
+  // Sàn bảo hộ tối thiểu = 2.295 JPY/ngày
+  const res = calculateUnemploymentBenefit({
+    monthlyWage: 50000,
+    age: 22,
+    insuredYears: 1,
+    separationCategory: 'COMPANY_CAUSE',
+    targetDate: '2026-09-01',
+  });
+
+  assert.equal(res.dailyWage, 2869);
+  assert.equal(res.basicDailyBenefit, 2295);
+  assert.equal(res.isFloored, true);
+});
+
+test('Golden Test 27: Dual effective period resolution (pre vs post 2026-08-01 MHLW revisions)', () => {
+  // Kỳ trước 01/08/2026 (VD: 2026-05-01) -> Trần nhóm 30-44 tuổi là 7.910 JPY
+  const resOld = calculateUnemploymentBenefit({
+    monthlyWage: 800000,
+    age: 35,
+    insuredYears: 5,
+    targetDate: '2026-05-01',
+  });
+  assert.equal(resOld.effectivePeriod.id, '2025_08');
+  assert.equal(resOld.basicDailyBenefit, 7910);
+
+  // Kỳ sau 01/08/2026 (VD: 2026-09-01) -> Trần nhóm 30-44 tuổi là 7.970 JPY
+  const resNew = calculateUnemploymentBenefit({
+    monthlyWage: 800000,
+    age: 35,
+    insuredYears: 5,
+    targetDate: '2026-09-01',
+  });
+  assert.equal(resNew.effectivePeriod.id, '2026_08');
+  assert.equal(resNew.basicDailyBenefit, 7970);
+});
+
+test('Golden Test 28: Prescribed duration for Type A Company Cause (Age 48, 22 years insured -> 330 days)', () => {
+  const { prescribedDays } = calculatePrescribedBenefitDays({
+    age: 48,
+    insuredYears: 22,
+    separationCategory: 'COMPANY_CAUSE',
+  });
+  assert.equal(prescribedDays, 330);
+});
+
+test('Golden Test 29: Prescribed duration for Type C Personal Voluntary (Age 48, 22 years insured -> 150 days)', () => {
+  const { prescribedDays } = calculatePrescribedBenefitDays({
+    age: 48,
+    insuredYears: 22,
+    separationCategory: 'PERSONAL_VOLUNTARY',
+  });
+  assert.equal(prescribedDays, 150);
+});
+
+test('Golden Test 30: Prescribed duration for Difficult to Employ (Age 35, 3 years insured -> 300 days)', () => {
+  const { prescribedDays } = calculatePrescribedBenefitDays({
+    age: 35,
+    insuredYears: 3,
+    isDifficultToEmploy: true,
+  });
+  assert.equal(prescribedDays, 300);
+});
+
 
 

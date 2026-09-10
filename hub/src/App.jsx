@@ -57,6 +57,7 @@ const DependentInsuranceTool = lazy(() => import('./tools/dependent-insurance-jp
 const OvertimeCalculatorTool = lazy(() => import('./tools/overtime-calculator-jp/OvertimeCalculatorTool.jsx'));
 const PaidLeaveCheckerTool = lazy(() => import('./tools/paid-leave-checker-jp/PaidLeaveCheckerTool.jsx'));
 const UnemploymentEligibilityTool = lazy(() => import('./tools/unemployment-eligibility-jp/UnemploymentEligibilityTool.jsx'));
+const UnemploymentBenefitTool = lazy(() => import('./tools/unemployment-benefit-jp/UnemploymentBenefitTool.jsx'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
 const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
 const FlappyBirdPet = lazy(() => import('./components/FlappyBirdPet'));
@@ -89,6 +90,7 @@ const toolComponentMap = {
   'overtime-calculator-jp': OvertimeCalculatorTool,
   'paid-leave-checker-jp': PaidLeaveCheckerTool,
   'unemployment-eligibility-jp': UnemploymentEligibilityTool,
+  'unemployment-benefit-jp': UnemploymentBenefitTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,
   'flappy-bird': FlappyBirdTool,
   'toolio-ninja': ToolioNinjaTool
