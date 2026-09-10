@@ -37,6 +37,7 @@ export { default as MovingCostView } from './components/housing/MovingCostView.j
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 export { DocumentFinderView } from './components/documents/DocumentFinderView.jsx';
 export { CertificateAcquisitionGuideView } from './components/documents/CertificateAcquisitionGuideView.jsx';
+export { MyNumberProcedureGuideView } from './components/documents/MyNumberProcedureGuideView.jsx';
 
 // Core Hooks
 export { useLocalStorage } from './hooks/useLocalStorage.js';
