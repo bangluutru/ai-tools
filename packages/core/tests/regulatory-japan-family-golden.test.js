@@ -16,6 +16,8 @@ import {
   CHILDCARE_BENEFIT_SCHEMES,
   calculateChildcareBenefit,
   CHILDCARE_BENEFIT_CONSTANTS,
+  calculateChildAllowance,
+  CHILD_ALLOWANCE_CONSTANTS,
 } from '../src/japan/family/index.js';
 
 test('Milestone 1: 出産手当金シミュレーター (Maternity Allowance Golden Tests)', async (t) => {
@@ -600,5 +602,179 @@ test('Milestone 3: 育児休業給付シミュレーター (Childcare Benefit Si
     assert.equal(result.timelineStages[3].stageId, 'short_time_work');
   });
 });
+
+test('Milestone 4: 児童手当チェッカー (Child Allowance Oct 2024 Reform Golden Tests)', async (t) => {
+  // Case 1: Gia đình 1 con 1 tuổi (dưới 3 tuổi)
+  await t.test('M4-01: Con dưới 3 tuổi: nhận 15,000円/tháng, 180,000円/năm, mỗi kỳ chẵn nhận 30,000円', () => {
+    const result = calculateChildAllowance({
+      children: [{ age: 1, name: 'Bé 1 tuổi' }],
+    });
+
+    assert.equal(result.eligibleChildrenCount, 1);
+    assert.equal(result.countingSiblingsCount, 1);
+    assert.equal(result.totalMonthlyAllowance, 15000);
+    assert.equal(result.totalAnnualAllowance, 180000);
+    assert.equal(result.bimonthlyPayment, 30000);
+    assert.equal(result.childrenDetails[0].rateTier, 'under_3');
+  });
+
+  // Case 2: Gia đình 1 con 5 tuổi (3 tuổi đến 18 tuổi)
+  await t.test('M4-02: Con từ 3 tuổi đến cấp 3: nhận 10,000円/tháng, 120,000円/năm', () => {
+    const result = calculateChildAllowance({
+      children: [{ age: 5, name: 'Bé 5 tuổi' }],
+    });
+
+    assert.equal(result.eligibleChildrenCount, 1);
+    assert.equal(result.totalMonthlyAllowance, 10000);
+    assert.equal(result.totalAnnualAllowance, 120000);
+    assert.equal(result.bimonthlyPayment, 20000);
+    assert.equal(result.childrenDetails[0].rateTier, 'age_3_to_high_school');
+  });
+
+  // Case 3: Con học sinh cấp 3 (17 tuổi) - Mở rộng mới từ 10/2024
+  await t.test('M4-03: Con học cấp 3 (17 tuổi): theo luật cũ nhận 0円, theo luật mới 10/2024 nhận 10,000円/tháng', () => {
+    const result = calculateChildAllowance({
+      children: [{ age: 17, name: 'Con 17 tuổi' }],
+    });
+
+    assert.equal(result.eligibleChildrenCount, 1);
+    assert.equal(result.totalMonthlyAllowance, 10000);
+    assert.equal(result.reformComparison.preReformMonthlyAllowance, 0);
+    assert.equal(result.reformComparison.monthlyGain, 10000);
+    assert.equal(result.reformComparison.highSchoolIncluded, true);
+  });
+
+  // Case 4: Gia đình 3 con (tuổi 8, 5, 2)
+  await t.test('M4-04: Gia đình 3 con (8, 5, 2 tuổi): con thứ 3 hưởng mức đa tử 30,000円/tháng, tổng gia đình 50,000円/tháng', () => {
+    const result = calculateChildAllowance({
+      children: [
+        { age: 8, name: 'Con đầu' },
+        { age: 5, name: 'Con hai' },
+        { age: 2, name: 'Con út' },
+      ],
+    });
+
+    assert.equal(result.eligibleChildrenCount, 3);
+    assert.equal(result.countingSiblingsCount, 3);
+
+    const c1 = result.childrenDetails.find((c) => c.name === 'Con đầu');
+    const c2 = result.childrenDetails.find((c) => c.name === 'Con hai');
+    const c3 = result.childrenDetails.find((c) => c.name === 'Con út');
+
+    assert.equal(c1.siblingRank, 1);
+    assert.equal(c1.monthlyAllowance, 10000);
+
+    assert.equal(c2.siblingRank, 2);
+    assert.equal(c2.monthlyAllowance, 10000);
+
+    assert.equal(c3.siblingRank, 3);
+    assert.equal(c3.monthlyAllowance, 30000);
+    assert.equal(c3.rateTier, 'third_child_or_above');
+
+    assert.equal(result.totalMonthlyAllowance, 50000);
+    assert.equal(result.totalAnnualAllowance, 600000);
+    assert.equal(result.bimonthlyPayment, 100000);
+  });
+
+  // Case 5: Quy tắc tính anh/chị lớn 20 tuổi (sinh viên có chu cấp) vào thứ tự đếm đa tử
+  await t.test('M4-05: Con lớn 20 tuổi có chu cấp: giữ vị trí Rank 1 để em thứ ba (10 tuổi) vẫn được hưởng mức 30,000円', () => {
+    const result = calculateChildAllowance({
+      children: [
+        { age: 20, name: 'Anh cả ĐH (20t)', hasParentalSupport: true },
+        { age: 16, name: 'Em hai cấp 3 (16t)' },
+        { age: 10, name: 'Em út tiểu học (10t)' },
+      ],
+    });
+
+    assert.equal(result.eligibleChildrenCount, 2); // Chỉ 2 em <= 18 tuổi nhận trợ cấp
+    assert.equal(result.countingSiblingsCount, 3); // Cả 3 anh em đều được đếm thứ tự
+
+    const oldest = result.childrenDetails.find((c) => c.name.includes('Anh cả'));
+    const middle = result.childrenDetails.find((c) => c.name.includes('Em hai'));
+    const youngest = result.childrenDetails.find((c) => c.name.includes('Em út'));
+
+    assert.equal(oldest.siblingRank, 1);
+    assert.equal(oldest.isReceivingAllowance, false);
+    assert.equal(oldest.monthlyAllowance, 0);
+
+    assert.equal(middle.siblingRank, 2);
+    assert.equal(middle.isReceivingAllowance, true);
+    assert.equal(middle.monthlyAllowance, 10000);
+
+    assert.equal(youngest.siblingRank, 3);
+    assert.equal(youngest.isReceivingAllowance, true);
+    assert.equal(youngest.monthlyAllowance, 30000);
+
+    assert.equal(result.totalMonthlyAllowance, 40000);
+  });
+
+  // Case 6: Con lớn tròn 23 tuổi (> 22 tuổi): Rớt khỏi danh sách đếm thứ tự
+  await t.test('M4-06: Con lớn 23 tuổi (> 22t): rớt khỏi danh sách đếm, các em bị dịch chuyển thứ hạng (không còn con thứ 3)', () => {
+    const result = calculateChildAllowance({
+      children: [
+        { age: 23, name: 'Anh cả đi làm (23t)', hasParentalSupport: true },
+        { age: 16, name: 'Em hai cấp 3 (16t)' },
+        { age: 10, name: 'Em út tiểu học (10t)' },
+      ],
+    });
+
+    assert.equal(result.eligibleChildrenCount, 2);
+    assert.equal(result.countingSiblingsCount, 2); // Chỉ còn 2 người được đếm
+
+    const oldest = result.childrenDetails.find((c) => c.name.includes('Anh cả'));
+    const middle = result.childrenDetails.find((c) => c.name.includes('Em hai'));
+    const youngest = result.childrenDetails.find((c) => c.name.includes('Em út'));
+
+    assert.equal(oldest.countsForSiblingOrder, false);
+    assert.equal(oldest.siblingRank, null);
+
+    assert.equal(middle.siblingRank, 1);
+    assert.equal(middle.monthlyAllowance, 10000);
+
+    assert.equal(youngest.siblingRank, 2);
+    assert.equal(youngest.monthlyAllowance, 10000); // Rớt về con thứ 2 (10,000円 thay vì 30,000円)
+
+    assert.equal(result.totalMonthlyAllowance, 20000);
+  });
+
+  // Case 7: Thu nhập hộ gia đình cao (15 triệu Yên/năm)
+  await t.test('M4-07: Thu nhập cao 15M JPY: luật cũ bị cắt hoàn toàn (0円), luật mới nhận trọn vẹn 100%', () => {
+    const result = calculateChildAllowance({
+      children: [{ age: 2, name: 'Bé 2 tuổi' }],
+      householdAnnualIncome: 15000000,
+    });
+
+    assert.equal(result.totalMonthlyAllowance, 15000);
+    assert.equal(result.reformComparison.preReformMonthlyAllowance, 0);
+    assert.equal(result.reformComparison.incomeLimitAbolishedBenefit, true);
+    assert.equal(result.reformComparison.monthlyGain, 15000);
+    assert.equal(result.reformComparison.annualGain, 180000);
+  });
+
+  // Case 8: Lịch chi trả 6 kỳ trong năm
+  await t.test('M4-08: Lịch chi trả đúng 6 kỳ vào các tháng chẵn (2, 4, 6, 8, 10, 12), mỗi kỳ nhận 2 tháng', () => {
+    const result = calculateChildAllowance({
+      children: [{ age: 1, name: 'Bé 1' }],
+    });
+
+    assert.equal(result.disbursementSchedule.length, 6);
+    const months = result.disbursementSchedule.map((d) => d.paymentMonth);
+    assert.deepEqual(months, [2, 4, 6, 8, 10, 12]);
+    assert.equal(result.disbursementSchedule[0].amount, 30000); // 15,000 x 2
+  });
+
+  // Case 9: Trường hợp danh sách rỗng an toàn không gây lỗi
+  await t.test('M4-09: Xử lý an toàn khi danh sách con rỗng hoặc không hợp lệ', () => {
+    const result = calculateChildAllowance({
+      children: [],
+    });
+
+    assert.equal(result.hasChildren, false);
+    assert.equal(result.totalMonthlyAllowance, 0);
+    assert.equal(result.totalAnnualAllowance, 0);
+    assert.equal(result.bimonthlyPayment, 0);
+  });
+});
+
 
 

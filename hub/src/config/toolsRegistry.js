@@ -351,6 +351,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'calculator',
     regulatory: true,
+  },
+  'child-allowance-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'family',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
   }
 };
 
@@ -962,6 +974,27 @@ const toolDefinitions = [
     badge: '雇用保険法',
     popular: true,
     tags: ['育児休業給付金', '育児休業', '育休手当', '出生後休業支援給付金', '育児時短就業給付金', '社会保険料免除', '非課税', '雇用保険', 'childcare benefit', 'trợ cấp nghỉ chăm con', 'bảo hiểm thất nghiệp', 'japan life', 'family']
+  },
+  {
+    id: 'child-allowance-jp',
+    name_vn: 'Kiểm Tra Trợ Cấp Trẻ Em',
+    name_en: 'Child Allowance Checker',
+    name_ja: '児童手当チェッカー',
+    desc_vn: 'Chẩn đoán số tiền trợ cấp trẻ em theo cải cách 10/2024: Bỏ trần thu nhập, mở rộng đến 18 tuổi (hết cấp 3), con thứ 3 nhận 30.000円/tháng, đếm thứ tự con đến 22 tuổi.',
+    desc_en: 'Diagnose child allowance benefits under the Oct 2024 reform: No income caps, extended to age 18 (high school), 30,000 JPY/mo for 3rd child, and bimonthly payout.',
+    desc_ja: 'こども家庭庁の2024年10月抜本拡充（所得制限撤廃・高校生年代18歳まで延長・第3子月3万円・22歳年度末カウント・偶数月年6回支給）に対応。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'family',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+    icon: 'Baby',
+    gradient: 'from-pink-500 via-rose-500 to-amber-500',
+    color: '#ec4899',
+    badge: '児童手当法',
+    popular: true,
+    tags: ['児童手当', 'こども家庭庁', '所得制限撤廃', '多子加算', '第3子', '高校生年代', 'child allowance', 'trợ cấp trẻ em', 'trợ cấp nuôi con', 'japan life', 'family']
   },
   {
     id: 'watermark-studio',

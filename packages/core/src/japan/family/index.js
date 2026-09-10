@@ -18,3 +18,8 @@ export * from './engines/childcareLeaveEngine.js';
 // M3: Childcare Leave Benefit Simulator (育児休業給付金シミュレーター)
 export * from './rules/childcareBenefitRules.js';
 export * from './engines/childcareBenefitEngine.js';
+
+// M4: Child Allowance Checker (児童手当チェッカー)
+export * from './rules/childAllowanceRules.js';
+export * from './engines/childAllowanceEngine.js';
+
