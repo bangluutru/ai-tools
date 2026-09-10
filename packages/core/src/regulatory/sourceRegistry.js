@@ -238,6 +238,34 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
   },
 
   // =========================================================================
+  // JAPAN LIFE - WORK & EMPLOYMENT (厚生労働省 / 労働基準法 / ハローワーク)
+  // =========================================================================
+  'mhlw-overtime-rates-notice': {
+    id: 'mhlw-overtime-rates-notice',
+    country: 'JP',
+    authority: '厚生労働省 (Ministry of Health, Labour and Welfare)',
+    title: '労働基準法第37条・時間外労働及び休日労働に対する割増賃金（月60時間超 50%割増・深夜・休日算定基準）',
+    url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000148322.html',
+    sourceType: 'official-table',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Biểu tỷ lệ phụ trội luật định: ngoài giờ 25%, vượt 60h/tháng 50%, đêm 25%, ngày nghỉ 35%, ngày nghỉ+đêm 60%, >60h+đêm 75%, 7 khoản phụ cấp loại trừ khỏi cơ sở lương giờ.'
+  },
+  'egov-labor-standards-act-37': {
+    id: 'egov-labor-standards-act-37',
+    country: 'JP',
+    authority: 'e-Gov 法令検索 / 厚生労働省',
+    title: '労働基準法（昭和22年法律第49号）第37条（時間外、休日及び深夜の割増賃金）',
+    url: 'https://elaws.e-gov.go.jp/document?lawid=322AC0000000049',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Quy định pháp điển gốc về nghĩa vụ trả lương phụ trội ngoài giờ, ngày nghỉ, ban đêm và phương pháp xác định cơ sở lương giờ theo Luật Tiêu chuẩn Lao động Nhật Bản.'
+  },
+
+  // =========================================================================
   // VIETNAM LIFE - TAX & SOCIAL INSURANCE (Tổng cục Thuế / BHXH Việt Nam)
   // =========================================================================
   'gdt-pit-law-2026': {

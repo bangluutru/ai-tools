@@ -110,7 +110,7 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   const japanTools = toolsForGroup(tools, 'japan-life');
   assert.deepEqual(
     japanTools.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp'].sort()
   );
 
   const commonTools = toolsForGroup(tools, 'common');
@@ -118,13 +118,13 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   assert.equal(commonTools.every((t) => t.group === 'common'), true);
 
   const allTools = toolsForGroup(tools, ALL_GROUPS);
-  assert.equal(allTools.length, 23);
+  assert.equal(allTools.length, 24);
 
   // filterTools combined
   const officeJapan = filterTools(tools, { category: 'office', group: 'japan-life' });
   assert.deepEqual(
     officeJapan.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp'].sort()
   );
 
   const officeCommon = filterTools(tools, { category: 'office', group: 'common' });
@@ -132,7 +132,7 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   assert.equal(officeCommon.some((t) => t.id === 'tax-calculator'), true);
 });
 
-test('search finds Japan Insurance miniapps across ja, en, and vi keywords', () => {
+test('search finds Japan Insurance and Employment miniapps across ja, en, and vi keywords', () => {
   function search(query) {
     const q = query.toLowerCase().trim();
     return tools.filter((t) => {
@@ -145,6 +145,18 @@ test('search finds Japan Insurance miniapps across ja, en, and vi keywords', () 
       return text.includes(q);
     });
   }
+
+  // 残業
+  const zangyou = search('残業');
+  assert.ok(zangyou.some((t) => t.id === 'overtime-calculator-jp'));
+
+  // overtime
+  const ot = search('overtime');
+  assert.ok(ot.some((t) => t.id === 'overtime-calculator-jp'));
+
+  // tăng ca
+  const tc = search('tăng ca');
+  assert.ok(tc.some((t) => t.id === 'overtime-calculator-jp'));
 
   // 社会保険
   const shakaiHoken = search('社会保険');

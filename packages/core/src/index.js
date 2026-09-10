@@ -23,6 +23,7 @@ export { default as SocialInsuranceSimulatorView } from './components/insurance/
 export { default as SocialInsuranceEligibilityView } from './components/insurance/SocialInsuranceEligibilityView.jsx';
 export { NationalPensionView } from './components/insurance/NationalPensionView.jsx';
 export { default as DependentInsuranceView } from './components/insurance/DependentInsuranceView.jsx';
+export { default as OvertimeCalculatorView } from './components/employment/OvertimeCalculatorView.jsx';
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 
 // Core Hooks
@@ -53,4 +54,7 @@ export * from './regulatory/index.js';
 
 // Japan Life - Insurance Domain
 export * from './japan/insurance/index.js';
+
+// Japan Life - Employment Domain
+export * from './japan/employment/index.js';
 

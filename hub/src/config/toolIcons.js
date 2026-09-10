@@ -33,7 +33,8 @@ import {
   Coins,
   ShieldCheck,
   PiggyBank,
-  HeartHandshake
+  HeartHandshake,
+  Clock
 } from 'lucide-react';
 
 export const iconMap = {
@@ -70,7 +71,8 @@ export const iconMap = {
   Coins,
   ShieldCheck,
   PiggyBank,
-  HeartHandshake
+  HeartHandshake,
+  Clock
 };
 
 /**

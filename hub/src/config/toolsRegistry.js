@@ -255,6 +255,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'checker',
     regulatory: true,
+  },
+  'overtime-calculator-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'employment',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
   }
 };
 
@@ -698,6 +710,27 @@ const toolDefinitions = [
     badge: '扶養判定',
     popular: true,
     tags: ['社会保険の扶養判定', '社会保険', '被扶養者', '130万円の壁', '180万円の壁', '健康保険', '国民年金第3号', '扶養', 'dependent', 'insurance', 'pension', 'bảo hiểm', 'lương hưu', 'japan life', 'office']
+  },
+  {
+    id: 'overtime-calculator-jp',
+    name_vn: 'Tính Tiền Làm Thêm Giờ (残業代)',
+    name_en: 'Japan Overtime Pay Calculator',
+    name_ja: '残業代シミュレーター',
+    desc_vn: 'Mô phỏng chính xác tiền lương phụ trội làm thêm giờ (ngoài giờ 25%, vượt 60h/tháng 50%, làm đêm 25%, ngày nghỉ 35%). Chuẩn Điều 37 Luật Tiêu chuẩn Lao động Nhật Bản. 100% xử lý nội bộ trình duyệt.',
+    desc_en: 'Accurate simulation of Japanese statutory overtime pay (standard 25%, over 60h/mo 50%, late-night 25%, holiday 35%). Compliant with Art. 37 Labor Standards Act. 100% client-side.',
+    desc_ja: '労働基準法第37条に準拠した時間外・休日・深夜労働の割増賃金（月60時間超の50%割増対応）を精密試算。除外賃金控除や月平均所定労働時間換算に対応。100%ブラウザ完結。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'employment',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
+    icon: 'Clock',
+    gradient: 'from-blue-600 via-indigo-600 to-cyan-500',
+    color: '#3b82f6',
+    badge: '労働基準法',
+    popular: true,
+    tags: ['残業代シミュレーター', '残業代', '割増賃金', '時間外労働', '休日労働', '深夜労働', '60時間超', 'overtime', 'tăng ca', 'làm thêm giờ', 'tiền tăng ca', 'zangyou', 'japan life', 'office']
   },
   {
     id: 'watermark-studio',
