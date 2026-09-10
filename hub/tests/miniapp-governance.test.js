@@ -328,7 +328,8 @@ test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and
     'japan-tax-simulator',
     'social-insurance-jp',
     'social-insurance-eligibility-jp',
-    'national-pension-jp'
+    'national-pension-jp',
+    'dependent-insurance-jp'
   ];
 
   assert.equal(

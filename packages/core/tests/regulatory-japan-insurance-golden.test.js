@@ -18,6 +18,7 @@ import {
   evaluateSocialInsuranceEligibility,
   calculateNationalPension,
   getNationalPensionSchedule,
+  evaluateDependentInsuranceEligibility,
 } from '../src/japan/insurance/index.js';
 
 test('Japan Insurance Golden 1: Standard remuneration boundary tests (Kenpo & Pension)', () => {
@@ -444,5 +445,127 @@ test('Japan Insurance Golden 18: National Pension - Additional Pension (付加�
   // Annual benefit increase: 200 JPY/year * 12 months = 2,400 JPY/year
   assert.equal(addPen.additionalPensionAnnualReturn, 2400);
 });
+
+test('Japan Insurance Golden 19: Dependent - Spouse cohabiting with 1M JPY projected income vs Insured 5M JPY', () => {
+  const d1 = evaluateDependentInsuranceEligibility({
+    relationship: 'spouse',
+    dependentAge: 32,
+    isCohabiting: true,
+    dependentFutureAnnualIncome: 1000000,
+    insuredAnnualIncome: 5000000,
+    residesInJapan: true,
+  });
+
+  assert.equal(d1.status, 'likely_eligible');
+  assert.equal(d1.ceiling, 1300000);
+  assert.equal(d1.checks.every((c) => c.status === 'pass'), true);
+  assert.equal(d1.taxDistinction.isNotTaxEvaluation, true);
+});
+
+test('Japan Insurance Golden 20: Dependent - Sibling living apart with 900k income & 1.2M remittance', () => {
+  const d2 = evaluateDependentInsuranceEligibility({
+    relationship: 'sibling',
+    dependentAge: 22,
+    isCohabiting: false,
+    dependentFutureAnnualIncome: 900000,
+    insuredAnnualIncome: 4500000,
+    annualRemittance: 1200000, // remittance > dependent income
+    residesInJapan: true,
+  });
+
+  assert.equal(d2.status, 'likely_eligible');
+  assert.equal(d2.relationship.cohabitationRequired, false);
+});
+
+test('Japan Insurance Golden 21: Dependent - Uncle (3rd degree) living apart (ineligible due to cohabitation rule)', () => {
+  const d3 = evaluateDependentInsuranceEligibility({
+    relationship: 'relative_3rd_degree',
+    dependentAge: 55,
+    isCohabiting: false, // Ineligible: 3rd degree MUST cohabit!
+    dependentFutureAnnualIncome: 800000,
+    insuredAnnualIncome: 6000000,
+    annualRemittance: 1000000,
+    residesInJapan: true,
+  });
+
+  assert.equal(d3.status, 'likely_ineligible');
+  const cohabitCheck = d3.checks.find((c) => c.id === 'kinship_cohabitation');
+  assert.equal(cohabitCheck.status, 'fail');
+});
+
+test('Japan Insurance Golden 22: Dependent - Senior parent aged 76 (ineligible due to late-stage healthcare system)', () => {
+  const d4 = evaluateDependentInsuranceEligibility({
+    relationship: 'parent',
+    dependentAge: 76,
+    isCohabiting: true,
+    dependentFutureAnnualIncome: 500000,
+    insuredAnnualIncome: 5000000,
+    residesInJapan: true,
+  });
+
+  assert.equal(d4.status, 'likely_ineligible');
+  const ageCheck = d4.checks.find((c) => c.id === 'age_75');
+  assert.equal(ageCheck.status, 'fail');
+});
+
+test('Japan Insurance Golden 23: Dependent - Senior parent aged 68 with 1.6M JPY income (eligible under 1.8M ceiling)', () => {
+  const d5 = evaluateDependentInsuranceEligibility({
+    relationship: 'parent',
+    dependentAge: 68,
+    isCohabiting: true,
+    dependentFutureAnnualIncome: 1600000,
+    insuredAnnualIncome: 5000000,
+    residesInJapan: true,
+  });
+
+  assert.equal(d5.status, 'likely_eligible');
+  assert.equal(d5.ceiling, 1800000);
+  assert.equal(d5.isSeniorOrDisabled, true);
+});
+
+test('Japan Insurance Golden 24: Dependent - Temporary overtime barrier relief package (1.4M with employer proof)', () => {
+  const d6 = evaluateDependentInsuranceEligibility({
+    relationship: 'spouse',
+    dependentAge: 35,
+    isCohabiting: true,
+    dependentFutureAnnualIncome: 1400000, // Exceeds 1.3M!
+    insuredAnnualIncome: 6000000,
+    residesInJapan: true,
+    hasEmployerOvertimeProof: true, // Has employer certification
+  });
+
+  assert.equal(d6.status, 'case_dependent');
+  const incCheck = d6.checks.find((c) => c.id === 'income_ceiling');
+  assert.equal(incCheck.status, 'warning');
+});
+
+test('Japan Insurance Golden 25: Dependent - Domestic residence requirement and study abroad exception', () => {
+  // Living abroad without exception: fail
+  const dAbroadFail = evaluateDependentInsuranceEligibility({
+    relationship: 'child',
+    dependentAge: 20,
+    isCohabiting: false,
+    dependentFutureAnnualIncome: 0,
+    insuredAnnualIncome: 6000000,
+    annualRemittance: 2000000,
+    residesInJapan: false,
+    residenceException: 'none',
+  });
+  assert.equal(dAbroadFail.status, 'likely_ineligible');
+
+  // Living abroad with study abroad exception: pass
+  const dAbroadPass = evaluateDependentInsuranceEligibility({
+    relationship: 'child',
+    dependentAge: 20,
+    isCohabiting: false,
+    dependentFutureAnnualIncome: 0,
+    insuredAnnualIncome: 6000000,
+    annualRemittance: 2000000,
+    residesInJapan: false,
+    residenceException: 'study_abroad',
+  });
+  assert.equal(dAbroadPass.status, 'likely_eligible');
+});
+
 
 

@@ -12,9 +12,11 @@ export * from './rules/childSupportRates.js';
 export * from './rules/welfarePensionRates.js';
 export * from './rules/eligibilityCriteriaRules.js';
 export * from './rules/nationalPensionRates.js';
+export * from './rules/dependentInsuranceRules.js';
 
 // Engines
 export * from './engines/standardRemunerationEngine.js';
 export * from './engines/socialInsuranceEngine.js';
 export * from './engines/eligibilityEngine.js';
 export * from './engines/nationalPensionEngine.js';
+export * from './engines/dependentInsuranceEngine.js';

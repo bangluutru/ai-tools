@@ -243,6 +243,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'calculator',
     regulatory: true,
+  },
+  'dependent-insurance-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'insurance',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
   }
 };
 
@@ -665,6 +677,27 @@ const toolDefinitions = [
     badge: '国民年金',
     popular: true,
     tags: ['国民年金', '年金', '保険料', '前納', '免除', '納付猶予', '学生納付特例', '追納', '付加年金', 'pension', 'hưu trí', 'bảo hiểm', 'japan life', 'office']
+  },
+  {
+    id: 'dependent-insurance-jp',
+    name_vn: 'Kiểm Tra Người Phụ Thuộc BHXH',
+    name_en: 'Social Insurance Dependent Checker',
+    name_ja: '社会保険の扶養判定',
+    desc_vn: 'Chẩn đoán điều kiện làm người phụ thuộc BHYT (0円 phí bảo hiểm) theo quan hệ thân nhân 3 đời, sống chung/riêng, trần thu nhập tương lai 130 vạn/180 vạn và tỷ lệ chu cấp. Phân biệt độc lập với thuế. 100% xử lý nội bộ trình duyệt.',
+    desc_en: 'Evaluate health insurance dependent status (0 JPY premium contribution) via 3rd-degree kinship, cohabitation, 1.3M/1.8M JPY income ceilings, and remittance support. Strictly separated from tax. 100% client-side.',
+    desc_ja: '健康保険の被扶養者（保険料負担なし）の認定要件を判定。3親等内の親族範囲・同居別居の別・将来見込み年収（130万/180万円）および主たる生計維持関係を網羅。税法上の扶養とは厳格に分離。100%ブラウザ完結。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'insurance',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+    icon: 'HeartHandshake',
+    gradient: 'from-rose-500 via-pink-600 to-amber-500',
+    color: '#e11d48',
+    badge: '扶養判定',
+    popular: true,
+    tags: ['社会保険の扶養判定', '被扶養者', '130万円の壁', '180万円の壁', '健康保険', '国民年金第3号', '扶養', 'dependent', 'bảo hiểm', 'japan life', 'office']
   },
   {
     id: 'watermark-studio',

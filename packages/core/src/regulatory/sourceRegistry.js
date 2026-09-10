@@ -188,6 +188,18 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     status: 'official-primary',
     notes: 'Bảng bậc lương chuẩn BHYT 協会けんぽ từ 58,000円 (cấp 1) đến 1,390,000円 (cấp 50), trần thưởng 5.73M/năm.'
   },
+  'kyoukaikenpo-dependent-2026': {
+    id: 'kyoukaikenpo-dependent-2026',
+    country: 'JP',
+    authority: '全国健康保険協会 (協会けんぽ - Japan Health Insurance Association)',
+    title: '健康保険 被扶養者認定基準（国内居住・年収130万円/180万円・主たる生計維持要件）',
+    url: 'https://www.kyoukaikenpo.or.jp/g3/sb3200/r142/',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Tiêu chuẩn xác định người phụ thuộc tham gia BHYT: quan hệ thân nhân 3 đời, điều kiện cư trú tại Nhật, trần thu nhập tương lai < 130 vạn (dưới 60t) hoặc < 180 vạn (trên 60t/khuyết tật), điều kiện sống chung (thu nhập < 1/2 người bảo hiểm) và sống riêng (thu nhập < tiền gửi chu cấp).'
+  },
   'mhlw-shakai-hoken-tekio-2026': {
     id: 'mhlw-shakai-hoken-tekio-2026',
     country: 'JP',
