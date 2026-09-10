@@ -20,6 +20,11 @@ import {
   classifySeparationReason,
   calculateUnemploymentBenefit,
   calculatePrescribedBenefitDays,
+  generateLeavingJobPlan,
+  classifyResidentTaxCollection,
+  evaluateHealthInsuranceAdvice,
+  HEALTH_INSURANCE_OPTIONS,
+  RESIDENT_TAX_RULES,
 } from '../src/japan/employment/index.js';
 
 test('Golden Test 1: Base hourly wage calculation for monthly salaried worker', () => {
@@ -479,6 +484,85 @@ test('Golden Test 30: Prescribed duration for Difficult to Employ (Age 35, 3 yea
     isDifficultToEmploy: true,
   });
   assert.equal(prescribedDays, 300);
+});
+
+test('Golden Test 31: Civil Code Art. 627 14-day notice deadline calculation', () => {
+  // Dự định nghỉ vào ngày 2026-10-31 -> Hạn chót nộp đơn theo luật là 2026-10-17 (14 ngày trước)
+  const plan = generateLeavingJobPlan({
+    resignationDate: '2026-10-31',
+  });
+  assert.equal(plan.statutoryDeadlines.civilCodeNoticeDate, '2026-10-17');
+});
+
+test('Golden Test 32: Health Insurance statutory deadlines (20 days for Voluntary vs 14 days for NHI)', () => {
+  // Nghỉ ngày 2026-04-30
+  // Voluntary continuation deadline (20 days): 2026-05-20
+  // Municipal NHI deadline (14 days): 2026-05-14
+  const plan = generateLeavingJobPlan({
+    resignationDate: '2026-04-30',
+    healthInsurancePreference: 'voluntary_continuation',
+  });
+  assert.equal(plan.statutoryDeadlines.voluntaryContinuationDeadline, '2026-05-20');
+  assert.equal(plan.statutoryDeadlines.municipalProceduresDeadline, '2026-05-14');
+  assert.equal(plan.statutoryDeadlines.withholdingSlipDeadline, '2026-05-30');
+});
+
+test('Golden Test 33: Resident Tax deduction rule by resignation month (Jan-May vs Jun-Dec)', () => {
+  // Nghỉ tháng 3 (2026-03-31) -> Nằm trong khoảng Jan - May: Bắt buộc khấu trừ một cục (一括徴収)
+  const springRes = classifyResidentTaxCollection('2026-03-31');
+  assert.equal(springRes.id, 'jan_to_may');
+  assert.equal(springRes.isMandatoryLumpSum, true);
+
+  // Nghỉ tháng 8 (2026-08-31) -> Nằm trong khoảng Jun - Dec: Chuyển sang tự nộp (普通徴収) hoặc tự nguyện một cục
+  const summerRes = classifyResidentTaxCollection('2026-08-31');
+  assert.equal(summerRes.id, 'jun_to_dec');
+  assert.equal(summerRes.isMandatoryLumpSum, false);
+});
+
+test('Golden Test 34: Health Insurance recommendation triage (Dependent vs NHI Involuntary reduction)', () => {
+  // TH1: Thu nhập kỳ vọng < 1.3 triệu JPY -> Khuyên vào phụ thuộc (0 JPY phí)
+  const adviceLowIncome = evaluateHealthInsuranceAdvice({
+    annualExpectedIncome: 1000000,
+  });
+  assert.equal(adviceLowIncome.recommendedOption, 'dependent');
+
+  // TH2: Thôi việc vì lý do công ty (sa thải/phá sản) -> Khuyên BHYT Quốc dân vì được giảm tới 70% phí
+  const adviceCompany = evaluateHealthInsuranceAdvice({
+    annualExpectedIncome: 3500000,
+    isCompanySeparation: true,
+  });
+  assert.equal(adviceCompany.recommendedOption, 'national_health_insurance');
+});
+
+test('Golden Test 35: Orchestrator deep links integrity & dynamic checklist personalization', () => {
+  // Người lao động có việc làm mới ngay lập tức
+  const planNewJob = generateLeavingJobPlan({
+    resignationDate: '2026-09-30',
+    hasNewJobImmediately: true,
+    remainingPaidLeaveDays: 12,
+  });
+
+  // Checklist: Mục BHTN và Lương hưu quốc dân ở ủy ban được đánh dấu không áp dụng
+  const helloWorkItem = planNewJob.checklist.find((i) => i.id === 'hellowork_unemployment_claim');
+  assert.equal(helloWorkItem.isApplicable, false);
+
+  const pensionItem = planNewJob.checklist.find((i) => i.id === 'national_pension_switch');
+  assert.equal(pensionItem.isApplicable, false);
+
+  // Phép năm còn 12 ngày có ghi chú tùy biến
+  const leaveItem = planNewJob.checklist.find((i) => i.id === 'consume_paid_leave');
+  assert.match(leaveItem.customNoteVi, /12 ngày/);
+
+  // Danh sách Deep-links chứa đủ 7 công cụ liên quan
+  const toolIds = planNewJob.deepLinks.map((d) => d.toolId);
+  assert.ok(toolIds.includes('paid-leave-checker-jp'));
+  assert.ok(toolIds.includes('overtime-calculator-jp'));
+  assert.ok(toolIds.includes('unemployment-eligibility-jp'));
+  assert.ok(toolIds.includes('unemployment-benefit-jp'));
+  assert.ok(toolIds.includes('dependent-insurance-jp'));
+  assert.ok(toolIds.includes('national-pension-jp'));
+  assert.ok(toolIds.includes('japan-tax-simulator'));
+  assert.equal(planNewJob.deepLinks.length, 7);
 });
 
 

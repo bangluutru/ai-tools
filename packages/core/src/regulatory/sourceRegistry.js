@@ -324,6 +324,18 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     status: 'official-primary',
     notes: 'Quy chuẩn mức trợ cấp cơ bản hàng ngày (基本手当日額), trần và sàn tiền lương ngày (賃金日額) theo độ tuổi, đường cong tỷ lệ hưởng trợ cấp 50%〜80% và bảng số ngày hưởng trợ cấp tối đa (90〜330 ngày) áp dụng từ ngày 1/8 hàng năm.'
   },
+  'mhlw-resignation-procedures-guide': {
+    id: 'mhlw-resignation-procedures-guide',
+    country: 'JP',
+    authority: '厚生労働省 / 日本年金機構 / 全国健康保険協会 (MHLW / JPS / Kyokai Kenpo)',
+    title: '会社を退職したときの手続きガイド（健康保険の切り替え・国民年金・住民税・雇用保険離職票）',
+    url: 'https://www.nenkin.go.jp/service/kounen/tekiyo-kanyu/hihokensha-1/20141202.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Hướng dẫn tổng thể quy trình thủ tục pháp lý khi người lao động nghỉ việc tại Nhật: thời hạn thông báo 2 tuần (Dân luật Điều 627), 3 lựa chọn BHYT (tiếp tục tự nguyện 20 ngày, BHYT quốc dân 14 ngày, theo người phụ thuộc), chuyển đổi lương hưu quốc dân, khấu trừ thuế cư trú (tháng 1-5 trừ một cục vs tháng 6-12 tự nộp) và nộp đơn Hello Work.'
+  },
 
   // =========================================================================
   // VIETNAM LIFE - TAX & SOCIAL INSURANCE (Tổng cục Thuế / BHXH Việt Nam)

@@ -333,7 +333,8 @@ test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and
     'overtime-calculator-jp',
     'paid-leave-checker-jp',
     'unemployment-eligibility-jp',
-    'unemployment-benefit-jp'
+    'unemployment-benefit-jp',
+    'leaving-job-wizard-jp'
   ];
 
   assert.equal(

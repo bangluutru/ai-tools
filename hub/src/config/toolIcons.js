@@ -36,7 +36,8 @@ import {
   HeartHandshake,
   Clock,
   CalendarCheck,
-  FileSearch
+  FileSearch,
+  Compass
 } from 'lucide-react';
 
 export const iconMap = {
@@ -76,7 +77,8 @@ export const iconMap = {
   HeartHandshake,
   Clock,
   CalendarCheck,
-  FileSearch
+  FileSearch,
+  Compass
 };
 
 /**

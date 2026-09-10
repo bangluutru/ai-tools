@@ -303,6 +303,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'calculator',
     regulatory: true,
+  },
+  'leaving-job-wizard-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'employment',
+    country: 'JP',
+    type: 'guide',
+    regulatory: true,
   }
 };
 
@@ -830,6 +842,27 @@ const toolDefinitions = [
     badge: '雇用保険法',
     popular: true,
     tags: ['失業給付シミュレーター', '失業手当', '失業保険', '基本手当日額', '賃金日額', '所定給付日数', '受給総額', '給付率', 'unemployment', 'trợ cấp thất nghiệp', 'tiền thất nghiệp', 'thất nghiệp', 'japan life', 'office']
+  },
+  {
+    id: 'leaving-job-wizard-jp',
+    name_vn: 'Hướng Dẫn Nghỉ Việc Tại Nhật',
+    name_en: 'Japan Resignation Guide & Wizard',
+    name_ja: '退職手続きガイド＆オーケストレーター',
+    desc_vn: 'Điều phối toàn diện thủ tục khi thôi việc: thời hạn báo trước 14 ngày, 3 lựa chọn BHYT, chuyển đổi lương hưu quốc dân, khấu trừ thuế cư trú và hồ sơ Hello Work.',
+    desc_en: 'Comprehensive Japan resignation roadmap: 14-day notice, 3 health insurance options, national pension switch, resident tax collection, and Hello Work procedures.',
+    desc_ja: '民法・労働法・社会保険に基づく退職手続き総合ガイド。申出2週間前ルール、健康保険の3択（任意継続・国保・扶養）、年金種別変更、住民税一括徴収、ハローワーク受給。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'employment',
+    country: 'JP',
+    type: 'guide',
+    regulatory: true,
+    icon: 'Compass',
+    gradient: 'from-sky-500 via-indigo-600 to-emerald-600',
+    color: '#0284c7',
+    badge: '退職・法的手続き',
+    popular: true,
+    tags: ['退職手続き', '退職', '退職届', '離職票', '任意継続', '国民健康保険', '国民年金', '住民税', '一括徴収', 'ハローワーク', 'resignation', 'leaving job', 'nghỉ việc', 'thôi việc', 'thủ tục thôi việc', 'japan life', 'office']
   },
   {
     id: 'watermark-studio',

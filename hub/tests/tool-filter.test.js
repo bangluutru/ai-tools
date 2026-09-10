@@ -110,7 +110,7 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   const japanTools = toolsForGroup(tools, 'japan-life');
   assert.deepEqual(
     japanTools.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp'].sort()
   );
 
   const commonTools = toolsForGroup(tools, 'common');
@@ -118,13 +118,13 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   assert.equal(commonTools.every((t) => t.group === 'common'), true);
 
   const allTools = toolsForGroup(tools, ALL_GROUPS);
-  assert.equal(allTools.length, 27);
+  assert.equal(allTools.length, 28);
 
   // filterTools combined
   const officeJapan = filterTools(tools, { category: 'office', group: 'japan-life' });
   assert.deepEqual(
     officeJapan.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp'].sort()
   );
 
   const officeCommon = filterTools(tools, { category: 'office', group: 'common' });
@@ -222,6 +222,18 @@ test('search finds Japan Insurance and Employment miniapps across ja, en, and vi
   const unemp = search('unemployment');
   assert.ok(unemp.some((t) => t.id === 'unemployment-eligibility-jp'));
   assert.ok(unemp.some((t) => t.id === 'unemployment-benefit-jp'));
+
+  // 退職
+  const taishoku = search('退職');
+  assert.ok(taishoku.some((t) => t.id === 'leaving-job-wizard-jp'));
+
+  // resignation
+  const resig = search('resignation');
+  assert.ok(resig.some((t) => t.id === 'leaving-job-wizard-jp'));
+
+  // nghỉ việc
+  const nghiViec = search('nghỉ việc');
+  assert.ok(nghiViec.some((t) => t.id === 'leaving-job-wizard-jp'));
 });
 
 

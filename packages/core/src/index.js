@@ -27,6 +27,7 @@ export { default as OvertimeCalculatorView } from './components/employment/Overt
 export { default as PaidLeaveCheckerView } from './components/employment/PaidLeaveCheckerView.jsx';
 export { default as UnemploymentEligibilityView } from './components/employment/UnemploymentEligibilityView.jsx';
 export { default as UnemploymentBenefitView } from './components/employment/UnemploymentBenefitView.jsx';
+export { default as LeavingJobWizardView } from './components/employment/LeavingJobWizardView.jsx';
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 
 // Core Hooks
