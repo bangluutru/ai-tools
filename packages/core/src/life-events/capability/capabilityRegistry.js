@@ -58,6 +58,10 @@ const DEFAULT_CAPABILITY_MAP = {
   'documents.requirement.check': 'procedure-requirement-checker-jp',
   'documents.admin.navigate': 'administrative-navigator-jp',
 
+  // Tên miền Điều hướng Đời sống Nhật Bản (Japan Life Navigator)
+  'navigator.japanLife': 'japan-life-navigator',
+  'navigator.lifeEvents': 'japan-life-navigator',
+
   // Biến thể tương thích (Compatibility Aliases)
   'family.maternityAllowance.simulate': 'maternity-allowance-jp',
   'family.childcareLeave.check': 'childcare-leave-eligibility-jp',

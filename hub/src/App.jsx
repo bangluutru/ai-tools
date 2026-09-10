@@ -82,6 +82,7 @@ const MyNumberProcedureGuideTool = lazy(() => import('./tools/mynumber-procedure
 const OfficialFormHelperTool = lazy(() => import('./tools/official-form-helper-jp/OfficialFormHelperTool.jsx'));
 const ProcedureRequirementCheckerTool = lazy(() => import('./tools/procedure-requirement-checker-jp/ProcedureRequirementCheckerTool.jsx'));
 const AdministrativeNavigatorTool = lazy(() => import('./tools/administrative-navigator-jp/AdministrativeNavigatorTool.jsx'));
+const JapanLifeNavigatorTool = lazy(() => import('./tools/japan-life-navigator/JapanLifeNavigatorTool.jsx'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
 const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
 const FlappyBirdPet = lazy(() => import('./components/FlappyBirdPet'));
@@ -139,6 +140,7 @@ const toolComponentMap = {
   'official-form-helper-jp': OfficialFormHelperTool,
   'procedure-requirement-checker-jp': ProcedureRequirementCheckerTool,
   'administrative-navigator-jp': AdministrativeNavigatorTool,
+  'japan-life-navigator': JapanLifeNavigatorTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,
   'flappy-bird': FlappyBirdTool,
   'toolio-ninja': ToolioNinjaTool

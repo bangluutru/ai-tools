@@ -357,7 +357,8 @@ test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and
     'mynumber-procedure-guide-jp',
     'official-form-helper-jp',
     'procedure-requirement-checker-jp',
-    'administrative-navigator-jp'
+    'administrative-navigator-jp',
+    'japan-life-navigator'
   ];
 
 

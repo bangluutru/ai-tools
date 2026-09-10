@@ -337,6 +337,26 @@ export const CAPABILITY_METADATA = Object.freeze({
     isLifeEventCompatible: true,
     coverageStatus: 'covered',
   },
+
+  // Navigator
+  'navigator.japanLife': {
+    domain: 'navigator',
+    type: 'navigator',
+    acceptedContextFields: ['lifeSituation', 'searchQuery'],
+    producedContextFields: ['activeJourneyRoadmap'],
+    isRegulatory: true,
+    isLifeEventCompatible: true,
+    coverageStatus: 'covered',
+  },
+  'navigator.lifeEvents': {
+    domain: 'navigator',
+    type: 'navigator',
+    acceptedContextFields: ['lifeSituation'],
+    producedContextFields: ['activeJourneyRoadmap'],
+    isRegulatory: true,
+    isLifeEventCompatible: true,
+    coverageStatus: 'covered',
+  },
 });
 
 /**

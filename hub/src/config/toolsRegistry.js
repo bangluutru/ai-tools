@@ -592,6 +592,18 @@ const toolGovernance = {
     type: 'navigator',
     regulatory: true,
   },
+  'japan-life-navigator': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'reference',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'navigator',
+    country: 'JP',
+    type: 'navigator',
+    regulatory: true,
+  },
 };
 
 
@@ -1642,6 +1654,22 @@ const toolDefinitions = [
     badge: 'NEW',
     popular: true,
     tags: ['navigator', 'điều hướng', 'tìm kiếm', 'hành chính', 'search', 'thuế', 'hộ tịch', 'giấy tờ', 'ナビ']
+  },
+  {
+    id: 'japan-life-navigator',
+    name_vn: 'Japan Life Navigator',
+    name_en: 'Japan Life Navigator',
+    name_ja: 'ライフイベント総合ナビ',
+    desc_vn: 'Điều hướng thông minh các sự kiện đời sống tại Nhật Bản (Chuyển việc, Đến Nhật, Sinh con, Đổi nhà, Bảo lãnh gia đình).',
+    desc_en: 'Intelligent life events orchestrator for Japan: changing jobs, newcomer setup, moving, childbirth, and family sponsorship.',
+    desc_ja: '転職、来日、出産、引越、家族呼び寄せ等のライフイベントを横断し、優先度順のアクションロードマップを提供。',
+    category: 'office',
+    icon: 'Compass',
+    gradient: 'from-cyan-600 via-teal-600 to-emerald-600',
+    color: '#0d9488',
+    badge: 'NEW',
+    popular: true,
+    tags: ['navigator', 'điều hướng', 'chuyển việc', 'đến nhật', 'sinh con', 'chuyển nhà', 'bảo lãnh', 'life events', 'ナビ']
   }
 ];
 
