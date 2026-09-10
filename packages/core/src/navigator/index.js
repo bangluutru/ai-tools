@@ -43,3 +43,19 @@ export {
   buildCapabilityDeepLink,
   getAllCapabilities,
 } from './capabilityGraph/capabilityResolver.js';
+
+// Intent & Routing
+export {
+  CANONICAL_INTENTS,
+} from './intent/intentTaxonomy.js';
+export {
+  DISAMBIGUATION_SCENARIOS,
+  checkQueryAmbiguity,
+  resolveDisambiguatedOption,
+} from './intent/intentDisambiguator.js';
+export {
+  normalizeQuery,
+  getAllIntents,
+  getIntentById,
+  resolveIntentFromText,
+} from './intent/intentResolver.js';
