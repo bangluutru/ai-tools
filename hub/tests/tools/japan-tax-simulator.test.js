@@ -168,3 +168,34 @@ test('japan-tax-simulator revenue isolation: employee_side ignores stale busines
   assert.ok(result.summary.totalTaxes < 500000, 'Taxes on 5.1M gross should be under 500k JPY');
   assert.ok(result.summary.netTakeHome > 4000000, 'Take home on 5.1M gross should be ~4.05M JPY');
 });
+
+test('japan-tax-simulator PDF export functionality generates valid PDF across languages', async () => {
+  const { generateTaxPdfReport } = await import('../../../packages/core/src/utils/tax/index.js');
+  const sim = simulateJapanTaxes({
+    year: 2025,
+    profile: 'employee_side',
+    salary: 4500000,
+    sideIncomeRevenue: 600000,
+    sideIncomeExpenses: 150000,
+    prefecture: 'tokyo',
+  });
+
+  // 1. Direct object call signature (from JapanTaxSimulatorView)
+  await assert.doesNotReject(async () => {
+    await generateTaxPdfReport({
+      calcResult: sim,
+      formValues: { profile: 'employee_side', prefecture: 'tokyo' },
+      lang: 'vi',
+    });
+  }, 'PDF generation in Vietnamese must not throw');
+
+  // 2. Direct 2-arg signature for Japanese
+  await assert.doesNotReject(async () => {
+    await generateTaxPdfReport(sim, 'ja');
+  }, 'PDF generation in Japanese must not throw');
+
+  // 3. Direct 2-arg signature for English
+  await assert.doesNotReject(async () => {
+    await generateTaxPdfReport(sim, 'en');
+  }, 'PDF generation in English must not throw');
+});

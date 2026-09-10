@@ -179,6 +179,14 @@ export default function JapanTaxSimulatorView({ displayLang = 'vi' }) {
       setTimeout(() => setToastMessage(''), 3000);
     } catch (err) {
       console.error('CSV Export Error:', err);
+      setToastMessage(
+        currentLang === 'ja'
+          ? 'CSVの出力に失敗しました'
+          : currentLang === 'vi'
+          ? 'Lỗi khi xuất CSV. Vui lòng thử lại!'
+          : 'Failed to export CSV'
+      );
+      setTimeout(() => setToastMessage(''), 3000);
     }
   };
 
@@ -186,7 +194,11 @@ export default function JapanTaxSimulatorView({ displayLang = 'vi' }) {
   const handleExportPdf = async () => {
     try {
       setIsExportingPdf(true);
-      await generateTaxPdfReport(simulationResult, currentLang);
+      await generateTaxPdfReport({
+        calcResult: simulationResult,
+        formValues,
+        lang: currentLang,
+      });
       setToastMessage(
         currentLang === 'ja'
           ? 'PDFレポートを保存しました'
@@ -197,6 +209,14 @@ export default function JapanTaxSimulatorView({ displayLang = 'vi' }) {
       setTimeout(() => setToastMessage(''), 3000);
     } catch (err) {
       console.error('PDF Export Error:', err);
+      setToastMessage(
+        currentLang === 'ja'
+          ? 'PDFの出力に失敗しました'
+          : currentLang === 'vi'
+          ? 'Lỗi khi xuất PDF. Vui lòng thử lại!'
+          : 'Failed to export PDF'
+      );
+      setTimeout(() => setToastMessage(''), 3000);
     } finally {
       setIsExportingPdf(false);
     }
@@ -210,7 +230,7 @@ export default function JapanTaxSimulatorView({ displayLang = 'vi' }) {
         <div className="absolute -right-20 -top-20 w-80 h-80 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1.5 max-w-3xl">
+          <div className="space-y-1.5 w-full">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 font-mono">
                 <Sparkles className="w-3.5 h-3.5" />
@@ -224,7 +244,7 @@ export default function JapanTaxSimulatorView({ displayLang = 'vi' }) {
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-on-surface">
               {t.appTitle}
             </h1>
-            <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+            <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed text-pretty">
               {t.appSubtitle}
             </p>
           </div>

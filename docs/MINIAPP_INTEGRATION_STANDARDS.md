@@ -355,9 +355,14 @@ Trước khi một miniapp được chuyển từ trạng thái `in-development`
   - Mọi thư viện `import` phải được khai báo trong `dependencies` của package tương ứng. Cấm dựa vào hoisting ngầm của npm.
 
 ### 🟡 CỔNG 2: STATIC TOKEN & UI LINTER (RÀ SOÁT TĨNH GIAO DIỆN)
-- [ ] **Cách Ly Thanh Điều Hướng (Navbar Isolation & Contract)**:
-  - Miniapp không tự dựng lại thanh Header/Navbar toàn cục riêng, không nhúng lại `ThemeToggle`, Language Selector hoặc ô tìm kiếm portal.
+- [ ] **Cách Ly Thanh Điều Hướng & SOT Tuyệt Đối (Navbar Isolation & Zero Duplicate SOT)**:
+  - Miniapp **tuyệt đối không được phép có 2 SOT** cho cùng một nội dung:
+    - **Ngôn ngữ UI (`displayLang`)**: Cấm miniapp tự dựng bộ chọn ngôn ngữ cục bộ (`Tiếng Việt / English / 日本語`), cấm tự quản lý state ngôn ngữ riêng rẽ. Miniapp bắt buộc nhận prop `displayLang` từ `ToolContainer` làm nguồn chân lý duy nhất (Single Source of Truth).
+    - **Giao diện sáng/tối (`theme`)**: Cấm nhúng lại component `ThemeToggle` hoặc tự ý can thiệp `data-theme`. Giao diện tự động thích ứng thông qua CSS variables.
   - Miniapp bắt đầu từ Breadcrumb và Tier 1 Context Header, nhận và phản ứng tức thì với prop `displayLang` truyền từ `ToolContainer`.
+- [ ] **Nguyên Tắc Typography Tự Nhiên & Không Gian Khả Dụng (Natural Space Typography & Zero Orphan Words)**:
+  - **Cấm giới hạn chiều rộng nhân tạo tùy tiện**: Tuyệt đối không đặt các class như `max-w-3xl`, `max-w-2xl` trên khối tiêu đề hoặc mô tả đơn lẻ trong container lớn (1240px) khi không có cột đối trọng bên cạnh.
+  - **Chống rớt từ mồ côi (Orphan/Widow Words)**: Khối mô tả phải tận dụng tối đa chiều rộng khả dụng (`w-full` hoặc `max-w-none`), kết hợp thuộc tính `text-pretty` của Tailwind để trình duyệt tự động cân đối nhịp điệu ngắt dòng tự nhiên. Tuyệt đối không để xảy ra tình huống bên phải còn hàng trăm pixel trống nhưng từ cuối câu (ví dụ chữ "hiểu.") lại bị rơi xuống một hàng mới trơ trọi.
 - [ ] **Quét sạch Class Light-Mode tĩnh**:
   - Không có `bg-white`, `bg-slate-50`, `bg-gray-100`, `text-black`, `text-slate-900`.
 - [ ] **Quét sạch Class Màu Chữ Tương Phản Thấp (A11y Anti-patterns)**:
@@ -401,6 +406,14 @@ Trước khi một miniapp được chuyển từ trạng thái `in-development`
   - Kích hoạt DropZone với tệp fixture synthetic chuẩn (PDF, Excel XLSX, XML hóa đơn điện tử, ảnh mẫu).
   - Kiểm tra trạng thái chuyển bước (Wizard step progression), render bảng dữ liệu / canvas kết quả không sinh ngoại lệ.
   - **Zero Horizontal Overflow Sau Tương Tác**: Sau khi nạp tệp và render dữ liệu thật/bảng kết quả, kiểm tra `document.documentElement.scrollWidth <= document.documentElement.clientWidth` trên iOS Safari (390px) và Android (393px) đảm bảo không bị xô lệch layout.
+- [ ] **Kiểm thử Toàn Diện Logic Tính Toán & Cô Lập Phạm Vi (Deterministic Calculation & Scope Isolation)**:
+  - Nếu miniapp có logic tính toán hiển thị (thuế, tài chính, chiết khấu, tỷ lệ, quy đổi, kích thước, định lượng...), bắt buộc phải có test suite tự động kiểm thử:
+    - **Tính đúng đắn công thức**: Khớp 100% với tài liệu nghiệp vụ hoặc luật định.
+    - **Cô lập dữ liệu theo hồ sơ (Profile Scope Isolation)**: Chuyển đổi giữa các profile không được phép làm rò rỉ dữ liệu cũ từ profile này sang profile khác gây sai lệch tổng số.
+    - **Kiểm thử biên & làm tròn (Boundary & Rounding)**: Kiểm tra các mốc ngưỡng nhạy cảm và quy tắc làm tròn số.
+- [ ] **Kiểm chứng Xuất Tệp Thực Tế (Real Export vs Inert UI Principle)**:
+  - Nếu miniapp hiển thị các nút/icon xuất định dạng tệp (CSV, PDF, XLSX, DOCX, ZIP, PNG...), bắt buộc phải là chức năng tải tệp thật (Real File Export).
+  - **Tuyệt đối cấm giao diện "chỉ để ngắm" (Inert/Mock UI)**: Mọi định dạng xuất tệp đã đưa lên UI bắt buộc phải có mã nguồn tạo file thực tế, có unit test tự động xác minh, và tuyệt đối không nuốt lỗi im lặng (`catch (err) { console.error(...) }` mà không thông báo lỗi cho người dùng).
 - [ ] **Kiểm chứng Cơ Chế Cách Ly Sự Cố (Fault Isolation)**:
   - Kích hoạt thử nghiệm lỗi mô phỏng → Card `ToolErrorBoundary` hiển thị thông báo an toàn, bấm "Về Trung Tâm" đưa người dùng về Dashboard hoàn hảo.
 
@@ -441,6 +454,8 @@ npm test                                         # Chạy toàn bộ test suites
 | **[Gate 1]** Đã khai báo đầy đủ 3 ngôn ngữ trong `toolsRegistry.js` | [ ] | VN, EN, JA |
 | **[Gate 1]** Tên gọi miniapp chuẩn hóa 3 ngôn ngữ, không chứa từ cấm tiếp thị (`PRO`, `Master`, `Craft`...) | [ ] | Naming Convention & Zero-Fluff |
 | **[Gate 1]** Không tự dựng Navbar/Header riêng, tuân thủ Navbar Contract từ `ToolContainer` | [ ] | Navbar Isolation |
+| **[Gate 2]** Đảm bảo Zero Duplicate SOT: Không tự dựng bộ đổi ngôn ngữ hay ThemeToggle cục bộ | [ ] | SOT duy nhất từ Navbar Hub |
+| **[Gate 2]** Bố cục typography tự nhiên: Không dùng class ép hẹp vô lý (`max-w-3xl`) gây orphan words | [ ] | text-pretty & w-full |
 | **[Gate 2]** Đã bọc trong `StandardToolLayout` hoặc `MiniAppLayout` | [ ] | Max 1240px |
 | **[Gate 2]** 100% sử dụng CSS semantic tokens (không có `bg-white`, `text-black`) | [ ] | Tương thích cả Dark/Light |
 | **[Gate 2]** Tỷ lệ tương phản chữ $\ge 4.5:1$ theo ma trận phối màu an toàn (không dùng `text-*-400`) | [ ] | Chuẩn WCAG 2.1 AA |
@@ -453,4 +468,7 @@ npm test                                         # Chạy toàn bộ test suites
 | **[Audit]** Chạy `npm run audit:miniapps` trả về 0 lỗi (Đạt Gate 0, 1, 2, 3) | [ ] | Pass 100% 4 cổng tĩnh |
 | **[Gate 4]** Chạy `node scripts/verify-miniapp-browser.mjs --tool=<id>` đạt `✔ Init+Dyn` | [ ] | 0 vi phạm axe-core |
 | **[Gate 4]** Zero Horizontal Overflow trên iOS Safari (390px) và Android (393px) sau khi nạp tệp | [ ] | Không tràn ngang màn hình |
+| **[Gate 4]** Mọi nút/icon xuất tệp (PDF, CSV, XLSX...) hoạt động thật (Real Export) và có test tự động | [ ] | Real Export vs Inert UI |
+| **[Gate 4]** Toàn bộ logic tính toán hiển thị có unit test kiểm tra cô lập phạm vi & giá trị biên | [ ] | Scope Isolation & Boundaries |
 | **[Tests]** Chạy `npm test` 100% xanh (bao gồm kiểm tra toán học tương phản token) | [ ] | Toàn vẹn hệ thống |
+

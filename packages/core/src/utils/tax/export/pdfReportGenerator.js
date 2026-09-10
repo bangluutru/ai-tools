@@ -19,8 +19,16 @@ export async function generateTaxPdfReport(arg1, arg2) {
     lang = arg1.lang || 'ja';
   } else {
     calcResult = arg1 || {};
-    formValues = (typeof arg2 === 'object' && arg2 !== null) ? arg2 : {};
-    lang = typeof arg2 === 'string' ? arg2 : (arg1?.lang || 'ja');
+    if (typeof arg2 === 'string') {
+      lang = arg2;
+      formValues = {};
+    } else if (typeof arg2 === 'object' && arg2 !== null) {
+      formValues = arg2;
+      lang = 'ja';
+    } else {
+      formValues = {};
+      lang = 'ja';
+    }
   }
 
   const { jsPDF } = await import('jspdf');
@@ -51,26 +59,37 @@ export async function generateTaxPdfReport(arg1, arg2) {
 
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Tax Year: ${calcResult.year} (${calcResult.rules.fiscalEra})  |  Generated: ${new Date().toLocaleDateString()}`, margin + 6, y + 18);
+  const yearText = calcResult.year || 2025;
+  const eraText = calcResult.rules?.fiscalEra || '令和7・8年税制';
+  doc.text(`Tax Year: ${yearText} (${eraText})  |  Generated: ${new Date().toLocaleDateString()}`, margin + 6, y + 18);
 
   y += 30;
 
   // 2. PROFILE & REGION META
+  const profileName = String(calcResult.profile || formValues?.profile || 'employee').toUpperCase();
+  const prefectureName = String(calcResult.prefecture || formValues?.prefecture || 'tokyo').toUpperCase();
+
   doc.setFillColor(241, 245, 249); // slate-100
   doc.roundedRect(margin, y, pageWidth - margin * 2, 16, 2, 2, 'F');
   doc.setTextColor(51, 65, 85);
   doc.setFontSize(9);
-  doc.text(`Profile: ${formValues.profile.toUpperCase()}   |   Prefecture: ${formValues.prefecture.toUpperCase()}   |   Calculation Mode: Deterministic Engine`, margin + 5, y + 10);
+  doc.text(`Profile: ${profileName}   |   Prefecture: ${prefectureName}   |   Calculation Mode: Deterministic Engine`, margin + 5, y + 10);
 
   y += 22;
 
   // 3. KPI CARDS ROW (4 ô tóm tắt)
+  const summary = calcResult.summary || {};
+  const grossVal = summary.grossEarnings || 0;
+  const taxesVal = summary.totalTaxes || 0;
+  const socialVal = summary.totalSocialInsurance || 0;
+  const takeHomeVal = summary.netTakeHome || 0;
+
   const cardWidth = (pageWidth - margin * 2 - 9) / 4;
   const cards = [
-    { label: 'Gross Revenue', value: `JPY ${calcResult.summary.grossEarnings.toLocaleString()}`, color: [2, 132, 199] },
-    { label: 'Total Taxes', value: `JPY ${calcResult.summary.totalTaxes.toLocaleString()}`, color: [239, 68, 68] },
-    { label: 'Total Social Ins.', value: `JPY ${calcResult.summary.totalSocialInsurance.toLocaleString()}`, color: [245, 158, 11] },
-    { label: 'Net Take-Home', value: `JPY ${calcResult.summary.netTakeHome.toLocaleString()}`, color: [16, 185, 129] },
+    { label: 'Gross Revenue', value: `JPY ${grossVal.toLocaleString()}`, color: [2, 132, 199] },
+    { label: 'Total Taxes', value: `JPY ${taxesVal.toLocaleString()}`, color: [239, 68, 68] },
+    { label: 'Total Social Ins.', value: `JPY ${socialVal.toLocaleString()}`, color: [245, 158, 11] },
+    { label: 'Net Take-Home', value: `JPY ${takeHomeVal.toLocaleString()}`, color: [16, 185, 129] },
   ];
 
   cards.forEach((card, idx) => {
@@ -180,8 +199,8 @@ export async function generateTaxPdfReport(arg1, arg2) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(71, 85, 105);
-  doc.text(`Official Source: ${calcResult.rules.officialSource}`, margin + 4, y + 11);
-  doc.text(`Rules Engine Verified: ${calcResult.rules.verifiedDate}  |  National Tax Agency Japan & Local Tax Acts`, margin + 4, y + 16);
+  doc.text(`Official Source: ${calcResult.rules?.officialSource || 'National Tax Agency Japan'}`, margin + 4, y + 11);
+  doc.text(`Rules Engine Verified: ${calcResult.rules?.verifiedDate || '2025-01-01'}  |  National Tax Agency Japan & Local Tax Acts`, margin + 4, y + 16);
 
   // 7. FOOTER DISCLAIMER
   const footerY = pageHeight - 16;

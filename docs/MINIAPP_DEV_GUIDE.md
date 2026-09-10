@@ -288,26 +288,29 @@ Chạy `npm run audit:miniapps <id>` và `npm run test:browser:tool -- <id>` đ�
       : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'}
     ```
 
-### 6.9. Bẫy Trùng Lặp Thanh Điều Hướng (Duplicate Navbar / Control Clash Trap)
-- **Triệu chứng**: Giao diện miniapp xuất hiện 2 thanh header xếp chồng lên nhau, hoặc xuất hiện nút Dark/Light mode và nút chọn ngôn ngữ thừa thãi bên trong khung làm việc của miniapp.
-- **Nguyên nhân**: Khi chuyển đổi codebase bên ngoài vào Hub, lập trình viên giữ nguyên thanh `<header>` hoặc component `<Navbar>` cũ của app độc lập.
+### 6.11. Bẫy Hai SOT Cho Cùng Một Dữ Liệu (Duplicate SOT Trap - Language & Theme)
+- **Triệu chứng**: Miniapp tự có dropdown/nút chọn ngôn ngữ riêng (VI/EN/JA), hoặc tự lưu trữ key `lang` / `theme` riêng trong state nội bộ. Khi người dùng đổi ngôn ngữ ở thanh Navbar của portal thì miniapp không đổi theo, hoặc miniapp đổi nhưng Navbar không nhận biết.
+- **Nguyên nhân**: Vi phạm nguyên tắc **Single Source of Truth (SOT)**. Miniapp tự triển khai logic quản lý ngôn ngữ hoặc theme độc lập.
 - **Giải pháp**:
-  - Xóa bỏ 100% thanh header/navbar riêng của app ngoài.
-  - Hub đã cung cấp sẵn thanh điều hướng cấp cao `ToolContainer` (`h-16`) chuẩn mực trên cùng với đầy đủ: Logo, nút Về Trung Tâm, Bộ chuyển nhanh công cụ, ThemeToggle và Language Selector.
-  - Miniapp chỉ cần bắt đầu từ Breadcrumb và Tier 1 Context Header, đồng thời nhận prop `displayLang` để đổi ngôn ngữ hiển thị.
+  - Tuyệt đối cấm tạo nút bấm / dropdown chọn ngôn ngữ hoặc theme trong miniapp.
+  - Nhận duy nhất prop `displayLang` từ `ToolContainer` làm nguồn chân lý duy nhất. Mọi từ điển i18n bên trong miniapp chỉ đọc theo `displayLang`.
 
-### 6.10. Bẫy Tên Gọi Rườm Rà & Lệch Pha Đa Ngôn Ngữ (Inconsistent & Marketing Naming Trap)
-- **Triệu chứng**: `toolsRegistry.js` ghi tên một kiểu nhưng Breadcrumb và thẻ H1 trong miniapp ghi một kiểu khác; hoặc tên công cụ bị gài các từ ngữ tiếp thị phô trương ("Studio PRO", "Master", "Craft", "— Đóng Dấu Bản Quyền..."). Khi người dùng chuyển sang tiếng Anh hoặc tiếng Nhật, tiêu đề H1 vẫn giữ nguyên tiếng Việt.
-- **Nguyên nhân**: Hardcode chuỗi tên tĩnh trong JSX thay vì phản ứng theo `displayLang` hoặc không tuân thủ Bảng tham chiếu tên gọi chuẩn mực.
+### 6.12. Bẫy Xuất Tệp Hình Thức & Nuốt Lỗi Im Lặng (Inert Export & Silent Catch Trap)
+- **Triệu chứng**: Giao diện hiển thị nút hoặc icon tải tệp (PDF, CSV, XLSX, DOCX, ZIP...), nhưng khi người dùng click vào thì "không có phản ứng gì", file không tải về và cũng không có thông báo lỗi.
+- **Nguyên nhân**:
+  1. Nút bấm chỉ là giao diện giả lập (mock UI) chưa được gắn logic tạo file thật.
+  2. Logic tạo file ném ra ngoại lệ (ví dụ: `TypeError: Cannot read properties of undefined`), nhưng hàm gọi lại bọc trong `catch (err) { console.error(err); }` mà không thông báo lỗi cho người dùng bằng Toast/Alert.
 - **Giải pháp**:
-  - Đặt tên theo công thức chuẩn: `[Hành động/Thể loại] + [Đối tượng]` súc tích.
-  - Bắt buộc đồng bộ 100% tên tại cả 4 điểm: Registry, Breadcrumb, Context Header H1 và file từ điển i18n.
-  - Luôn render tiêu đề theo prop `displayLang`:
-    ```jsx
-    <h1>
-      {displayLang === 'en' ? 'Document Watermark' : displayLang === 'ja' ? '文書透かし・押印' : 'Đóng Dấu Tài Liệu'}
-    </h1>
-    ```
+  - Tuân thủ **Nguyên Tắc Xuất Tệp Thực Tế (Real Export)**: Đã có nút xuất tệp thì bắt buộc phải tải về được file thật 100%.
+  - Luôn có cơ chế phản hồi lỗi trực quan (toast notification): Nếu quá trình xuất tệp gặp sự cố, phải thông báo ngay cho người dùng ("Lỗi khi xuất tệp, vui lòng thử lại").
+  - Viết unit test tự động xác minh chức năng sinh file của từng định dạng được hỗ trợ.
+
+### 6.13. Bẫy Bó Hẹp Chiều Rộng Gây Rớt Chữ Mồ Côi (Artificial Width Constraint & Orphan Text Trap)
+- **Triệu chứng**: Một câu phụ đề mô tả ngắn chỉ bị rớt đúng 1 từ cuối cùng (ví dụ: chữ "hiểu.") xuống dòng mới một cách trơ trọi, trong khi phía bên phải của thẻ vẫn còn trống hàng trăm pixel.
+- **Nguyên nhân**: Lập trình viên đặt các class giới hạn chiều rộng nhân tạo tùy tiện (như `max-w-3xl` = 768px, `max-w-2xl` = 672px) trên khối tiêu đề trong khi container toàn trang rộng tới 1240px mà không hề có cột đối trọng bên phải.
+- **Giải pháp**:
+  - Để khối tiêu đề và mô tả chiếm trọn diện tích khả dụng (`w-full` hoặc `max-w-none`).
+  - Sử dụng class `text-pretty` của Tailwind CSS để trình duyệt tự động tính toán ngắt dòng thông minh, loại bỏ hoàn toàn các từ đơn lẻ bị mồ côi (orphan/widow words).
 
 ---
 
@@ -315,7 +318,10 @@ Chạy `npm run audit:miniapps <id>` và `npm run test:browser:tool -- <id>` đ�
 
 Trước khi commit và đưa miniapp mới vào production, hãy đảm bảo vượt qua bảng kiểm tra:
 
-- [ ] **Thanh điều hướng:** Không tự tạo Navbar/Header toàn cục riêng, kế thừa 100% thanh điều hướng chuẩn từ `ToolContainer`.
+- [ ] **Thanh điều hướng & SOT Tuyệt Đối:** Không tự tạo Navbar/Header, ThemeToggle hay bộ chọn ngôn ngữ riêng. 100% tuân thủ SOT từ Navbar và prop `displayLang`.
+- [ ] **Bố cục Typography tự nhiên:** Không áp đặt `max-w-3xl` gây rớt chữ mồ côi (orphan words), sử dụng `w-full` và `text-pretty`.
+- [ ] **Xuất tệp thực tế (Real Export):** Mọi nút/icon xuất tệp (PDF, CSV, XLSX, DOCX...) đều tải về được file thật, có unit test tự động và có toast thông báo lỗi nếu thất bại.
+- [ ] **Logic tính toán chuẩn xác:** Toàn bộ công thức tính toán hiển thị có unit test kiểm tra cô lập phạm vi (scope isolation), không để dữ liệu từ profile này rò rỉ sang profile khác.
 - [ ] **Tên gọi chuẩn mực:** Tên gọi súc tích 3 ngôn ngữ theo công thức `[Hành động/Thể loại] + [Đối tượng]`, không chứa từ cấm tiếp thị (`PRO`, `Master`, `Craft`...), đồng bộ 4 điểm (Registry, Breadcrumb, H1, i18n).
 - [ ] **Khung chứa:** Miniapp nằm gọn trong `max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8`.
 - [ ] **Màu sắc:** 0 class `bg-white`, 0 class `text-black`, 100% dùng CSS semantic tokens.

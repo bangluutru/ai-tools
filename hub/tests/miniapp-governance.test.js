@@ -267,6 +267,51 @@ test('MAIS Gate 2: Active miniapps adhere to Navbar Isolation and do not duplica
   }
 });
 
+test('MAIS Gate 2: Active miniapps adhere to Single Source of Truth (SOT) and do not duplicate Language Selectors', () => {
+  const forbiddenSelectors = /\b(LanguageSwitcher|LanguageToggle|LangToggle|LocaleSelector)\b/;
+  const localLangStatePattern = /\[\s*(?:lang|language|locale)\s*,\s*set(?:Lang|Language|Locale)\s*\]\s*=\s*useState\s*\(\s*['"](?:vi|en|ja)['"]\s*\)/;
+
+  for (const tool of activeTools) {
+    const files = getToolFiles(tool.id);
+    for (const file of files) {
+      const content = readFileSync(file, 'utf8');
+      const codeOnly = content.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, '');
+
+      assert.equal(
+        forbiddenSelectors.test(codeOnly),
+        false,
+        `${file} vi phạm Single Source of Truth (SOT): Miniapp tự định nghĩa bộ chọn ngôn ngữ riêng thay vì nhận currentLang từ Shell/Navbar.`
+      );
+
+      assert.equal(
+        localLangStatePattern.test(codeOnly),
+        false,
+        `${file} vi phạm Single Source of Truth (SOT): Miniapp khởi tạo state ngôn ngữ cục bộ riêng.`
+      );
+    }
+  }
+});
+
+test('MAIS Gate 3: Active miniapps with file export functionality must wire real action handlers and not inert UI', () => {
+  for (const tool of activeTools) {
+    const files = getToolFiles(tool.id);
+    for (const file of files) {
+      const content = readFileSync(file, 'utf8');
+      // Match buttons designed for exporting/downloading files (PDF, CSV, Excel, XLSX, DOCX)
+      const exportButtonMatches = content.matchAll(/<button\b[^>]*>(?:(?!<\/button>)[\s\S])*?(?:Xuất|Export|Download|Tải)[^<]*?(?:PDF|CSV|Excel|XLSX|DOCX)[\s\S]*?<\/button>/gi);
+      for (const m of exportButtonMatches) {
+        const buttonHtml = m[0];
+        // Ensure onClick exists on this button or it is explicitly disabled
+        assert.ok(
+          buttonHtml.includes('onClick=') || buttonHtml.includes('disabled'),
+          `${file} vi phạm Real Export: Nút xuất file (${buttonHtml.slice(0, 80)}...) không có thuộc tính onClick.`
+        );
+      }
+    }
+  }
+});
+
+
 test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and ISO date', () => {
   const expectedVerifiedIds = [
     'image-convert',
