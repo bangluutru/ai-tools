@@ -29,7 +29,8 @@ import {
   Sparkles,
   Video,
   Gamepad2,
-  Swords
+  Swords,
+  Coins
 } from 'lucide-react';
 
 export const iconMap = {
@@ -62,7 +63,8 @@ export const iconMap = {
   Sparkles,
   Video,
   Gamepad2,
-  Swords
+  Swords,
+  Coins
 };
 
 /**

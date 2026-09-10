@@ -47,6 +47,7 @@ const WatermarkStudioTool = lazy(() => import('./tools/watermark-studio/Watermar
 const IdPhotoStudioTool = lazy(() => import('./tools/id-photo-studio/IdPhotoStudioTool'));
 const BusinessCardStudioTool = lazy(() => import('./tools/business-card-studio/BusinessCardStudioTool'));
 const TaxCalculatorTool = lazy(() => import('./tools/tax-calculator/TaxCalculatorTool'));
+const JapanTaxSimulatorTool = lazy(() => import('./tools/japan-tax-simulator/JapanTaxSimulatorTool'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
 const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
 const FlappyBirdPet = lazy(() => import('./components/FlappyBirdPet'));
@@ -71,6 +72,7 @@ const toolComponentMap = {
   'id-photo-studio': IdPhotoStudioTool,
   'business-card-studio': BusinessCardStudioTool,
   'tax-calculator': TaxCalculatorTool,
+  'japan-tax-simulator': JapanTaxSimulatorTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,
   'flappy-bird': FlappyBirdTool,
   'toolio-ninja': ToolioNinjaTool

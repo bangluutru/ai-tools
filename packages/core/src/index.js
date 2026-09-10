@@ -18,6 +18,7 @@ export { default as WatermarkStudioView } from './components/WatermarkStudioView
 export { default as DocStudioApp } from './components/editor-studio/DocStudioApp.jsx';
 export { default as CertificateStudioView } from './components/CertificateStudioView.jsx';
 export { default as TaxCalculatorView } from './components/TaxCalculatorView.jsx';
+export { default as JapanTaxSimulatorView } from './components/JapanTaxSimulatorView.jsx';
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 
 // Core Hooks

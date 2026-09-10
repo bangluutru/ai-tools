@@ -279,7 +279,8 @@ test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and
     'tax-calculator',
     'watermark-studio',
     'id-photo-studio',
-    'business-card-studio'
+    'business-card-studio',
+    'japan-tax-simulator'
   ];
 
   assert.equal(

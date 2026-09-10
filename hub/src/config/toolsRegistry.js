@@ -162,6 +162,13 @@ const toolGovernance = {
     readiness: 'beta',
     processing: 'browser',
     outputPurpose: 'utility'
+  },
+  'japan-tax-simulator': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10'
   }
 };
 
@@ -500,6 +507,22 @@ const toolDefinitions = [
     badge: '2026 READY',
     popular: true,
     tags: ['thuế tncn', 'tax', 'pit', 'gross net', 'lương', 'salary', 'bhxh', 'bhtn', 'quuyết toán', 'freelancer', 'bất động sản', 'office']
+  },
+  {
+    id: 'japan-tax-simulator',
+    name_vn: 'Mô Phỏng Thuế Nhật Bản',
+    name_en: 'Japan Tax Guide & Simulator',
+    name_ja: '日本の税金ガイド・シミュレーター',
+    desc_vn: 'Mô phỏng toàn diện các loại thuế & bảo hiểm xã hội Nhật Bản (Thuế TNCN, Thuế cư trú, Kinh doanh, Tiêu thụ, Pháp nhân). Chẩn đoán tự động điều kiện kê khai 確定申告 & mô phỏng What-If. 100% xử lý nội bộ trình duyệt.',
+    desc_en: 'Comprehensive Japan tax & social insurance simulator (Income, Resident, Enterprise, Consumption & Corporate taxes). Auto-diagnose Kakutei Shinkoku necessity with interactive What-If simulation. 100% client-side.',
+    desc_ja: '働き方に合わせた税金・社会保険料の自動判定と概算シミュレーション（所得税・住民税・個人事業税・消費税・法人税）。確定申告の要否診断とWhat-If比較に対応。100%ブラウザ完結。',
+    category: 'office',
+    icon: 'Coins',
+    gradient: 'from-rose-500 via-red-600 to-amber-500',
+    color: '#e11d48',
+    badge: 'JAPAN TAX',
+    popular: true,
+    tags: ['japan tax', 'thuế nhật', '日本の税金', '確定申告', '所得税', '住民税', '個人事業税', '消費税', '法人税', '社会保険', 'gensen', 'nenkin', 'hoken', 'shinkoku', 'office']
   },
   {
     id: 'watermark-studio',
