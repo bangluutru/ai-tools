@@ -77,3 +77,6 @@ export * from './japan/housing/index.js';
 // Life Event Foundation (Shared lifecycle runtime)
 export * from './life-events/index.js';
 
+// Japan Life - Administrative Procedures & Documents Domain
+export * from './documents/index.js';
+
