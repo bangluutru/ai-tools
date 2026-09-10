@@ -45,6 +45,7 @@ async function loadRegistry() {
     activeTools: registryModule.activeTools || [],
     inDevelopmentTools: registryModule.inDevelopmentTools || [],
     categories: registryModule.categories || [],
+    TOOL_GROUPS: registryModule.TOOL_GROUPS || {},
   };
 }
 
@@ -184,6 +185,25 @@ function auditGate1(tool, registryInfo) {
   const validCategoryIds = registryInfo.categories.map((c) => c.id);
   if (tool.category && !validCategoryIds.includes(tool.category)) {
     issues.push(`Danh mục không hợp lệ: "${tool.category}". Cho phép: ${validCategoryIds.join(', ')}`);
+  }
+
+  // Tool Contract V1: Product Groups & Regulatory Consistency
+  const allowedGroupIds = Object.keys(registryInfo.TOOL_GROUPS || {});
+  if (tool.group && allowedGroupIds.length > 0 && !allowedGroupIds.includes(tool.group)) {
+    issues.push(`Nhóm sản phẩm không hợp lệ: "${tool.group}". Cho phép: ${allowedGroupIds.join(', ')}`);
+  }
+
+  // Country / Group Consistency Rules
+  if (tool.group === 'japan-life' && tool.country !== 'JP') {
+    issues.push(`Công cụ thuộc nhóm 'japan-life' bắt buộc phải khai báo country: 'JP'. Hiện tại: "${tool.country}"`);
+  }
+  if (tool.group === 'vietnam-life' && tool.country !== 'VN') {
+    issues.push(`Công cụ thuộc nhóm 'vietnam-life' bắt buộc phải khai báo country: 'VN'. Hiện tại: "${tool.country}"`);
+  }
+
+  // Regulatory field validation
+  if (tool.regulatory !== undefined && typeof tool.regulatory !== 'boolean') {
+    issues.push(`Trường regulatory phải là kiểu boolean (true/false). Hiện tại: "${typeof tool.regulatory}"`);
   }
 
   // Folder and Component Existence

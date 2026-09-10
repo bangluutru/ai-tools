@@ -6,7 +6,7 @@ import ToolErrorBoundary from './components/ToolErrorBoundary';
 import CommandPalette from './components/CommandPalette';
 import DataPolicyModal from './components/DataPolicyModal';
 import SettingsModal from './components/SettingsModal';
-import { tools, isInDevelopment } from './config/toolsRegistry';
+import { tools, isInDevelopment, TOOL_GROUPS } from './config/toolsRegistry';
 import { buildVersion } from './config/buildInfo';
 import { resolveToolId, toolUrl } from './utils/toolRoute';
 import {
@@ -21,9 +21,11 @@ import {
 import {
   ALL_CATEGORY,
   IN_DEVELOPMENT_CATEGORY,
+  ALL_GROUPS,
   partitionTools,
   toolsForCategory,
   visibleCategoryIds,
+  visibleGroupIds,
 } from './utils/toolFilter';
 import { useTheme } from '@ai-tools/core';
 
@@ -82,6 +84,7 @@ export default function App() {
   useTheme();
   const [displayLang, setDisplayLang] = useState(() => localStorage.getItem('hub_lang') || 'vi');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeGroup, setActiveGroup] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeToolId, setActiveToolId] = useState(() =>
     resolveToolId(window.location.hash, tools)
@@ -178,13 +181,18 @@ export default function App() {
   const { active: activeTools } = partitionTools(tools, hiddenToolIds);
   const filteredTools = toolsForCategory(tools, activeCategory, hiddenToolIds);
   const categoryIds = visibleCategoryIds(tools, hiddenToolIds);
+  const groupIds = useMemo(() => visibleGroupIds(tools, hiddenToolIds), [hiddenToolIds]);
 
-  // Live search filtering
+  // Live search and domain group filtering
   const displayedTools = useMemo(() => {
     let list = filteredTools;
+    if (activeGroup !== ALL_GROUPS && !searchQuery.trim()) {
+      list = list.filter((t) => (t.group || 'common') === activeGroup);
+    }
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      list = list.filter((t) => {
+      // Search finds matching tools across all active tools regardless of active group
+      list = activeTools.filter((t) => {
         const nameVn = (t.name_vn || '').toLowerCase();
         const nameEn = (t.name_en || '').toLowerCase();
         const nameJa = (t.name_ja || '').toLowerCase();
@@ -192,6 +200,8 @@ export default function App() {
         const descEn = (t.desc_en || '').toLowerCase();
         const id = (t.id || '').toLowerCase();
         const category = (t.category || '').toLowerCase();
+        const group = (t.group || '').toLowerCase();
+        const tags = Array.isArray(t.tags) ? t.tags.join(' ').toLowerCase() : '';
         return (
           nameVn.includes(q) ||
           nameEn.includes(q) ||
@@ -199,12 +209,14 @@ export default function App() {
           descVn.includes(q) ||
           descEn.includes(q) ||
           id.includes(q) ||
-          category.includes(q)
+          category.includes(q) ||
+          group.includes(q) ||
+          tags.includes(q)
         );
       });
     }
     return list;
-  }, [filteredTools, searchQuery]);
+  }, [filteredTools, activeTools, activeGroup, searchQuery]);
 
   const toggleToolVisibility = useCallback((toolId) => {
     const nextHiddenToolIds = hiddenToolIds.includes(toolId)
@@ -264,18 +276,69 @@ export default function App() {
           />
 
           <main className="flex-1 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-4">
-            {/* Minimal 1-line tool count & privacy note */}
-            <div className="flex items-center justify-between text-xs text-on-surface-variant pt-1 pb-1">
-              <div className="flex items-center gap-2">
+            {/* Minimal 1-line tool count, group filter & privacy note */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-on-surface-variant pt-1 pb-1">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <span className="font-semibold text-on-surface">
                   {activeCategory === ALL_CATEGORY
-                    ? 'Tất cả công cụ'
+                    ? (activeGroup === ALL_GROUPS
+                        ? (displayLang === 'ja' ? 'すべてのツール' : displayLang === 'en' ? 'All Tools' : 'Tất cả công cụ')
+                        : (TOOL_GROUPS[activeGroup]?.name[displayLang] || activeGroup))
                     : `Danh mục: ${activeCategory.toUpperCase()}`}
                 </span>
                 <span className="text-outline font-mono">({displayedTools.length})</span>
+
+                {/* Subtle Domain Group Filter (only visible when activeCategory is ALL and no search query) */}
+                {activeCategory === ALL_CATEGORY && !searchQuery.trim() && (
+                  <div
+                    className="inline-flex items-center p-0.5 rounded-lg bg-surface-subtle border border-border-subtle text-[11px] font-medium"
+                    role="tablist"
+                    aria-label="Bộ lọc nhóm công cụ"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={activeGroup === ALL_GROUPS}
+                      onClick={() => setActiveGroup(ALL_GROUPS)}
+                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
+                        activeGroup === ALL_GROUPS
+                          ? 'bg-surface-container-high text-primary font-semibold shadow-xs'
+                          : 'text-on-surface-variant hover:text-on-surface'
+                      }`}
+                    >
+                      {displayLang === 'ja' ? 'すべて' : displayLang === 'en' ? 'All' : 'Tất cả'}
+                    </button>
+                    {Object.values(TOOL_GROUPS)
+                      .filter((g) => groupIds.has(g.id))
+                      .map((g) => {
+                        const isSelected = activeGroup === g.id;
+                        const label = g.name[displayLang] || g.id;
+                        return (
+                          <button
+                            key={g.id}
+                            type="button"
+                            role="tab"
+                            aria-selected={isSelected}
+                            onClick={() => setActiveGroup(g.id)}
+                            className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
+                              isSelected
+                                ? 'bg-surface-container-high text-primary font-semibold shadow-xs'
+                                : 'text-on-surface-variant hover:text-on-surface'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                  </div>
+                )}
               </div>
               <span className="hidden sm:inline-block text-outline font-normal">
-                Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.
+                {displayLang === 'ja'
+                  ? '100% ブラウザ内処理・ファイルは外部サーバーに送信されません。'
+                  : displayLang === 'en'
+                  ? 'Client-side processing — your files never leave your device.'
+                  : 'Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.'}
               </span>
             </div>
 

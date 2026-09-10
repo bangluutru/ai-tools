@@ -8,6 +8,8 @@ import {
   activeTools,
   inDevelopmentTools,
   tools,
+  TOOL_GROUPS,
+  getToolGroup,
 } from '../src/config/toolsRegistry.js';
 
 const PAUSED_TOOL_IDS = [
@@ -89,3 +91,64 @@ test('every active miniapp is wired to a lazy-loaded component in App.jsx', () =
     assert.equal(wiredIds.includes(toolId), false, `${toolId} must stay out of the bundle`);
   }
 });
+
+
+test('TOOL_GROUPS defines standardized multilingual product and domain groups', () => {
+  assert.ok(TOOL_GROUPS.common, 'Must define common group');
+  assert.ok(TOOL_GROUPS['japan-life'], 'Must define japan-life group');
+  assert.ok(TOOL_GROUPS['vietnam-life'], 'Must define vietnam-life group');
+
+  for (const [groupId, group] of Object.entries(TOOL_GROUPS)) {
+    assert.equal(group.id, groupId);
+    assert.ok(group.name.vi, `${groupId} must have name.vi`);
+    assert.ok(group.name.en, `${groupId} must have name.en`);
+    assert.ok(group.name.ja, `${groupId} must have name.ja`);
+  }
+
+  assert.equal(TOOL_GROUPS['japan-life'].country, 'JP');
+  assert.equal(TOOL_GROUPS['vietnam-life'].country, 'VN');
+});
+
+
+test('every miniapp has a valid product group defaulting safely to common', () => {
+  const allowedGroups = Object.keys(TOOL_GROUPS);
+  for (const tool of tools) {
+    assert.ok(tool.group, `${tool.id} must have a group`);
+    assert.ok(
+      allowedGroups.includes(tool.group),
+      `${tool.id} has invalid group: ${tool.group}`,
+    );
+    assert.equal(getToolGroup(tool), tool.group);
+
+    // Group-country consistency
+    if (tool.group === 'japan-life') {
+      assert.equal(tool.country, 'JP', `${tool.id} in japan-life must have country JP`);
+    } else if (tool.group === 'vietnam-life') {
+      assert.equal(tool.country, 'VN', `${tool.id} in vietnam-life must have country VN`);
+    }
+
+    if (tool.regulatory !== undefined) {
+      assert.equal(typeof tool.regulatory, 'boolean', `${tool.id} regulatory must be boolean`);
+    }
+  }
+
+  // Japan Tax is the only tool migrated to japan-life in Phase 1
+  const japanLifeTools = tools.filter((t) => t.group === 'japan-life');
+  assert.deepEqual(
+    japanLifeTools.map((t) => t.id),
+    ['japan-tax-simulator'],
+    'Only japan-tax-simulator must be in japan-life group in Phase 1',
+  );
+
+  const jTax = tools.find((t) => t.id === 'japan-tax-simulator');
+  assert.equal(jTax.group, 'japan-life');
+  assert.equal(jTax.country, 'JP');
+  assert.equal(jTax.domain, 'tax');
+  assert.equal(jTax.type, 'calculator');
+  assert.equal(jTax.regulatory, true);
+
+  // All other tools must be in common group
+  const commonTools = tools.filter((t) => t.group === 'common');
+  assert.equal(commonTools.length, tools.length - 1, 'All other tools must default to common');
+});
+

@@ -4,9 +4,13 @@ import test from 'node:test';
 import {
   ALL_CATEGORY,
   IN_DEVELOPMENT_CATEGORY,
+  ALL_GROUPS,
   partitionTools,
   toolsForCategory,
   visibleCategoryIds,
+  toolsForGroup,
+  visibleGroupIds,
+  filterTools,
 } from '../src/utils/toolFilter.js';
 import { tools } from '../src/config/toolsRegistry.js';
 
@@ -93,3 +97,32 @@ test('against the real registry, the AI category is now empty of openable tools'
     assert.notEqual(tool.readiness, 'in-development', `${tool.id} lọt vào nhóm Tất cả công cụ`);
   }
 });
+
+
+test('toolsForGroup and visibleGroupIds accurately filter tools by product group', () => {
+  const visibleGroups = visibleGroupIds(tools);
+  assert.equal(visibleGroups.has('all'), true);
+  assert.equal(visibleGroups.has('common'), true);
+  assert.equal(visibleGroups.has('japan-life'), true);
+  // vietnam-life has no tools yet, so it must not be in visibleGroupIds
+  assert.equal(visibleGroups.has('vietnam-life'), false, 'Empty groups must not pollute visibleGroupIds');
+
+  const japanTools = toolsForGroup(tools, 'japan-life');
+  assert.deepEqual(japanTools.map((t) => t.id), ['japan-tax-simulator']);
+
+  const commonTools = toolsForGroup(tools, 'common');
+  assert.equal(commonTools.length, 18);
+  assert.equal(commonTools.every((t) => t.group === 'common'), true);
+
+  const allTools = toolsForGroup(tools, ALL_GROUPS);
+  assert.equal(allTools.length, 19);
+
+  // filterTools combined
+  const officeJapan = filterTools(tools, { category: 'office', group: 'japan-life' });
+  assert.deepEqual(officeJapan.map((t) => t.id), ['japan-tax-simulator']);
+
+  const officeCommon = filterTools(tools, { category: 'office', group: 'common' });
+  assert.equal(officeCommon.some((t) => t.id === 'japan-tax-simulator'), false);
+  assert.equal(officeCommon.some((t) => t.id === 'tax-calculator'), true);
+});
+

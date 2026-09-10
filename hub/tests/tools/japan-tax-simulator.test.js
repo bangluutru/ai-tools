@@ -17,6 +17,12 @@ test('japan-tax-simulator is correctly registered in toolsRegistry', () => {
   assert.ok(tool.name_vn && tool.name_en && tool.name_ja, 'Must have trilingual names');
   assert.ok(tool.desc_vn && tool.desc_en && tool.desc_ja, 'Must have trilingual descriptions');
 
+  assert.equal(tool.group, 'japan-life');
+  assert.equal(tool.country, 'JP');
+  assert.equal(tool.domain, 'tax');
+  assert.equal(tool.type, 'calculator');
+  assert.equal(tool.regulatory, true);
+
   const isActive = activeTools.some((t) => t.id === 'japan-tax-simulator');
   assert.equal(isActive, true, 'Tool must be in activeTools');
 });

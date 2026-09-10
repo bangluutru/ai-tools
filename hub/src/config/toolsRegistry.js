@@ -11,6 +11,39 @@ export const categories = [
   { id: 'in-development', label_vn: 'Đang phát triển', label_en: 'In development', label_ja: '開発中', icon: 'Wrench' }
 ];
 
+// Nhóm sản phẩm / Tên miền (Domain Groups) chuẩn hóa
+export const TOOL_GROUPS = {
+  common: {
+    id: 'common',
+    name: {
+      vi: 'Công cụ',
+      en: 'Tools',
+      ja: 'ツール',
+    },
+  },
+  'japan-life': {
+    id: 'japan-life',
+    country: 'JP',
+    name: {
+      vi: 'Cuộc sống tại Nhật',
+      en: 'Japan Life',
+      ja: '日本生活',
+    },
+  },
+  'vietnam-life': {
+    id: 'vietnam-life',
+    country: 'VN',
+    name: {
+      vi: 'Cuộc sống tại Việt Nam',
+      en: 'Vietnam Life',
+      ja: 'ベトナム生活',
+    },
+  },
+};
+
+/** Lấy group của miniapp, mặc định an toàn về 'common' nếu chưa khai báo */
+export const getToolGroup = (tool) => tool?.group || 'common';
+
 // Miniapp tạm dừng phát triển. Chúng không được build vào portal, không mở được
 // từ URL/command palette, và chỉ xuất hiện trong nhóm "Đang phát triển" — không
 // nằm trong bất kỳ nhóm nào khác, kể cả "Tất cả công cụ". Xem
@@ -168,7 +201,12 @@ const toolGovernance = {
     processing: 'browser',
     outputPurpose: 'utility',
     verified: true,
-    verifiedAt: '2026-09-10'
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'tax',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
   }
 };
 
@@ -517,6 +555,11 @@ const toolDefinitions = [
     desc_en: 'Comprehensive Japan tax & social insurance simulator (Income, Resident, Enterprise, Consumption & Corporate taxes). Auto-diagnose Kakutei Shinkoku necessity with interactive What-If simulation. 100% client-side.',
     desc_ja: '働き方に合わせた税金・社会保険料の自動判定と概算シミュレーション（所得税・住民税・個人事業税・消費税・法人税）。確定申告の要否診断とWhat-If比較に対応。100%ブラウザ完結。',
     category: 'office',
+    group: 'japan-life',
+    domain: 'tax',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
     icon: 'Coins',
     gradient: 'from-rose-500 via-red-600 to-amber-500',
     color: '#e11d48',
@@ -574,14 +617,26 @@ const toolDefinitions = [
   }
 ];
 
-export const tools = toolDefinitions.map((tool) => ({
-  readiness: 'experimental',
-  processing: 'browser',
-  outputPurpose: 'reference',
-  verified: false,
-  ...tool,
-  ...toolGovernance[tool.id]
-}));
+export const tools = toolDefinitions.map((tool) => {
+  const merged = {
+    readiness: 'experimental',
+    processing: 'browser',
+    outputPurpose: 'reference',
+    verified: false,
+    group: 'common',
+    domain: null,
+    country: null,
+    type: 'utility',
+    regulatory: false,
+    ...tool,
+    ...toolGovernance[tool.id],
+  };
+  // Bảo đảm tương thích ngược tuyệt đối: nếu chưa có group thì mặc định an toàn là 'common'
+  if (!merged.group) {
+    merged.group = 'common';
+  }
+  return merged;
+});
 
 export const isInDevelopment = (tool) => tool?.readiness === IN_DEVELOPMENT;
 
