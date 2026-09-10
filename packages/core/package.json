@@ -12,7 +12,8 @@
     "./theme/*": "./src/theme/*",
     "./regulatory/*": "./src/regulatory/*",
     "./japan/*": "./src/japan/*",
-    "./documents/*": "./src/documents/*"
+    "./documents/*": "./src/documents/*",
+    "./navigator/*": "./src/navigator/*"
   },
   "scripts": {
     "lint": "eslint src scripts --config ../../eslint.config.js",

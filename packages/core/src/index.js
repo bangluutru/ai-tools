@@ -86,3 +86,6 @@ export * from './life-events/index.js';
 // Japan Life - Administrative Procedures & Documents Domain
 export * from './documents/index.js';
 
+// Japan Life - Navigator Layer
+export * from './navigator/index.js';
+
