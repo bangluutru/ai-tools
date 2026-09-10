@@ -216,6 +216,7 @@ export default function App() {
           nameJa.includes(q) ||
           descVn.includes(q) ||
           descEn.includes(q) ||
+          (t.desc_ja || '').toLowerCase().includes(q) ||
           id.includes(q) ||
           category.includes(q) ||
           group.includes(q) ||

@@ -132,3 +132,57 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   assert.equal(officeCommon.some((t) => t.id === 'tax-calculator'), true);
 });
 
+test('search finds Japan Insurance miniapps across ja, en, and vi keywords', () => {
+  function search(query) {
+    const q = query.toLowerCase().trim();
+    return tools.filter((t) => {
+      const text = [
+        t.name_vn, t.name_en, t.name_ja,
+        t.desc_vn, t.desc_en, t.desc_ja,
+        t.id, t.category, t.group,
+        ...(Array.isArray(t.tags) ? t.tags : []),
+      ].filter(Boolean).join(' ').toLowerCase();
+      return text.includes(q);
+    });
+  }
+
+  // 社会保険
+  const shakaiHoken = search('社会保険');
+  assert.ok(shakaiHoken.some((t) => t.id === 'social-insurance-jp'));
+  assert.ok(shakaiHoken.some((t) => t.id === 'social-insurance-eligibility-jp'));
+  assert.ok(shakaiHoken.some((t) => t.id === 'dependent-insurance-jp'));
+
+  // 年金
+  const nenkin = search('年金');
+  assert.ok(nenkin.some((t) => t.id === 'national-pension-jp'));
+  assert.ok(nenkin.some((t) => t.id === 'social-insurance-jp'));
+
+  // 扶養
+  const fuyou = search('扶養');
+  assert.ok(fuyou.some((t) => t.id === 'dependent-insurance-jp'));
+
+  // insurance
+  const ins = search('insurance');
+  assert.ok(ins.some((t) => t.id === 'social-insurance-jp'));
+  assert.ok(ins.some((t) => t.id === 'social-insurance-eligibility-jp'));
+  assert.ok(ins.some((t) => t.id === 'dependent-insurance-jp'));
+
+  // pension
+  const pen = search('pension');
+  assert.ok(pen.some((t) => t.id === 'national-pension-jp'));
+  assert.ok(pen.some((t) => t.id === 'social-insurance-jp'));
+
+  // bảo hiểm
+  const bh = search('bảo hiểm');
+  assert.ok(bh.some((t) => t.id === 'social-insurance-jp'));
+  assert.ok(bh.some((t) => t.id === 'social-insurance-eligibility-jp'));
+  assert.ok(bh.some((t) => t.id === 'national-pension-jp'));
+  assert.ok(bh.some((t) => t.id === 'dependent-insurance-jp'));
+
+  // lương hưu
+  const lh = search('lương hưu');
+  assert.ok(lh.some((t) => t.id === 'national-pension-jp'));
+  assert.ok(lh.some((t) => t.id === 'social-insurance-jp'));
+});
+
+

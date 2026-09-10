@@ -655,7 +655,7 @@ const toolDefinitions = [
     color: '#059669',
     badge: '判定チェッカー',
     popular: true,
-    tags: ['社会保険加入判定', '106万円の壁', '短時間労働者', 'パート', 'アルバイト', '厚生年金', '健康保険', 'eligibility', 'bảo hiểm', 'shakai hoken', 'japan life', 'office']
+    tags: ['社会保険加入判定', '社会保険', '106万円の壁', '短時間労働者', 'パート', 'アルバイト', '厚生年金', '健康保険', 'eligibility', 'insurance', 'bảo hiểm', 'lương hưu', 'shakai hoken', 'japan life', 'office']
   },
   {
     id: 'national-pension-jp',
@@ -676,7 +676,7 @@ const toolDefinitions = [
     color: '#f59e0b',
     badge: '国民年金',
     popular: true,
-    tags: ['国民年金', '年金', '保険料', '前納', '免除', '納付猶予', '学生納付特例', '追納', '付加年金', 'pension', 'hưu trí', 'bảo hiểm', 'japan life', 'office']
+    tags: ['国民年金', '年金', '保険料', '前納', '免除', '納付猶予', '学生納付特例', '追納', '付加年金', 'pension', 'insurance', 'hưu trí', 'lương hưu', 'bảo hiểm', 'japan life', 'office']
   },
   {
     id: 'dependent-insurance-jp',
@@ -697,7 +697,7 @@ const toolDefinitions = [
     color: '#e11d48',
     badge: '扶養判定',
     popular: true,
-    tags: ['社会保険の扶養判定', '被扶養者', '130万円の壁', '180万円の壁', '健康保険', '国民年金第3号', '扶養', 'dependent', 'bảo hiểm', 'japan life', 'office']
+    tags: ['社会保険の扶養判定', '社会保険', '被扶養者', '130万円の壁', '180万円の壁', '健康保険', '国民年金第3号', '扶養', 'dependent', 'insurance', 'pension', 'bảo hiểm', 'lương hưu', 'japan life', 'office']
   },
   {
     id: 'watermark-studio',
