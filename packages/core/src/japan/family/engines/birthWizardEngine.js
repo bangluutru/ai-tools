@@ -13,6 +13,7 @@ import {
   ROADMAP_STAGES,
 } from '../rules/birthWizardRules.js';
 import { getMunicipalFamilyData } from '../locality/municipalRegistry.js';
+import { calculateChecklistStats as baseCalculateChecklistStats } from '../../../life-events/checklist/checklistEngine.js';
 
 /**
  * Tính toán Khoản hỗ trợ sinh con trọn gói (出産育児一時金)
@@ -125,36 +126,5 @@ export function getRoadmapStages(params = {}) {
  * @returns {Object} Thống kê tổng thể và chi tiết từng giai đoạn
  */
 export function calculateChecklistStats(completedTaskIds = [], stages = ROADMAP_STAGES) {
-  const completedSet = new Set(completedTaskIds);
-
-  let totalTasks = 0;
-  let totalCompleted = 0;
-
-  const stageStats = stages.map((stage) => {
-    const stageTotal = stage.tasks.length;
-    const stageCompleted = stage.tasks.filter((t) => completedSet.has(t.id)).length;
-    const percent = stageTotal > 0 ? Math.round((stageCompleted / stageTotal) * 100) : 0;
-
-    totalTasks += stageTotal;
-    totalCompleted += stageCompleted;
-
-    return {
-      stageId: stage.stageId,
-      order: stage.order,
-      total: stageTotal,
-      completed: stageCompleted,
-      percent,
-      isFullyCompleted: stageCompleted === stageTotal && stageTotal > 0,
-    };
-  });
-
-  const overallPercent = totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 0;
-
-  return {
-    totalTasks,
-    totalCompleted,
-    overallPercent,
-    isAllCompleted: totalCompleted === totalTasks && totalTasks > 0,
-    stageStats,
-  };
+  return baseCalculateChecklistStats(completedTaskIds, stages);
 }
