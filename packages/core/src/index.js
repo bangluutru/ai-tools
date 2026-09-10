@@ -29,6 +29,7 @@ export { default as UnemploymentEligibilityView } from './components/employment/
 export { default as UnemploymentBenefitView } from './components/employment/UnemploymentBenefitView.jsx';
 export { default as LeavingJobWizardView } from './components/employment/LeavingJobWizardView.jsx';
 export { default as MaternityAllowanceView } from './components/family/MaternityAllowanceView.jsx';
+export { default as ChildcareLeaveEligibilityView } from './components/family/ChildcareLeaveEligibilityView.jsx';
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 
 // Core Hooks

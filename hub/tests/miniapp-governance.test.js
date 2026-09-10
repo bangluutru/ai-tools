@@ -335,7 +335,8 @@ test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and
     'unemployment-eligibility-jp',
     'unemployment-benefit-jp',
     'leaving-job-wizard-jp',
-    'maternity-allowance-jp'
+    'maternity-allowance-jp',
+    'childcare-leave-eligibility-jp'
   ];
 
   assert.equal(

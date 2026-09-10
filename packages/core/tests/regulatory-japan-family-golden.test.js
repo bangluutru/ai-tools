@@ -11,6 +11,9 @@ import test from 'node:test';
 import {
   calculateMaternityAllowance,
   MATERNITY_STATUTORY_CONSTANTS,
+  checkChildcareLeaveEligibility,
+  ELIGIBILITY_STATUS,
+  CHILDCARE_BENEFIT_SCHEMES,
 } from '../src/japan/family/index.js';
 
 test('Milestone 1: 出産手当金シミュレーター (Maternity Allowance Golden Tests)', async (t) => {
@@ -232,3 +235,219 @@ test('Milestone 1: 出産手当金シミュレーター (Maternity Allowance Gol
     assert.equal(nhiResult.ineligibleReasonCode, 'NOT_EMPLOYED_INSURED');
   });
 });
+
+test('Milestone 2: 育児休業・給付チェッカー (Childcare Leave & Benefit Eligibility Golden Tests)', async (t) => {
+  // Case 1: Lao động chính quy (Regular employee) - Mẹ đủ điều kiện nghỉ con & Trợ cấp tiêu chuẩn
+  await t.test('M2-01: Mẹ đi làm chính quy đủ 12 tháng BHTN, con 6 tháng: đủ điều kiện nghỉ việc và nhận trợ cấp tiêu chuẩn', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'mother',
+      employmentStatus: 'regular',
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 18,
+      childAgeMonths: 6,
+    });
+
+    assert.equal(result.statutoryLeaveRight.isEligible, true);
+    assert.equal(result.statutoryLeaveRight.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+    assert.equal(result.schemes.standardBenefit.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+    // Mẹ trong 8 tuần đầu hay sau sinh không dùng Papa Ikukyu
+    assert.equal(result.schemes.postBirthPapaBenefit.status, ELIGIBILITY_STATUS.NOT_APPLICABLE);
+  });
+
+  // Case 2: Bố xin nghỉ sau sinh (産後パパ育休) trong 8 tuần đầu
+  await t.test('M2-02: Bố xin nghỉ sau sinh trong 8 tuần đầu (con 1 tháng, nghỉ 14 ngày, đủ BHTN): đủ điều kiện Papa Ikukyu', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'father',
+      employmentStatus: 'regular',
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 24,
+      childAgeMonths: 1,
+      isRequestingPostBirthPapaIkukyu: true,
+      postBirthLeaveDays: 14,
+    });
+
+    assert.equal(result.statutoryLeaveRight.isEligible, true);
+    assert.equal(result.schemes.postBirthPapaBenefit.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+    assert.equal(result.schemes.standardBenefit.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+  });
+
+  // Case 3: Thưởng hỗ trợ sau sinh 13% khi cả 2 vợ chồng cùng nghỉ >= 14 ngày
+  await t.test('M2-03: Cả hai vợ chồng cùng nghỉ >= 14 ngày: đủ điều kiện hưởng thưởng hỗ trợ sau sinh 13% (tổng 80% lương)', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'father',
+      employmentStatus: 'regular',
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 24,
+      childAgeMonths: 1,
+      postBirthLeaveDays: 14,
+      spouseStatus: {
+        takesQualifyingLeave: true,
+        isException: false,
+      },
+    });
+
+    assert.equal(result.schemes.postBirthSupportBonus.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+  });
+
+  // Case 4: Thưởng hỗ trợ sau sinh 13% theo diện ngoại lệ người phối ngẫu (Single parent / Spouse unemployed)
+  await t.test('M2-04: Nghỉ >= 14 ngày thuộc diện đơn thân hoặc vợ/chồng không đi làm: đủ điều kiện hưởng thưởng 13%', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'mother',
+      employmentStatus: 'regular',
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 12,
+      childAgeMonths: 1,
+      postBirthLeaveDays: 14,
+      spouseStatus: {
+        takesQualifyingLeave: false,
+        isException: true,
+        exceptionType: 'single_parent',
+      },
+    });
+
+    assert.equal(result.schemes.postBirthSupportBonus.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+  });
+
+  // Case 5: Thưởng hỗ trợ sau sinh cần xác nhận khi chưa rõ phối ngẫu có nghỉ >= 14 ngày hay không
+  await t.test('M2-05: Bản thân nghỉ >= 14 ngày nhưng chưa rõ vợ/chồng có nghỉ hay không: trạng thái cần xác nhận (NEEDS_CONFIRMATION)', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'father',
+      employmentStatus: 'regular',
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 12,
+      childAgeMonths: 1,
+      postBirthLeaveDays: 14,
+      spouseStatus: {
+        takesQualifyingLeave: false,
+        isException: false,
+        exceptionType: 'none',
+      },
+    });
+
+    assert.equal(result.schemes.postBirthSupportBonus.status, ELIGIBILITY_STATUS.NEEDS_CONFIRMATION);
+  });
+
+  // Case 6: Thưởng hỗ trợ sau sinh không đủ điều kiện khi bản thân nghỉ dưới 14 ngày (<14 days leave)
+  await t.test('M2-06: Bản thân nghỉ dưới 14 ngày (10 ngày): không đủ điều kiện hưởng thưởng 13%', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'father',
+      employmentStatus: 'regular',
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 12,
+      childAgeMonths: 1,
+      postBirthLeaveDays: 10,
+      spouseStatus: {
+        takesQualifyingLeave: true,
+      },
+    });
+
+    assert.equal(result.schemes.postBirthSupportBonus.status, ELIGIBILITY_STATUS.LIKELY_NOT_ELIGIBLE);
+  });
+
+  // Case 7: Con tròn 1 tuổi - gia hạn thành công khi có xác nhận trượt nhà trẻ (isDaycareRejected: true)
+  await t.test('M2-07: Con 13 tháng có giấy xác nhận trượt nhà trẻ: được gia hạn quyền nghỉ và trợ cấp lên tối đa 2 tuổi', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'mother',
+      employmentStatus: 'regular',
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 18,
+      childAgeMonths: 13,
+      isDaycareRejected: true,
+    });
+
+    assert.equal(result.statutoryLeaveRight.isEligible, true);
+    assert.equal(result.statutoryLeaveRight.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+    assert.equal(result.schemes.standardBenefit.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+  });
+
+  // Case 8: Con tròn 1 tuổi - chưa có giấy trượt nhà trẻ thì cần xác nhận
+  await t.test('M2-08: Con 13 tháng chưa có giấy trượt nhà trẻ: quyền nghỉ và trợ cấp ở trạng thái cần xác nhận (NEEDS_CONFIRMATION)', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'mother',
+      employmentStatus: 'regular',
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 18,
+      childAgeMonths: 13,
+      isDaycareRejected: false,
+    });
+
+    assert.equal(result.statutoryLeaveRight.isEligible, false);
+    assert.equal(result.statutoryLeaveRight.status, ELIGIBILITY_STATUS.NEEDS_CONFIRMATION);
+    assert.equal(result.schemes.standardBenefit.status, ELIGIBILITY_STATUS.NEEDS_CONFIRMATION);
+  });
+
+  // Case 9: Con đủ 2 tuổi - hết hạn nghỉ và trợ cấp tối đa theo luật
+  await t.test('M2-09: Con đủ 24 tháng (2 tuổi): đã vượt quá thời hạn nghỉ và trợ cấp tối đa theo luật', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'mother',
+      employmentStatus: 'regular',
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 18,
+      childAgeMonths: 24,
+      isDaycareRejected: true,
+    });
+
+    assert.equal(result.statutoryLeaveRight.isEligible, false);
+    assert.equal(result.statutoryLeaveRight.status, ELIGIBILITY_STATUS.LIKELY_NOT_ELIGIBLE);
+    assert.equal(result.schemes.standardBenefit.status, ELIGIBILITY_STATUS.LIKELY_NOT_ELIGIBLE);
+  });
+
+  // Case 10: Hợp đồng có thời hạn (Fixed-term) không được gia hạn trước khi con 1.5 tuổi
+  await t.test('M2-10: HĐLĐ có thời hạn không được tái ký trước khi con 1.5 tuổi: không đủ điều kiện nghỉ theo luật', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'mother',
+      employmentStatus: 'fixed_term',
+      isFixedTermContractRenewable: false,
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 18,
+      childAgeMonths: 3,
+    });
+
+    assert.equal(result.statutoryLeaveRight.isEligible, false);
+    assert.equal(result.statutoryLeaveRight.status, ELIGIBILITY_STATUS.LIKELY_NOT_ELIGIBLE);
+    assert.equal(result.schemes.standardBenefit.status, ELIGIBILITY_STATUS.LIKELY_NOT_ELIGIBLE);
+  });
+
+  // Case 11: Freelancer / Tự do hoặc Thất nghiệp không thuộc đối tượng áp dụng
+  await t.test('M2-11: Lao động tự do (Freelancer) không thuộc đối tượng của Luật Nghỉ chăm con', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'father',
+      employmentStatus: 'self_employed_freelance',
+      isEnrolledEmploymentInsurance: false,
+      childAgeMonths: 2,
+    });
+
+    assert.equal(result.statutoryLeaveRight.isEligible, false);
+    assert.equal(result.statutoryLeaveRight.status, ELIGIBILITY_STATUS.NOT_APPLICABLE);
+    assert.equal(result.schemes.standardBenefit.status, ELIGIBILITY_STATUS.LIKELY_NOT_ELIGIBLE);
+  });
+
+  // Case 12: Không tham gia BHTN hoặc không đủ 12 tháng BHTN trong 2 năm qua
+  await t.test('M2-12: Tham gia BHTN dưới 12 tháng (8 tháng): quyền nghỉ vẫn có nhưng trợ cấp BHTN không đủ điều kiện', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'mother',
+      employmentStatus: 'regular',
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 8,
+      childAgeMonths: 3,
+    });
+
+    assert.equal(result.statutoryLeaveRight.isEligible, true);
+    assert.equal(result.schemes.standardBenefit.status, ELIGIBILITY_STATUS.LIKELY_NOT_ELIGIBLE);
+  });
+
+  // Case 13: Trợ cấp làm việc rút ngắn giờ (育児時短就業給付金) khi đi làm lại và nuôi con dưới 2 tuổi
+  await t.test('M2-13: Đi làm lại và rút ngắn giờ nuôi con dưới 2 tuổi (từ 04/2025): đủ điều kiện hưởng trợ cấp rút ngắn giờ', () => {
+    const result = checkChildcareLeaveEligibility({
+      userRole: 'mother',
+      employmentStatus: 'regular',
+      isEnrolledEmploymentInsurance: true,
+      employmentInsuranceMonthsInPast2Years: 18,
+      childAgeMonths: 14,
+      isShortTimeWork: true,
+    });
+
+    assert.equal(result.schemes.shortTimeWorkBenefit.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+  });
+});
+

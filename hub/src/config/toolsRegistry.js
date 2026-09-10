@@ -327,6 +327,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'calculator',
     regulatory: true,
+  },
+  'childcare-leave-eligibility-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'family',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
   }
 };
 
@@ -896,6 +908,27 @@ const toolDefinitions = [
     badge: '健康保険法',
     popular: true,
     tags: ['出産手当金', '産前産後休業', '健康保険', '協会けんぽ', 'thai sản', 'maternity allowance', 'nghỉ sinh', 'trợ cấp thai sản', 'lương nghỉ thai sản', 'bảo hiểm thai sản', 'japan life', 'family']
+  },
+  {
+    id: 'childcare-leave-eligibility-jp',
+    name_vn: 'Kiểm Tra Nghỉ Chăm Con & Trợ Cấp',
+    name_en: 'Childcare Leave & Benefit Checker',
+    name_ja: '育児休業・給付チェッカー',
+    desc_vn: 'Chẩn đoán quyền nghỉ chăm con theo luật lao động & điều kiện nhận 4 chế độ trợ cấp BHTN (tiêu chuẩn, sau sinh cho bố, thưởng 13%, rút ngắn giờ).',
+    desc_en: 'Diagnose statutory childcare leave rights and eligibility for 4 Employment Insurance benefit schemes (standard, Papa Ikukyu, post-birth bonus, short-time work).',
+    desc_ja: '育児・介護休業法に基づく休業権利と、雇用保険の4大給付（育休給付・産後パパ育休・休業支援加算・時短就業給付）の受給要件を判定。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'family',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+    icon: 'Users',
+    gradient: 'from-indigo-600 via-purple-600 to-pink-500',
+    color: '#6366f1',
+    badge: '育介法・雇用保険',
+    popular: true,
+    tags: ['育児休業', '育児休業給付金', '産後パパ育休', '出生後休業支援給付金', '育児時短就業給付金', '雇用保険', '育休', 'childcare leave', 'nghỉ chăm con', 'trợ cấp chăm con', 'japan life', 'family']
   },
   {
     id: 'watermark-studio',
