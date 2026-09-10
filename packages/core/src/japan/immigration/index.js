@@ -36,4 +36,8 @@ export * from './statusChange/statusChangeEngine.js';
 export * from './family/familyRules.js';
 export * from './family/familyEngine.js';
 
+// M6: Permanent Residence Readiness Checker (永住申請準備度チェッカー)
+export * from './permanentResidence/prRules.js';
+export * from './permanentResidence/prEngine.js';
+
 

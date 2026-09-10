@@ -484,6 +484,18 @@ const toolGovernance = {
     type: 'guide',
     regulatory: true,
   },
+  'pr-readiness-checker-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+  },
 };
 
 
@@ -1326,6 +1338,27 @@ const toolDefinitions = [
     badge: '入管・家族',
     popular: true,
     tags: ['visa', 'immigration', 'family', 'kazoku taizai', 'dependent', 'bảo lãnh', 'gia đình', 'coe', '28h', '家族滞在', '入管', 'japan life']
+  },
+  {
+    id: 'pr-readiness-checker-jp',
+    name_vn: 'Đánh Giá Điều Kiện Vĩnh Trú',
+    name_en: 'Permanent Residence Readiness Checker',
+    name_ja: '永住申請準備度チェッカー',
+    desc_vn: 'Tự đánh giá 6 điều kiện xin Vĩnh trú Nhật Bản: thời gian cư trú, thời hạn visa 3-5 năm, lịch sử đóng thuế, Nenkin & BHYT 2-5 năm không trễ hạn.',
+    desc_en: 'Self-assessment for Japan Permanent Residence: residence duration, 3-5yr visa, 100% on-time tax, pension & health insurance compliance.',
+    desc_ja: '日本の永住許可申請における主要6要件（居住年数、3年以上の在留期間、税金・年金・保険の完全期日内納付、年収基準等）の準備度をセルフチェック。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+    icon: 'Award',
+    gradient: 'from-amber-600 via-yellow-600 to-amber-700',
+    color: '#d97706',
+    badge: '入管・永住',
+    popular: true,
+    tags: ['visa', 'immigration', 'permanent residence', 'eijuu', 'vĩnh trú', 'nenkin', 'tax', 'hsp', 'tokurei', '永住許可', '入管', 'japan life']
   },
   {
     id: 'watermark-studio',

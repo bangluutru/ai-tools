@@ -110,7 +110,7 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   const japanTools = toolsForGroup(tools, 'japan-life');
   assert.deepEqual(
     japanTools.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp', 'moving-cost-jp', 'moving-admin-checker-jp', 'address-change-checklist-jp', 'moving-wizard-jp', 'work-scope-checker-jp', 'residence-renewal-guide-jp', 'affiliation-change-checker-jp', 'status-change-guide-jp', 'family-immigration-guide-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp', 'moving-cost-jp', 'moving-admin-checker-jp', 'address-change-checklist-jp', 'moving-wizard-jp', 'work-scope-checker-jp', 'residence-renewal-guide-jp', 'affiliation-change-checker-jp', 'status-change-guide-jp', 'family-immigration-guide-jp', 'pr-readiness-checker-jp'].sort()
   );
 
   const commonTools = toolsForGroup(tools, 'common');
@@ -118,13 +118,13 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   assert.equal(commonTools.every((t) => t.group === 'common'), true);
 
   const allTools = toolsForGroup(tools, ALL_GROUPS);
-  assert.equal(allTools.length, 42);
+  assert.equal(allTools.length, 43);
 
   // filterTools combined
   const officeJapan = filterTools(tools, { category: 'office', group: 'japan-life' });
   assert.deepEqual(
     officeJapan.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp', 'moving-cost-jp', 'moving-admin-checker-jp', 'address-change-checklist-jp', 'moving-wizard-jp', 'work-scope-checker-jp', 'residence-renewal-guide-jp', 'affiliation-change-checker-jp', 'status-change-guide-jp', 'family-immigration-guide-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp', 'moving-cost-jp', 'moving-admin-checker-jp', 'address-change-checklist-jp', 'moving-wizard-jp', 'work-scope-checker-jp', 'residence-renewal-guide-jp', 'affiliation-change-checker-jp', 'status-change-guide-jp', 'family-immigration-guide-jp', 'pr-readiness-checker-jp'].sort()
   );
 
   const officeCommon = filterTools(tools, { category: 'office', group: 'common' });
