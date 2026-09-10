@@ -59,3 +59,12 @@ export {
   getIntentById,
   resolveIntentFromText,
 } from './intent/intentResolver.js';
+
+// Canonical Life Events Registry
+export {
+  CANONICAL_LIFE_EVENTS,
+  getCanonicalLifeEventId,
+  getLifeEventById,
+  getLifeEventRuntime,
+  getAllLifeEvents,
+} from './lifeEvents/lifeEventRegistry.js';
