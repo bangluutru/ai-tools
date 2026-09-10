@@ -372,9 +372,9 @@ export function JapanLifeNavigatorView({ lang = 'vi' }) {
                         <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
                           <IconComponent className="w-5 h-5" />
                         </div>
-                        <StatusBadge variant="cyan">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-surface-container-high text-on-surface border border-outline/30">
                           {def.stages ? `${def.stages.length} Stages` : 'Journey'}
-                        </StatusBadge>
+                        </span>
                       </div>
 
                       <h4 className="font-semibold text-on-surface text-sm group-hover:text-primary transition-colors">
