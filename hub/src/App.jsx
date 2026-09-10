@@ -65,6 +65,7 @@ const ChildcareBenefitTool = lazy(() => import('./tools/childcare-benefit-jp/Chi
 const ChildAllowanceTool = lazy(() => import('./tools/child-allowance-jp/ChildAllowanceTool.jsx'));
 const BirthWizardTool = lazy(() => import('./tools/birth-wizard-jp/BirthWizardTool.jsx'));
 const MovingCostTool = lazy(() => import('./tools/moving-cost-jp/MovingCostTool.jsx'));
+const MovingAdminCheckerTool = lazy(() => import('./tools/moving-admin-checker-jp/MovingAdminCheckerTool.jsx'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
 const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
 const FlappyBirdPet = lazy(() => import('./components/FlappyBirdPet'));
@@ -105,6 +106,7 @@ const toolComponentMap = {
   'child-allowance-jp': ChildAllowanceTool,
   'birth-wizard-jp': BirthWizardTool,
   'moving-cost-jp': MovingCostTool,
+  'moving-admin-checker-jp': MovingAdminCheckerTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,
   'flappy-bird': FlappyBirdTool,
   'toolio-ninja': ToolioNinjaTool

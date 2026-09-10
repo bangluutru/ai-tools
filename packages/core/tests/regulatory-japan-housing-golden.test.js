@@ -15,6 +15,10 @@ import {
   SEASONALITY,
   TIME_SLOTS,
   ADDON_SERVICES,
+
+  // Moving Admin
+  evaluateMovingAdminProcedures,
+  STATUTORY_DEADLINES,
 } from '../src/japan/housing/index.js';
 
 test('Milestone 4: 引越し費用シミュレーター (Moving Cost Simulator Golden Tests)', async (t) => {
@@ -123,3 +127,106 @@ test('Milestone 4: 引越し費用シミュレーター (Moving Cost Simulator G
     assert.ok(result.estimates.averageEstimate > 0);
   });
 });
+
+test('Milestone 5: 引越し行政手続きナビ (Moving Admin Procedures Golden Tests)', async (t) => {
+  // Case 1: Different municipality with My Number Card (One-Stop Eligible)
+  await t.test('M5-01: Chuyển khác quận có thẻ My Number: đủ điều kiện Một Cửa MyNaPortal, Tenshutsu online, Tennyu bắt buộc trực tiếp', () => {
+    const result = evaluateMovingAdminProcedures({
+      movingType: 'different_municipality',
+      hasMyNumberCard: true,
+      moveDate: '2026-10-01',
+    });
+
+    assert.equal(result.onestop.eligible, true);
+    assert.equal(result.onestop.canSubmitTenshutsuOnline, true);
+    assert.equal(result.onestop.requiresPhysicalTennyu, true);
+    assert.equal(result.deadlines.tenshutsuStart, '2026-09-17');
+    assert.equal(result.deadlines.finalDeadline, '2026-10-15');
+
+    const tenshutsuStep = result.steps.find((s) => s.id === 'step_tenshutsu');
+    assert.ok(tenshutsuStep);
+    assert.equal(tenshutsuStep.isOnline, true);
+
+    const tennyuStep = result.steps.find((s) => s.id === 'step_tennyu');
+    assert.ok(tennyuStep);
+    assert.equal(tennyuStep.isOnline, false);
+  });
+
+  // Case 2: Different municipality WITHOUT My Number Card
+  await t.test('M5-02: Chuyển khác quận KHÔNG có thẻ My Number: không dùng được Một Cửa, bắt buộc ra quầy cũ nhận Tenshutsu Shomeisho', () => {
+    const result = evaluateMovingAdminProcedures({
+      movingType: 'different_municipality',
+      hasMyNumberCard: false,
+      moveDate: '2026-10-01',
+    });
+
+    assert.equal(result.onestop.eligible, false);
+    assert.equal(result.onestop.canSubmitTenshutsuOnline, false);
+
+    const tenshutsuDoc = result.requiredDocuments.find((d) => d.id === 'tenshutsu_cert');
+    assert.ok(tenshutsuDoc);
+    assert.equal(tenshutsuDoc.mandatory, true);
+  });
+
+  // Case 3: Statutory 14-day deadline & Overdue warning
+  await t.test('M5-03: Cảnh báo quá hạn 14 ngày luật định: phạt tiền đến 50.000円 theo Điều 52 Luật Sổ bộ Cư trú', () => {
+    // Move date in the past (> 20 days ago)
+    const result = evaluateMovingAdminProcedures({
+      movingType: 'different_municipality',
+      hasMyNumberCard: true,
+      moveDate: '2026-01-01',
+    });
+
+    assert.equal(result.deadlines.isOverdue, true);
+    assert.ok(result.deadlines.daysRemaining < 0);
+
+    const dangerWarning = result.warnings.find((w) => w.level === 'danger');
+    assert.ok(dangerWarning);
+    assert.ok(dangerWarning.contentJa.includes('5万円'));
+  });
+
+  // Case 4: Household with Children (15-day rule for Child Allowance)
+  await t.test('M5-04: Hộ có trẻ em: kích hoạt quy tắc đặc quyền 15 ngày nộp hồ sơ Trợ cấp Trẻ em (15日特例)', () => {
+    const result = evaluateMovingAdminProcedures({
+      movingType: 'different_municipality',
+      hasChildren: true,
+      moveDate: '2026-10-01',
+    });
+
+    const childStep = result.steps.find((s) => s.id === 'step_child_allowance');
+    assert.ok(childStep);
+    assert.equal(childStep.deadlineDate, '2026-10-16'); // 15 days from Oct 1
+
+    const boshiDoc = result.requiredDocuments.find((d) => d.id === 'boshi_techo');
+    assert.ok(boshiDoc);
+  });
+
+  // Case 5: Foreign Resident (Zairyu Card Endorsement)
+  await t.test('M5-05: Người nước ngoài cư trú: bắt buộc in địa chỉ mới vào mặt sau Thẻ Ngoại Kiều trong 14 ngày', () => {
+    const result = evaluateMovingAdminProcedures({
+      movingType: 'different_municipality',
+      isForeignResident: true,
+      moveDate: '2026-10-01',
+    });
+
+    const zairyuStep = result.steps.find((s) => s.id === 'step_zairyu_endorsement');
+    assert.ok(zairyuStep);
+
+    const zairyuDoc = result.requiredDocuments.find((d) => d.id === 'zairyu_card');
+    assert.ok(zairyuDoc);
+  });
+
+  // Case 6: Same municipality (Tenkyo)
+  await t.test('M5-06: Chuyển trong cùng quận/thành phố: chỉ làm thủ tục Tenkyo trong 14 ngày, không phát sinh Tenshutsu', () => {
+    const result = evaluateMovingAdminProcedures({
+      movingType: 'same_municipality',
+      moveDate: '2026-10-01',
+    });
+
+    assert.equal(result.isDifferentMunicipality, false);
+    const tenkyoStep = result.steps.find((s) => s.id === 'step_tenkyo');
+    assert.ok(tenkyoStep);
+    assert.equal(result.steps.some((s) => s.id === 'step_tenshutsu'), false);
+  });
+});
+

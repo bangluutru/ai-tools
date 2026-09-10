@@ -44,7 +44,8 @@ import {
   Truck,
   Home,
   ClipboardCheck,
-  Boxes
+  Boxes,
+  Building2
 } from 'lucide-react';
 
 
@@ -94,7 +95,8 @@ export const iconMap = {
   Truck,
   Home,
   ClipboardCheck,
-  Boxes
+  Boxes,
+  Building2
 };
 
 

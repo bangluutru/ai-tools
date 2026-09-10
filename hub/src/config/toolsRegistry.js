@@ -387,6 +387,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'simulator',
     regulatory: true,
+  },
+  'moving-admin-checker-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'housing',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
   }
 };
 
@@ -1062,6 +1074,27 @@ const toolDefinitions = [
     badge: '住まい',
     popular: true,
     tags: ['引越し', '引越し費用', '相場', 'トラック', '標準引越運送約款', 'moving cost', 'chuyển nhà', 'cước phí', 'japan life', 'housing']
+  },
+  {
+    id: 'moving-admin-checker-jp',
+    name_vn: 'Thủ Tục Hành Chính Chuyển Nhà',
+    name_en: 'Moving Administrative Checker',
+    name_ja: '引越し行政手続きナビ',
+    desc_vn: 'Kiểm tra hạn chót luật định 14 ngày cho 転出届 (chuyển đi), 転入届 (chuyển đến), 転居届 (đổi địa chỉ). Hướng dẫn dịch vụ Một Cửa chuyển nhà online trên MyNaPortal.',
+    desc_en: 'Check statutory 14-day deadlines for moving-out (Tenshutsu) and moving-in (Tennyu). Guidance for MyNaPortal Online Moving One-Stop Service.',
+    desc_ja: '住民基本台帳法に基づく転出届・転入届・転居届の法定14日期限とマイナポータル「引越しワンストップサービス」の判定ナビ。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'housing',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+    icon: 'Building2',
+    gradient: 'from-blue-600 via-indigo-600 to-sky-600',
+    color: '#2563eb',
+    badge: '行政ナビ',
+    popular: true,
+    tags: ['引越し', '転出届', '転入届', '転居届', 'マイナポータル', 'ワンストップ', '住民基本台帳法', 'moving procedure', 'thủ tục chuyển nhà', 'chuyển khẩu', 'japan life', 'housing']
   },
   {
     id: 'watermark-studio',
