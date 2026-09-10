@@ -496,6 +496,18 @@ const toolGovernance = {
     type: 'checker',
     regulatory: true,
   },
+  'arriving-in-japan-wizard-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'wizard',
+    regulatory: true,
+  },
 };
 
 
@@ -1359,6 +1371,27 @@ const toolDefinitions = [
     badge: '入管・永住',
     popular: true,
     tags: ['visa', 'immigration', 'permanent residence', 'eijuu', 'vĩnh trú', 'nenkin', 'tax', 'hsp', 'tokurei', '永住許可', '入管', 'japan life']
+  },
+  {
+    id: 'arriving-in-japan-wizard-jp',
+    name_vn: 'Hướng Dẫn Cho Người Mới Sang Nhật',
+    name_en: 'Arriving in Japan Setup Guide',
+    name_ja: '来日後セットアップガイド',
+    desc_vn: 'Lộ trình hướng dẫn các thủ tục pháp định tại sân bay, tòa thị chính trong 14 ngày (đăng ký địa chỉ, My Number, Nenkin/BHYT), mở ngân hàng, SIM và thủ tục công ty.',
+    desc_en: 'Comprehensive newcomer setup guide for airport landing, 14-day municipal registration (address, My Number, health/pension), bank, SIM, and employer tax onboarding.',
+    desc_ja: '新規入国時の空港手続き、14日以内の役所住民登録（住居地届出、マイナンバー、年金・国保）、銀行口座・格安SIM、勤務先提出を網羅するガイド。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'wizard',
+    regulatory: true,
+    icon: 'PlaneLanding',
+    gradient: 'from-sky-600 via-blue-600 to-indigo-700',
+    color: '#0284c7',
+    badge: '入管・生活',
+    popular: true,
+    tags: ['visa', 'immigration', 'arrival', 'newcomer', 'mới sang nhật', '14 ngày', 'tòa thị chính', 'yucho', 'sim', '來日', '住民登録', '入管', 'japan life']
   },
   {
     id: 'watermark-studio',

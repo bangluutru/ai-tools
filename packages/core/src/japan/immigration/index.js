@@ -40,4 +40,10 @@ export * from './family/familyEngine.js';
 export * from './permanentResidence/prRules.js';
 export * from './permanentResidence/prEngine.js';
 
+// M7: Arriving in Japan Setup Guide (来日後セットアップガイド - 4th Life Event)
+export * from './arrival/arrivalRules.js';
+export * from './arrival/arrivalEngine.js';
+export * from './arrival/arrivalDefinition.js';
+
+
 

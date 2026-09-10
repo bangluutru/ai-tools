@@ -74,6 +74,7 @@ const AffiliationChangeCheckerTool = lazy(() => import('./tools/affiliation-chan
 const StatusChangeGuideTool = lazy(() => import('./tools/status-change-guide-jp/StatusChangeGuideTool.jsx'));
 const FamilyImmigrationGuideTool = lazy(() => import('./tools/family-immigration-guide-jp/FamilyImmigrationGuideTool.jsx'));
 const PermanentResidenceReadinessTool = lazy(() => import('./tools/pr-readiness-checker-jp/PermanentResidenceReadinessTool.jsx'));
+const ArrivingInJapanWizardTool = lazy(() => import('./tools/arriving-in-japan-wizard-jp/ArrivingInJapanWizardTool.jsx'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
 const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
 const FlappyBirdPet = lazy(() => import('./components/FlappyBirdPet'));
@@ -123,6 +124,7 @@ const toolComponentMap = {
   'status-change-guide-jp': StatusChangeGuideTool,
   'family-immigration-guide-jp': FamilyImmigrationGuideTool,
   'pr-readiness-checker-jp': PermanentResidenceReadinessTool,
+  'arriving-in-japan-wizard-jp': ArrivingInJapanWizardTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,
   'flappy-bird': FlappyBirdTool,
   'toolio-ninja': ToolioNinjaTool
