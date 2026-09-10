@@ -472,6 +472,18 @@ const toolGovernance = {
     type: 'guide',
     regulatory: true,
   },
+  'family-immigration-guide-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'guide',
+    regulatory: true,
+  },
 };
 
 
@@ -1293,6 +1305,27 @@ const toolDefinitions = [
     badge: '入管・在留',
     popular: true,
     tags: ['visa', 'immigration', 'status change', 'henkou', 'đổi visa', 'gijinkoku', 'chuyển visa', 'tokurei', '在留資格変更', '入管', 'japan life']
+  },
+  {
+    id: 'family-immigration-guide-jp',
+    name_vn: 'Hướng Dẫn Bảo Lãnh Gia Đình',
+    name_en: 'Family & Dependent Visa Guide',
+    name_ja: '家族滞在・家族呼寄せガイド',
+    desc_vn: 'Hướng dẫn bảo lãnh vợ/chồng, con cái sang Nhật (COE), thủ tục cho trẻ mới sinh tại Nhật (Điều 22-2) và quy định làm thêm 28h.',
+    desc_en: 'Statutory guide for sponsoring spouse and children to Japan (COE), newborn status acquisition (Art. 22-2), and 28h part-time rules.',
+    desc_ja: '配偶者・子の家族滞在ビザ呼寄せ（COE）、日本出生児の在留資格取得（22条の2）、週28時間アルバイト要件を判定。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'guide',
+    regulatory: true,
+    icon: 'HeartHandshake',
+    gradient: 'from-pink-600 via-rose-600 to-red-600',
+    color: '#e11d48',
+    badge: '入管・家族',
+    popular: true,
+    tags: ['visa', 'immigration', 'family', 'kazoku taizai', 'dependent', 'bảo lãnh', 'gia đình', 'coe', '28h', '家族滞在', '入管', 'japan life']
   },
   {
     id: 'watermark-studio',

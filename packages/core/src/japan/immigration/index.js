@@ -32,4 +32,8 @@ export * from './affiliation/affiliationEngine.js';
 export * from './statusChange/statusChangeRules.js';
 export * from './statusChange/statusChangeEngine.js';
 
+// M5: Family Immigration Guide (家族滞在・家族呼寄せガイド)
+export * from './family/familyRules.js';
+export * from './family/familyEngine.js';
+
 
