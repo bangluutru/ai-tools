@@ -344,7 +344,8 @@ test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and
     'moving-admin-checker-jp',
     'address-change-checklist-jp',
     'moving-wizard-jp',
-    'work-scope-checker-jp'
+    'work-scope-checker-jp',
+    'residence-renewal-guide-jp'
   ];
 
 

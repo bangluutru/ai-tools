@@ -19,3 +19,8 @@ export * from './status/statusCatalog.js';
 // M1: Work Scope Checker (在留資格・就労範囲チェッカー)
 export * from './workScope/workScopeRules.js';
 export * from './workScope/workScopeEngine.js';
+
+// M2: Residence Renewal Guide (在留期間更新ガイド)
+export * from './renewal/renewalRules.js';
+export * from './renewal/renewalEngine.js';
+

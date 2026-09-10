@@ -436,6 +436,18 @@ const toolGovernance = {
     type: 'checker',
     regulatory: true,
   },
+  'residence-renewal-guide-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'guide',
+    regulatory: true,
+  },
 };
 
 
@@ -1194,6 +1206,27 @@ const toolDefinitions = [
     badge: '入管・在留',
     popular: true,
     tags: ['在留資格', '就労範囲', 'ビザ', '資格外活動許可', '週28時間', '技人国', '留学', '家族滞在', '永住者', '入管', 'work scope', 'residence status', 'visa nhật', 'phạm vi làm việc', 'japan life', 'immigration']
+  },
+  {
+    id: 'residence-renewal-guide-jp',
+    name_vn: 'Hướng Dẫn Gia Hạn Lưu Trú',
+    name_en: 'Residence Renewal Guide',
+    name_ja: '在留期間更新ガイド',
+    desc_vn: 'Tính toán cửa sổ nộp hồ sơ gia hạn (3 tháng trước), thời kỳ đặc lệ (Tokurei Kikan), lệ phí và danh mục hồ sơ giấy tờ.',
+    desc_en: 'Calculate renewal filing windows, Tokurei Kikan grace period, official fees, and customized document checklist.',
+    desc_ja: '在留期間更新の申請受付開始日、特例期間満了日、手数料、必要書類チェックリストを公的基準で自動算出。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'guide',
+    regulatory: true,
+    icon: 'Calendar',
+    gradient: 'from-blue-600 via-indigo-600 to-violet-600',
+    color: '#2563eb',
+    badge: '入管・在留',
+    popular: true,
+    tags: ['visa', 'immigration', 'renewal', 'tokurei', 'gia hạn', 'thẻ cư trú', 'isa', '在留期間更新', '入管', 'japan life']
   },
   {
     id: 'watermark-studio',
