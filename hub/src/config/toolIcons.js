@@ -31,7 +31,8 @@ import {
   Gamepad2,
   Swords,
   Coins,
-  ShieldCheck
+  ShieldCheck,
+  PiggyBank
 } from 'lucide-react';
 
 export const iconMap = {
@@ -66,7 +67,8 @@ export const iconMap = {
   Gamepad2,
   Swords,
   Coins,
-  ShieldCheck
+  ShieldCheck,
+  PiggyBank
 };
 
 /**

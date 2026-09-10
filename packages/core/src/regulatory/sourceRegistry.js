@@ -104,6 +104,18 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     status: 'official-primary',
     notes: 'Phí bảo hiểm hưu trí quốc dân 令和8年度 (áp dụng từ 01/04/2026 đến 31/03/2027): 17,920円/tháng.'
   },
+  'jps-national-pension-exemption-2026': {
+    id: 'jps-national-pension-exemption-2026',
+    country: 'JP',
+    authority: '日本年金機構 (Japan Pension Service)',
+    title: '国民年金保険料の免除制度・納付猶予制度・学生納付特例',
+    url: 'https://www.nenkin.go.jp/service/kokunen/menjo/index.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Quy định miễn giảm phí BH Hưu trí Quốc dân: Miễn toàn bộ, 3/4, 1/2, 1/4, hoãn đóng dưới 50 tuổi và đặc lệ sinh viên. Quy tắc truy đóng (追納) trong vòng 10 năm.'
+  },
   'mhlw-employment-rate-2026': {
     id: 'mhlw-employment-rate-2026',
     country: 'JP',

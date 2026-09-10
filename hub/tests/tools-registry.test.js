@@ -136,8 +136,8 @@ test('every miniapp has a valid product group defaulting safely to common', () =
   const japanLifeTools = tools.filter((t) => t.group === 'japan-life');
   assert.deepEqual(
     japanLifeTools.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp'].sort(),
-    'japan-life group contains japan-tax-simulator, social-insurance-jp and social-insurance-eligibility-jp',
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp'].sort(),
+    'japan-life group contains japan-tax-simulator, social-insurance-jp, social-insurance-eligibility-jp and national-pension-jp',
   );
 
   const jTax = tools.find((t) => t.id === 'japan-tax-simulator');
@@ -160,6 +160,13 @@ test('every miniapp has a valid product group defaulting safely to common', () =
   assert.equal(jElig.domain, 'insurance');
   assert.equal(jElig.type, 'checker');
   assert.equal(jElig.regulatory, true);
+
+  const jPen = tools.find((t) => t.id === 'national-pension-jp');
+  assert.equal(jPen.group, 'japan-life');
+  assert.equal(jPen.country, 'JP');
+  assert.equal(jPen.domain, 'insurance');
+  assert.equal(jPen.type, 'calculator');
+  assert.equal(jPen.regulatory, true);
 
   // All other tools must be in common group
   const commonTools = tools.filter((t) => t.group === 'common');

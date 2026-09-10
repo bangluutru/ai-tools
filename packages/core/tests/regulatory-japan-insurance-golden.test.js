@@ -16,6 +16,8 @@ import {
   resolveCareInsuranceRate,
   resolveChildSupportRate,
   evaluateSocialInsuranceEligibility,
+  calculateNationalPension,
+  getNationalPensionSchedule,
 } from '../src/japan/insurance/index.js';
 
 test('Japan Insurance Golden 1: Standard remuneration boundary tests (Kenpo & Pension)', () => {
@@ -352,4 +354,95 @@ test('Japan Insurance Golden 14: Eligibility - Age boundaries (72 and 76 years o
   assert.equal(e76.applicableInsurances.healthInsurance, false);
   assert.equal(e76.applicableInsurances.welfarePension, false);
 });
+
+test('Japan Insurance Golden 15: National Pension - FY2026 vs FY2025 monthly rate resolution', () => {
+  // FY2025: 17,510 JPY
+  const s2025 = getNationalPensionSchedule('2026-03-31');
+  assert.equal(s2025.monthlyPremium, 17510);
+  assert.equal(s2025.effectiveFrom, '2025-04-01');
+
+  // FY2026: 17,920 JPY
+  const s2026 = getNationalPensionSchedule('2026-04-01');
+  assert.equal(s2026.monthlyPremium, 17920);
+  assert.equal(s2026.effectiveFrom, '2026-04-01');
+  assert.equal(s2026.sourceId, 'jps-national-pension-2026');
+});
+
+test('Japan Insurance Golden 16: National Pension - Advance payment discounts (前納割引)', () => {
+  // 1 year advance via bank account transfer
+  const adv1yr = calculateNationalPension({
+    applicableDate: '2026-05-01',
+    exemptionType: 'none',
+    months: 12,
+    advancePaymentPlan: 'one_year',
+    advancePaymentMethod: 'account_transfer'
+  });
+  assert.equal(adv1yr.success, true);
+  assert.equal(adv1yr.baseMonthlyPremium, 17920);
+  assert.equal(adv1yr.advanceCalculation.grossAmount, 17920 * 12); // 215,040 JPY
+  assert.equal(adv1yr.advanceCalculation.discountAmount, 4160); // Official JPS discount
+  assert.equal(adv1yr.advanceCalculation.netPayableAmount, 215040 - 4160); // 210,880 JPY
+  assert.equal(adv1yr.advanceCalculation.savingsPercentage, 1.93);
+
+  // 2 years advance via account transfer
+  const adv2yr = calculateNationalPension({
+    applicableDate: '2026-05-01',
+    exemptionType: 'none',
+    months: 24,
+    advancePaymentPlan: 'two_years',
+    advancePaymentMethod: 'account_transfer'
+  });
+  assert.equal(adv2yr.advanceCalculation.grossAmount, 17920 * 24); // 430,080 JPY
+  assert.equal(adv2yr.advanceCalculation.discountAmount, 16590);
+  assert.equal(adv2yr.advanceCalculation.netPayableAmount, 430080 - 16590); // 413,490 JPY
+});
+
+test('Japan Insurance Golden 17: National Pension - Exemption types and benefit reflection', () => {
+  // Regular: pays 17,920 JPY, reflection 100%
+  const reg = calculateNationalPension({ applicableDate: '2026-05-01', exemptionType: 'none' });
+  assert.equal(reg.totalMonthlyContribution, 17920);
+  assert.equal(reg.exemption.benefitReflectionPercent, 100);
+
+  // 1/4 exempt: pays 3/4 (13,440 JPY), reflection 87.5% (7/8)
+  const qtr = calculateNationalPension({ applicableDate: '2026-05-01', exemptionType: 'quarter_exempt' });
+  assert.equal(qtr.totalMonthlyContribution, 13440);
+  assert.equal(qtr.exemption.benefitReflectionPercent, 87.5);
+
+  // Half exempt: pays 1/2 (8,960 JPY), reflection 75% (6/8)
+  const half = calculateNationalPension({ applicableDate: '2026-05-01', exemptionType: 'half_exempt' });
+  assert.equal(half.totalMonthlyContribution, 8960);
+  assert.equal(half.exemption.benefitReflectionPercent, 75);
+
+  // 3/4 exempt: pays 1/4 (4,480 JPY), reflection 62.5% (5/8)
+  const threeQtr = calculateNationalPension({ applicableDate: '2026-05-01', exemptionType: 'three_quarters_exempt' });
+  assert.equal(threeQtr.totalMonthlyContribution, 4480);
+  assert.equal(threeQtr.exemption.benefitReflectionPercent, 62.5);
+
+  // Full exempt: pays 0 JPY, reflection 50% (4/8) from treasury
+  const full = calculateNationalPension({ applicableDate: '2026-05-01', exemptionType: 'full_exempt' });
+  assert.equal(full.totalMonthlyContribution, 0);
+  assert.equal(full.exemption.benefitReflectionPercent, 50);
+
+  // Deferment & Student: pays 0 JPY, reflection 0% (counts towards qualifying years)
+  const def = calculateNationalPension({ applicableDate: '2026-05-01', exemptionType: 'deferment' });
+  assert.equal(def.totalMonthlyContribution, 0);
+  assert.equal(def.exemption.benefitReflectionPercent, 0);
+  assert.equal(def.exemption.qualifyingMonthsCredited, true);
+  assert.equal(def.retroactiveAdvice.canBackpay, true);
+});
+
+test('Japan Insurance Golden 18: National Pension - Additional Pension (付加年金 400円/月)', () => {
+  const addPen = calculateNationalPension({
+    applicableDate: '2026-05-01',
+    exemptionType: 'none',
+    withAdditionalPension: true,
+    months: 12
+  });
+  // Monthly: 17,920 + 400 = 18,320 JPY
+  assert.equal(addPen.totalMonthlyContribution, 18320);
+  assert.equal(addPen.standardPeriodTotal, 18320 * 12);
+  // Annual benefit increase: 200 JPY/year * 12 months = 2,400 JPY/year
+  assert.equal(addPen.additionalPensionAnnualReturn, 2400);
+});
+
 

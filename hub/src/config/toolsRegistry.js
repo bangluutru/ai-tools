@@ -231,6 +231,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'checker',
     regulatory: true,
+  },
+  'national-pension-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'insurance',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
   }
 };
 
@@ -632,6 +644,27 @@ const toolDefinitions = [
     badge: '判定チェッカー',
     popular: true,
     tags: ['社会保険加入判定', '106万円の壁', '短時間労働者', 'パート', 'アルバイト', '厚生年金', '健康保険', 'eligibility', 'bảo hiểm', 'shakai hoken', 'japan life', 'office']
+  },
+  {
+    id: 'national-pension-jp',
+    name_vn: 'Tra Cứu & Tính Phí Hưu Trí Quốc Dân',
+    name_en: 'Japan National Pension Guide & Simulator',
+    name_ja: '国民年金ガイド＆保険料シミュレーター',
+    desc_vn: 'Tra cứu biểu phí Hưu trí Quốc dân FY2026 (17,920円/tháng), mức chiết khấu nộp trước (前納), tỷ lệ hưởng lương hưu theo các mức miễn giảm (免除・猶予) và quy tắc truy đóng (追納). 100% xử lý nội bộ trình duyệt.',
+    desc_en: 'Simulate Japan National Pension FY2026 premiums (17,920 JPY/mo), advance payment discounts, old-age pension reflection under exemptions/deferments, and retroactive backpayments. 100% client-side.',
+    desc_ja: '令和8年度（月額17,920円）の国民年金保険料、前納割引額、全額・一部免除や学生納付特例における将来の年金額反映率、10年以内の追納ルールを精密試算・解説。100%ブラウザ完結。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'insurance',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
+    icon: 'PiggyBank',
+    gradient: 'from-amber-500 via-orange-500 to-rose-500',
+    color: '#f59e0b',
+    badge: '国民年金',
+    popular: true,
+    tags: ['国民年金', '年金', '保険料', '前納', '免除', '納付猶予', '学生納付特例', '追納', '付加年金', 'pension', 'hưu trí', 'bảo hiểm', 'japan life', 'office']
   },
   {
     id: 'watermark-studio',

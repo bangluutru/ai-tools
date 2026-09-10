@@ -21,6 +21,7 @@ export { default as TaxCalculatorView } from './components/TaxCalculatorView.jsx
 export { default as JapanTaxSimulatorView } from './components/JapanTaxSimulatorView.jsx';
 export { default as SocialInsuranceSimulatorView } from './components/insurance/SocialInsuranceSimulatorView.jsx';
 export { default as SocialInsuranceEligibilityView } from './components/insurance/SocialInsuranceEligibilityView.jsx';
+export { NationalPensionView } from './components/insurance/NationalPensionView.jsx';
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 
 // Core Hooks
