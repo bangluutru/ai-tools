@@ -730,22 +730,40 @@ export const ALLOWED_SOURCE_STATUSES = Object.freeze([
 ]);
 
 /**
- * Tra cứu thông tin nguồn chính thức theo id.
- * @param {string} sourceId - ID của nguồn
+ * Bảng ánh xạ bí danh (Aliases) sang mã nguồn chính thức (Canonical Source IDs).
+ * Đảm bảo tính tương thích và liên kết thông suốt giữa các components và quy chuẩn.
+ */
+export const SOURCE_ALIASES = Object.freeze({
+  'isa-act-art21': 'isa-ica-art21-renewal',
+  'isa-act-art20-para5': 'isa-ica-art21-renewal',
+  'isa-fee-table': 'isa-fee-schedule-2026',
+  'isa-photo-guidelines': 'isa-photo-req-2026',
+  'isa-renewal-doc-requirements': 'isa-ica-art21-renewal',
+  'isa-act-art19-16': 'isa-ica-art19-16-notification',
+  'isa-act-art22-4-para1-item6': 'isa-ica-art19-16-notification',
+  'isa-act-art19-2': 'isa-ica-art19-work-scope',
+});
+
+/**
+ * Tra cứu thông tin nguồn chính thức theo id hoặc alias.
+ * @param {string} sourceId - ID hoặc alias của nguồn
  * @returns {RegulatorySource|null} Object nguồn hoặc null nếu không tìm thấy
  */
 export function getSource(sourceId) {
   if (!sourceId) return null;
-  return OFFICIAL_SOURCE_REGISTRY[sourceId] || null;
+  const canonicalId = SOURCE_ALIASES[sourceId] || sourceId;
+  return OFFICIAL_SOURCE_REGISTRY[canonicalId] || null;
 }
 
 /**
- * Kiểm tra xem một sourceId có tồn tại trong registry chính thức không.
+ * Kiểm tra xem một sourceId hoặc alias có tồn tại trong registry chính thức không.
  * @param {string} sourceId
  * @returns {boolean}
  */
 export function hasSource(sourceId) {
-  return Boolean(sourceId && OFFICIAL_SOURCE_REGISTRY[sourceId]);
+  if (!sourceId) return false;
+  const canonicalId = SOURCE_ALIASES[sourceId] || sourceId;
+  return Boolean(OFFICIAL_SOURCE_REGISTRY[canonicalId]);
 }
 
 /**
