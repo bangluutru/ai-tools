@@ -18,7 +18,6 @@ import {
   Sliders,
   CheckCircle2,
   AlertCircle,
-  Globe2,
   ExternalLink,
 } from 'lucide-react';
 import {
@@ -42,8 +41,8 @@ const DEFAULT_FORM_VALUES = {
   prefecture: 'tokyo',
   age: 30,
   salary: 4500000,
-  businessRevenue: 8000000,
-  businessExpenses: 2500000,
+  businessRevenue: 0,
+  businessExpenses: 0,
   blueReturnOption: 'etax_65',
   businessCategoryId: 'type1_retail_dining',
   operatingMonths: 12,
@@ -57,7 +56,7 @@ const DEFAULT_FORM_VALUES = {
   consumptionMethod: 'standard',
   simplifiedCatId: 'cat5_service_it',
   taxablePurchases: 0,
-  corporateIncome: 6000000,
+  corporateIncome: 0,
   capital: 10000000,
   employeeCount: 5,
   hasSpouse: false,
@@ -68,12 +67,9 @@ const DEFAULT_FORM_VALUES = {
   isFirstYearHousingLoan: false,
 };
 
-export default function JapanTaxSimulatorView({ displayLang = 'ja' }) {
-  // Allow user to switch language locally, falling back to displayLang from Hub
-  const [userSelectedLang, setUserSelectedLang] = useState(null);
-  const currentLang = userSelectedLang || (['ja', 'vi', 'en'].includes(displayLang) ? displayLang : 'ja');
-  const setCurrentLang = setUserSelectedLang;
-
+export default function JapanTaxSimulatorView({ displayLang = 'vi' }) {
+  // SOT: Use global displayLang from Hub (fallback to 'vi' if not set or unsupported)
+  const currentLang = ['ja', 'vi', 'en'].includes(displayLang) ? displayLang : 'vi';
   const t = getTaxI18n(currentLang);
 
   // Form State
@@ -86,29 +82,59 @@ export default function JapanTaxSimulatorView({ displayLang = 'ja' }) {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  // Handle Profile Switch: adjust default revenues to reasonable defaults
+  // Handle Profile Switch: adjust default revenues to reasonable defaults and reset unrelated fields
   const handleSelectProfile = (newProfile) => {
     setFormValues((prev) => {
       const next = { ...prev, profile: newProfile };
       if (newProfile === 'part_time') {
         next.salary = 1200000;
+        next.businessRevenue = 0;
+        next.businessExpenses = 0;
+        next.sideIncomeRevenue = 0;
+        next.sideIncomeExpenses = 0;
+        next.hasSideIncome = false;
+        next.corporateIncome = 0;
       } else if (newProfile === 'employee') {
         next.salary = 4500000;
+        next.businessRevenue = 0;
+        next.businessExpenses = 0;
+        next.sideIncomeRevenue = 0;
+        next.sideIncomeExpenses = 0;
         next.hasSideIncome = false;
+        next.corporateIncome = 0;
       } else if (newProfile === 'employee_side') {
         next.salary = 4500000;
+        next.businessRevenue = 0;
+        next.businessExpenses = 0;
         next.hasSideIncome = true;
         next.sideIncomeRevenue = 600000;
         next.sideIncomeExpenses = 150000;
+        next.corporateIncome = 0;
       } else if (newProfile === 'freelance') {
+        next.salary = 0;
         next.businessRevenue = 5000000;
         next.businessExpenses = 1500000;
         next.blueReturnOption = 'white_0';
+        next.hasSideIncome = false;
+        next.sideIncomeRevenue = 0;
+        next.sideIncomeExpenses = 0;
+        next.corporateIncome = 0;
       } else if (newProfile === 'sole_proprietor') {
+        next.salary = 0;
         next.businessRevenue = 8000000;
         next.businessExpenses = 2500000;
         next.blueReturnOption = 'etax_65';
+        next.hasSideIncome = false;
+        next.sideIncomeRevenue = 0;
+        next.sideIncomeExpenses = 0;
+        next.corporateIncome = 0;
       } else if (newProfile === 'corporate') {
+        next.salary = 0;
+        next.businessRevenue = 0;
+        next.businessExpenses = 0;
+        next.hasSideIncome = false;
+        next.sideIncomeRevenue = 0;
+        next.sideIncomeExpenses = 0;
         next.corporateIncome = 6000000;
       }
       return next;
@@ -201,45 +227,6 @@ export default function JapanTaxSimulatorView({ displayLang = 'ja' }) {
             <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
               {t.appSubtitle}
             </p>
-          </div>
-
-          {/* Equal 3-Language Switcher */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0">
-            <div className="flex items-center p-1 bg-surface-container-high rounded-xl border border-border-subtle shadow-inner">
-              <button
-                type="button"
-                onClick={() => setCurrentLang('ja')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  currentLang === 'ja'
-                    ? 'bg-rose-600 text-white shadow-sm'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                🇯🇵 日本語
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrentLang('vi')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  currentLang === 'vi'
-                    ? 'bg-rose-600 text-white shadow-sm'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                🇻🇳 Tiếng Việt
-              </button>
-              <button
-                type="button"
-                onClick={() => setCurrentLang('en')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  currentLang === 'en'
-                    ? 'bg-rose-600 text-white shadow-sm'
-                    : 'text-on-surface-variant hover:text-on-surface'
-                }`}
-              >
-                🇬🇧 English
-              </button>
-            </div>
           </div>
         </div>
 
@@ -345,6 +332,7 @@ export default function JapanTaxSimulatorView({ displayLang = 'ja' }) {
             summary={simulationResult.summary}
             lang={currentLang}
             t={t}
+            onSelectDetail={(type) => setActiveTaxDetailId(type)}
           />
 
           {/* Applicable Taxes & Obligations Banner */}

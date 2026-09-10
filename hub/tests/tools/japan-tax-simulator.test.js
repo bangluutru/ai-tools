@@ -129,3 +129,42 @@ test('japan-tax-simulator CSV export functionality', () => {
   exportTaxSimulationCsv(sim, 'en');
   assert.equal(triggeredDownload, true);
 });
+
+test('japan-tax-simulator 47 prefectures coverage and JIS X 0401 ordering', async () => {
+  const { getAllPrefectures, getLocationRules } = await import('../../../packages/core/src/utils/tax/index.js');
+  const prefs = getAllPrefectures();
+  assert.equal(prefs.length, 47, 'Must register exactly 47 prefectures in Japan');
+  assert.equal(prefs[0].id, 'hokkaido', '01 must be Hokkaido');
+  assert.equal(prefs[12].id, 'tokyo', '13 must be Tokyo');
+  assert.equal(prefs[46].id, 'okinawa', '47 must be Okinawa');
+
+  // Verify no duplicate IDs or missing fields
+  const ids = new Set();
+  for (const p of prefs) {
+    assert.ok(!ids.has(p.id), `Duplicate prefecture id: ${p.id}`);
+    ids.add(p.id);
+    assert.ok(p.name_ja && p.name_vi && p.name_en, `Missing trilingual name for ${p.id}`);
+    const rules = getLocationRules(p.id);
+    assert.ok(rules.socialInsurance.kenpoRate > 0.08 && rules.socialInsurance.kenpoRate < 0.12, `Realistic BHYT rate for ${p.id}`);
+  }
+});
+
+test('japan-tax-simulator revenue isolation: employee_side ignores stale business revenue', () => {
+  const result = simulateJapanTaxes({
+    year: 2025,
+    profile: 'employee_side',
+    salary: 4500000,
+    sideIncomeRevenue: 600000,
+    sideIncomeExpenses: 150000,
+    // Stale fields from other profiles must NOT bleed in
+    businessRevenue: 8000000,
+    businessExpenses: 2500000,
+    corporateIncome: 6000000,
+  });
+
+  // Gross must strictly be salary (4.5M) + side income (600k) = 5.1M, NOT 13.1M
+  assert.equal(result.summary.grossEarnings, 5100000, 'Gross earnings must be 5,100,000 JPY');
+  // Taxes must reflect assessable income on 5.1M gross
+  assert.ok(result.summary.totalTaxes < 500000, 'Taxes on 5.1M gross should be under 500k JPY');
+  assert.ok(result.summary.netTakeHome > 4000000, 'Take home on 5.1M gross should be ~4.05M JPY');
+});

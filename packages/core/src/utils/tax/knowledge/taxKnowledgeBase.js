@@ -388,4 +388,110 @@ export const TaxKnowledgeBase = {
       ],
     },
   },
+
+  // 7. 総収入・総所得 (Gross Annual Earnings & Income Composition)
+  gross_earnings: {
+    title_ja: '総収入・所得の算出根拠 (額面年収・総売上)',
+    title_vi: 'Cơ Cấu Tổng Thu Nhập / Doanh Thu (Lương, Kinh Doanh, Việc Phụ)',
+    title_en: 'Gross Annual Earnings & Total Income Composition',
+    authority: '国税庁・厚生労働省',
+    category: 'summary',
+
+    level1: {
+      ja: '給与収入（額面）、事業売上、副業収入など、1年間に得たすべての収入の合計です。税法上は「総収入金額」から給与所得控除や必要経費を差し引いたものが「合計所得金額」となり、税金計算の基礎となります。',
+      vi: 'Tổng tất cả các nguồn tiền thu được trong năm trước khi trừ thuế và bảo hiểm: Lương Gross (額面), Doanh thu kinh doanh (売上), và Doanh thu từ việc làm thêm (副業). Trong luật thuế, sau khi trừ Khấu trừ tiền lương (給与所得控除) hoặc Chi phí thực tế sẽ hình thành Tổng thu nhập tính thuế (合計所得金額).',
+      en: 'The aggregate of all pre-tax earnings received in a calendar year, comprising gross salary, business revenue, and side income. Net taxable income is derived after subtracting statutory employment deductions or business expenses.',
+    },
+
+    getLevel2(calc) {
+      const summary = calc.summary || {};
+      const { salary = 0, businessRevenue = 0, businessExpenses = 0, sideIncomeRevenue = 0, sideIncomeExpenses = 0, employmentDeduction = 0, employmentIncome = 0, businessIncome = 0, sideIncome = 0, totalGrossIncome = 0 } = calc.incomeTax || {};
+      return {
+        ja: [
+          salary > 0 ? `① 給与年収（額面）: ¥${salary.toLocaleString()}（給与所得控除 ¥${employmentDeduction.toLocaleString()} 差引後の給与所得: ¥${employmentIncome.toLocaleString()}）` : null,
+          sideIncomeRevenue > 0 ? `② 副業収入: 売上 ¥${sideIncomeRevenue.toLocaleString()} − 経費 ¥${sideIncomeExpenses.toLocaleString()} = 雑所得 ¥${sideIncome.toLocaleString()}` : null,
+          businessRevenue > 0 ? `③ 事業売上: ¥${businessRevenue.toLocaleString()} − 経費 ¥${businessExpenses.toLocaleString()} = 事業所得（控除前） ¥${(businessRevenue - businessExpenses).toLocaleString()}` : null,
+          `④ 総合計収入（総額面）: ¥${(summary.grossEarnings || 0).toLocaleString()}`,
+          `⑤ 課税基準となる合計所得金額: ¥${totalGrossIncome.toLocaleString()}（税金計算のスタート地点）`,
+        ].filter(Boolean),
+        vi: [
+          salary > 0 ? `① Thu nhập tiền lương (Gross): ¥${salary.toLocaleString()} (Sau khi trừ Giảm trừ tiền lương ¥${employmentDeduction.toLocaleString()} còn Thu nhập lương: ¥${employmentIncome.toLocaleString()})` : null,
+          sideIncomeRevenue > 0 ? `② Thu nhập việc phụ (副業): Doanh thu ¥${sideIncomeRevenue.toLocaleString()} − Chi phí ¥${sideIncomeExpenses.toLocaleString()} = Lợi nhuận ¥${sideIncome.toLocaleString()}` : null,
+          businessRevenue > 0 ? `③ Doanh thu kinh doanh: ¥${businessRevenue.toLocaleString()} − Chi phí ¥${businessExpenses.toLocaleString()} = Lợi nhuận trước thuế ¥${(businessRevenue - businessExpenses).toLocaleString()}` : null,
+          `④ Tổng thu nhập toàn diện (Gross): ¥${(summary.grossEarnings || 0).toLocaleString()}`,
+          `⑤ Tổng thu nhập chịu thuế hợp nhất (合計所得金額): ¥${totalGrossIncome.toLocaleString()} (Căn cứ để trừ gia cảnh & tính thuế)`,
+        ].filter(Boolean),
+        en: [
+          salary > 0 ? `① Annual Gross Salary: ¥${salary.toLocaleString()} (Minus Employment Deduction ¥${employmentDeduction.toLocaleString()} = Net Employment Income ¥${employmentIncome.toLocaleString()})` : null,
+          sideIncomeRevenue > 0 ? `② Side Business Income: Revenue ¥${sideIncomeRevenue.toLocaleString()} − Expenses ¥${sideIncomeExpenses.toLocaleString()} = Profit ¥${sideIncome.toLocaleString()}` : null,
+          businessRevenue > 0 ? `③ Business Gross Sales: ¥${businessRevenue.toLocaleString()} − Expenses ¥${businessExpenses.toLocaleString()} = Net Profit ¥${(businessRevenue - businessExpenses).toLocaleString()}` : null,
+          `④ Aggregate Gross Annual Earnings: ¥${(summary.grossEarnings || 0).toLocaleString()}`,
+          `⑤ Total Assessable Income (合計所得金額): ¥${totalGrossIncome.toLocaleString()} (Starting point for tax deductions)`,
+        ].filter(Boolean),
+      };
+    },
+
+    level3: {
+      legalArticles_ja: '所得税法第28条（給与所得控除）、第35条（雑所得）、第27条（事業所得）、国税通則法第118条',
+      legalArticles_vi: 'Luật Thuế thu nhập Nhật Bản Điều 28 (Khấu trừ tiền lương), Điều 35 (Thu nhập vãng lai/việc phụ), Điều 27 (Thu nhập kinh doanh) và Luật Quản lý thuế Quốc gia Điều 118.',
+      legalArticles_en: 'Income Tax Act Art. 28 (Employment Income Deduction), Art. 35 (Miscellaneous Income), Art. 27 (Business Income), National Tax Collection Act Art. 118.',
+      links: [
+        { label: '国税庁: 給与所得控除 (No.1410)', url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm' },
+        { label: '国税庁: 副収入がある方の確定申告', url: 'https://www.nta.go.jp/taxes/shiraberu/shinkoku/tokushu/fukugyou.htm' },
+        { label: '国税庁: 所得の区分のあらまし (No.1300)', url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1300.htm' },
+      ],
+    },
+  },
+
+  // 8. 手取り額 (Net Take-Home Pay)
+  net_take_home: {
+    title_ja: '手取り額（可処分所得）の算出根拠',
+    title_vi: 'Căn Cứ Tính Tiền Thực Nhận Tay Về (手取り額 - Khả Dụng)',
+    title_en: 'Net Take-Home Pay & Cashflow Reconciliation',
+    authority: '国税庁・日本年金機構・地方自治体',
+    category: 'summary',
+
+    level1: {
+      ja: '総収入（額面年収・総売上）から、所得税・住民税などの公租公課および社会保険料（健康保険・年金・雇用保険）を差し引いた、実際に自由に使える金額（可処分所得）です。',
+      vi: 'Số tiền thực tế còn lại bạn được toàn quyền sử dụng sau khi đã trừ toàn bộ nghĩa vụ công khố: Thuế thu nhập, Thuế cư trú, Thuế tiêu thụ và các khoản Bảo hiểm xã hội bắt buộc (BHYT, Hưu trí, Thất nghiệp).',
+      en: 'The net disposable income remaining after deducting all mandatory public obligations, including national & local taxes and statutory social insurance contributions (health, pension, employment).',
+    },
+
+    getLevel2(calc) {
+      const { grossEarnings = 0, totalTaxes = 0, totalSocialInsurance = 0, netTakeHome = 0, effectiveBurdenRate = 0 } = calc.summary || {};
+      return {
+        ja: [
+          `① 年間総収入（額面総額）: ¥${grossEarnings.toLocaleString()}`,
+          `② 公租公課（税金合計）: − ¥${totalTaxes.toLocaleString()}（所得税・住民税・消費税等）`,
+          `③ 社会保険料（社保合計）: − ¥${totalSocialInsurance.toLocaleString()}（健康保険・厚生年金・雇用等）`,
+          `④ 年間手取り額（可処分所得）: ¥${netTakeHome.toLocaleString()}`,
+          `⑤ 実効公的負担率: ${(effectiveBurdenRate * 100).toFixed(1)}%（額面の ${((netTakeHome / (grossEarnings || 1)) * 100).toFixed(1)}% が手元に残ります）`,
+        ],
+        vi: [
+          `① Tổng thu nhập hàng năm (Gross): ¥${grossEarnings.toLocaleString()}`,
+          `② Tổng các loại thuế phải nộp: − ¥${totalTaxes.toLocaleString()} (Thuế TNCN, cư trú, tiêu thụ...)`,
+          `③ Tổng bảo hiểm xã hội đã trừ: − ¥${totalSocialInsurance.toLocaleString()} (BHYT, Quỹ hưu trí, Thất nghiệp)`,
+          `④ Tiền thực nhận về tay cả năm (Net): ¥${netTakeHome.toLocaleString()}`,
+          `⑤ Tỷ lệ trích nộp công thực tế: ${(effectiveBurdenRate * 100).toFixed(1)}% (Bạn giữ lại được ${((netTakeHome / (grossEarnings || 1)) * 100).toFixed(1)}% tổng thu nhập)`,
+        ],
+        en: [
+          `① Total Annual Gross Earnings: ¥${grossEarnings.toLocaleString()}`,
+          `② Mandatory Taxes Total: − ¥${totalTaxes.toLocaleString()} (Income, Resident, Consumption)`,
+          `③ Social Insurance Total: − ¥${totalSocialInsurance.toLocaleString()} (Health, Pension, Unemployment)`,
+          `④ Annual Net Take-Home Pay: ¥${netTakeHome.toLocaleString()}`,
+          `⑤ Effective Public Burden Ratio: ${(effectiveBurdenRate * 100).toFixed(1)}% (Retained take-home share: ${((netTakeHome / (grossEarnings || 1)) * 100).toFixed(1)}%)`,
+        ],
+      };
+    },
+
+    level3: {
+      legalArticles_ja: '労働基準法第24条（賃金全額払いの原則および源泉控除の特例）、所得税法第183条（源泉徴収義務）',
+      legalArticles_vi: 'Luật Tiêu chuẩn lao động Nhật Bản Điều 24 (Nguyên tắc trả lương đầy đủ và ngoại lệ khấu trừ tại nguồn), Luật Thuế thu nhập Điều 183 (Nghĩa vụ khấu trừ tại nguồn).',
+      legalArticles_en: 'Labor Standards Act Art. 24 (Payment of Wages in Full and Statutory Withholding Deductions), Income Tax Act Art. 183 (Withholding Obligations).',
+      links: [
+        { label: '国税庁: 源泉所得税のしくみ', url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/gensen/2502.htm' },
+        { label: '厚生労働省: 労働基準法第24条に関する解説', url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyou_roudou/roudoukijun/roudoujouken/index.html' },
+      ],
+    },
+  },
 };

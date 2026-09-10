@@ -64,12 +64,33 @@ export function simulateJapanTaxes(formValues = {}) {
   const profile = formValues.profile || 'employee';
   const prefecture = formValues.prefecture || 'tokyo';
 
-  const salary = Math.max(0, Number(formValues.salary) || 0);
-  const businessRevenue = Math.max(0, Number(formValues.businessRevenue) || 0);
-  const businessExpenses = Math.max(0, Number(formValues.businessExpenses) || 0);
+  // Profile-scoped revenue extraction to prevent data bleeding between profiles
+  let salary = 0;
+  let businessRevenue = 0;
+  let businessExpenses = 0;
+  let sideIncomeRevenue = 0;
+  let sideIncomeExpenses = 0;
+
+  if (profile === 'employee' || profile === 'part_time') {
+    salary = Math.max(0, Number(formValues.salary) || 0);
+  } else if (profile === 'employee_side') {
+    salary = Math.max(0, Number(formValues.salary) || 0);
+    sideIncomeRevenue = Math.max(0, Number(formValues.sideIncomeRevenue) || 0);
+    sideIncomeExpenses = Math.max(0, Number(formValues.sideIncomeExpenses) || 0);
+  } else if (profile === 'sole_proprietor' || profile === 'freelance') {
+    businessRevenue = Math.max(0, Number(formValues.businessRevenue) || 0);
+    businessExpenses = Math.max(0, Number(formValues.businessExpenses) || 0);
+  } else if (profile === 'corporate') {
+    salary = Math.max(0, Number(formValues.salary) || 0);
+  } else {
+    salary = Math.max(0, Number(formValues.salary) || 0);
+    businessRevenue = Math.max(0, Number(formValues.businessRevenue) || 0);
+    businessExpenses = Math.max(0, Number(formValues.businessExpenses) || 0);
+    sideIncomeRevenue = Math.max(0, Number(formValues.sideIncomeRevenue) || 0);
+    sideIncomeExpenses = Math.max(0, Number(formValues.sideIncomeExpenses) || 0);
+  }
+
   const blueReturnOption = formValues.blueReturnOption || (profile === 'sole_proprietor' ? 'etax_65' : 'white_0');
-  const sideIncomeRevenue = Math.max(0, Number(formValues.sideIncomeRevenue) || 0);
-  const sideIncomeExpenses = Math.max(0, Number(formValues.sideIncomeExpenses) || 0);
   const idecoMonthly = Math.max(0, Number(formValues.idecoMonthly) || 0);
   const dependentsCount = Math.max(0, Number(formValues.dependentsCount) || 0);
   const hasSpouse = Boolean(formValues.hasSpouse);
@@ -152,9 +173,18 @@ export function simulateJapanTaxes(formValues = {}) {
   }
 
   // 7. Tổng hợp các chỉ số tài chính (Summary KPIs)
-  const grossEarnings = profile === 'corporate'
-    ? (Number(formValues.corporateIncome) || 0)
-    : (salary + businessRevenue + sideIncomeRevenue);
+  let grossEarnings = 0;
+  if (profile === 'corporate') {
+    grossEarnings = Number(formValues.corporateIncome) || 0;
+  } else if (profile === 'employee' || profile === 'part_time') {
+    grossEarnings = salary;
+  } else if (profile === 'employee_side') {
+    grossEarnings = salary + sideIncomeRevenue;
+  } else if (profile === 'sole_proprietor' || profile === 'freelance') {
+    grossEarnings = businessRevenue;
+  } else {
+    grossEarnings = salary + businessRevenue + sideIncomeRevenue;
+  }
 
   const totalTaxes =
     incomeTax.totalIncomeTax +

@@ -113,7 +113,9 @@ export default function ProgressiveForm({
           >
             {prefectures.map((pref) => (
               <option key={pref.id} value={pref.id}>
-                {pref[`name_${lang}`] || pref.name_ja} {pref.name_ja !== (pref[`name_${lang}`] || '') ? `(${pref.name_ja})` : ''}
+                {lang === 'ja'
+                  ? pref.name_ja
+                  : `${pref[`name_${lang}`] || pref.name_en} (${pref.name_ja})`}
               </option>
             ))}
           </select>
