@@ -39,6 +39,7 @@ export { DocumentFinderView } from './components/documents/DocumentFinderView.js
 export { CertificateAcquisitionGuideView } from './components/documents/CertificateAcquisitionGuideView.jsx';
 export { MyNumberProcedureGuideView } from './components/documents/MyNumberProcedureGuideView.jsx';
 export { OfficialFormHelperView } from './components/documents/OfficialFormHelperView.jsx';
+export { ProcedureRequirementCheckerView } from './components/documents/ProcedureRequirementCheckerView.jsx';
 
 // Core Hooks
 export { useLocalStorage } from './hooks/useLocalStorage.js';
