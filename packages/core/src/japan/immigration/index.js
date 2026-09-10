@@ -24,3 +24,8 @@ export * from './workScope/workScopeEngine.js';
 export * from './renewal/renewalRules.js';
 export * from './renewal/renewalEngine.js';
 
+// M3: Affiliation Change Checker (転職・所属機関変更チェッカー)
+export * from './affiliation/affiliationRules.js';
+export * from './affiliation/affiliationEngine.js';
+
+

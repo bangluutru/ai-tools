@@ -70,6 +70,7 @@ const AddressChangeChecklistTool = lazy(() => import('./tools/address-change-che
 const MovingWizardTool = lazy(() => import('./tools/moving-wizard-jp/MovingWizardTool.jsx'));
 const WorkScopeCheckerTool = lazy(() => import('./tools/work-scope-checker-jp/WorkScopeCheckerTool.jsx'));
 const ResidenceRenewalGuideTool = lazy(() => import('./tools/residence-renewal-guide-jp/ResidenceRenewalGuideTool.jsx'));
+const AffiliationChangeCheckerTool = lazy(() => import('./tools/affiliation-change-checker-jp/AffiliationChangeCheckerTool.jsx'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
 const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
 const FlappyBirdPet = lazy(() => import('./components/FlappyBirdPet'));
@@ -115,6 +116,7 @@ const toolComponentMap = {
   'moving-wizard-jp': MovingWizardTool,
   'work-scope-checker-jp': WorkScopeCheckerTool,
   'residence-renewal-guide-jp': ResidenceRenewalGuideTool,
+  'affiliation-change-checker-jp': AffiliationChangeCheckerTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,
   'flappy-bird': FlappyBirdTool,
   'toolio-ninja': ToolioNinjaTool

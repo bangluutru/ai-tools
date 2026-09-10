@@ -448,6 +448,18 @@ const toolGovernance = {
     type: 'guide',
     regulatory: true,
   },
+  'affiliation-change-checker-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+  },
 };
 
 
@@ -1227,6 +1239,27 @@ const toolDefinitions = [
     badge: '入管・在留',
     popular: true,
     tags: ['visa', 'immigration', 'renewal', 'tokurei', 'gia hạn', 'thẻ cư trú', 'isa', '在留期間更新', '入管', 'japan life']
+  },
+  {
+    id: 'affiliation-change-checker-jp',
+    name_vn: 'Kiểm Tra Thay Đổi Đơn Vị Công Tác',
+    name_en: 'Affiliation Change & Transfer Checker',
+    name_ja: '転職・所属機関変更チェッカー',
+    desc_vn: 'Tính toán hạn thông báo 14 ngày (Điều 19-16), đánh giá nguy cơ thu hồi tư cách sau 3 tháng không hoạt động, và hướng dẫn xin Giấy chứng nhận tư cách làm việc.',
+    desc_en: 'Check 14-day statutory notification deadline (Art. 19-16), evaluate 3-month inactivity revocation risks, and Certificate of Authorized Employment guidance.',
+    desc_ja: '転職・退職後14日以内の所属機関届出期限、退職後3か月の在留資格取消リスク、就労資格証明書（1,200円）手続を公的基準で判定。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+    icon: 'Building2',
+    gradient: 'from-cyan-600 via-teal-600 to-emerald-600',
+    color: '#0891b2',
+    badge: '入管・在留',
+    popular: true,
+    tags: ['chuyển việc', 'thay đổi công ty', 'thông báo 14 ngày', 'thu hồi visa', 'hello work', '転職', '所属機関変更', '入管', '就労資格証明書', 'japan life']
   },
   {
     id: 'watermark-studio',
