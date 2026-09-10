@@ -110,7 +110,7 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   const japanTools = toolsForGroup(tools, 'japan-life');
   assert.deepEqual(
     japanTools.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp'].sort()
   );
 
   const commonTools = toolsForGroup(tools, 'common');
@@ -118,13 +118,13 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   assert.equal(commonTools.every((t) => t.group === 'common'), true);
 
   const allTools = toolsForGroup(tools, ALL_GROUPS);
-  assert.equal(allTools.length, 24);
+  assert.equal(allTools.length, 25);
 
   // filterTools combined
   const officeJapan = filterTools(tools, { category: 'office', group: 'japan-life' });
   assert.deepEqual(
     officeJapan.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp'].sort()
   );
 
   const officeCommon = filterTools(tools, { category: 'office', group: 'common' });
@@ -145,6 +145,18 @@ test('search finds Japan Insurance and Employment miniapps across ja, en, and vi
       return text.includes(q);
     });
   }
+
+  // 有給
+  const yukyu = search('有給');
+  assert.ok(yukyu.some((t) => t.id === 'paid-leave-checker-jp'));
+
+  // paid leave
+  const pl = search('paid leave');
+  assert.ok(pl.some((t) => t.id === 'paid-leave-checker-jp'));
+
+  // phép năm
+  const pn = search('phép năm');
+  assert.ok(pn.some((t) => t.id === 'paid-leave-checker-jp'));
 
   // 残業
   const zangyou = search('残業');

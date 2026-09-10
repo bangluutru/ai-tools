@@ -12,6 +12,10 @@ import {
   calculateOvertimePay,
   STATUTORY_PREMIUM_RATES,
   STATUTORY_EXCLUDED_ALLOWANCES,
+  calculatePaidLeaveEntitlement,
+  lookupStatutoryGrantDays,
+  isProportionalGrant,
+  calculateServiceDuration,
 } from '../src/japan/employment/index.js';
 
 test('Golden Test 1: Base hourly wage calculation for monthly salaried worker', () => {
@@ -127,3 +131,148 @@ test('Golden Test 8: Hourly worker and daily worker base wage derivation', () =>
   });
   assert.equal(hourly.baseHourlyWage, 1250);
 });
+
+test('Golden Test 9: Full-time standard progression across service milestones (10 to 20 days)', () => {
+  // Bảng chuẩn toàn thời gian: 6 tháng (10), 1.5 năm (11), 2.5 năm (12), 3.5 năm (14), 4.5 năm (16), 5.5 năm (18), 6.5 năm+ (20)
+  assert.equal(lookupStatutoryGrantDays({ proportional: false, serviceMonths: 6 }), 10);
+  assert.equal(lookupStatutoryGrantDays({ proportional: false, serviceMonths: 18 }), 11);
+  assert.equal(lookupStatutoryGrantDays({ proportional: false, serviceMonths: 30 }), 12);
+  assert.equal(lookupStatutoryGrantDays({ proportional: false, serviceMonths: 42 }), 14);
+  assert.equal(lookupStatutoryGrantDays({ proportional: false, serviceMonths: 54 }), 16);
+  assert.equal(lookupStatutoryGrantDays({ proportional: false, serviceMonths: 66 }), 18);
+  assert.equal(lookupStatutoryGrantDays({ proportional: false, serviceMonths: 78 }), 20);
+  assert.equal(lookupStatutoryGrantDays({ proportional: false, serviceMonths: 120 }), 20);
+});
+
+test('Golden Test 10: Service duration under 6 months grants 0 days', () => {
+  // Người mới vào làm 3 tháng chưa có quyền nghỉ phép năm
+  assert.equal(lookupStatutoryGrantDays({ proportional: false, serviceMonths: 3 }), 0);
+
+  const res = calculatePaidLeaveEntitlement({
+    hireDate: '2026-06-01',
+    asOfDate: '2026-09-01', // 3 tháng
+    weeklyHours: 40,
+    weeklyDays: 5,
+  });
+
+  assert.equal(res.currentGrantDays, 0);
+  assert.equal(res.warnings.some((w) => w.code === 'UNDER_SIX_MONTHS'), true);
+});
+
+test('Golden Test 11: Part-time proportional grant (週4日 / 169-216日: 7, 8, 9, 10, 12, 13, 15 days)', () => {
+  assert.equal(isProportionalGrant({ weeklyHours: 25, weeklyDays: 4 }), true);
+  assert.equal(isProportionalGrant({ weeklyHours: 35, weeklyDays: 4 }), false); // >= 30h là thông thường
+
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 4, serviceMonths: 6 }), 7);
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 4, serviceMonths: 18 }), 8);
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 4, serviceMonths: 30 }), 9);
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 4, serviceMonths: 42 }), 10);
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 4, serviceMonths: 54 }), 12);
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 4, serviceMonths: 66 }), 13);
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 4, serviceMonths: 78 }), 15);
+});
+
+test('Golden Test 12: Part-time proportional grant for 1 day/week and 2 days/week', () => {
+  // 1 ngày/tuần: 0.5y: 1, 1.5y: 2, 2.5y: 2, 3.5y: 2, 4.5y: 3, 5.5y: 3, 6.5y+: 3
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 1, serviceMonths: 6 }), 1);
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 1, serviceMonths: 18 }), 2);
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 1, serviceMonths: 78 }), 3);
+
+  // 2 ngày/tuần: 0.5y: 3, 1.5y: 4, 2.5y: 4, 3.5y: 5, 4.5y: 6, 5.5y: 6, 6.5y+: 7
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 2, serviceMonths: 6 }), 3);
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 2, serviceMonths: 18 }), 4);
+  assert.equal(lookupStatutoryGrantDays({ proportional: true, weeklyDays: 2, serviceMonths: 78 }), 7);
+});
+
+test('Golden Test 13: 80% Attendance rule (出勤率8割要件)', () => {
+  // Đi làm đầy đủ 1 năm 6 tháng, tỷ lệ chuyên cần 85% -> Được cấp 11 ngày
+  const resPass = calculatePaidLeaveEntitlement({
+    hireDate: '2025-03-01',
+    asOfDate: '2026-09-01', // 1.5 năm
+    attendanceRate: 0.85,
+    weeklyHours: 40,
+    weeklyDays: 5,
+  });
+  assert.equal(resPass.currentGrantDays, 11);
+  assert.equal(resPass.isAttendanceQualified, true);
+
+  // Đi làm 1 năm 6 tháng nhưng chỉ đạt 75% chuyên cần (< 80%) -> 0 ngày
+  const resFail = calculatePaidLeaveEntitlement({
+    hireDate: '2025-03-01',
+    asOfDate: '2026-09-01',
+    attendanceRate: 0.75,
+    weeklyHours: 40,
+    weeklyDays: 5,
+  });
+  assert.equal(resFail.currentGrantDays, 0);
+  assert.equal(resFail.isAttendanceQualified, false);
+  assert.equal(resFail.warnings.some((w) => w.code === 'ATTENDANCE_RATE_BELOW_80'), true);
+});
+
+test('Golden Test 14: Statutory 5-day mandatory leave obligation trigger (>= 10 days granted)', () => {
+  // Cấp 10 ngày (full-time 6 tháng), đã nghỉ 2 ngày -> Còn thiếu 3 ngày bắt buộc phải nghỉ
+  const res = calculatePaidLeaveEntitlement({
+    hireDate: '2026-03-01',
+    asOfDate: '2026-09-05',
+    attendanceRate: 1.0,
+    weeklyHours: 40,
+    weeklyDays: 5,
+    usedDaysCurrent: 2,
+  });
+
+  assert.equal(res.mandatory5Days.isApplicable, true);
+  assert.equal(res.mandatory5Days.targetDays, 5);
+  assert.equal(res.mandatory5Days.usedDays, 2);
+  assert.equal(res.mandatory5Days.remainingDays, 3);
+  assert.equal(res.warnings.some((w) => w.code === 'MANDATORY_5_DAYS_PENDING'), true);
+
+  // Đã nghỉ đủ 5 ngày -> Hết cảnh báo nghĩa vụ
+  const resFulfilled = calculatePaidLeaveEntitlement({
+    hireDate: '2026-03-01',
+    asOfDate: '2026-09-05',
+    attendanceRate: 1.0,
+    weeklyHours: 40,
+    weeklyDays: 5,
+    usedDaysCurrent: 5,
+  });
+  assert.equal(resFulfilled.mandatory5Days.remainingDays, 0);
+  assert.equal(resFulfilled.warnings.some((w) => w.code === 'MANDATORY_5_DAYS_PENDING'), false);
+});
+
+test('Golden Test 15: Carryover balance calculation and 2-year statute of limitations', () => {
+  // Thâm niên 2.5 năm (cấp mới 12 ngày), năm trước còn tồn chuyển tiếp 8 ngày
+  // Tổng quỹ phép được hưởng = 12 + 8 = 20 ngày. Đã dùng 4 ngày -> Còn khả dụng 16 ngày
+  const res = calculatePaidLeaveEntitlement({
+    hireDate: '2024-03-01',
+    asOfDate: '2026-09-05',
+    attendanceRate: 1.0,
+    weeklyHours: 40,
+    weeklyDays: 5,
+    carriedOverDays: 8,
+    usedDaysCurrent: 4,
+  });
+
+  assert.equal(res.currentGrantDays, 12);
+  assert.equal(res.carriedOverDays, 8);
+  assert.equal(res.totalEntitledDays, 20);
+  assert.equal(res.remainingAvailableDays, 16);
+  assert.equal(res.statuteOfLimitationsYears, 2);
+  assert.equal(res.sources.includes('mhlw-paid-leave-guidelines'), true);
+  assert.equal(res.sources.includes('egov-labor-standards-act-39'), true);
+});
+
+test('Golden Test 16: Part-time worker receiving under 10 days does not trigger 5-day mandatory leave', () => {
+  // Part-time 2 ngày/tuần, thâm niên 2.5 năm -> cấp mới 4 ngày (< 10 ngày)
+  const res = calculatePaidLeaveEntitlement({
+    hireDate: '2024-03-01',
+    asOfDate: '2026-09-05',
+    weeklyHours: 15,
+    weeklyDays: 2,
+  });
+
+  assert.equal(res.isProportional, true);
+  assert.equal(res.currentGrantDays, 4);
+  assert.equal(res.mandatory5Days.isApplicable, false);
+  assert.equal(res.mandatory5Days.targetDays, 0);
+});
+

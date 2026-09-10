@@ -267,6 +267,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'calculator',
     regulatory: true,
+  },
+  'paid-leave-checker-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'employment',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
   }
 };
 
@@ -731,6 +743,27 @@ const toolDefinitions = [
     badge: '労働基準法',
     popular: true,
     tags: ['残業代シミュレーター', '残業代', '割増賃金', '時間外労働', '休日労働', '深夜労働', '60時間超', 'overtime', 'tăng ca', 'làm thêm giờ', 'tiền tăng ca', 'zangyou', 'japan life', 'office']
+  },
+  {
+    id: 'paid-leave-checker-jp',
+    name_vn: 'Kiểm Tra Phép Năm (有給休暇)',
+    name_en: 'Japan Paid Leave Entitlement Checker',
+    name_ja: '有給休暇チェッカー',
+    desc_vn: 'Tra cứu ngày nghỉ phép có lương theo thâm niên, lịch cấp phép tỷ lệ cho part-time/baito, điều kiện chuyên cần 80% và nghĩa vụ nghỉ 5 ngày/năm. Chuẩn Điều 39 Luật Tiêu chuẩn Lao động.',
+    desc_en: 'Check statutory annual paid leave entitlements by tenure, proportional part-time grants, 80% attendance rule, and mandatory 5-day leave compliance tracker under Art. 39 Labor Standards Act.',
+    desc_ja: '労働基準法第39条に基づく法定有給休暇日数、パート・アルバイトの比例付与、出勤率8割要件、年5日取得義務の進捗を正確に算定・可視化。100%ブラウザ完結。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'employment',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+    icon: 'CalendarCheck',
+    gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
+    color: '#059669',
+    badge: '労働基準法',
+    popular: true,
+    tags: ['有給休暇チェッカー', '有給休暇', '年次有給休暇', '有給', '年5日取得義務', '比例付与', '出勤率8割', 'paid leave', 'annual leave', 'phép năm', 'nghỉ phép', 'yukyu', 'japan life', 'office']
   },
   {
     id: 'watermark-studio',

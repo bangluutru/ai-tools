@@ -34,7 +34,8 @@ import {
   ShieldCheck,
   PiggyBank,
   HeartHandshake,
-  Clock
+  Clock,
+  CalendarCheck
 } from 'lucide-react';
 
 export const iconMap = {
@@ -72,7 +73,8 @@ export const iconMap = {
   ShieldCheck,
   PiggyBank,
   HeartHandshake,
-  Clock
+  Clock,
+  CalendarCheck
 };
 
 /**

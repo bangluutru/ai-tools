@@ -19,12 +19,25 @@ export default function RegulatorySourceView({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Lấy danh sách nguồn từ sourceIds hoặc customSources
-  const resolvedSources = customSources || (
-    sourceIds && sourceIds.length > 0
-      ? sourceIds.map((id) => OfficialSourceRegistry.get(id)).filter(Boolean)
-      : []
-  );
+  // Lấy danh sách nguồn từ sourceIds hoặc sources (hỗ trợ cả mảng string ID và mảng object)
+  const rawList = customSources && customSources.length > 0
+    ? customSources
+    : (sourceIds && sourceIds.length > 0 ? sourceIds : []);
+
+  const resolvedSources = rawList
+    .map((item) => {
+      if (typeof item === 'string') {
+        return OfficialSourceRegistry.get(item) || {
+          id: item,
+          title: item,
+          authority: '',
+          url: '#',
+          sourceType: 'official'
+        };
+      }
+      return item;
+    })
+    .filter(Boolean);
 
   const labels = {
     ja: {

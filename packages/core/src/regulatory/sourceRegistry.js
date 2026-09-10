@@ -264,6 +264,30 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     status: 'official-primary',
     notes: 'Quy định pháp điển gốc về nghĩa vụ trả lương phụ trội ngoài giờ, ngày nghỉ, ban đêm và phương pháp xác định cơ sở lương giờ theo Luật Tiêu chuẩn Lao động Nhật Bản.'
   },
+  'mhlw-paid-leave-guidelines': {
+    id: 'mhlw-paid-leave-guidelines',
+    country: 'JP',
+    authority: '厚生労働省 (Ministry of Health, Labour and Welfare)',
+    title: '年次有給休暇の付与要件・日数算定・比例付与・年5日取得義務化ガイドライン',
+    url: 'https://www.mhlw.go.jp/seisakunitsuite/bunya/koyoukintou/seisaku04/',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Tiêu chuẩn cấp phép năm: nhân viên chính thức (10-20 ngày), part-time (tỷ lệ theo ngày làm), điều kiện chuyên cần 80%, thời hiệu 2 năm và nghĩa vụ nghỉ 5 ngày/năm đối với người được cấp từ 10 ngày.'
+  },
+  'egov-labor-standards-act-39': {
+    id: 'egov-labor-standards-act-39',
+    country: 'JP',
+    authority: 'e-Gov 法令検索 / 厚生労働省',
+    title: '労働基準法（昭和22年法律第49号）第39条（年次有給休暇）',
+    url: 'https://elaws.e-gov.go.jp/document?lawid=322AC0000000049',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Căn cứ pháp lý Điều 39 Luật Tiêu chuẩn Lao động Nhật Bản về quyền nghỉ phép năm có lương sau 6 tháng, bảng lũy tiến theo thâm niên và thời hiệu hết hạn 2 năm theo Điều 115.'
+  },
 
   // =========================================================================
   // VIETNAM LIFE - TAX & SOCIAL INSURANCE (Tổng cục Thuế / BHXH Việt Nam)
