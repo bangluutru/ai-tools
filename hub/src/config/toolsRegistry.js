@@ -315,6 +315,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'guide',
     regulatory: true,
+  },
+  'maternity-allowance-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'family',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
   }
 };
 
@@ -863,6 +875,27 @@ const toolDefinitions = [
     badge: '退職・法的手続き',
     popular: true,
     tags: ['退職手続き', '退職', '退職届', '離職票', '任意継続', '国民健康保険', '国民年金', '住民税', '一括徴収', 'ハローワーク', 'resignation', 'leaving job', 'nghỉ việc', 'thôi việc', 'thủ tục thôi việc', 'japan life', 'office']
+  },
+  {
+    id: 'maternity-allowance-jp',
+    name_vn: 'Tính Trợ Cấp Thai Sản',
+    name_en: 'Maternity Allowance Simulator',
+    name_ja: '出産手当金シミュレーター',
+    desc_vn: 'Mô phỏng trợ cấp thai sản BHYT Nhật Bản (2/3 lương chuẩn): tính chính xác số ngày được hưởng, mức trợ cấp ngày và tổng số tiền.',
+    desc_en: 'Simulate Japan health insurance maternity allowance (2/3 standard remuneration): exact eligible days, daily rate, and total amount.',
+    desc_ja: '健康保険法第102条に基づく産前産後休業中の給料補償（標準報酬月額の3分の2）：支給日数・日額・総支給額を正確に試算。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'family',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
+    icon: 'Baby',
+    gradient: 'from-pink-500 to-rose-600',
+    color: '#ec4899',
+    badge: '健康保険法',
+    popular: true,
+    tags: ['出産手当金', '産前産後休業', '健康保険', '協会けんぽ', 'thai sản', 'maternity allowance', 'nghỉ sinh', 'trợ cấp thai sản', 'lương nghỉ thai sản', 'bảo hiểm thai sản', 'japan life', 'family']
   },
   {
     id: 'watermark-studio',

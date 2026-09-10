@@ -28,6 +28,7 @@ export { default as PaidLeaveCheckerView } from './components/employment/PaidLea
 export { default as UnemploymentEligibilityView } from './components/employment/UnemploymentEligibilityView.jsx';
 export { default as UnemploymentBenefitView } from './components/employment/UnemploymentBenefitView.jsx';
 export { default as LeavingJobWizardView } from './components/employment/LeavingJobWizardView.jsx';
+export { default as MaternityAllowanceView } from './components/family/MaternityAllowanceView.jsx';
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 
 // Core Hooks
@@ -61,4 +62,10 @@ export * from './japan/insurance/index.js';
 
 // Japan Life - Employment Domain
 export * from './japan/employment/index.js';
+
+// Japan Life - Family & Child Domain
+export * from './japan/family/index.js';
+
+// Orchestration & Capability Registry
+export * from './orchestration/capabilityRegistry.js';
 

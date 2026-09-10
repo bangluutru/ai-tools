@@ -363,6 +363,106 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     lastVerifiedAt: '2026-09-10',
     status: 'official-primary',
     notes: 'Tỷ lệ trích nộp BHXH (8%), BHYT (1.5%), BHTN (1%) và mức trần tiền lương đóng bảo hiểm.'
+  },
+
+  // =========================================================================
+  // JAPAN LIFE - FAMILY & CHILD (こども家庭庁 / 厚生労働省 / 協会けんぽ / 自治体)
+  // =========================================================================
+  'egov-health-insurance-act-maternity': {
+    id: 'egov-health-insurance-act-maternity',
+    country: 'JP',
+    authority: 'e-Gov 法令検索 (厚生労働省管轄)',
+    title: '健康保険法第101条（出産育児一時金）及び第102条（出産手当金）',
+    url: 'https://elaws.e-gov.go.jp/document?lawid=211AC0000000070',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Quy định pháp định về trợ cấp thai sản theo ngày (出産手当金: 2/3 lương tiêu chuẩn 12 tháng) và trợ cấp sinh con một lần (出産育児一時金).'
+  },
+  'kyokai-kenpo-maternity-allowance': {
+    id: 'kyokai-kenpo-maternity-allowance',
+    country: 'JP',
+    authority: '全国健康保険協会 (協会けんぽ)',
+    title: '出産手当金について（支給期間・支給額の計算方法）',
+    url: 'https://www.kyoukaikenpo.or.jp/g3/sb3290/r148/',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Hướng dẫn chi trả trợ cấp thai sản: 42 ngày trước sinh (98 ngày đa thai), 56 ngày sau sinh; quy tắc tham gia dưới 12 tháng so với mức trần bình quân toàn hiệp hội 300,000円; quy tắc khấu trừ lương khi nghỉ.'
+  },
+  'mhlw-childbirth-lump-sum-grant': {
+    id: 'mhlw-childbirth-lump-sum-grant',
+    country: 'JP',
+    authority: '厚生労働省 (Ministry of Health, Labour and Welfare)',
+    title: '出産育児一時金の支給額引上げ（1児につき原則50万円）',
+    url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/kenkou_iryou/iryouhoken/shussan/index.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Khoản hỗ trợ chi phí sinh con 500,000円 (từ 04/2023, hoặc 488,000円 nếu cơ sở y tế không tham gia chế độ bồi thường sự cố sản khoa); cơ chế chi trả trực tiếp cho bệnh viện.'
+  },
+  'egov-childcare-leave-act': {
+    id: 'egov-childcare-leave-act',
+    country: 'JP',
+    authority: 'e-Gov 法令検索 (厚生労働省管轄)',
+    title: '育児休業、介護休業等育児又は家族介護を行う労働者の福祉に関する法律',
+    url: 'https://elaws.e-gov.go.jp/document?lawid=403AC0000000076',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Luật Nghỉ chăm sóc con & gia đình: Quyền nghỉ chăm con đến 1 tuổi (gia hạn đến 1.5 - 2 tuổi), chế độ nghỉ chăm con sau sinh (産後パパ育休).'
+  },
+  'mhlw-childcare-benefit-guidelines-2026': {
+    id: 'mhlw-childcare-benefit-guidelines-2026',
+    country: 'JP',
+    authority: '厚生労働省 (Ministry of Health, Labour and Welfare)',
+    title: '育児休業等給付の概要（育児休業給付金・出生時育児休業給付金・出生後休業支援給付金・育児時短就業給付金）',
+    url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000158500.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Quy chế 4 loại trợ cấp: 67% (180 ngày đầu), 50% (sau 180 ngày), trợ cấp hỗ trợ sau sinh (+13% ngày lương lên 80% lương ngày), và trợ cấp làm việc rút ngắn giờ từ 04/2025.'
+  },
+  'cfa-child-allowance-reform-2024': {
+    id: 'cfa-child-allowance-reform-2024',
+    country: 'JP',
+    authority: 'こども家庭庁 (Children and Families Agency)',
+    title: '児童手当制度の改正（令和6年10月分から制度拡充）',
+    url: 'https://www.cfa.go.jp/policies/kokosei/jidouteate',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Cải cách Trợ cấp Trẻ em từ tháng 10/2024: Bỏ hoàn toàn trần thu nhập; mở rộng đến hết cấp 3 (18 tuổi); mức 15,000円 (<3 tuổi), 10,000円 (3 tuổi - cấp 3), 30,000円 (con thứ 3 trở đi); đếm thứ bậc con có tính con phụ thuộc đến 22 tuổi.'
+  },
+  'fukuoka-city-maternal-child-portal': {
+    id: 'fukuoka-city-maternal-child-portal',
+    country: 'JP',
+    authority: '福岡市役所 (Fukuoka City Government)',
+    title: '福岡市 妊娠・出産・子育てポータル（母子健康手帳・妊婦健診助成・子ども医療費助成）',
+    url: 'https://www.city.fukuoka.lg.jp/kodomo-mirai/kosodate/',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Cổng thông tin hướng dẫn thủ tục mẹ và bé TP Fukuoka: cấp sổ mẹ con tại 7 Trung tâm y tế phúc lợi quận, phiếu khám thai 14 lần, trợ cấp y tế trẻ em.'
+  },
+  'chiyoda-tokyo-maternal-child-portal': {
+    id: 'chiyoda-tokyo-maternal-child-portal',
+    country: 'JP',
+    authority: '千代田区役所 (Chiyoda City, Tokyo)',
+    title: '千代田区 妊娠・出産・子育て応援事業及び子ども医療費助成',
+    url: 'https://www.city.chiyoda.lg.jp/koho/kosodate/',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Cổng thông tin thủ tục sinh và chăm sóc trẻ em Quận Chiyoda, Tokyo: trợ cấp 50,000円 khi báo thai + 50,000円 khi sinh, trợ cấp y tế trẻ em đến 18 tuổi miễn phí 100% viện phí/khám bệnh.'
   }
 });
 

@@ -136,8 +136,8 @@ test('every miniapp has a valid product group defaulting safely to common', () =
   const japanLifeTools = tools.filter((t) => t.group === 'japan-life');
   assert.deepEqual(
     japanLifeTools.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp'].sort(),
-    'japan-life group contains japan-tax-simulator, social-insurance-jp, social-insurance-eligibility-jp, national-pension-jp, dependent-insurance-jp, overtime-calculator-jp, paid-leave-checker-jp, unemployment-eligibility-jp, unemployment-benefit-jp, and leaving-job-wizard-jp',
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp'].sort(),
+    'japan-life group contains japan-tax-simulator, social-insurance-jp, social-insurance-eligibility-jp, national-pension-jp, dependent-insurance-jp, overtime-calculator-jp, paid-leave-checker-jp, unemployment-eligibility-jp, unemployment-benefit-jp, leaving-job-wizard-jp, and maternity-allowance-jp',
   );
 
   const jTax = tools.find((t) => t.id === 'japan-tax-simulator');
