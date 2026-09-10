@@ -186,7 +186,7 @@ export function DocumentFinderView({ lang = 'vi' }) {
             {t.intentsTitle[lang] || t.intentsTitle.vi}
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {availableIntents.map((intent) => {
               const isSelected = selectedIntentId === intent.intentId;
               return (
@@ -194,9 +194,10 @@ export function DocumentFinderView({ lang = 'vi' }) {
                   key={intent.intentId}
                   type="button"
                   onClick={() => handleSelectIntent(intent)}
-                  className={`text-left p-4 rounded-xl border transition-all flex flex-col justify-between ${
+                  aria-pressed={isSelected}
+                  className={`p-3.5 rounded-xl border text-left flex flex-col justify-between transition-all ${
                     isSelected
-                      ? 'bg-primary/10 border-primary text-primary font-semibold shadow-sm'
+                      ? 'bg-primary/10 border-primary text-primary font-semibold shadow-sm ring-1 ring-primary'
                       : 'bg-surface border-outline-variant/60 text-on-surface hover:border-primary/40 hover:bg-surface-container-high'
                   }`}
                 >
@@ -215,14 +216,16 @@ export function DocumentFinderView({ lang = 'vi' }) {
 
           {/* Procedure Dropdown Alternative */}
           <div className="mt-5 pt-4 border-t border-outline-variant/60 flex flex-wrap items-center justify-between gap-3">
-            <label className="text-xs font-semibold text-on-surface-variant flex items-center gap-2">
+            <label htmlFor="procedure-select" className="text-xs font-semibold text-on-surface-variant flex items-center gap-2">
               <Filter className="w-3.5 h-3.5" />
               {t.selectProcedure[lang] || t.selectProcedure.vi}:
             </label>
             <select
+              id="procedure-select"
+              aria-label={t.selectProcedure[lang] || t.selectProcedure.vi}
               value={selectedProcedureId}
               onChange={(e) => handleSelectProcedure(e.target.value)}
-              className="bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full sm:w-auto max-w-full bg-surface border border-outline-variant rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary truncate"
             >
               {allProcedures.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -355,6 +358,7 @@ export function DocumentFinderView({ lang = 'vi' }) {
                     <button
                       type="button"
                       onClick={() => toggleDoc(item.id)}
+                      aria-label={`Đánh dấu hoàn thành ${item.documentNameJa}`}
                       className={`mt-1 p-1 rounded-lg border transition-colors ${
                         isChecked
                           ? 'bg-primary border-primary text-on-primary'

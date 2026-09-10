@@ -226,7 +226,7 @@ export function OfficialFormHelperView({ lang = 'vi' }) {
                           className="bg-surface-container-low p-3.5 rounded-xl border border-outline-variant/50 space-y-2"
                         >
                           <div className="flex items-center justify-between">
-                            <label className="text-xs font-bold text-on-surface">
+                            <label htmlFor={`field-${f.id}`} className="text-xs font-bold text-on-surface">
                               {f.labelJa}
                             </label>
                             {f.isSensitive && (
@@ -243,6 +243,8 @@ export function OfficialFormHelperView({ lang = 'vi' }) {
                           {/* Input field for draft preparation */}
                           {f.inputType === 'select' ? (
                             <select
+                              id={`field-${f.id}`}
+                              aria-label={f.labelJa}
                               value={currentValue}
                               onChange={(e) => handleFieldChange(f.id, e.target.value)}
                               className="w-full bg-surface border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
@@ -272,6 +274,8 @@ export function OfficialFormHelperView({ lang = 'vi' }) {
                             </div>
                           ) : (
                             <input
+                              id={`field-${f.id}`}
+                              aria-label={f.labelJa}
                               type={f.isSensitive && !showSensitive && currentValue ? 'password' : f.inputType}
                               value={currentValue}
                               onChange={(e) => handleFieldChange(f.id, e.target.value)}
@@ -281,7 +285,7 @@ export function OfficialFormHelperView({ lang = 'vi' }) {
                           )}
 
                           {f.format && (
-                            <span className="text-[10px] text-on-surface-variant/70 block">
+                            <span className="text-[10px] text-on-surface-variant block">
                               Định dạng: {f.format}
                             </span>
                           )}

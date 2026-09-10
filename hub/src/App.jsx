@@ -76,6 +76,12 @@ const FamilyImmigrationGuideTool = lazy(() => import('./tools/family-immigration
 const PermanentResidenceReadinessTool = lazy(() => import('./tools/pr-readiness-checker-jp/PermanentResidenceReadinessTool.jsx'));
 const ArrivingInJapanWizardTool = lazy(() => import('./tools/arriving-in-japan-wizard-jp/ArrivingInJapanWizardTool.jsx'));
 const LeavingJapanWizardTool = lazy(() => import('./tools/leaving-japan-wizard-jp/LeavingJapanWizardTool.jsx'));
+const DocumentFinderTool = lazy(() => import('./tools/document-finder-jp/DocumentFinderTool.jsx'));
+const CertificateAcquisitionGuideTool = lazy(() => import('./tools/certificate-acquisition-guide-jp/CertificateAcquisitionGuideTool.jsx'));
+const MyNumberProcedureGuideTool = lazy(() => import('./tools/mynumber-procedure-guide-jp/MyNumberProcedureGuideTool.jsx'));
+const OfficialFormHelperTool = lazy(() => import('./tools/official-form-helper-jp/OfficialFormHelperTool.jsx'));
+const ProcedureRequirementCheckerTool = lazy(() => import('./tools/procedure-requirement-checker-jp/ProcedureRequirementCheckerTool.jsx'));
+const AdministrativeNavigatorTool = lazy(() => import('./tools/administrative-navigator-jp/AdministrativeNavigatorTool.jsx'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
 const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
 const FlappyBirdPet = lazy(() => import('./components/FlappyBirdPet'));
@@ -127,6 +133,12 @@ const toolComponentMap = {
   'pr-readiness-checker-jp': PermanentResidenceReadinessTool,
   'arriving-in-japan-wizard-jp': ArrivingInJapanWizardTool,
   'leaving-japan-wizard-jp': LeavingJapanWizardTool,
+  'document-finder-jp': DocumentFinderTool,
+  'certificate-acquisition-guide-jp': CertificateAcquisitionGuideTool,
+  'mynumber-procedure-guide-jp': MyNumberProcedureGuideTool,
+  'official-form-helper-jp': OfficialFormHelperTool,
+  'procedure-requirement-checker-jp': ProcedureRequirementCheckerTool,
+  'administrative-navigator-jp': AdministrativeNavigatorTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,
   'flappy-bird': FlappyBirdTool,
   'toolio-ninja': ToolioNinjaTool

@@ -249,10 +249,12 @@ export function CertificateAcquisitionGuideView({ lang = 'vi' }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+              <label htmlFor="muni-select" className="block text-xs font-semibold text-on-surface-variant mb-1">
                 {t.selectMuni[lang] || t.selectMuni.vi} (Verified major cities):
               </label>
               <select
+                id="muni-select"
+                aria-label={t.selectMuni[lang] || t.selectMuni.vi}
                 value={selectedMuniCode}
                 onChange={(e) => {
                   setSelectedMuniCode(e.target.value);
@@ -370,7 +372,7 @@ export function CertificateAcquisitionGuideView({ lang = 'vi' }) {
                 </div>
 
                 {guideResult.document.statutoryBasis && (
-                  <div className="text-xs text-on-surface-variant/80 bg-surface/80 px-3 py-1.5 rounded-lg border border-outline-variant/60">
+                  <div className="text-xs text-on-surface-variant bg-surface/80 px-3 py-1.5 rounded-lg border border-outline-variant/60">
                     <span className="font-medium">Căn cứ: </span>
                     {guideResult.document.statutoryBasis.lawJa}
                   </div>
@@ -460,7 +462,7 @@ export function CertificateAcquisitionGuideView({ lang = 'vi' }) {
                         <span>Lệ phí: {channel.feeJpy}円</span>
                       </div>
 
-                      <div className="mt-1 text-[11px] text-on-surface-variant/80 flex items-center gap-1">
+                      <div className="mt-1 text-xs text-on-surface-variant flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5" />
                         <span className="truncate">{channel.operatingHoursJa}</span>
                       </div>

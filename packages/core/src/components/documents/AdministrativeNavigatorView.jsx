@@ -164,6 +164,7 @@ export function AdministrativeNavigatorView({ lang = 'vi' }) {
           <div className="relative">
             <input
               type="text"
+              aria-label={t.searchPlaceholder[lang] || t.searchPlaceholder.vi}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t.searchPlaceholder[lang] || t.searchPlaceholder.vi}

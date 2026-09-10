@@ -133,10 +133,12 @@ export function ProcedureRequirementCheckerView({ lang = 'vi' }) {
       <div className="space-y-8 max-w-5xl mx-auto">
         {/* 1. Procedure Selector */}
         <section className="bg-surface-container-low border border-outline-variant rounded-2xl p-6 shadow-sm">
-          <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wide mb-2">
+          <label htmlFor="proc-select" className="block text-xs font-bold text-on-surface-variant uppercase tracking-wide mb-2">
             {t.selectProcedure[lang] || t.selectProcedure.vi}:
           </label>
           <select
+            id="proc-select"
+            aria-label={t.selectProcedure[lang] || t.selectProcedure.vi}
             value={selectedProcedureId}
             onChange={(e) => {
               setSelectedProcedureId(e.target.value);
@@ -295,6 +297,7 @@ export function ProcedureRequirementCheckerView({ lang = 'vi' }) {
                         type="checkbox"
                         checked={isChecked}
                         onChange={(e) => handleDocToggle(doc.requirementId, e.target.checked)}
+                        aria-label={`Đã chuẩn bị ${doc.documentNameJa}`}
                         className="w-4 h-4 rounded text-primary mt-1"
                       />
                       <div>
@@ -321,10 +324,12 @@ export function ProcedureRequirementCheckerView({ lang = 'vi' }) {
                       <div className="flex flex-wrap items-center gap-3 text-xs pl-7 md:pl-0">
                         {doc.maxAgeMonths !== null && (
                           <div className="flex items-center gap-1.5">
-                            <label className="text-on-surface-variant font-medium">
+                            <label htmlFor={`date-${doc.requirementId}`} className="text-on-surface-variant font-medium">
                               Ngày cấp in trên giấy:
                             </label>
                             <input
+                              id={`date-${doc.requirementId}`}
+                              aria-label={`Ngày cấp của ${doc.documentNameJa}`}
                               type="date"
                               value={userDoc.issueDate || ''}
                               onChange={(e) =>
@@ -394,8 +399,10 @@ export function ProcedureRequirementCheckerView({ lang = 'vi' }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="bg-surface p-4 rounded-xl border border-outline-variant space-y-2">
-              <label className="font-bold text-on-surface block">Hình thức nộp hồ sơ:</label>
+              <label htmlFor="submission-method-select" className="font-bold text-on-surface block">Hình thức nộp hồ sơ:</label>
               <select
+                id="submission-method-select"
+                aria-label="Hình thức nộp hồ sơ"
                 value={selectedMethod}
                 onChange={(e) => setSelectedMethod(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant rounded-lg p-2 text-on-surface font-medium"

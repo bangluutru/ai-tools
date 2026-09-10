@@ -50,6 +50,14 @@ const DEFAULT_CAPABILITY_MAP = {
   'immigration.arrivingInJapan.guide': 'arriving-in-japan-wizard-jp',
   'immigration.leavingJapan.guide': 'leaving-japan-wizard-jp',
 
+  // Tên miền Thủ tục & Giấy tờ Hành chính (Administrative Procedures & Documents)
+  'documents.finder': 'document-finder-jp',
+  'documents.certificate.guide': 'certificate-acquisition-guide-jp',
+  'documents.mynumber.guide': 'mynumber-procedure-guide-jp',
+  'documents.form.helper': 'official-form-helper-jp',
+  'documents.requirement.check': 'procedure-requirement-checker-jp',
+  'documents.admin.navigate': 'administrative-navigator-jp',
+
   // Biến thể tương thích (Compatibility Aliases)
   'family.maternityAllowance.simulate': 'maternity-allowance-jp',
   'family.childcareLeave.check': 'childcare-leave-eligibility-jp',
