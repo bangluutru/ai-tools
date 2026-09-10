@@ -15,3 +15,7 @@ export * from './engines/movingAdminEngine.js';
 // M6: Address Change Multi-channel Checklist (住所変更チェックリスト)
 export * from './rules/addressChangeRules.js';
 export * from './engines/addressChangeEngine.js';
+
+// M7: Moving Guide & Orchestrator (引越し手続きガイド)
+export * from './rules/movingWizardDefinition.js';
+export * from './engines/movingWizardEngine.js';

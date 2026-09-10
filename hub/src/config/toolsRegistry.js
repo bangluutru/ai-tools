@@ -411,6 +411,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'checklist',
     regulatory: true,
+  },
+  'moving-wizard-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'housing',
+    country: 'JP',
+    type: 'wizard',
+    regulatory: true,
   }
 };
 
@@ -1128,6 +1140,27 @@ const toolDefinitions = [
     badge: '手続きリスト',
     popular: true,
     tags: ['引越し', '住所変更', 'e転居', '郵便局', 'ライフライン', '電気', 'ガス', '水道', 'address change', 'đổi địa chỉ', 'chuyển nhà', 'japan life', 'housing']
+  },
+  {
+    id: 'moving-wizard-jp',
+    name_vn: 'Lộ Trình Thủ Tục Chuyển Nhà',
+    name_en: 'Moving Guide & Orchestrator',
+    name_ja: '引越し手続きガイド',
+    desc_vn: 'Điều phối toàn diện thủ tục chuyển nhà: Lập tiến trình trước & sau chuyển, cảnh báo hạn 14 ngày & phạt 50.000 yên, đặc lệ 15 ngày trợ cấp trẻ em, e-Tenkyo và điện nước gas.',
+    desc_en: 'Comprehensive Japan moving lifecycle guide: Statutory timeline, 14-day resident registration & 50k JPY fine alerts, child allowance 15-day rule, utilities and e-Tenkyo.',
+    desc_ja: '引越し前後の総合手続きナビ：法定期限タイムライン、転入届14日・過料5万円アラート、児童手当15日特例、ライフライン・e転居の総合チェックリスト。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'housing',
+    country: 'JP',
+    type: 'wizard',
+    regulatory: true,
+    icon: 'Home',
+    gradient: 'from-amber-600 via-orange-600 to-rose-600',
+    color: '#d97706',
+    badge: '総合ガイド',
+    popular: true,
+    tags: ['引越し', '手続き', 'ガイド', '転入届', '転出届', '過料', '児童手当', 'ライフライン', 'e転居', 'moving guide', 'chuyển nhà', 'japan life', 'housing']
   },
   {
     id: 'watermark-studio',

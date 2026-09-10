@@ -24,6 +24,12 @@ import {
   generateAddressChangeChecklist,
   ADDRESS_CHANGE_CATEGORIES,
   TIMING_BANDS,
+
+  // Moving Wizard
+  generateMovingWizardPlan,
+  movingWizardRuntime,
+  movingWizardDefinition,
+  MOVING_STAGES,
 } from '../src/japan/housing/index.js';
 
 test('Milestone 4: 引越し費用シミュレーター (Moving Cost Simulator Golden Tests)', async (t) => {
@@ -307,6 +313,133 @@ test('Milestone 6: 住所変更チェックリスト (Address Change Checklist G
     const lifelineGroup = checklist.byCategory.find((g) => g.category.id === 'lifeline');
     assert.ok(lifelineGroup);
     assert.ok(lifelineGroup.items.some((i) => i.id === 'gas_valve_opening'));
+  });
+});
+
+test('Milestone 7: 引越し手続きガイド＆オーケストレーター (Moving Wizard & Life Event Foundation Golden Tests)', async (t) => {
+  // Case 1: Cross-municipality family move with children and My Number
+  await t.test('M7-01: Chuyển nhà khác quận/huyện, có con nhỏ, có My Number: đầy đủ 転出届 online, 転入届 14 ngày, và đặc lệ 15 ngày Trợ cấp Trẻ em', () => {
+    const moveDate = '2026-10-15';
+    const plan = generateMovingWizardPlan({
+      moveDate,
+      movingType: 'different_municipality',
+      hasMyNumberCard: true,
+      hasChildren: true,
+      hasVehicle: true,
+      hasFixedInternet: true,
+      isForeignResident: true,
+    });
+
+    assert.equal(plan.profile.isSameMunicipality, false);
+    assert.equal(plan.milestones.moveDate, '2026-10-15');
+    assert.equal(plan.milestones.tennyuDeadlineDate, '2026-10-29'); // 14 ngày sau
+    assert.equal(plan.milestones.childAllowanceDeadlineDate, '2026-10-30'); // 15 ngày sau
+
+    // Critical Warnings
+    const tennyuWarn = plan.warnings.find((w) => w.id === 'warning_tennyu_14days');
+    assert.ok(tennyuWarn);
+    assert.equal(tennyuWarn.severity, 'critical');
+
+    const childWarn = plan.warnings.find((w) => w.id === 'warning_child_allowance_15days');
+    assert.ok(childWarn);
+    assert.equal(childWarn.severity, 'high');
+
+    // Tasks
+    const tenshutsu = plan.tasks.find((t) => t.id === 'task_tenshutsu_todoke');
+    assert.ok(tenshutsu);
+    assert.equal(tenshutsu.isApplicable, true);
+    assert.ok(tenshutsu.customNoteJa.includes('オンラインで転出届を完結'));
+
+    const childAllowanceTask = plan.tasks.find((t) => t.id === 'task_child_allowance_15day');
+    assert.ok(childAllowanceTask);
+    assert.equal(childAllowanceTask.isApplicable, true);
+    assert.equal(childAllowanceTask.deadlineDate, '2026-10-30');
+
+    const zairyuTask = plan.tasks.find((t) => t.id === 'task_zairyu_card_endorsement');
+    assert.ok(zairyuTask);
+    assert.equal(zairyuTask.isApplicable, true);
+  });
+
+  // Case 2: Intra-municipality move (same municipality)
+  await t.test('M7-02: Chuyển nhà cùng quận: 転出届 không áp dụng, 転入 chuyển thành 転居届, trợ cấp trẻ em tự động cập nhật', () => {
+    const plan = generateMovingWizardPlan({
+      moveDate: '2026-11-01',
+      movingType: 'same_municipality',
+      hasMyNumberCard: false,
+      hasChildren: true,
+      hasVehicle: false,
+    });
+
+    assert.equal(plan.profile.isSameMunicipality, true);
+
+    const tenshutsu = plan.tasks.find((t) => t.id === 'task_tenshutsu_todoke');
+    assert.ok(tenshutsu);
+    assert.equal(tenshutsu.isApplicable, false);
+
+    const tenkyo = plan.tasks.find((t) => t.id === 'task_tennyu_todoke');
+    assert.ok(tenkyo);
+    assert.ok(tenkyo.titleJa.includes('転居届'));
+
+    // Child allowance in same municipality does not need new certification claim
+    const childAllowanceTask = plan.tasks.find((t) => t.id === 'task_child_allowance_15day');
+    assert.ok(childAllowanceTask);
+    assert.ok(childAllowanceTask.customNoteJa.includes('受給資格の新規認定請求は不要'));
+  });
+
+  // Case 3: Life Event Runtime capability resolution and deep linking
+  await t.test('M7-03: Life Event Runtime phân giải chính xác Semantic Capabilities sang Tool IDs và Hash Routes', () => {
+    const plan = generateMovingWizardPlan({
+      moveDate: '2026-12-01',
+      hasVehicle: true,
+      hasChildren: true,
+    });
+
+    // Verify task capabilities
+    const costTask = plan.tasks.find((t) => t.id === 'task_moving_cost_estimate');
+    assert.equal(costTask.relatedCapabilityId, 'housing.moving.cost.calculate');
+    assert.equal(costTask.toolId, 'moving-cost-jp');
+    assert.equal(costTask.hashRoute, '#/tools/moving-cost-jp');
+
+    const adminTask = plan.tasks.find((t) => t.id === 'task_tennyu_todoke');
+    assert.equal(adminTask.relatedCapabilityId, 'housing.moving.admin.check');
+    assert.equal(adminTask.toolId, 'moving-admin-checker-jp');
+    assert.equal(adminTask.hashRoute, '#/tools/moving-admin-checker-jp');
+
+    const childTask = plan.tasks.find((t) => t.id === 'task_child_allowance_15day');
+    assert.equal(childTask.relatedCapabilityId, 'family.childAllowance.calculate');
+    assert.equal(childTask.toolId, 'child-allowance-jp');
+    assert.equal(childTask.hashRoute, '#/tools/child-allowance-jp');
+
+    // Verify relatedTools list
+    assert.equal(plan.relatedTools.length, 4);
+    assert.ok(plan.relatedTools.some((rt) => rt.toolId === 'moving-cost-jp'));
+    assert.ok(plan.relatedTools.some((rt) => rt.toolId === 'moving-admin-checker-jp'));
+    assert.ok(plan.relatedTools.some((rt) => rt.toolId === 'address-change-checklist-jp'));
+    assert.ok(plan.relatedTools.some((rt) => rt.toolId === 'child-allowance-jp'));
+  });
+
+  // Case 4: Timeline structure and chronological order
+  await t.test('M7-04: Trục thời gian (Timeline) sắp xếp tuần tự từ 1 tháng trước tới sau khi chuyển', () => {
+    const plan = generateMovingWizardPlan({
+      moveDate: '2026-10-01',
+    });
+
+    assert.ok(plan.timeline.length >= 5);
+    const stages = plan.timeline.map((item) => item.stageId);
+    assert.ok(stages.includes('stage_1_month_prior'));
+    assert.ok(stages.includes('stage_1_week_prior'));
+    assert.ok(stages.includes('stage_day_of_move'));
+    assert.ok(stages.includes('stage_within_14_days'));
+  });
+
+  // Case 5: Life Event Runtime storage interface
+  await t.test('M7-05: Runtime cung cấp giao diện lưu trữ đồng nhất (storage interface) cho checklist state', () => {
+    assert.equal(typeof movingWizardRuntime.storage.loadCompleted, 'function');
+    assert.equal(typeof movingWizardRuntime.storage.saveCompleted, 'function');
+    assert.equal(typeof movingWizardRuntime.storage.toggleCompleted, 'function');
+    assert.equal(typeof movingWizardRuntime.storage.clear, 'function');
+    assert.equal(movingWizardRuntime.getId(), 'moving');
+    assert.equal(movingWizardRuntime.getDefinition().domain, 'housing');
   });
 });
 
