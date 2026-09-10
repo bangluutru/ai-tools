@@ -15,3 +15,6 @@ export * from './engines/maternityAllowanceEngine.js';
 export * from './rules/childcareLeaveRules.js';
 export * from './engines/childcareLeaveEngine.js';
 
+// M3: Childcare Leave Benefit Simulator (育児休業給付金シミュレーター)
+export * from './rules/childcareBenefitRules.js';
+export * from './engines/childcareBenefitEngine.js';

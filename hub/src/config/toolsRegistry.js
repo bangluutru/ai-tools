@@ -339,6 +339,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'checker',
     regulatory: true,
+  },
+  'childcare-benefit-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'family',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
   }
 };
 
@@ -929,6 +941,27 @@ const toolDefinitions = [
     badge: '育介法・雇用保険',
     popular: true,
     tags: ['育児休業', '育児休業給付金', '産後パパ育休', '出生後休業支援給付金', '育児時短就業給付金', '雇用保険', '育休', 'childcare leave', 'nghỉ chăm con', 'trợ cấp chăm con', 'japan life', 'family']
+  },
+  {
+    id: 'childcare-benefit-jp',
+    name_vn: 'Tính Trợ Cấp Nghỉ Chăm Con',
+    name_en: 'Childcare Leave Benefit Simulator',
+    name_ja: '育児休業給付シミュレーター',
+    desc_vn: 'Mô phỏng tiền trợ cấp nghỉ chăm con (giai đoạn 67% và 50%), tiền hỗ trợ sau sinh 13%, trợ cấp rút ngắn giờ làm 10% và miễn giảm bảo hiểm xã hội.',
+    desc_en: 'Simulate childcare leave benefits (67% & 50% tiers), post-birth 13% bonus, short-time work 10% benefit, and social insurance tax exemptions.',
+    desc_ja: '育児休業給付金（67%・50%）、出生後休業支援（+13%）、育児時短就業給付（10%）および社会保険料免除・非課税実質手取り額をシミュレーション。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'family',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
+    icon: 'Coins',
+    gradient: 'from-amber-500 via-orange-500 to-rose-500',
+    color: '#f59e0b',
+    badge: '雇用保険法',
+    popular: true,
+    tags: ['育児休業給付金', '育児休業', '育休手当', '出生後休業支援給付金', '育児時短就業給付金', '社会保険料免除', '非課税', '雇用保険', 'childcare benefit', 'trợ cấp nghỉ chăm con', 'bảo hiểm thất nghiệp', 'japan life', 'family']
   },
   {
     id: 'watermark-studio',

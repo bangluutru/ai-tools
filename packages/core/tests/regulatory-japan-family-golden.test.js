@@ -14,6 +14,8 @@ import {
   checkChildcareLeaveEligibility,
   ELIGIBILITY_STATUS,
   CHILDCARE_BENEFIT_SCHEMES,
+  calculateChildcareBenefit,
+  CHILDCARE_BENEFIT_CONSTANTS,
 } from '../src/japan/family/index.js';
 
 test('Milestone 1: 出産手当金シミュレーター (Maternity Allowance Golden Tests)', async (t) => {
@@ -450,4 +452,153 @@ test('Milestone 2: 育児休業・給付チェッカー (Childcare Leave & Benef
     assert.equal(result.schemes.shortTimeWorkBenefit.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
   });
 });
+
+test('Milestone 3: 育児休業給付シミュレーター (Childcare Benefit Simulator Golden Tests)', async (t) => {
+  // Case 1: Lương chuẩn 300,000円/tháng, nghỉ 300 ngày (180 ngày 67% + 120 ngày 50%)
+  await t.test('M3-01: Lương 300,000円 nghỉ 300 ngày: tính chính xác mức 67% cho 180 ngày đầu và 50% cho 120 ngày sau', () => {
+    const result = calculateChildcareBenefit({
+      monthlySalary: 300000,
+      plannedLeaveDays: 300,
+    });
+
+    assert.equal(result.isEligible, true);
+    assert.equal(result.wageDailyBasis.rawDailyWage, 10000);
+    assert.equal(result.wageDailyBasis.statutoryDailyWage, 10000);
+    assert.equal(result.wageDailyBasis.isCappedByMaxLimit, false);
+    assert.equal(result.wageDailyBasis.isFlooredByMinLimit, false);
+
+    // Tier 1 (180 ngày đầu): 10,000 * 67% = 6,700円/ngày -> 1,206,000円
+    assert.equal(result.benefitBreakdown.tier1.days, 180);
+    assert.equal(result.benefitBreakdown.tier1.dailyAmount, 6700);
+    assert.equal(result.benefitBreakdown.tier1.totalAmount, 1206000);
+
+    // Tier 2 (120 ngày sau): 10,000 * 50% = 5,000円/ngày -> 600,000円
+    assert.equal(result.benefitBreakdown.tier2.days, 120);
+    assert.equal(result.benefitBreakdown.tier2.dailyAmount, 5000);
+    assert.equal(result.benefitBreakdown.tier2.totalAmount, 600000);
+
+    assert.equal(result.financialsTotals?.totalStandardBenefit || result.financialTotals.totalStandardBenefit, 1806000);
+    assert.equal(result.financialTotals.grandTotalBenefit, 1806000);
+  });
+
+  // Case 2: Lương cao bị khống chế trần MHLW 16,210円/ngày
+  await t.test('M3-02: Lương cao (600,000円/tháng) bị khống chế trần mức lương ngày MHLW (16,210円)', () => {
+    const result = calculateChildcareBenefit({
+      monthlySalary: 600000,
+      plannedLeaveDays: 180,
+    });
+
+    assert.equal(result.wageDailyBasis.isCappedByMaxLimit, true);
+    assert.equal(result.wageDailyBasis.statutoryDailyWage, 16210);
+    // 16,210 * 67% = 10,860.7 -> 10,860円/ngày
+    assert.equal(result.benefitBreakdown.tier1.dailyAmount, 10860);
+    assert.equal(result.benefitBreakdown.tier1.totalAmount, 10860 * 180);
+  });
+
+  // Case 3: Lương thấp được áp mức sàn MHLW 2,978円/ngày
+  await t.test('M3-03: Lương thấp (80,000円/tháng) được áp mức sàn bảo đảm MHLW (2,978円)', () => {
+    const result = calculateChildcareBenefit({
+      monthlySalary: 80000,
+      plannedLeaveDays: 180,
+    });
+
+    assert.equal(result.wageDailyBasis.isFlooredByMinLimit, true);
+    assert.equal(result.wageDailyBasis.statutoryDailyWage, 2978);
+    // 2,978 * 67% = 1,995.26 -> 1,995円/ngày
+    assert.equal(result.benefitBreakdown.tier1.dailyAmount, 1995);
+    assert.equal(result.benefitBreakdown.tier1.totalAmount, 1995 * 180);
+  });
+
+  // Case 4: Thưởng hỗ trợ sau sinh 13% trong 28 ngày đầu (出生後休業支援給付金)
+  await t.test('M3-04: Đủ điều kiện thưởng hỗ trợ sau sinh 13%: cộng thêm 1,300円/ngày trong 28 ngày (tổng 80% lương)', () => {
+    const result = calculateChildcareBenefit({
+      monthlySalary: 300000,
+      plannedLeaveDays: 300,
+      qualifiesForPostBirthBonus: true,
+      postBirthBonusDays: 28,
+    });
+
+    assert.equal(result.benefitBreakdown.postBirthBonus.isApplied, true);
+    assert.equal(result.benefitBreakdown.postBirthBonus.days, 28);
+    assert.equal(result.benefitBreakdown.postBirthBonus.dailyAmount, 1300);
+    assert.equal(result.benefitBreakdown.postBirthBonus.totalAmount, 36400);
+
+    // Tổng cộng = 1,806,000 + 36,400 = 1,842,400円
+    assert.equal(result.financialTotals.grandTotalBenefit, 1842400);
+  });
+
+  // Case 5: Trợ cấp làm việc rút ngắn giờ nuôi con dưới 2 tuổi (育児時短就業給付金 - 10%)
+  await t.test('M3-05: Đi làm lại và rút ngắn giờ nuôi con dưới 2 tuổi: nhận thêm trợ cấp 10% lương mỗi tháng', () => {
+    const result = calculateChildcareBenefit({
+      monthlySalary: 300000,
+      plannedLeaveDays: 300,
+      isShortTimeWork: true,
+      shortTimeMonths: 6,
+    });
+
+    assert.equal(result.benefitBreakdown.shortTimeWork.isApplied, true);
+    assert.equal(result.benefitBreakdown.shortTimeWork.monthlyAmount, 30000);
+    assert.equal(result.benefitBreakdown.shortTimeWork.totalAmount, 180000);
+    assert.equal(result.financialTotals.grandTotalBenefit, 1806000 + 180000);
+  });
+
+  // Case 6: Công ty trả lương trong thời gian nghỉ <= 13% không bị giảm trừ
+  await t.test('M3-06: Công ty trả lương trong kỳ nghỉ <= 13% lương chuẩn: không bị giảm trừ trợ cấp', () => {
+    const result = calculateChildcareBenefit({
+      monthlySalary: 300000,
+      plannedLeaveDays: 180,
+      monthlySalaryDuringLeave: 30000, // 10% < 13%
+    });
+
+    assert.equal(result.financialTotals.isSalaryOffsetApplied, false);
+    assert.equal(result.benefitBreakdown.tier1.monthlyAmount, 201000);
+  });
+
+  // Case 7: Công ty trả lương >= 80% lương chuẩn thì trợ cấp = 0円
+  await t.test('M3-07: Công ty trả lương trong kỳ nghỉ >= 80% lương chuẩn: trợ cấp bị giảm về 0円', () => {
+    const result = calculateChildcareBenefit({
+      monthlySalary: 300000,
+      plannedLeaveDays: 180,
+      monthlySalaryDuringLeave: 250000, // > 80% (240,000円)
+    });
+
+    assert.equal(result.financialTotals.isSalaryOffsetApplied, true);
+    assert.equal(result.financialTotals.isFullSalaryOffset, true);
+    assert.equal(result.benefitBreakdown.tier1.monthlyAmount, 0);
+    assert.equal(result.financialTotals.grandTotalBenefit, 0);
+  });
+
+  // Case 8: Công ty trả lương từ 13% đến 80% được bù phần chênh lệch
+  await t.test('M3-08: Công ty trả lương trong khoảng 13% - 80%: trợ cấp được bù đắp sao cho tổng không vượt quá 80%', () => {
+    const result = calculateChildcareBenefit({
+      monthlySalary: 300000,
+      plannedLeaveDays: 180,
+      monthlySalaryDuringLeave: 120000, // 40% lương chuẩn
+    });
+
+    assert.equal(result.financialTotals.isSalaryOffsetApplied, true);
+    assert.equal(result.financialTotals.isFullSalaryOffset, false);
+    // 80% của 300k là 240k. 240k - 120k = 120,000円
+    assert.equal(result.benefitBreakdown.tier1.monthlyAmount, 120000);
+  });
+
+  // Case 9: Timeline stages được xây dựng đầy đủ
+  await t.test('M3-09: Xây dựng cấu trúc dữ liệu dòng thời gian (Timeline Stages) chi tiết cho giao diện trực quan', () => {
+    const result = calculateChildcareBenefit({
+      monthlySalary: 300000,
+      plannedLeaveDays: 300,
+      qualifiesForPostBirthBonus: true,
+      postBirthBonusDays: 28,
+      isShortTimeWork: true,
+      shortTimeMonths: 6,
+    });
+
+    assert.equal(result.timelineStages.length, 4);
+    assert.equal(result.timelineStages[0].stageId, 'tier1_initial');
+    assert.equal(result.timelineStages[1].stageId, 'post_birth_support_bonus');
+    assert.equal(result.timelineStages[2].stageId, 'tier2_subsequent');
+    assert.equal(result.timelineStages[3].stageId, 'short_time_work');
+  });
+});
+
 
