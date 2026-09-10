@@ -137,14 +137,36 @@ export function createLifeEventRuntime(definition) {
           if (cap.isAvailable) {
             enriched.toolId = cap.toolId;
             enriched.toolLinkId = cap.toolId;
-            enriched.deepLink = cap.hashRoute;
+            enriched.hashRoute = cap.hashRoute;
+            if (typeof enriched.deepLink === 'object' && enriched.deepLink !== null) {
+              enriched.deepLink = {
+                ...enriched.deepLink,
+                toolId: cap.toolId,
+                hashRoute: cap.hashRoute,
+              };
+            } else if (typeof enriched.deepLink === 'string') {
+              enriched.deepLink = cap.hashRoute;
+            } else {
+              enriched.deepLink = cap.hashRoute;
+            }
           }
         } else if (enriched.toolId || enriched.toolLinkId) {
           // Tương thích ngược với toolId truyền trực tiếp
           const tid = enriched.toolId || enriched.toolLinkId;
           enriched.toolId = tid;
           enriched.toolLinkId = tid;
-          enriched.deepLink = `#/tools/${tid}`;
+          enriched.hashRoute = `#/tools/${tid}`;
+          if (typeof enriched.deepLink === 'object' && enriched.deepLink !== null) {
+            enriched.deepLink = {
+              ...enriched.deepLink,
+              toolId: tid,
+              hashRoute: `#/tools/${tid}`,
+            };
+          } else if (typeof enriched.deepLink === 'string') {
+            enriched.deepLink = `#/tools/${tid}`;
+          } else {
+            enriched.deepLink = `#/tools/${tid}`;
+          }
         }
 
         return enriched;

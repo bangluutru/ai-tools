@@ -12,4 +12,5 @@ export * from './engines/unemploymentEligibilityEngine.js';
 export * from './rules/unemploymentBenefitTables.js';
 export * from './engines/unemploymentBenefitEngine.js';
 export * from './rules/leavingJobRules.js';
+export * from './rules/leavingJobDefinition.js';
 export * from './engines/leavingJobEngine.js';

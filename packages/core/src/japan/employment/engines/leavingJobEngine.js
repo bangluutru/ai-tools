@@ -13,6 +13,7 @@ import {
   LEAVING_ACTION_ITEMS,
   LEAVING_JOB_SOURCES,
 } from '../rules/leavingJobRules.js';
+import { leavingJobRuntime } from '../rules/leavingJobDefinition.js';
 
 /**
  * Cộng thêm số ngày vào một chuỗi ngày 'YYYY-MM-DD'
@@ -147,65 +148,17 @@ export function generateLeavingJobPlan(input = {}) {
     isCompanySeparation,
   });
 
-  // 4. Lọc và tùy biến danh mục công việc (Checklist items)
-  const checklist = LEAVING_ACTION_ITEMS.map((item) => {
-    let isApplicable = true;
-    let customNoteJa = '';
-    let customNoteVi = '';
-    let customNoteEn = '';
-    let deadlineDate = '';
-
-    if (item.id === 'notice_resignation') {
-      deadlineDate = civilCodeNoticeDate;
-    } else if (item.id === 'consume_paid_leave') {
-      if (remainingPaidLeaveDays > 0) {
-        customNoteJa = `現在残日数: ${remainingPaidLeaveDays}日。退職日までに全日数消化を推奨。`;
-        customNoteVi = `Số phép còn lại: ${remainingPaidLeaveDays} ngày. Đề nghị lên lịch nghỉ hết trước ngày thôi việc.`;
-        customNoteEn = `Remaining days: ${remainingPaidLeaveDays} days. Schedule full consumption before resignation.`;
-      }
-    } else if (item.id === 'health_insurance_procedure') {
-      deadlineDate = input.healthInsurancePreference === 'voluntary_continuation'
-        ? voluntaryContinuationDeadline
-        : municipalProceduresDeadline;
-      if (hasNewJobImmediately) {
-        isApplicable = false;
-        customNoteJa = '転職先の社会保険に即日加入するため、個人での切り替え手続きは不要です。';
-        customNoteVi = 'Do chuyển sang công ty mới ngay, công ty mới sẽ làm thủ tục tham gia BHYT.';
-        customNoteEn = 'New employer will enroll you into their health insurance immediately.';
-      }
-    } else if (item.id === 'national_pension_switch') {
-      deadlineDate = municipalProceduresDeadline;
-      if (hasNewJobImmediately) {
-        isApplicable = false;
-        customNoteJa = '転職先の厚生年金に引き継がれるため、市区町村窓口での手続きは不要です。';
-        customNoteVi = 'Được tiếp nối đóng Lương hưu Phúc lợi tại công ty mới, không cần ra ủy ban.';
-        customNoteEn = 'Transferred directly to new employer welfare pension, municipal procedure not needed.';
-      }
-    } else if (item.id === 'hellowork_unemployment_claim') {
-      deadlineDate = rishokuhyoEstimatedEnd;
-      if (hasNewJobImmediately) {
-        isApplicable = false;
-        customNoteJa = 'すでに次の転職先が決まっているため、失業給付の受給手続きは不要です。';
-        customNoteVi = 'Đã có việc làm tiếp theo ngay nên không cần làm thủ tục hưởng trợ cấp thất nghiệp.';
-        customNoteEn = 'Already secured next employment, unemployment allowance claim is not applicable.';
-      }
-    } else if (item.id === 'year_end_tax_filing') {
-      if (hasNewJobImmediately) {
-        customNoteJa = '転職先で前職の源泉徴収票を提出し、年末調整を受けられます。';
-        customNoteVi = 'Nộp phiếu khấu trừ thuế công ty cũ cho công ty mới để làm điều chỉnh thuế cuối năm.';
-        customNoteEn = 'Submit previous employer withholding slip to new employer for year-end adjustment.';
-      }
-    }
-
-    return {
-      ...item,
-      isApplicable,
-      deadlineDate,
-      customNoteJa,
-      customNoteVi,
-      customNoteEn,
-    };
-  });
+  // 4. Lọc và tùy biến danh mục công việc (Checklist items) qua Life Event Runtime
+  const checklist = leavingJobRuntime.evaluateChecklist({
+    ...input,
+    resignationDate,
+    hasNewJobImmediately,
+    remainingPaidLeaveDays,
+    healthInsurancePreference: input.healthInsurancePreference,
+  }).map((item) => ({
+    ...item,
+    deadlineDate: item.calculatedDeadlineDate || '',
+  }));
 
   // 5. Trục thời gian tiến trình (Chronological Timeline)
   const timeline = [
@@ -344,5 +297,6 @@ export function generateLeavingJobPlan(input = {}) {
     timeline,
     deepLinks,
     regulatorySources: LEAVING_JOB_SOURCES,
+    lifeEventRuntime: leavingJobRuntime,
   };
 }

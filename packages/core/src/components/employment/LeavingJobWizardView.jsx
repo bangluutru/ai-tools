@@ -663,19 +663,29 @@ export default function LeavingJobWizardView({ lang = 'ja' }) {
                       )}
 
                       {/* Action Deep-link Button */}
-                      {item.deepLink && item.isApplicable && (
-                        <div className="pt-2">
-                          <a
-                            href={`#/tools/${item.deepLink.toolId}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-colors"
-                          >
-                            <span>
-                              {lang === 'ja' ? item.deepLink.labelJa : lang === 'vi' ? item.deepLink.labelVi : item.deepLink.labelEn}
-                            </span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
-                      )}
+                      {item.deepLink && item.isApplicable && (() => {
+                        const targetToolId = typeof item.deepLink === 'object'
+                          ? (item.deepLink.toolId || item.toolId)
+                          : (item.toolId || (typeof item.deepLink === 'string' ? item.deepLink.replace(/^#\/tools\//, '') : null));
+
+                        if (!targetToolId) return null;
+
+                        const label = (typeof item.deepLink === 'object' && (lang === 'ja' ? item.deepLink.labelJa : lang === 'vi' ? item.deepLink.labelVi : item.deepLink.labelEn))
+                          || (lang === 'ja' ? '関連ツールを開く' : lang === 'vi' ? 'Mở công cụ liên kết' : 'Open related tool');
+
+                        return (
+                          <div className="pt-2">
+                            <a
+                              href={`#/tools/${targetToolId}`}
+                              aria-label={label}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold transition-colors"
+                            >
+                              <span>{label}</span>
+                              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                            </a>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
