@@ -44,3 +44,6 @@ export {
 } from './theme/themeManager.js';
 export { useTheme } from './theme/useTheme.js';
 
+// Regulatory Foundation (Shared across JP, VN, etc.)
+export * from './regulatory/index.js';
+

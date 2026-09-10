@@ -1,0 +1,225 @@
+/**
+ * @file packages/core/src/regulatory/sourceRegistry.js
+ * @description Official Source Registry dùng chung cho toàn bộ các miền pháp lý (JP, VN, etc.).
+ * Quản lý các nguồn văn bản pháp quy chính thức cấp quốc gia và địa phương (Tier-1 Primary Sources),
+ * tài liệu hướng dẫn giải thích (Tier-2 Explanatory Sources), loại bỏ việc hardcode URL trong rule files.
+ */
+
+/**
+ * @typedef {'law' | 'regulation' | 'official-guidance' | 'official-table' | 'official-faq'} RegulatorySourceType
+ * @typedef {'official-primary' | 'official-secondary' | 'deprecated'} RegulatorySourceStatus
+ * @typedef {'ja' | 'vi' | 'en'} RegulatoryLanguage
+ * @typedef {'JP' | 'VN'} RegulatoryCountry
+ *
+ * @typedef {Object} RegulatorySource
+ * @property {string} id - Mã định danh nguồn duy nhất (ví dụ: 'nta-no1410-2026')
+ * @property {RegulatoryCountry} country - Quốc gia ban hành ('JP' | 'VN')
+ * @property {string} authority - Cơ quan ban hành (ví dụ: '国税庁', '厚生労働省', '日本年金機構')
+ * @property {string} title - Tiêu đề văn bản hoặc biểu mẫu chính thức
+ * @property {string} url - Đường dẫn tham chiếu chính thức (Primary URL)
+ * @property {RegulatorySourceType} sourceType - Loại nguồn văn bản
+ * @property {RegulatoryLanguage} language - Ngôn ngữ văn bản gốc
+ * @property {string} lastVerifiedAt - Ngày kiểm chứng gần nhất (YYYY-MM-DD)
+ * @property {RegulatorySourceStatus} status - Trạng thái nguồn ('official-primary' | 'official-secondary' | 'deprecated')
+ * @property {string} [notes] - Ghi chú tóm tắt nội dung quy chuẩn
+ */
+
+export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
+  // =========================================================================
+  // JAPAN LIFE - TAX & REVENUE (国税庁 / 地方税 / 総務省)
+  // =========================================================================
+  'nta-no1410-2026': {
+    id: 'nta-no1410-2026',
+    country: 'JP',
+    authority: '国税庁 (National Tax Agency)',
+    title: 'No.1410 給与所得控除（令和8年分・令和9年分）',
+    url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1410.htm',
+    sourceType: 'official-table',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Biểu tính khấu trừ tiền lương 令和8・9年分: mức sàn 740,000円 (thu nhập <= 2.2M円), trần 1,950,000円 (> 8.5M円).'
+  },
+  'nta-no1199-2026': {
+    id: 'nta-no1199-2026',
+    country: 'JP',
+    authority: '国税庁 (National Tax Agency)',
+    title: 'No.1199 基礎控除（令和8年分・令和9年分以後）',
+    url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm',
+    sourceType: 'official-table',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Biểu khấu trừ cơ bản 令和8・9年分: 104万円 cho thu nhập <= 132万円; giảm trừ lũy tiến theo các ngưỡng 3.36M, 4.89M, 6.55M, 23.5M, 24M, 24.5M, 25M.'
+  },
+  'nta-no2260-brackets': {
+    id: 'nta-no2260-brackets',
+    country: 'JP',
+    authority: '国税庁 (National Tax Agency)',
+    title: 'No.2260 所得税の税率（所得税の速算表）',
+    url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2260.htm',
+    sourceType: 'official-table',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Biểu thuế lũy tiến từng phần 7 bậc cho thuế thu nhập cá nhân (5% đến 45%).'
+  },
+  'nta-qa-reform-2026': {
+    id: 'nta-qa-reform-2026',
+    country: 'JP',
+    authority: '国税庁 (National Tax Agency)',
+    title: '令和8年度税制改正（所得税の基礎控除の引上げ等関係）Ｑ＆Ａ',
+    url: 'https://www.nta.go.jp/users/gensen/2026kiso/pdf/0026005-024.pdf',
+    sourceType: 'official-faq',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Hướng dẫn thi hành thuế thu nhập: hiệu lực ngày 01/12/2026, áp dụng cho kỳ tính thuế năm 2026 và quyết toán thuế cuối năm.'
+  },
+  'soumu-resident-tax-std': {
+    id: 'soumu-resident-tax-std',
+    country: 'JP',
+    authority: '総務省 (Ministry of Internal Affairs and Communications)',
+    title: '個人住民税の概要・税率標準（地方税法）',
+    url: 'https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/ichiran08/ichiran08_01.html',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Chuẩn thuế cư trú: 所得割 10% (tỉnh 4% + xã/phường 6%), 均等割 chuẩn 5,000円/năm, 森林環境税 1,000円/năm.'
+  },
+
+  // =========================================================================
+  // JAPAN LIFE - SOCIAL INSURANCE & PENSION (厚労省 / 年金機構 / 協会けんぽ)
+  // =========================================================================
+  'jps-national-pension-2026': {
+    id: 'jps-national-pension-2026',
+    country: 'JP',
+    authority: '日本年金機構 (Japan Pension Service)',
+    title: '令和8年度 国民年金保険料（月額 17,920円）',
+    url: 'https://www.nenkin.go.jp/service/kokunen/hokenryo/default.html',
+    sourceType: 'official-table',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Phí bảo hiểm hưu trí quốc dân 令和8年度 (áp dụng từ 01/04/2026 đến 31/03/2027): 17,920円/tháng.'
+  },
+  'mhlw-employment-rate-2026': {
+    id: 'mhlw-employment-rate-2026',
+    country: 'JP',
+    authority: '厚生労働省 (Ministry of Health, Labour and Welfare)',
+    title: '令和8年度 雇用保険料率のご案内',
+    url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000160564_00043.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Tỷ lệ bảo hiểm thất nghiệp 令和8年度: ngành thông thường người lao động 5/1000 (0.5%), chủ sử dụng 8.5/1000, tổng 13.5/1000.'
+  },
+  'kyoukaikenpo-rates-2026': {
+    id: 'kyoukaikenpo-rates-2026',
+    country: 'JP',
+    authority: '全国健康保険協会 (協会けんぽ - Japan Health Insurance Association)',
+    title: '令和8年度 都道府県支部別保険料率額表',
+    url: 'https://www.kyoukaikenpo.or.jp/g7/cat330/sb3150/',
+    sourceType: 'official-table',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Tỷ lệ BHYT 47 tỉnh thành 令和8年度 (Fukuoka 10.11%, Tokyo 9.98%, v.v.), chia đôi 50/50 người lao động và chủ sử dụng.'
+  },
+  'cfa-child-support-2026': {
+    id: 'cfa-child-support-2026',
+    country: 'JP',
+    authority: 'こども家庭庁 / 厚生労働省 (Children and Families Agency / MHLW)',
+    title: '子ども・子育て支援金制度（令和8年4月施行・支援金率 0.23%）',
+    url: 'https://www.cfa.go.jp/policies/kodomo-shienkin',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Tiền đóng góp hỗ trợ nuôi dưỡng trẻ em toàn quốc 0.23% (chia đôi 50/50: người lao động 0.115%), áp dụng từ tháng 4/2026.'
+  },
+  'kyoukaikenpo-care-insurance-2026': {
+    id: 'kyoukaikenpo-care-insurance-2026',
+    country: 'JP',
+    authority: '全国健康保険協会 (協会けんぽ - Japan Health Insurance Association)',
+    title: '令和8年度 介護保険料率（全国一律 1.62%）',
+    url: 'https://www.kyoukaikenpo.or.jp/g7/cat330/sb3130/',
+    sourceType: 'official-table',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Bảo hiểm chăm sóc người già 介護保険 (đối tượng 40-64 tuổi): tỷ lệ toàn quốc 1.62% (chia đôi 50/50: người lao động 0.81%).'
+  },
+
+  // =========================================================================
+  // VIETNAM LIFE - TAX & SOCIAL INSURANCE (Tổng cục Thuế / BHXH Việt Nam)
+  // =========================================================================
+  'gdt-pit-law-2026': {
+    id: 'gdt-pit-law-2026',
+    country: 'VN',
+    authority: 'Tổng cục Thuế / Bộ Tài chính (GDT / MOF Vietnam)',
+    title: 'Luật Thuế Thu nhập cá nhân & Biểu thuế lũy tiến từng phần',
+    url: 'https://www.gdt.gov.vn',
+    sourceType: 'law',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Quy định thuế TNCN, biểu thuế lũy tiến từng phần và mức giảm trừ gia cảnh.'
+  },
+  'vss-social-insurance-2026': {
+    id: 'vss-social-insurance-2026',
+    country: 'VN',
+    authority: 'Bảo hiểm Xã hội Việt Nam (Vietnam Social Security)',
+    title: 'Luật Bảo hiểm xã hội & Tỷ lệ trích nộp BHXH, BHYT, BHTN 2026',
+    url: 'https://baohiemxahoi.gov.vn',
+    sourceType: 'law',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Tỷ lệ trích nộp BHXH (8%), BHYT (1.5%), BHTN (1%) và mức trần tiền lương đóng bảo hiểm.'
+  }
+});
+
+/**
+ * Tra cứu thông tin nguồn chính thức theo id.
+ * @param {string} sourceId - ID của nguồn
+ * @returns {RegulatorySource|null} Object nguồn hoặc null nếu không tìm thấy
+ */
+export function getSource(sourceId) {
+  if (!sourceId) return null;
+  return OFFICIAL_SOURCE_REGISTRY[sourceId] || null;
+}
+
+/**
+ * Kiểm tra xem một sourceId có tồn tại trong registry chính thức không.
+ * @param {string} sourceId
+ * @returns {boolean}
+ */
+export function hasSource(sourceId) {
+  return Boolean(sourceId && OFFICIAL_SOURCE_REGISTRY[sourceId]);
+}
+
+/**
+ * Lấy danh sách tất cả các nguồn theo quốc gia hoặc trạng thái.
+ * @param {Object} [filter]
+ * @param {RegulatoryCountry} [filter.country]
+ * @param {RegulatorySourceStatus} [filter.status]
+ * @returns {RegulatorySource[]}
+ */
+export function getAllSources(filter = {}) {
+  const sources = Object.values(OFFICIAL_SOURCE_REGISTRY);
+  return sources.filter((s) => {
+    if (filter.country && s.country !== filter.country) return false;
+    if (filter.status && s.status !== filter.status) return false;
+    return true;
+  });
+}
+
+export const OfficialSourceRegistry = {
+  get: getSource,
+  has: hasSource,
+  getAll: getAllSources,
+  all: OFFICIAL_SOURCE_REGISTRY,
+};

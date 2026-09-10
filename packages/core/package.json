@@ -9,7 +9,8 @@
     "./utils/*": "./src/utils/*",
     "./hooks/*": "./src/hooks/*",
     "./services/*": "./src/services/*",
-    "./theme/*": "./src/theme/*"
+    "./theme/*": "./src/theme/*",
+    "./regulatory/*": "./src/regulatory/*"
   },
   "scripts": {
     "lint": "eslint src scripts --config ../../eslint.config.js",
