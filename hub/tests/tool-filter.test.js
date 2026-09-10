@@ -110,7 +110,7 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   const japanTools = toolsForGroup(tools, 'japan-life');
   assert.deepEqual(
     japanTools.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp'].sort()
   );
 
   const commonTools = toolsForGroup(tools, 'common');
@@ -118,13 +118,13 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   assert.equal(commonTools.every((t) => t.group === 'common'), true);
 
   const allTools = toolsForGroup(tools, ALL_GROUPS);
-  assert.equal(allTools.length, 32);
+  assert.equal(allTools.length, 33);
 
   // filterTools combined
   const officeJapan = filterTools(tools, { category: 'office', group: 'japan-life' });
   assert.deepEqual(
     officeJapan.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp'].sort()
   );
 
   const officeCommon = filterTools(tools, { category: 'office', group: 'common' });
@@ -234,6 +234,18 @@ test('search finds Japan Insurance and Employment miniapps across ja, en, and vi
   // nghỉ việc
   const nghiViec = search('nghỉ việc');
   assert.ok(nghiViec.some((t) => t.id === 'leaving-job-wizard-jp'));
+
+  // 出産育児一時金
+  const birthGrant = search('出産育児一時金');
+  assert.ok(birthGrant.some((t) => t.id === 'birth-wizard-jp'));
+
+  // mang thai
+  const mangThai = search('mang thai');
+  assert.ok(mangThai.some((t) => t.id === 'birth-wizard-jp'));
+
+  // birth wizard
+  const birthWiz = search('birth wizard');
+  assert.ok(birthWiz.some((t) => t.id === 'birth-wizard-jp'));
 });
 
 

@@ -18,6 +18,10 @@ import {
   CHILDCARE_BENEFIT_CONSTANTS,
   calculateChildAllowance,
   CHILD_ALLOWANCE_CONSTANTS,
+  calculateChildbirthLumpSumGrant,
+  BIRTH_GRANT_CONSTANTS,
+  getRoadmapStages,
+  calculateChecklistStats,
 } from '../src/japan/family/index.js';
 
 test('Milestone 1: 出産手当金シミュレーター (Maternity Allowance Golden Tests)', async (t) => {
@@ -775,6 +779,123 @@ test('Milestone 4: 児童手当チェッカー (Child Allowance Oct 2024 Reform 
     assert.equal(result.bimonthlyPayment, 0);
   });
 });
+
+test('Milestone 5: 妊娠・出産・育児ガイド (Birth Wizard & Life-Event Orchestrator Golden Tests)', async (t) => {
+  // Case 1: Đơn thai sinh tại cơ sở có Quỹ bồi thường sản khoa
+  await t.test('M5-01: Đơn thai tại cơ sở tham gia Quỹ bồi thường sản khoa: trợ cấp chính xác 500,000円', () => {
+    const result = calculateChildbirthLumpSumGrant({
+      childCount: 1,
+      isParticipatingInObstetricCompensation: true,
+      actualHospitalCost: 500000,
+    });
+
+    assert.equal(result.grantPerChild, 500000);
+    assert.equal(result.totalGrantAmount, 500000);
+    assert.equal(result.outOfPocketExpense, 0);
+    assert.equal(result.surplusRefund, 0);
+    assert.equal(result.isDirectPayment, true);
+  });
+
+  // Case 2: Đa thai (Sinh đôi = 2 bé)
+  await t.test('M5-02: Đa thai (sinh đôi 2 bé): trợ cấp gấp đôi = 1,000,000円', () => {
+    const result = calculateChildbirthLumpSumGrant({
+      childCount: 2,
+      isParticipatingInObstetricCompensation: true,
+      actualHospitalCost: 950000,
+    });
+
+    assert.equal(result.grantPerChild, 500000);
+    assert.equal(result.totalGrantAmount, 1000000);
+    assert.equal(result.outOfPocketExpense, 0);
+    assert.equal(result.surplusRefund, 50000); // Viện phí 950k < 1 triệu -> hoàn dư 50k
+  });
+
+  // Case 3: Cơ sở không tham gia Quỹ bồi thường sản khoa (488,000円)
+  await t.test('M5-03: Cơ sở y tế không tham gia Quỹ bồi thường: mức trợ cấp là 488,000円/bé', () => {
+    const result = calculateChildbirthLumpSumGrant({
+      childCount: 1,
+      isParticipatingInObstetricCompensation: false,
+      actualHospitalCost: 500000,
+    });
+
+    assert.equal(result.grantPerChild, 488000);
+    assert.equal(result.totalGrantAmount, 488000);
+    assert.equal(result.outOfPocketExpense, 12000); // 500k - 488k = 12,000円 bù thêm
+    assert.equal(result.surplusRefund, 0);
+  });
+
+  // Case 4: Viện phí thực tế cao hơn trợ cấp (530,000円)
+  await t.test('M5-04: Viện phí thực tế vượt mức trợ cấp (530k vs 500k): người dùng bù thêm 30,000円 tại quầy', () => {
+    const result = calculateChildbirthLumpSumGrant({
+      childCount: 1,
+      isParticipatingInObstetricCompensation: true,
+      actualHospitalCost: 530000,
+    });
+
+    assert.equal(result.totalGrantAmount, 500000);
+    assert.equal(result.outOfPocketExpense, 30000);
+    assert.equal(result.surplusRefund, 0);
+  });
+
+  // Case 5: Viện phí thực tế thấp hơn trợ cấp (470,000円)
+  await t.test('M5-05: Viện phí thực tế thấp hơn trợ cấp (470k vs 500k): được BHYT hoàn trả phần dư 30,000円', () => {
+    const result = calculateChildbirthLumpSumGrant({
+      childCount: 1,
+      isParticipatingInObstetricCompensation: true,
+      actualHospitalCost: 470000,
+    });
+
+    assert.equal(result.totalGrantAmount, 500000);
+    assert.equal(result.outOfPocketExpense, 0);
+    assert.equal(result.surplusRefund, 30000);
+  });
+
+  // Case 6: Bản đồ lộ trình chuẩn gồm đúng 6 giai đoạn tuần tự
+  await t.test('M5-06: Bản đồ lộ trình chuẩn gồm đủ 6 giai đoạn từ mang thai đến con 2 tuổi', () => {
+    const stages = getRoadmapStages();
+
+    assert.equal(stages.length, 6);
+    assert.equal(stages[0].stageId, 'stage1_early_pregnancy');
+    assert.equal(stages[1].stageId, 'stage2_late_pregnancy');
+    assert.equal(stages[2].stageId, 'stage3_birth_day');
+    assert.equal(stages[3].stageId, 'stage4_immediate_post_birth');
+    assert.equal(stages[4].stageId, 'stage5_childcare_leave_period');
+    assert.equal(stages[5].stageId, 'stage6_return_to_work');
+  });
+
+  // Case 7: Tích hợp dữ liệu đặc thù địa phương Fukuoka City
+  await t.test('M5-07: Tùy biến thông tin theo địa phương Fukuoka City (14 phiếu khám thai, quà sinh con 100k, y tế THCS)', () => {
+    const stages = getRoadmapStages({ jurisdictionCode: 'JP-40-40130' });
+
+    const s1 = stages.find((s) => s.stageId === 'stage1_early_pregnancy');
+    const pregnancyNoticeTask = s1.tasks.find((t) => t.id === 'task_pregnancy_notification');
+    const pregnancyGiftTask = s1.tasks.find((t) => t.id === 'task_pregnancy_support_gift');
+
+    assert.match(pregnancyNoticeTask.localNotesVi, /14 phiếu khám thai/);
+    assert.match(pregnancyNoticeTask.localNotesVi, /106,000円/);
+    assert.match(pregnancyGiftTask.localNotesVi, /100,000円/);
+
+    const s4 = stages.find((s) => s.stageId === 'stage4_immediate_post_birth');
+    const medicalSubsidyTask = s4.tasks.find((t) => t.id === 'task_child_medical_subsidy');
+    assert.match(medicalSubsidyTask.localNotesVi, /tốt nghiệp THCS/);
+  });
+
+  // Case 8: Tính toán thống kê tiến độ Checklist chính xác
+  await t.test('M5-08: Thống kê tiến độ Checklist (Checklist Stats) tính toán chính xác số lượng và % hoàn thành', () => {
+    const stages = getRoadmapStages();
+    // Giả sử hoàn thành 2 task đầu của stage 1
+    const completedTaskIds = ['task_pregnancy_notification', 'task_pregnancy_support_gift'];
+    const stats = calculateChecklistStats(completedTaskIds, stages);
+
+    assert.equal(stats.totalCompleted, 2);
+    assert.equal(stats.totalTasks, 17); // 3 + 2 + 2 + 5 + 3 + 2 = 17 tasks
+    assert.equal(stats.isAllCompleted, false);
+    assert.equal(stats.stageStats[0].completed, 2);
+    assert.equal(stats.stageStats[0].total, 3);
+    assert.equal(stats.stageStats[0].percent, 67);
+  });
+});
+
 
 
 

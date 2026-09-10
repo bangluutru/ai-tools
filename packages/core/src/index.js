@@ -32,6 +32,7 @@ export { default as MaternityAllowanceView } from './components/family/Maternity
 export { default as ChildcareLeaveEligibilityView } from './components/family/ChildcareLeaveEligibilityView.jsx';
 export { default as ChildcareBenefitView } from './components/family/ChildcareBenefitView.jsx';
 export { default as ChildAllowanceView } from './components/family/ChildAllowanceView.jsx';
+export { default as BirthWizardView } from './components/family/BirthWizardView.jsx';
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 
 // Core Hooks

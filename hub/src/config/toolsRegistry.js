@@ -363,6 +363,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'checker',
     regulatory: true,
+  },
+  'birth-wizard-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'family',
+    country: 'JP',
+    type: 'guide',
+    regulatory: true,
   }
 };
 
@@ -995,6 +1007,27 @@ const toolDefinitions = [
     badge: '児童手当法',
     popular: true,
     tags: ['児童手当', 'こども家庭庁', '所得制限撤廃', '多子加算', '第3子', '高校生年代', 'child allowance', 'trợ cấp trẻ em', 'trợ cấp nuôi con', 'japan life', 'family']
+  },
+  {
+    id: 'birth-wizard-jp',
+    name_vn: 'Cẩm Nang Mang Thai & Nuôi Con',
+    name_en: 'Birth & Childcare Guide',
+    name_ja: '妊娠・出産・育児ガイド',
+    desc_vn: 'Bản đồ lộ trình 6 giai đoạn từ lúc mang thai đến con 2 tuổi: Tính khoản hỗ trợ sinh con 500.000円, hạn nộp hồ sơ, cơ quan phụ trách và chính sách riêng theo địa phương.',
+    desc_en: 'Complete 6-stage lifecycle roadmap from pregnancy to age 2: 500,000 JPY childbirth grant settlement, filing deadlines, municipal desks, and local policy integration.',
+    desc_ja: '妊娠判明から出産・育休・職場復帰（2歳到達）まで全6ステージの手続きロードマップ。出産育児一時金50万円の直接支払精算や自治体独自制度に対応。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'family',
+    country: 'JP',
+    type: 'guide',
+    regulatory: true,
+    icon: 'Compass',
+    gradient: 'from-rose-500 via-purple-600 to-indigo-600',
+    color: '#e11d48',
+    badge: 'ライフイベント',
+    popular: true,
+    tags: ['妊娠', '出産', '育児', '出産育児一時金', '母子手帳', '保活', '出生届', 'birth wizard', 'mang thai', 'sinh con', 'nuôi con', 'japan life', 'family']
   },
   {
     id: 'watermark-studio',

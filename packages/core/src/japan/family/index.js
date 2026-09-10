@@ -23,3 +23,8 @@ export * from './engines/childcareBenefitEngine.js';
 export * from './rules/childAllowanceRules.js';
 export * from './engines/childAllowanceEngine.js';
 
+// M5: Birth Wizard & Life-Event Orchestrator (妊娠・出産・育児ガイド)
+export * from './rules/birthWizardRules.js';
+export * from './engines/birthWizardEngine.js';
+
+

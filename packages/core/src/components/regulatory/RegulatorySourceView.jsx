@@ -175,12 +175,13 @@ export default function RegulatorySourceView({
                     </div>
 
                     <a
-                      href={s.url}
+                      href={s.url || '#'}
                       target="_blank"
                       rel="noopener noreferrer"
+                      aria-label={`${s.authority || s.title || s.id} - ${s.title || ''}`}
                       className="inline-flex items-center gap-1 text-primary hover:underline text-[11px] font-medium shrink-0"
                     >
-                      <span>{s.authority}</span>
+                      <span>{s.authority || s.title || 'Xem văn bản'}</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
