@@ -15,6 +15,7 @@ import {
   resolveEmploymentInsuranceRate,
   resolveCareInsuranceRate,
   resolveChildSupportRate,
+  evaluateSocialInsuranceEligibility,
 } from '../src/japan/insurance/index.js';
 
 test('Japan Insurance Golden 1: Standard remuneration boundary tests (Kenpo & Pension)', () => {
@@ -251,3 +252,104 @@ test('Japan Insurance Golden 8: High Remuneration Case (1.5M JPY/mo + 1M bonus, 
     1500000 + 1000000 + res.grandTotals.employerContributionTotal
   );
 });
+
+test('Japan Insurance Golden 9: Eligibility - Regular full-time employee', () => {
+  const e1 = evaluateSocialInsuranceEligibility({
+    employmentType: 'regular',
+    age: 30,
+  });
+  assert.equal(e1.status, 'likely_mandatory');
+  assert.equal(e1.applicableInsurances.healthInsurance, true);
+  assert.equal(e1.applicableInsurances.welfarePension, true);
+  assert.equal(e1.applicableInsurances.employmentInsurance, true);
+});
+
+test('Japan Insurance Golden 10: Eligibility - 3/4 criteria (32 hours/week, >2 months)', () => {
+  const e2 = evaluateSocialInsuranceEligibility({
+    employmentType: 'part_time',
+    weeklyHours: 32,
+    monthlyWage: 120000,
+    companySize: 20, // small company
+    contractDurationMonths: 6,
+  });
+  assert.equal(e2.status, 'likely_mandatory');
+  assert.equal(e2.applicableInsurances.healthInsurance, true);
+  assert.equal(e2.applicableInsurances.welfarePension, true);
+});
+
+test('Japan Insurance Golden 11: Eligibility - Expanded short-time criteria (25h, 95k JPY, 60 employees)', () => {
+  const e3 = evaluateSocialInsuranceEligibility({
+    employmentType: 'part_time',
+    weeklyHours: 25,
+    monthlyWage: 95000,
+    companySize: 60,
+    contractDurationMonths: 12,
+    isStudent: false,
+  });
+  assert.equal(e3.status, 'likely_mandatory');
+  assert.equal(e3.applicableInsurances.healthInsurance, true);
+  assert.equal(e3.applicableInsurances.welfarePension, true);
+  assert.equal(e3.applicableInsurances.employmentInsurance, true);
+});
+
+test('Japan Insurance Golden 12: Eligibility - Case-dependent (25h, 95k JPY, but small company 30 without agreement)', () => {
+  const e4 = evaluateSocialInsuranceEligibility({
+    employmentType: 'part_time',
+    weeklyHours: 25,
+    monthlyWage: 95000,
+    companySize: 30,
+    contractDurationMonths: 12,
+    isStudent: false,
+    hasLaborAgreement: false,
+  });
+  assert.equal(e4.status, 'case_dependent');
+  assert.equal(e4.applicableInsurances.healthInsurance, false);
+  assert.equal(e4.applicableInsurances.employmentInsurance, true); // employment insurance is still active for >=20h
+});
+
+test('Japan Insurance Golden 13: Eligibility - Daytime student vs Night student exception', () => {
+  // Daytime student: exempt
+  const eDay = evaluateSocialInsuranceEligibility({
+    employmentType: 'part_time',
+    weeklyHours: 25,
+    monthlyWage: 95000,
+    companySize: 80,
+    contractDurationMonths: 12,
+    isStudent: true,
+    studentType: 'daytime',
+  });
+  assert.equal(eDay.status, 'likely_not_mandatory');
+
+  // Night student: covered!
+  const eNight = evaluateSocialInsuranceEligibility({
+    employmentType: 'part_time',
+    weeklyHours: 25,
+    monthlyWage: 95000,
+    companySize: 80,
+    contractDurationMonths: 12,
+    isStudent: true,
+    studentType: 'night',
+  });
+  assert.equal(eNight.status, 'likely_mandatory');
+});
+
+test('Japan Insurance Golden 14: Eligibility - Age boundaries (72 and 76 years old)', () => {
+  // Age 72: Pension ceases (age >= 70), Health continues until 75
+  const e72 = evaluateSocialInsuranceEligibility({
+    employmentType: 'regular',
+    age: 72,
+  });
+  assert.equal(e72.status, 'likely_mandatory');
+  assert.equal(e72.applicableInsurances.healthInsurance, true);
+  assert.equal(e72.applicableInsurances.welfarePension, false);
+
+  // Age 76: Both cease, moves to late-stage elderly healthcare
+  const e76 = evaluateSocialInsuranceEligibility({
+    employmentType: 'regular',
+    age: 76,
+  });
+  assert.equal(e76.status, 'likely_not_mandatory');
+  assert.equal(e76.applicableInsurances.healthInsurance, false);
+  assert.equal(e76.applicableInsurances.welfarePension, false);
+});
+

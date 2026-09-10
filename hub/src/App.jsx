@@ -51,6 +51,7 @@ const BusinessCardStudioTool = lazy(() => import('./tools/business-card-studio/B
 const TaxCalculatorTool = lazy(() => import('./tools/tax-calculator/TaxCalculatorTool'));
 const JapanTaxSimulatorTool = lazy(() => import('./tools/japan-tax-simulator/JapanTaxSimulatorTool'));
 const SocialInsuranceSimulatorTool = lazy(() => import('./tools/social-insurance-jp/SocialInsuranceSimulatorTool.jsx'));
+const SocialInsuranceEligibilityTool = lazy(() => import('./tools/social-insurance-eligibility-jp/SocialInsuranceEligibilityTool.jsx'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
 const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
 const FlappyBirdPet = lazy(() => import('./components/FlappyBirdPet'));
@@ -77,6 +78,7 @@ const toolComponentMap = {
   'tax-calculator': TaxCalculatorTool,
   'japan-tax-simulator': JapanTaxSimulatorTool,
   'social-insurance-jp': SocialInsuranceSimulatorTool,
+  'social-insurance-eligibility-jp': SocialInsuranceEligibilityTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,
   'flappy-bird': FlappyBirdTool,
   'toolio-ninja': ToolioNinjaTool

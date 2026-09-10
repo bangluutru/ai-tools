@@ -219,6 +219,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'calculator',
     regulatory: true,
+  },
+  'social-insurance-eligibility-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'insurance',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
   }
 };
 
@@ -599,6 +611,27 @@ const toolDefinitions = [
     badge: '令和8年度',
     popular: true,
     tags: ['社会保険', '健康保険', '厚生年金', '雇用保険', '介護保険', '子ども子育て支援金', '標準報酬月額', 'insurance', 'pension', 'bảo hiểm', 'lương hưu', 'kenpo', 'shakai hoken', 'japan life', 'office']
+  },
+  {
+    id: 'social-insurance-eligibility-jp',
+    name_vn: 'Kiểm Tra Điều Kiện Tham Gia BHXH',
+    name_en: 'Social Insurance Eligibility Checker',
+    name_ja: '社会保険加入判定',
+    desc_vn: 'Chẩn đoán điều kiện bắt buộc tham gia BHXH (BHYT & Hưu trí Kosei Nenkin) cho lao động Part-time, Baito theo quy chuẩn mở rộng 2026 (20h/tuần, 8.8 vạn, DN 51 người). 100% xử lý nội bộ trình duyệt.',
+    desc_en: 'Diagnose whether part-time or contract workers must enroll in Social Insurance under the 2026 expanded criteria (20h/wk, 88k JPY/mo, 51+ employees). 100% client-side.',
+    desc_ja: 'パート・アルバイト・短時間労働者が社会保険（健康保険・厚生年金）の義務的加入対象かを判定。週20時間・月額8.8万円・51人以上企業の新基準に対応。100%ブラウザ完結。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'insurance',
+    country: 'JP',
+    type: 'checker',
+    regulatory: true,
+    icon: 'UserCheck',
+    gradient: 'from-emerald-500 via-teal-600 to-cyan-500',
+    color: '#059669',
+    badge: '判定チェッカー',
+    popular: true,
+    tags: ['社会保険加入判定', '106万円の壁', '短時間労働者', 'パート', 'アルバイト', '厚生年金', '健康保険', 'eligibility', 'bảo hiểm', 'shakai hoken', 'japan life', 'office']
   },
   {
     id: 'watermark-studio',
