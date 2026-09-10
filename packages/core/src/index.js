@@ -38,6 +38,7 @@ export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 export { DocumentFinderView } from './components/documents/DocumentFinderView.jsx';
 export { CertificateAcquisitionGuideView } from './components/documents/CertificateAcquisitionGuideView.jsx';
 export { MyNumberProcedureGuideView } from './components/documents/MyNumberProcedureGuideView.jsx';
+export { OfficialFormHelperView } from './components/documents/OfficialFormHelperView.jsx';
 
 // Core Hooks
 export { useLocalStorage } from './hooks/useLocalStorage.js';
