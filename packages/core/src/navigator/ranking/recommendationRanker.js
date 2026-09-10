@@ -66,10 +66,13 @@ export function rankRecommendations(recommendations) {
     return [];
   }
 
-  const scored = recommendations.map((rec) => ({
-    rec,
-    score: calculateRecommendationScore(rec),
-  }));
+  const scored = recommendations.map((rec) => {
+    const score = calculateRecommendationScore(rec);
+    return {
+      rec: { ...rec, rankingScore: score },
+      score,
+    };
+  });
 
   // Sắp xếp giảm dần theo điểm số, hòa điểm thì sắp xếp theo ID tăng dần (Deterministic tie-break)
   scored.sort((a, b) => {

@@ -31,8 +31,23 @@ export {
   rankRecommendations,
 } from './ranking/recommendationRanker.js';
 export {
+  RECOMMENDATION_REASON_CODES,
   evaluateAndRankRecommendations,
+  generateContextualRecommendations,
 } from './recommendations/recommendationEngine.js';
+
+// Unified Search
+export {
+  ENTITY_TYPES,
+  CANONICAL_TOOLS,
+  buildUnifiedSearchIndex,
+  getUnifiedSearchIndex,
+} from './search/unifiedSearchIndex.js';
+export {
+  normalizeSearchQuery,
+  tokenizeQuery,
+  searchUnifiedIndex,
+} from './search/searchEngine.js';
 
 // Capability Graph
 export {
