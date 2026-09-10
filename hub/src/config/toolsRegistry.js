@@ -508,6 +508,18 @@ const toolGovernance = {
     type: 'wizard',
     regulatory: true,
   },
+  'leaving-japan-wizard-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'wizard',
+    regulatory: true,
+  },
 };
 
 
@@ -1392,6 +1404,27 @@ const toolDefinitions = [
     badge: '入管・生活',
     popular: true,
     tags: ['visa', 'immigration', 'arrival', 'newcomer', 'mới sang nhật', '14 ngày', 'tòa thị chính', 'yucho', 'sim', '來日', '住民登録', '入管', 'japan life']
+  },
+  {
+    id: 'leaving-japan-wizard-jp',
+    name_vn: 'Thủ Tục Khi Rời Khỏi Nhật Bản',
+    name_en: 'Leaving Japan Procedure Guide',
+    name_ja: '日本を離れる手続きガイド',
+    desc_vn: 'Lộ trình hướng dẫn thủ tục xuất cảnh tạm thời (Minashi Re-entry) hoặc rời Nhật hẳn (chuyển đi, My Number, người đại diện thuế, rút Nenkin 1 lần & hoàn 20.42% thuế).',
+    desc_en: 'Comprehensive procedure guide for temporary exit (Minashi Re-entry) or permanent departure (moving-out, My Number, tax administrator, 60-month lump-sum pension & 20.42% tax refund).',
+    desc_ja: '一時出国（みなし再入国許可）および本帰国（海外転出届、マイナンバー失効、納税管理人、脱退一時金最大60ヶ月・源泉所得税20.42%還付）の手続きガイド。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'wizard',
+    regulatory: true,
+    icon: 'PlaneTakeoff',
+    gradient: 'from-blue-600 via-sky-600 to-cyan-700',
+    color: '#0284c7',
+    badge: '入管・帰国',
+    popular: true,
+    tags: ['visa', 'immigration', 'leaving japan', 're-entry', 'minashi', 'rời nhật', 'về nước', 'nenkin', 'hoàn thuế', '20.42%', '脱退一時金', '再入国', 'japan life']
   },
   {
     id: 'watermark-studio',

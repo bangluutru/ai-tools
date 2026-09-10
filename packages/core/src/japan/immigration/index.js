@@ -45,5 +45,7 @@ export * from './arrival/arrivalRules.js';
 export * from './arrival/arrivalEngine.js';
 export * from './arrival/arrivalDefinition.js';
 
-
-
+// M8: Leaving Japan Procedure Guide (日本を離れる手続きガイド - 5th Life Event)
+export * from './departure/departureRules.js';
+export * from './departure/departureEngine.js';
+export * from './departure/departureDefinition.js';

@@ -391,7 +391,7 @@ export default function ArrivingInJapanWizardView({ lang = 'vi' }) {
                 : plan.summary.daysRemaining14 < 0
                 ? 'text-red-600'
                 : plan.summary.daysRemaining14 <= 3
-                ? 'text-amber-600'
+                ? 'text-amber-800 dark:text-amber-300'
                 : 'text-primary'
             }`}>
               {plan.summary.daysRemaining14 === null
@@ -530,7 +530,7 @@ export default function ArrivingInJapanWizardView({ lang = 'vi' }) {
                         task.requirement === 'required'
                           ? 'bg-red-600 text-white'
                           : task.requirement === 'conditional'
-                          ? 'bg-amber-600 text-white'
+                          ? 'bg-amber-800 text-white'
                           : 'bg-surface-container-high text-on-surface'
                       }`}>
                         {task.requirement === 'required'
@@ -549,7 +549,7 @@ export default function ArrivingInJapanWizardView({ lang = 'vi' }) {
                           task.isOverdue
                             ? 'bg-red-700 text-white'
                             : task.isUrgent
-                            ? 'bg-amber-600 text-white'
+                            ? 'bg-amber-800 text-white'
                             : 'bg-surface-container text-on-surface-variant'
                         }`}>
                           <Clock className="w-3 h-3" />

@@ -350,7 +350,8 @@ test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and
     'status-change-guide-jp',
     'family-immigration-guide-jp',
     'pr-readiness-checker-jp',
-    'arriving-in-japan-wizard-jp'
+    'arriving-in-japan-wizard-jp',
+    'leaving-japan-wizard-jp'
   ];
 
 

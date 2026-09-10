@@ -705,6 +705,18 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     lastVerifiedAt: '2026-09-11',
     status: 'official-current',
     notes: 'Tiền rút một lần hưu trí (脱退一時金): Dành cho người nước ngoài không có quốc tịch Nhật, đã đóng Nenkin từ 6 tháng trở lên, nộp đơn trong vòng 2 năm sau khi rời Nhật.'
+  },
+  'nta-tax-administrator': {
+    id: 'nta-tax-administrator',
+    country: 'JP',
+    authority: '国税庁 (National Tax Agency)',
+    title: '所得税法第117条（納税管理人）及び地方税法に基づく納税管理人の選任手続',
+    url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/2026.htm',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-current',
+    notes: 'Quy định về Người đại diện nộp thuế (納税管理人): Người nước ngoài xuất cảnh khỏi Nhật Bản không còn địa chỉ cư trú phải cử người cư trú tại Nhật để thay mặt nộp thuế thu nhập, thuế cư trú và xin hoàn thuế 20.42% từ Nenkin rút 1 lần.'
   }
 });
 
