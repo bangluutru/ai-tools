@@ -50,6 +50,7 @@ async function loadRegistry() {
 }
 
 import { buildGraph } from './lib/ai-tools-graph/index.mjs';
+import { getAllSources } from '../packages/core/src/regulatory/sourceRegistry.js';
 
 // Find all source files related to a miniapp (enhanced with Dependency Graph)
 function getToolSourceFiles(toolId, graph = null) {
@@ -443,6 +444,87 @@ function auditGate3(tool, files) {
   };
 }
 
+// Gate R: Regulatory Integrity & Source Verification Gate V1
+function auditGateRegulatory(tool, files) {
+  if (!tool.regulatory) {
+    return {
+      name: 'Gate R: Regulatory Gate V1',
+      passed: true,
+      notApplicable: true,
+      issues: [],
+      warnings: [],
+    };
+  }
+
+  const issues = [];
+  const warnings = [];
+
+  // 1. Country exists & supported
+  if (!tool.country || !['JP', 'VN'].includes(tool.country)) {
+    issues.push(`Công cụ pháp lý "${tool.id}" thiếu country hợp lệ ('JP' hoặc 'VN') trong toolsRegistry.`);
+  }
+
+  // 2. Domain exists
+  if (!tool.domain) {
+    issues.push(`Công cụ pháp lý "${tool.id}" thiếu khai báo domain (ví dụ: 'tax', 'insurance') trong toolsRegistry.`);
+  }
+
+  // 3. Official Source Registry exists and has sources for country
+  const countrySources = getAllSources({ country: tool.country });
+  if (countrySources.length === 0) {
+    issues.push(`Chưa đăng ký Official Sources nào cho quốc gia "${tool.country}" trong OfficialSourceRegistry.`);
+  }
+
+  // 4. Check regulatory rule files for sourceId and metadata
+  const taxRules2026Path = path.join(coreDir, 'src/utils/tax/rules/2026/index.js');
+  if (fs.existsSync(taxRules2026Path)) {
+    const content = fs.readFileSync(taxRules2026Path, 'utf8');
+
+    // Rule metadata contract checks
+    if (!content.includes('sourceId')) {
+      issues.push(`File quy chuẩn ${path.relative(rootDir, taxRules2026Path)} thiếu khai báo sourceId.`);
+    }
+    if (!content.includes('applicablePeriod') && !content.includes('effectiveFrom')) {
+      issues.push(`File quy chuẩn ${path.relative(rootDir, taxRules2026Path)} thiếu thông tin applicablePeriod/effectiveFrom.`);
+    }
+    if (!content.includes('lastVerifiedAt') && !content.includes('verifiedDate')) {
+      issues.push(`File quy chuẩn ${path.relative(rootDir, taxRules2026Path)} thiếu mốc thời gian kiểm chứng lastVerifiedAt.`);
+    }
+
+    // 5. Dummy / Placeholder constant detection
+    const forbiddenPatterns = [
+      { regex: /TODO\s+rate/i, label: 'TODO rate' },
+      { regex: /example\s+rate/i, label: 'example rate' },
+      { regex: /dummy[_\s]*rate/i, label: 'dummy rate' },
+      { regex: /placeholder[_\s]*rate/i, label: 'placeholder rate' },
+      { regex: /average\s+assumed/i, label: 'average assumed' },
+      { regex: /sample\s+rate/i, label: 'sample rate' },
+      { regex: /temporary\s+rate/i, label: 'temporary rate' },
+      { regex: /hardcoded\s+approximate/i, label: 'hardcoded approximate' },
+    ];
+
+    for (const pat of forbiddenPatterns) {
+      if (pat.regex.test(content)) {
+        issues.push(`Phát hiện placeholder/dummy hằng số pháp lý không hợp lệ: "${pat.label}" trong ${path.relative(rootDir, taxRules2026Path)}`);
+      }
+    }
+  }
+
+  // 6. Golden Tests existence check
+  const goldenTestPath = path.join(coreDir, 'tests/regulatory-japan-tax-golden.test.js');
+  if (!fs.existsSync(goldenTestPath)) {
+    issues.push(`Thiếu bộ kiểm thử vàng (Golden Legal Tests) tại ${path.relative(rootDir, goldenTestPath)}`);
+  }
+
+  return {
+    name: 'Gate R: Regulatory Gate V1',
+    passed: issues.length === 0,
+    notApplicable: false,
+    issues,
+    warnings,
+  };
+}
+
 // Main Runner
 async function main() {
   const args = process.argv.slice(2);
@@ -454,7 +536,7 @@ async function main() {
   const tGraph = (performance.now() - t0).toFixed(1);
 
   console.log(`\n${colors.bold}${colors.cyan}=== 🛡️ MINIAPP ARCHITECTURE & INTEGRATION AUDIT (MAIS) ===${colors.reset}`);
-  console.log(`${colors.gray}Tiêu chuẩn kiểm duyệt 4 cổng tĩnh (Gate 0, 1, 2, 3) — Đồ thị khởi tạo trong ${tGraph}ms${colors.reset}\n`);
+  console.log(`${colors.gray}Tiêu chuẩn kiểm duyệt 5 cổng (Gate 0, 1, 2, 3, Regulatory Gate R) — Đồ thị khởi tạo trong ${tGraph}ms${colors.reset}\n`);
 
   const registry = await loadRegistry();
   const toolsToAudit = isAll
@@ -476,12 +558,13 @@ async function main() {
     const g1 = auditGate1(tool, registry);
     const g2 = auditGate2(tool, files);
     const g3 = auditGate3(tool, files);
+    const gR = auditGateRegulatory(tool, files);
 
     const isToolActive = tool.readiness !== 'in-development';
-    const toolPassed = g0.passed && g1.passed && g2.passed && g3.passed;
+    const toolPassed = g0.passed && g1.passed && g2.passed && g3.passed && gR.passed;
     if (!toolPassed && isToolActive) totalFailed++;
 
-    const toolWarningsCount = g0.warnings.length + g1.warnings.length + g2.warnings.length + g3.warnings.length;
+    const toolWarningsCount = g0.warnings.length + g1.warnings.length + g2.warnings.length + g3.warnings.length + gR.warnings.length;
     totalWarnings += toolWarningsCount;
 
     let statusBadge;
@@ -500,16 +583,17 @@ async function main() {
       g1: g1.passed ? '✔' : '✖',
       g2: g2.passed ? '✔' : '✖',
       g3: g3.passed ? '✔' : '✖',
+      gR: gR.notApplicable ? '-' : (gR.passed ? '✔' : '✖'),
       status: statusBadge,
-      issues: [...g0.issues, ...g1.issues, ...g2.issues, ...g3.issues],
-      warnings: [...g0.warnings, ...g1.warnings, ...g2.warnings, ...g3.warnings],
+      issues: [...g0.issues, ...g1.issues, ...g2.issues, ...g3.issues, ...gR.issues],
+      warnings: [...g0.warnings, ...g1.warnings, ...g2.warnings, ...g3.warnings, ...gR.warnings],
     });
   }
 
-  // Print Summary Table (with G0 column)
-  console.log('┌───────────────────────┬──────────────┬────────┬────┬────┬────┬────┬──────────────┐');
-  console.log('│ Miniapp ID            │ Trạng thái   │ Files  │ G0 │ G1 │ G2 │ G3 │ Kết quả      │');
-  console.log('├───────────────────────┼──────────────┼────────┼────┼────┼────┼────┼──────────────┤');
+  // Print Summary Table (with G0 & GR columns)
+  console.log('┌───────────────────────┬──────────────┬────────┬────┬────┬────┬────┬────┬──────────────┐');
+  console.log('│ Miniapp ID            │ Trạng thái   │ Files  │ G0 │ G1 │ G2 │ G3 │ GR │ Kết quả      │');
+  console.log('├───────────────────────┼──────────────┼────────┼────┼────┼────┼────┼────┼──────────────┤');
 
   for (const row of summaryRows) {
     const idCol = row.id.padEnd(21).slice(0, 21);
@@ -519,10 +603,11 @@ async function main() {
     const g1Col = row.g1 === '✔' ? `${colors.green}PASS${colors.reset}` : `${colors.red}FAIL${colors.reset}`;
     const g2Col = row.g2 === '✔' ? `${colors.green}PASS${colors.reset}` : `${colors.red}FAIL${colors.reset}`;
     const g3Col = row.g3 === '✔' ? `${colors.green}PASS${colors.reset}` : `${colors.red}FAIL${colors.reset}`;
+    const gRCol = row.gR === '-' ? `${colors.gray} -  ${colors.reset}` : (row.gR === '✔' ? `${colors.green}PASS${colors.reset}` : `${colors.red}FAIL${colors.reset}`);
 
-    console.log(`│ ${idCol} │ ${readinessCol} │ ${filesCol} │ ${g0Col} │ ${g1Col} │ ${g2Col} │ ${g3Col} │ ${row.status.padEnd(21)}│`);
+    console.log(`│ ${idCol} │ ${readinessCol} │ ${filesCol} │ ${g0Col} │ ${g1Col} │ ${g2Col} │ ${g3Col} │ ${gRCol} │ ${row.status.padEnd(21)}│`);
   }
-  console.log('└───────────────────────┴──────────────┴────────┴────┴────┴────┴────┴──────────────┘');
+  console.log('└───────────────────────┴──────────────┴────────┴────┴────┴────┴────┴────┴──────────────┘');
 
   // Print Detailed Issues / Warnings if requested or on failure
   let hasDetails = false;
