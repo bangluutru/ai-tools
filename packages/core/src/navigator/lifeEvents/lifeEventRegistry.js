@@ -44,7 +44,7 @@ export const CANONICAL_LIFE_EVENTS = Object.freeze({
   },
   'life.jp.pregnancy-birth': {
     id: 'life.jp.pregnancy-birth',
-    aliases: ['birth', 'pregnancy-birth', 'childcare'],
+    aliases: ['birth', 'pregnancy-birth', 'childcare', 'life.jp.birth'],
     definition: birthDefinition,
     runtime: birthRuntime,
     category: 'family',
