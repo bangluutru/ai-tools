@@ -70,6 +70,6 @@ export * from './japan/employment/index.js';
 // Japan Life - Family & Child Domain
 export * from './japan/family/index.js';
 
-// Orchestration & Capability Registry
-export * from './orchestration/capabilityRegistry.js';
+// Life Event Foundation (Shared lifecycle runtime)
+export * from './life-events/index.js';
 
