@@ -40,6 +40,7 @@ export { CertificateAcquisitionGuideView } from './components/documents/Certific
 export { MyNumberProcedureGuideView } from './components/documents/MyNumberProcedureGuideView.jsx';
 export { OfficialFormHelperView } from './components/documents/OfficialFormHelperView.jsx';
 export { ProcedureRequirementCheckerView } from './components/documents/ProcedureRequirementCheckerView.jsx';
+export { AdministrativeNavigatorView } from './components/documents/AdministrativeNavigatorView.jsx';
 
 // Core Hooks
 export { useLocalStorage } from './hooks/useLocalStorage.js';
