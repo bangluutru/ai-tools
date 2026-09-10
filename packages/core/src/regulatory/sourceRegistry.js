@@ -152,6 +152,66 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     status: 'official-primary',
     notes: 'Bảo hiểm chăm sóc người già 介護保険 (đối tượng 40-64 tuổi): tỷ lệ toàn quốc 1.62% (chia đôi 50/50: người lao động 0.81%).'
   },
+  'jps-welfare-pension-table-2026': {
+    id: 'jps-welfare-pension-table-2026',
+    country: 'JP',
+    authority: '日本年金機構 (Japan Pension Service)',
+    title: '厚生年金保険料額表（標準報酬月額 1〜32等級・保険料率 18.3%）',
+    url: 'https://www.nenkin.go.jp/service/kounen/hokenryo/ryogaku-hyo/',
+    sourceType: 'official-table',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Bảng bậc lương chuẩn Hưu trí phúc lợi 厚生年金 từ 88,000円 (cấp 1) đến 650,000円 (cấp 32), trần thưởng 1.5M/lần.'
+  },
+  'kyokai-kenpo-monthly-table-2026': {
+    id: 'kyokai-kenpo-monthly-table-2026',
+    country: 'JP',
+    authority: '全国健康保険協会 (協会けんぽ - Japan Health Insurance Association)',
+    title: '健康保険・介護保険 標準報酬月額等級表（1〜50等級）',
+    url: 'https://www.kyoukaikenpo.or.jp/g7/cat330/sb3150/',
+    sourceType: 'official-table',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Bảng bậc lương chuẩn BHYT 協会けんぽ từ 58,000円 (cấp 1) đến 1,390,000円 (cấp 50), trần thưởng 5.73M/năm.'
+  },
+  'mhlw-shakai-hoken-tekio-2026': {
+    id: 'mhlw-shakai-hoken-tekio-2026',
+    country: 'JP',
+    authority: '厚生労働省 / 日本年金機構 (MHLW / JPS)',
+    title: '短時間労働者に対する社会保険適用拡大基準（週20時間・月額8.8万円・51人以上企業）',
+    url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyoukintou/shakaihoken_tekiyoukakudai/',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Quy chuẩn bắt buộc tham gia BHXH cho nhân viên part-time/short-time (20h/tuần, 88,000円/tháng, công ty >= 51 người).'
+  },
+  'jps-dependent-eligibility-2026': {
+    id: 'jps-dependent-eligibility-2026',
+    country: 'JP',
+    authority: '日本年金機構 / 全国健康保険協会 (JPS / Kyokai Kenpo)',
+    title: '健康保険・厚生年金保険 被扶養者認定要件（年間収入130万円未満／60歳以上180万円未満）',
+    url: 'https://www.nenkin.go.jp/service/kounen/tekiyo-kanyu/hihokensha-1/20141204.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Quy chuẩn công nhận người phụ thuộc BHYT (thu nhập kỳ vọng < 130 vạn/năm, quan hệ nhân thân, cư trú trong nước).'
+  },
+  'jps-national-pension-exemption-2026': {
+    id: 'jps-national-pension-exemption-2026',
+    country: 'JP',
+    authority: '日本年金機構 (Japan Pension Service)',
+    title: '国民年金保険料の免除制度・納付猶予制度・学生納付特例',
+    url: 'https://www.nenkin.go.jp/service/kokunen/menjo/index.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-10',
+    status: 'official-primary',
+    notes: 'Chế độ miễn giảm toàn bộ/bán phần (全額・一部免除), hoãn nộp thanh niên/sinh viên và cơ chế nộp bù 10 năm (追納).'
+  },
 
   // =========================================================================
   // VIETNAM LIFE - TAX & SOCIAL INSURANCE (Tổng cục Thuế / BHXH Việt Nam)

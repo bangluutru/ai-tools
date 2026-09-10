@@ -475,20 +475,30 @@ function auditGateRegulatory(tool, files) {
     issues.push(`Chưa đăng ký Official Sources nào cho quốc gia "${tool.country}" trong OfficialSourceRegistry.`);
   }
 
-  // 4. Check regulatory rule files for sourceId and metadata
-  const taxRules2026Path = path.join(coreDir, 'src/utils/tax/rules/2026/index.js');
-  if (fs.existsSync(taxRules2026Path)) {
-    const content = fs.readFileSync(taxRules2026Path, 'utf8');
+  // 4. Check regulatory rule files for sourceId and metadata based on domain
+  let ruleFilePath = null;
+  let goldenTestPath = null;
+
+  if (tool.domain === 'tax') {
+    ruleFilePath = path.join(coreDir, 'src/utils/tax/rules/2026/index.js');
+    goldenTestPath = path.join(coreDir, 'tests/regulatory-japan-tax-golden.test.js');
+  } else if (tool.domain === 'insurance') {
+    ruleFilePath = path.join(coreDir, 'src/japan/insurance/rules/index.js');
+    goldenTestPath = path.join(coreDir, 'tests/regulatory-japan-insurance-golden.test.js');
+  }
+
+  if (ruleFilePath && fs.existsSync(ruleFilePath)) {
+    const content = fs.readFileSync(ruleFilePath, 'utf8');
 
     // Rule metadata contract checks
     if (!content.includes('sourceId')) {
-      issues.push(`File quy chuẩn ${path.relative(rootDir, taxRules2026Path)} thiếu khai báo sourceId.`);
+      issues.push(`File quy chuẩn ${path.relative(rootDir, ruleFilePath)} thiếu khai báo sourceId.`);
     }
     if (!content.includes('applicablePeriod') && !content.includes('effectiveFrom')) {
-      issues.push(`File quy chuẩn ${path.relative(rootDir, taxRules2026Path)} thiếu thông tin applicablePeriod/effectiveFrom.`);
+      issues.push(`File quy chuẩn ${path.relative(rootDir, ruleFilePath)} thiếu thông tin applicablePeriod/effectiveFrom.`);
     }
     if (!content.includes('lastVerifiedAt') && !content.includes('verifiedDate')) {
-      issues.push(`File quy chuẩn ${path.relative(rootDir, taxRules2026Path)} thiếu mốc thời gian kiểm chứng lastVerifiedAt.`);
+      issues.push(`File quy chuẩn ${path.relative(rootDir, ruleFilePath)} thiếu mốc thời gian kiểm chứng lastVerifiedAt.`);
     }
 
     // 5. Dummy / Placeholder constant detection
@@ -505,14 +515,13 @@ function auditGateRegulatory(tool, files) {
 
     for (const pat of forbiddenPatterns) {
       if (pat.regex.test(content)) {
-        issues.push(`Phát hiện placeholder/dummy hằng số pháp lý không hợp lệ: "${pat.label}" trong ${path.relative(rootDir, taxRules2026Path)}`);
+        issues.push(`Phát hiện placeholder/dummy hằng số pháp lý không hợp lệ: "${pat.label}" trong ${path.relative(rootDir, ruleFilePath)}`);
       }
     }
   }
 
   // 6. Golden Tests existence check
-  const goldenTestPath = path.join(coreDir, 'tests/regulatory-japan-tax-golden.test.js');
-  if (!fs.existsSync(goldenTestPath)) {
+  if (goldenTestPath && !fs.existsSync(goldenTestPath)) {
     issues.push(`Thiếu bộ kiểm thử vàng (Golden Legal Tests) tại ${path.relative(rootDir, goldenTestPath)}`);
   }
 
