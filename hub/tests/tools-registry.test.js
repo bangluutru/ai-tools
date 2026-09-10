@@ -132,12 +132,12 @@ test('every miniapp has a valid product group defaulting safely to common', () =
     }
   }
 
-  // Japan Tax is the only tool migrated to japan-life in Phase 1
+  // Japan Life tools
   const japanLifeTools = tools.filter((t) => t.group === 'japan-life');
   assert.deepEqual(
-    japanLifeTools.map((t) => t.id),
-    ['japan-tax-simulator'],
-    'Only japan-tax-simulator must be in japan-life group in Phase 1',
+    japanLifeTools.map((t) => t.id).sort(),
+    ['japan-tax-simulator', 'social-insurance-jp'].sort(),
+    'japan-life group contains japan-tax-simulator and social-insurance-jp',
   );
 
   const jTax = tools.find((t) => t.id === 'japan-tax-simulator');
@@ -147,8 +147,15 @@ test('every miniapp has a valid product group defaulting safely to common', () =
   assert.equal(jTax.type, 'calculator');
   assert.equal(jTax.regulatory, true);
 
+  const jIns = tools.find((t) => t.id === 'social-insurance-jp');
+  assert.equal(jIns.group, 'japan-life');
+  assert.equal(jIns.country, 'JP');
+  assert.equal(jIns.domain, 'insurance');
+  assert.equal(jIns.type, 'calculator');
+  assert.equal(jIns.regulatory, true);
+
   // All other tools must be in common group
   const commonTools = tools.filter((t) => t.group === 'common');
-  assert.equal(commonTools.length, tools.length - 1, 'All other tools must default to common');
+  assert.equal(commonTools.length, tools.length - japanLifeTools.length, 'All other tools must default to common');
 });
 

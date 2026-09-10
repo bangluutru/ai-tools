@@ -19,6 +19,7 @@ export { default as DocStudioApp } from './components/editor-studio/DocStudioApp
 export { default as CertificateStudioView } from './components/CertificateStudioView.jsx';
 export { default as TaxCalculatorView } from './components/TaxCalculatorView.jsx';
 export { default as JapanTaxSimulatorView } from './components/JapanTaxSimulatorView.jsx';
+export { default as SocialInsuranceSimulatorView } from './components/insurance/SocialInsuranceSimulatorView.jsx';
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 
 // Core Hooks
@@ -46,4 +47,7 @@ export { useTheme } from './theme/useTheme.js';
 
 // Regulatory Foundation (Shared across JP, VN, etc.)
 export * from './regulatory/index.js';
+
+// Japan Life - Insurance Domain
+export * from './japan/insurance/index.js';
 

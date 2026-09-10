@@ -207,6 +207,18 @@ const toolGovernance = {
     country: 'JP',
     type: 'calculator',
     regulatory: true,
+  },
+  'social-insurance-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-10',
+    group: 'japan-life',
+    domain: 'insurance',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
   }
 };
 
@@ -566,6 +578,27 @@ const toolDefinitions = [
     badge: 'JAPAN TAX',
     popular: true,
     tags: ['japan tax', 'thuế nhật', '日本の税金', '確定申告', '所得税', '住民税', '個人事業税', '消費税', '法人税', '社会保険', 'gensen', 'nenkin', 'hoken', 'shinkoku', 'office']
+  },
+  {
+    id: 'social-insurance-jp',
+    name_vn: 'Mô Phỏng BHXH Nhật Bản',
+    name_en: 'Japan Social Insurance Simulator',
+    name_ja: '社会保険料シミュレーター',
+    desc_vn: 'Mô phỏng chính xác BHYT Kyokai Kenpo (47 tỉnh thành), Quỹ hỗ trợ nuôi con 2026, Chăm sóc người già, Hưu trí Kosei Nenkin & Thất nghiệp theo bảng chuẩn thù lao tháng. 100% xử lý nội bộ trình duyệt.',
+    desc_en: 'Accurate simulation of Kyokai Kenpo health insurance (47 prefectures), Child Support Fund 2026, Care Insurance, Welfare Pension & Employment Insurance via Standard Monthly Remuneration. 100% client-side.',
+    desc_ja: '協会けんぽ（47都道府県）・子ども子育て支援金（2026年）・介護保険・厚生年金・雇用保険の標準報酬月額に基づく精密試算。従業員控除と会社負担の2つの視点に対応。100%ブラウザ完結。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'insurance',
+    country: 'JP',
+    type: 'calculator',
+    regulatory: true,
+    icon: 'ShieldCheck',
+    gradient: 'from-blue-600 via-cyan-600 to-emerald-500',
+    color: '#0284c7',
+    badge: '令和8年度',
+    popular: true,
+    tags: ['社会保険', '健康保険', '厚生年金', '雇用保険', '介護保険', '子ども子育て支援金', '標準報酬月額', 'insurance', 'pension', 'bảo hiểm', 'lương hưu', 'kenpo', 'shakai hoken', 'japan life', 'office']
   },
   {
     id: 'watermark-studio',

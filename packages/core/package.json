@@ -10,7 +10,8 @@
     "./hooks/*": "./src/hooks/*",
     "./services/*": "./src/services/*",
     "./theme/*": "./src/theme/*",
-    "./regulatory/*": "./src/regulatory/*"
+    "./regulatory/*": "./src/regulatory/*",
+    "./japan/*": "./src/japan/*"
   },
   "scripts": {
     "lint": "eslint src scripts --config ../../eslint.config.js",

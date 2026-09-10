@@ -56,3 +56,6 @@ export function isValidJurisdiction(jurisdiction) {
   if (!jurisdiction || typeof jurisdiction !== 'object') return false;
   return Boolean(jurisdiction.country && SUPPORTED_COUNTRIES[jurisdiction.country]);
 }
+
+export const JAPAN_JURISDICTION = createJurisdiction({ country: 'JP' });
+export const VIETNAM_JURISDICTION = createJurisdiction({ country: 'VN' });

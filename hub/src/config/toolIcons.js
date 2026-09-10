@@ -30,7 +30,8 @@ import {
   Video,
   Gamepad2,
   Swords,
-  Coins
+  Coins,
+  ShieldCheck
 } from 'lucide-react';
 
 export const iconMap = {
@@ -64,7 +65,8 @@ export const iconMap = {
   Video,
   Gamepad2,
   Swords,
-  Coins
+  Coins,
+  ShieldCheck
 };
 
 /**
