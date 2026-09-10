@@ -463,8 +463,57 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     lastVerifiedAt: '2026-09-10',
     status: 'official-primary',
     notes: 'Cổng thông tin thủ tục sinh và chăm sóc trẻ em Quận Chiyoda, Tokyo: trợ cấp 50,000円 khi báo thai + 50,000円 khi sinh, trợ cấp y tế trẻ em đến 18 tuổi miễn phí 100% viện phí/khám bệnh.'
+  },
+  'soumu-resident-basic-book-act': {
+    id: 'soumu-resident-basic-book-act',
+    country: 'JP',
+    authority: '総務省 (Ministry of Internal Affairs and Communications)',
+    title: '住民基本台帳法（転出届・転入届・転居届の法定届出義務・14日ルール）',
+    url: 'https://www.soumu.go.jp/main_sosiki/jichi_gyousei/c-gyousei/juumin_kihon_daityou.html',
+    sourceType: 'law',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-primary',
+    notes: 'Luật Sổ bộ cư trú cơ bản Nhật Bản: Nghĩa vụ nộp giấy chuyển đi (転出届) trước khi chuyển, nộp giấy chuyển vào (転入届) hoặc chuyển chỗ ở (転居届) trong vòng 14 ngày. Phạt tiền vi phạm quy định cư trú.'
+  },
+  'digital-agency-moving-onestop': {
+    id: 'digital-agency-moving-onestop',
+    country: 'JP',
+    authority: 'デジタル庁 (Digital Agency Japan)',
+    title: '引越しワンストップサービス（マイナポータルを通じたオンライン転出届・来庁予定連絡）',
+    url: 'https://www.digital.go.jp/policies/moving_onestop_service',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-primary',
+    notes: 'Dịch vụ một cửa chuyển nhà qua MyNaPortal: Nộp 転出届 trực tuyến và đặt lịch hẹn đến Ủy ban mới (来庁予定連絡). Chú ý: 転入届 bắt buộc phải xuất trình thẻ My Number trực tiếp tại cơ quan hành chính nơi đến.'
+  },
+  'mlit-standard-moving-transport-contract': {
+    id: 'mlit-standard-moving-transport-contract',
+    country: 'JP',
+    authority: '国土交通省 (Ministry of Land, Infrastructure, Transport and Tourism)',
+    title: '標準引越運送約款（引越し料金・解約手数料・荷物破損補償の公定基準）',
+    url: 'https://www.mlit.go.jp/jidosha/jidosha_tk4_000007.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-primary',
+    notes: 'Quy ước vận chuyển chuyển nhà tiêu chuẩn do Bộ Đất đai, Cơ sở hạ tầng, Giao thông và Du lịch ban hành: Định nghĩa cơ cấu cước phí (cước cơ bản, phụ phí, dịch vụ thực phí), phí hủy hợp đồng (trước ngày chuyển 3 ngày: miễn phí; 2 ngày: 20%; 1 ngày: 30%; trong ngày: 50%), quy định bồi thường hư hại trong 3 tháng.'
+  },
+  'japan-post-transfer-service': {
+    id: 'japan-post-transfer-service',
+    country: 'JP',
+    authority: '日本郵便株式会社 (Japan Post Co., Ltd.)',
+    title: 'e転居（郵便物等の転送サービス・1年間無料転送制度）',
+    url: 'https://www.post.japanpost.jp/service/tenkyo/',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-11',
+    status: 'official-primary',
+    notes: 'Dịch vụ chuyển tiếp thư từ bưu điện (e転居): Miễn phí chuyển tiếp thư từ nội địa Nhật Bản trong 1 năm kể từ ngày chuyển đi đăng ký. Chỉ áp dụng thư từ nội địa, không áp dụng chuyển tiếp ra nước ngoài.'
   }
 });
+
 
 /**
  * Tra cứu thông tin nguồn chính thức theo id.

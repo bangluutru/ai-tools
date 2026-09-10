@@ -33,6 +33,7 @@ export { default as ChildcareLeaveEligibilityView } from './components/family/Ch
 export { default as ChildcareBenefitView } from './components/family/ChildcareBenefitView.jsx';
 export { default as ChildAllowanceView } from './components/family/ChildAllowanceView.jsx';
 export { default as BirthWizardView } from './components/family/BirthWizardView.jsx';
+export { default as MovingCostView } from './components/housing/MovingCostView.jsx';
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
 
 // Core Hooks
@@ -69,6 +70,9 @@ export * from './japan/employment/index.js';
 
 // Japan Life - Family & Child Domain
 export * from './japan/family/index.js';
+
+// Japan Life - Housing & Moving Domain
+export * from './japan/housing/index.js';
 
 // Life Event Foundation (Shared lifecycle runtime)
 export * from './life-events/index.js';

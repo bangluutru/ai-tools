@@ -40,8 +40,14 @@ import {
   Compass,
   Baby,
   Users,
-  Heart
+  Heart,
+  Truck,
+  Home,
+  ClipboardCheck,
+  Boxes
 } from 'lucide-react';
+
+
 
 export const iconMap = {
   Image,
@@ -84,8 +90,13 @@ export const iconMap = {
   Compass,
   Baby,
   Users,
-  Heart
+  Heart,
+  Truck,
+  Home,
+  ClipboardCheck,
+  Boxes
 };
+
 
 /**
  * Resolves a Lucide icon component by name with a graceful fallback.

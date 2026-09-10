@@ -375,8 +375,21 @@ const toolGovernance = {
     country: 'JP',
     type: 'guide',
     regulatory: true,
+  },
+  'moving-cost-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'housing',
+    country: 'JP',
+    type: 'simulator',
+    regulatory: true,
   }
 };
+
 
 const toolDefinitions = [
   {
@@ -1030,7 +1043,29 @@ const toolDefinitions = [
     tags: ['妊娠', '出産', '育児', '出産育児一時金', '母子手帳', '保活', '出生届', 'birth wizard', 'mang thai', 'sinh con', 'nuôi con', 'japan life', 'family']
   },
   {
+    id: 'moving-cost-jp',
+    name_vn: 'Mô Phỏng Chi Phí Chuyển Nhà',
+    name_en: 'Moving Cost Simulator',
+    name_ja: '引越し費用シミュレーター',
+    desc_vn: 'Ước tính cước phí chuyển nhà theo quy mô hộ gia đình, cự ly và mùa cao điểm. Tra cứu biểu phí phạt hủy hợp đồng theo quy ước chuẩn của Bộ Giao thông MLIT.',
+    desc_en: 'Moving cost simulator by household size, distance, and peak seasonality. Reference MLIT standard cancellation fee guidelines.',
+    desc_ja: '世帯人数・移動距離・時期・時間帯別の引越し概算相場シミュレーター。国土交通省「標準引越運送約款」に基づく解約手数料を明示。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'housing',
+    country: 'JP',
+    type: 'simulator',
+    regulatory: true,
+    icon: 'Truck',
+    gradient: 'from-amber-500 via-orange-600 to-rose-600',
+    color: '#f59e0b',
+    badge: '住まい',
+    popular: true,
+    tags: ['引越し', '引越し費用', '相場', 'トラック', '標準引越運送約款', 'moving cost', 'chuyển nhà', 'cước phí', 'japan life', 'housing']
+  },
+  {
     id: 'watermark-studio',
+
     name_vn: 'Đóng Dấu Tài Liệu',
     name_en: 'Document Watermark',
     name_ja: '文書透かし・押印',

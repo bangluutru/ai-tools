@@ -339,8 +339,10 @@ test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and
     'childcare-leave-eligibility-jp',
     'childcare-benefit-jp',
     'child-allowance-jp',
-    'birth-wizard-jp'
+    'birth-wizard-jp',
+    'moving-cost-jp'
   ];
+
 
   assert.equal(
     verifiedTools.length,
