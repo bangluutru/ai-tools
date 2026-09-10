@@ -35,6 +35,7 @@ export { default as ChildAllowanceView } from './components/family/ChildAllowanc
 export { default as BirthWizardView } from './components/family/BirthWizardView.jsx';
 export { default as MovingCostView } from './components/housing/MovingCostView.jsx';
 export { default as FlappyBirdView } from './components/FlappyBirdView.jsx';
+export { DocumentFinderView } from './components/documents/DocumentFinderView.jsx';
 
 // Core Hooks
 export { useLocalStorage } from './hooks/useLocalStorage.js';
