@@ -460,6 +460,18 @@ const toolGovernance = {
     type: 'checker',
     regulatory: true,
   },
+  'status-change-guide-jp': {
+    readiness: 'beta',
+    processing: 'browser',
+    outputPurpose: 'utility',
+    verified: true,
+    verifiedAt: '2026-09-11',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'guide',
+    regulatory: true,
+  },
 };
 
 
@@ -1260,6 +1272,27 @@ const toolDefinitions = [
     badge: '入管・在留',
     popular: true,
     tags: ['chuyển việc', 'thay đổi công ty', 'thông báo 14 ngày', 'thu hồi visa', 'hello work', '転職', '所属機関変更', '入管', '就労資格証明書', 'japan life']
+  },
+  {
+    id: 'status-change-guide-jp',
+    name_vn: 'Hướng Dẫn Đổi Tư Cách Lưu Trú',
+    name_en: 'Residence Status Change Guide',
+    name_ja: '在留資格変更ガイド',
+    desc_vn: 'Hướng dẫn điều kiện pháp định, thẩm định hồ sơ và tính toán thời hạn đặc lệ khi đổi visa (Điều 20 Luật Nhập quản).',
+    desc_en: 'Check statutory requirements, verify documents, and calculate Special Period for residence status changes.',
+    desc_ja: '留学・家族滞在から就労ビザ、特定技能、経営・管理、配偶者ビザへの変更要件、特例期間、手数料を公的基準で判定。',
+    category: 'office',
+    group: 'japan-life',
+    domain: 'immigration',
+    country: 'JP',
+    type: 'guide',
+    regulatory: true,
+    icon: 'ArrowLeftRight',
+    gradient: 'from-blue-600 via-indigo-600 to-purple-600',
+    color: '#4f46e5',
+    badge: '入管・在留',
+    popular: true,
+    tags: ['visa', 'immigration', 'status change', 'henkou', 'đổi visa', 'gijinkoku', 'chuyển visa', 'tokurei', '在留資格変更', '入管', 'japan life']
   },
   {
     id: 'watermark-studio',

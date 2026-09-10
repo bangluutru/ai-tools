@@ -28,4 +28,8 @@ export * from './renewal/renewalEngine.js';
 export * from './affiliation/affiliationRules.js';
 export * from './affiliation/affiliationEngine.js';
 
+// M4: Status Change Guide (在留資格変更ガイド)
+export * from './statusChange/statusChangeRules.js';
+export * from './statusChange/statusChangeEngine.js';
+
 
