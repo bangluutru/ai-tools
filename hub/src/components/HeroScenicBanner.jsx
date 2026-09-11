@@ -20,15 +20,15 @@ export default function HeroScenicBanner({ displayLang = 'vi' }) {
   const currentTitle = titles[displayLang] || titles.vi;
 
   return (
-    <section className="relative overflow-hidden rounded-3xl h-[135px] sm:h-[150px] md:h-[160px] border border-border-subtle/70 shadow-xs transition-all duration-300 group">
+    <section className="relative overflow-hidden rounded-3xl h-[140px] sm:h-[150px] md:h-[160px] border border-border-subtle/70 shadow-xs transition-all duration-300 group">
       {/* 1. Artwork phong cảnh toàn cảnh sắc nét (Phú Sĩ bên trái, Chùa Một Cột bên phải) */}
       <div className="absolute inset-0 w-full h-full z-0">
         <ScenicLandscapeIllustration />
       </div>
 
-      {/* 2. Tiêu đề trung tâm trang nhã, cân đối */}
-      <div className="relative z-10 w-full h-full flex items-center justify-center px-4 sm:px-8 text-center pointer-events-none">
-        <h1 className="font-title-lg text-xl sm:text-2xl md:text-[28px] lg:text-[30px] font-extrabold text-on-surface tracking-tight leading-snug drop-shadow-xs max-w-2xl">
+      {/* 2. Tiêu đề trung tâm trang nhã, cân đối trên mọi thiết bị */}
+      <div className="relative z-10 w-full h-full flex items-center justify-center px-3 sm:px-8 text-center pointer-events-none">
+        <h1 className="font-title-lg text-lg sm:text-2xl md:text-[26px] lg:text-[30px] font-extrabold text-on-surface tracking-tight leading-snug drop-shadow-xs max-w-[175px] sm:max-w-md md:max-w-lg lg:max-w-2xl">
           {currentTitle}
         </h1>
       </div>
