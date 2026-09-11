@@ -2,7 +2,7 @@ import React from 'react';
 import { DOMAIN_SHORTCUTS } from '../config/domainShortcuts.js';
 import { tools } from '../config/toolsRegistry.js';
 import { iconMap } from '../config/toolIcons.js';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Sparkles } from 'lucide-react';
 
 const toolRegistryMap = new Map(tools.map((t) => [t.id, t]));
 
@@ -24,9 +24,11 @@ const DOMAIN_STYLES = {
   },
 };
 
+const TOTAL_GRID_SLOTS = 8;
+
 /**
- * DomainQuickShortcuts — Lưới 2x2 (4 nút) truy cập nhanh miniapp
- * Kích thước mỗi nút chiếm xấp xỉ 1/4 diện tích của Thẻ Domain
+ * DomainQuickShortcuts — Lưới 2 cột x 4 dòng (8 slots) truy cập nhanh miniapp
+ * Đảm bảo các cột domain đồng đều chiều cao, hỗ trợ mở rộng miniapp dễ dàng
  */
 export default function DomainQuickShortcuts({
   domainId = 'common',
@@ -35,6 +37,7 @@ export default function DomainQuickShortcuts({
 }) {
   const shortcuts = DOMAIN_SHORTCUTS[domainId] || [];
   const style = DOMAIN_STYLES[domainId] || DOMAIN_STYLES.common;
+  const placeholderCount = Math.max(0, TOTAL_GRID_SLOTS - shortcuts.length);
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:gap-2.5 w-full">
@@ -59,6 +62,31 @@ export default function DomainQuickShortcuts({
               {toolTitle}
             </span>
           </button>
+        );
+      })}
+
+      {/* Các slot giữ chỗ để hoàn thiện lưới 2 cột x 4 dòng (8 slots) khi chưa đủ miniapp */}
+      {Array.from({ length: placeholderCount }).map((_, idx) => {
+        const placeholderText =
+          displayLang === 'ja'
+            ? '準備中...'
+            : displayLang === 'en'
+            ? 'Coming soon...'
+            : 'Sắp ra mắt...';
+
+        return (
+          <div
+            key={`placeholder-${domainId}-${idx}`}
+            className="flex items-center gap-2 px-2.5 py-2 sm:py-2.5 rounded-xl bg-surface-container/20 border border-dashed border-border-subtle/60 text-outline/40 select-none"
+            aria-hidden="true"
+          >
+            <div className="w-7 h-7 rounded-lg bg-surface-container-high/30 flex items-center justify-center shrink-0 text-outline/35">
+              <Sparkles size={13} className="opacity-50" />
+            </div>
+            <span className="text-[11.5px] sm:text-xs font-medium text-outline/50 truncate italic">
+              {placeholderText}
+            </span>
+          </div>
         );
       })}
     </div>

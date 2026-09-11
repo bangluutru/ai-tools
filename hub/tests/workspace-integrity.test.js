@@ -135,21 +135,28 @@ test('Zero Horizontal Shift: Header, Main, and Footer share identical 1240px con
 });
 
 /**
- * Kiểm tra 12 Shortcut trang chủ:
- * - Chia đều cho 3 domain (mỗi domain đúng 4 shortcut)
- * - Tất cả 12 toolId đều phải tồn tại trong toolsRegistry.js
+ * Kiểm tra 20 Shortcut trang chủ:
+ * - common: 8 shortcut
+ * - japan-life: 8 shortcut
+ * - vietnam-life: 4 shortcut (lưới 2x4 hiển thị 4 nút khả dụng + 4 slot giữ chỗ)
+ * - Tất cả toolId đều phải tồn tại trong toolsRegistry.js
  * - Mỗi shortcut phải có đủ tên đa ngữ (VI, EN, JA) và icon
  */
-test('Homepage Quick Shortcuts: 12 shortcuts across 3 domains are all valid and registered', async () => {
+test('Homepage Quick Shortcuts: domain shortcuts are all valid and registered', async () => {
   const { DOMAIN_SHORTCUTS } = await import('../src/config/domainShortcuts.js');
   const { iconMap } = await import('../src/config/toolIcons.js');
   const validToolIds = new Set(tools.map((t) => t.id));
 
-  const expectedDomains = ['common', 'japan-life', 'vietnam-life'];
-  for (const domain of expectedDomains) {
+  const expectedCounts = {
+    common: 8,
+    'japan-life': 8,
+    'vietnam-life': 4,
+  };
+
+  for (const [domain, expectedCount] of Object.entries(expectedCounts)) {
     const list = DOMAIN_SHORTCUTS[domain];
     assert.ok(Array.isArray(list), `DOMAIN_SHORTCUTS.${domain} phải là một mảng`);
-    assert.equal(list.length, 4, `Domain "${domain}" phải có đúng 4 shortcut`);
+    assert.equal(list.length, expectedCount, `Domain "${domain}" phải có đúng ${expectedCount} shortcut`);
 
     for (const item of list) {
       assert.ok(validToolIds.has(item.id), `Shortcut ID "${item.id}" không tồn tại trong toolsRegistry.js`);

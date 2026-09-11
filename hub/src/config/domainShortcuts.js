@@ -6,9 +6,9 @@ import { tools } from './toolsRegistry.js';
 const toolRegistryMap = new Map(tools.map((t) => [t.id, t]));
 
 /**
- * Cấu hình 12 Shortcut truy cập nhanh miniapp trang chủ theo 3 Domain
- * Chia đều 4 shortcut cho mỗi domain (Lưới 2x2, diện tích ~1/4 thẻ Domain)
- * Tất cả icon đều dùng chung 100% với icon gốc của miniapp trong toolsRegistry.js
+ * Cấu hình Shortcut truy cập nhanh miniapp trang chủ theo 3 Domain
+ * - Bố cục chuẩn lưới 2 cột x 4 dòng (8 slots mỗi Domain)
+ * - Tất cả icon đều lấy trực tiếp từ thuộc tính icon của miniapp trong toolsRegistry.js
  */
 export const DOMAIN_SHORTCUTS = {
   common: [
@@ -48,6 +48,42 @@ export const DOMAIN_SHORTCUTS = {
         ja: '画面録画',
       },
     },
+    {
+      id: 'business-card-studio',
+      icon: toolRegistryMap.get('business-card-studio')?.icon || 'Contact',
+      names: {
+        vi: 'Tạo danh thiếp',
+        en: 'Business Card',
+        ja: '名刺作成',
+      },
+    },
+    {
+      id: 'barcode-qr',
+      icon: toolRegistryMap.get('barcode-qr')?.icon || 'QrCode',
+      names: {
+        vi: 'Tạo mã QR',
+        en: 'QR Code Maker',
+        ja: 'QRコード作成',
+      },
+    },
+    {
+      id: 'image-convert',
+      icon: toolRegistryMap.get('image-convert')?.icon || 'Image',
+      names: {
+        vi: 'Nén ảnh',
+        en: 'Compress Image',
+        ja: '画像圧縮',
+      },
+    },
+    {
+      id: 'omniconvert',
+      icon: toolRegistryMap.get('omniconvert')?.icon || 'ArrowLeftRight',
+      names: {
+        vi: 'Chuyển đổi đa năng',
+        en: 'Universal Converter',
+        ja: '万能ファイル変換',
+      },
+    },
   ],
   'japan-life': [
     {
@@ -84,6 +120,42 @@ export const DOMAIN_SHORTCUTS = {
         vi: 'Thủ tục về nước',
         en: 'Leaving Japan',
         ja: '帰国手続き',
+      },
+    },
+    {
+      id: 'overtime-calculator-jp',
+      icon: toolRegistryMap.get('overtime-calculator-jp')?.icon || 'Clock',
+      names: {
+        vi: 'Tiền làm thêm giờ',
+        en: 'Overtime Pay',
+        ja: '残業代試算',
+      },
+    },
+    {
+      id: 'certificate-acquisition-guide-jp',
+      icon: toolRegistryMap.get('certificate-acquisition-guide-jp')?.icon || 'Store',
+      names: {
+        vi: 'Lấy giấy tờ',
+        en: 'Get Certificates',
+        ja: '証明書取得',
+      },
+    },
+    {
+      id: 'status-change-guide-jp',
+      icon: toolRegistryMap.get('status-change-guide-jp')?.icon || 'ArrowLeftRight',
+      names: {
+        vi: 'Đổi tư cách lưu trú',
+        en: 'Status Change',
+        ja: '在留資格変更',
+      },
+    },
+    {
+      id: 'pr-readiness-checker-jp',
+      icon: toolRegistryMap.get('pr-readiness-checker-jp')?.icon || 'Award',
+      names: {
+        vi: 'Điều kiện vĩnh trú',
+        en: 'PR Readiness',
+        ja: '永住準備度',
       },
     },
   ],
