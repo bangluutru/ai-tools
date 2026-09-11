@@ -56,18 +56,18 @@ export const HUB_DOMAINS = {
     id: 'japan-life',
     route: 'japan-life',
     name: {
-      vi: 'Cuộc sống tại Nhật',
+      vi: 'Đời sống Nhật Bản',
       en: 'Japan Life',
       ja: '日本生活',
     },
     cardTitle: 'Japan Life',
     subtitle: {
-      vi: 'Hỗ trợ cuộc sống tại Nhật Bản với thông tin chính xác, dễ hiểu.',
+      vi: 'Hỗ trợ đời sống tại Nhật Bản với thông tin chính xác, dễ hiểu.',
       en: 'Life support in Japan with verified and intuitive tools.',
       ja: '日本での暮らしと手続きを、正確かつ分かりやすくサポート。',
     },
     description: {
-      vi: 'Cuộc sống tại Nhật Bản: Thuế, bảo hiểm, việc làm, cư trú, gia đình, nhà ở và các thủ tục hành chính.',
+      vi: 'Đời sống Nhật Bản: Thuế, bảo hiểm, việc làm, cư trú, gia đình, nhà ở và các thủ tục hành chính.',
       en: 'Life in Japan: Income tax, social insurance, employment, residence, family, housing, and municipal procedures.',
       ja: '日本での生活：税金、社会保険、年金、就労、在留資格、子育て、引越、行政手続きまで網羅。',
     },
@@ -99,18 +99,18 @@ export const HUB_DOMAINS = {
     id: 'vietnam-life',
     route: 'vietnam-life',
     name: {
-      vi: 'Cuộc sống tại Việt Nam',
+      vi: 'Đời sống Việt Nam',
       en: 'Vietnam Life',
       ja: 'ベトナム生活',
     },
     cardTitle: 'Vietnam Life',
     subtitle: {
-      vi: 'Hỗ trợ cuộc sống tại Việt Nam (đang phát triển).',
+      vi: 'Hỗ trợ đời sống tại Việt Nam (đang phát triển).',
       en: 'Life support in Vietnam (under development).',
       ja: 'ベトナム生活サポート（開発中）。',
     },
     description: {
-      vi: 'Cuộc sống tại Việt Nam: Thuế, bảo hiểm, hành chính, giáo dục và các tiện ích cho cuộc sống tại Việt Nam.',
+      vi: 'Đời sống Việt Nam: Thuế, bảo hiểm, hành chính, giáo dục và các tiện ích cho đời sống tại Việt Nam.',
       en: 'Life in Vietnam: Personal tax, social insurance, public administration, education, and daily life utilities.',
       ja: 'ベトナムでの生活：税金、社会保障、行政手続き、教育、生活便利ツールを順次提供予定。',
     },

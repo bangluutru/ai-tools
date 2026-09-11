@@ -1,304 +1,241 @@
 import React from 'react';
 
 /**
- * ScenicLandscapeIllustration — Bức tranh phong cảnh toàn cảnh (Scenic Panorama)
- * Phối cảnh: Núi Phú Sĩ tuyết phủ, Chùa 5 tầng Nhật Bản, Cành hoa anh đào Sakura,
- * Mascot Ninja Toolio bay lượn và Bong bóng thoại châm ngôn thương hiệu.
- * 100% Vector SVG, sắc nét trên mọi độ phân giải màn hình, tự động thích ứng Light/Dark mode.
+ * ScenicLandscapeIllustration — Bức tranh phong cảnh toàn cảnh (Panorama Banner)
+ * Thiết kế mảnh mai (chiều cao ~150px, tỷ lệ 1200x160) cân đối 2.5x Navbar:
+ * - Cánh trái: Đỉnh Núi Phú Sĩ tuyết phủ mờ ảo, cành hoa anh đào Sakura (Đại diện cho Nhật Bản)
+ * - Cánh phải: Chùa Một Cột uy nghiêm vươn trên đài sen cùng rặng tre ngọc bích (Đại diện cho Việt Nam)
+ * - Vùng trung tâm: Khoảng không thông thoáng để đặt tiêu đề "Công cụ hữu ích cho cuộc sống"
+ * 100% Vector SVG, thích ứng mượt mà cả Light Mode và Dark Mode.
  */
 
 export default function ScenicLandscapeIllustration({
-  displayLang = 'vi',
   className = '',
 }) {
-  const quotes = {
-    vi: {
-      line1: 'Những công cụ nhỏ,',
-      line2: 'tạo ra thay đổi lớn trong cuộc sống!',
-    },
-    en: {
-      line1: 'Tiny tools,',
-      line2: 'huge impact in everyday life!',
-    },
-    ja: {
-      line1: '小さなツールで、',
-      line2: '暮らしに大きな変化を！',
-    },
-  };
-
-  const currentQuote = quotes[displayLang] || quotes.vi;
-
   return (
-    <div className={`w-full relative overflow-hidden select-none pointer-events-none ${className}`}>
+    <div className={`w-full h-full relative overflow-hidden select-none pointer-events-none ${className}`}>
       <svg
-        viewBox="0 0 1200 320"
+        viewBox="0 0 1200 160"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-auto max-h-[280px] sm:max-h-[320px] object-cover sm:object-contain"
+        className="w-full h-full object-cover"
         preserveAspectRatio="xMidYMid slice"
         aria-hidden="true"
       >
         <defs>
-          {/* Nền chuyển sắc bầu trời */}
-          <linearGradient id="sky-grad" x1="0" y1="0" x2="0" y2="320" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#f0f9ff" stopOpacity="0.8" className="dark:stop-color-[#091527] dark:stop-opacity-80" />
-            <stop offset="70%" stopColor="#e0f2fe" stopOpacity="0.4" className="dark:stop-color-[#0c1f38] dark:stop-opacity-40" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0" className="dark:stop-color-[#090D16] dark:stop-opacity-0" />
+          {/* Nền bầu trời chuyển sắc ngang nhẹ nhàng */}
+          <linearGradient id="scenic-sky-grad" x1="0" y1="0" x2="1200" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#eff6ff" stopOpacity="0.85" className="dark:stop-color-[#0b1329] dark:stop-opacity-80" />
+            <stop offset="30%" stopColor="#f0f9ff" stopOpacity="0.6" className="dark:stop-color-[#0d1c38] dark:stop-opacity-50" />
+            <stop offset="70%" stopColor="#ecfdf5" stopOpacity="0.6" className="dark:stop-color-[#06241b] dark:stop-opacity-50" />
+            <stop offset="100%" stopColor="#f0fdf4" stopOpacity="0.85" className="dark:stop-color-[#062117] dark:stop-opacity-80" />
           </linearGradient>
 
-          {/* Dải màu Núi Phú Sĩ */}
-          <linearGradient id="fuji-body-grad" x1="260" y1="90" x2="260" y2="300" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.6" className="dark:stop-color-[#1e3a8a] dark:stop-opacity-60" />
-            <stop offset="100%" stopColor="#dbeafe" stopOpacity="0.15" className="dark:stop-color-[#0f172a] dark:stop-opacity-20" />
+          {/* Dải màu Núi Phú Sĩ (Cánh trái) */}
+          <linearGradient id="fuji-body-grad" x1="180" y1="30" x2="180" y2="160" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.55" className="dark:stop-color-[#1e3a8a] dark:stop-opacity-65" />
+            <stop offset="100%" stopColor="#bfdbfe" stopOpacity="0.1" className="dark:stop-color-[#0f172a] dark:stop-opacity-20" />
           </linearGradient>
 
-          <linearGradient id="fuji-snow-grad" x1="260" y1="70" x2="260" y2="150" gradientUnits="userSpaceOnUse">
+          <linearGradient id="fuji-snow-grad" x1="180" y1="20" x2="180" y2="75" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#e0f2fe" stopOpacity="0.8" className="dark:stop-color-[#93c5fd] dark:stop-opacity-70" />
+            <stop offset="100%" stopColor="#dbeafe" stopOpacity="0.75" className="dark:stop-color-[#60a5fa] dark:stop-opacity-50" />
           </linearGradient>
 
-          {/* Dải màu Chùa 5 tầng */}
-          <linearGradient id="pagoda-body-grad" x1="1080" y1="120" x2="1080" y2="300" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.85" className="dark:stop-color-[#e11d48] dark:stop-opacity-85" />
-            <stop offset="100%" stopColor="#be123c" stopOpacity="0.95" className="dark:stop-color-[#881337] dark:stop-opacity-95" />
-          </linearGradient>
-
-          {/* Dải màu hoa anh đào Sakura */}
-          <linearGradient id="scenic-sakura-grad" x1="0" y1="0" x2="0" y2="20" gradientUnits="userSpaceOnUse">
+          {/* Dải màu Hoa Sakura (Cánh trái) */}
+          <linearGradient id="sakura-petal-grad" x1="0" y1="0" x2="0" y2="16" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#fecdd3" />
             <stop offset="100%" stopColor="#f43f5e" />
           </linearGradient>
 
-          {/* Cánh hoa anh đào đơn chiếc */}
-          <path
-            id="falling-petal"
-            d="M6 0 C2 4, 0 8, 4 12 C7 10, 8 6, 6 0 Z"
-            fill="url(#scenic-sakura-grad)"
-            opacity="0.85"
-          />
+          {/* Mái Chùa Một Cột (Cánh phải) */}
+          <linearGradient id="vn-pagoda-roof" x1="1020" y1="25" x2="1100" y2="75" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#059669" />
+          </linearGradient>
 
-          {/* Bông hoa anh đào 5 cánh */}
-          <g id="blossom-flower">
-            <path d="M12 10 C8 5, 2 2, 5 -3 C7 -5, 10 -4, 12 -1 C14 -4, 17 -5, 19 -3 C22 2, 16 5, 12 10 Z" fill="url(#scenic-sakura-grad)" />
-            <path d="M12 10 C8 5, 2 2, 5 -3 C7 -5, 10 -4, 12 -1 C14 -4, 17 -5, 19 -3 C22 2, 16 5, 12 10 Z" fill="url(#scenic-sakura-grad)" transform="rotate(72 12 12)" />
-            <path d="M12 10 C8 5, 2 2, 5 -3 C7 -5, 10 -4, 12 -1 C14 -4, 17 -5, 19 -3 C22 2, 16 5, 12 10 Z" fill="url(#scenic-sakura-grad)" transform="rotate(144 12 12)" />
-            <path d="M12 10 C8 5, 2 2, 5 -3 C7 -5, 10 -4, 12 -1 C14 -4, 17 -5, 19 -3 C22 2, 16 5, 12 10 Z" fill="url(#scenic-sakura-grad)" transform="rotate(216 12 12)" />
-            <path d="M12 10 C8 5, 2 2, 5 -3 C7 -5, 10 -4, 12 -1 C14 -4, 17 -5, 19 -3 C22 2, 16 5, 12 10 Z" fill="url(#scenic-sakura-grad)" transform="rotate(288 12 12)" />
-            <circle cx="12" cy="12" r="3" fill="#fef08a" />
-            <circle cx="12" cy="12" r="1.5" fill="#f59e0b" />
+          {/* Cột trụ Chùa Một Cột */}
+          <linearGradient id="vn-pagoda-pillar" x1="1050" y1="75" x2="1070" y2="160" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#6ee7b7" />
+            <stop offset="100%" stopColor="#047857" />
+          </linearGradient>
+
+          {/* Vầng sáng phía sau Chùa Một Cột */}
+          <radialGradient id="vn-halo-glow" cx="1060" cy="70" r="85" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#a7f3d0" stopOpacity="0.35" className="dark:stop-color-[#065f46] dark:stop-opacity-30" />
+            <stop offset="100%" stopColor="#a7f3d0" stopOpacity="0" />
+          </radialGradient>
+
+          {/* Bông hoa anh đào */}
+          <g id="mini-blossom">
+            <path d="M8 7 C5 3, 1 1, 3 -2 C5 -4, 7 -3, 8 -1 C10 -3, 12 -4, 13 -2 C15 1, 11 3, 8 7 Z" fill="url(#sakura-petal-grad)" />
+            <path d="M8 7 C5 3, 1 1, 3 -2 C5 -4, 7 -3, 8 -1 C10 -3, 12 -4, 13 -2 C15 1, 11 3, 8 7 Z" fill="url(#sakura-petal-grad)" transform="rotate(72 8 8)" />
+            <path d="M8 7 C5 3, 1 1, 3 -2 C5 -4, 7 -3, 8 -1 C10 -3, 12 -4, 13 -2 C15 1, 11 3, 8 7 Z" fill="url(#sakura-petal-grad)" transform="rotate(144 8 8)" />
+            <path d="M8 7 C5 3, 1 1, 3 -2 C5 -4, 7 -3, 8 -1 C10 -3, 12 -4, 13 -2 C15 1, 11 3, 8 7 Z" fill="url(#sakura-petal-grad)" transform="rotate(216 8 8)" />
+            <path d="M8 7 C5 3, 1 1, 3 -2 C5 -4, 7 -3, 8 -1 C10 -3, 12 -4, 13 -2 C15 1, 11 3, 8 7 Z" fill="url(#sakura-petal-grad)" transform="rotate(288 8 8)" />
+            <circle cx="8" cy="8" r="2" fill="#fef08a" />
           </g>
 
-          {/* Đổ bóng cho Bong bóng thoại */}
-          <filter id="quote-card-shadow" x="-10%" y="-10%" width="130%" height="130%">
-            <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#0f172a" floodOpacity="0.08" />
-          </filter>
+          {/* Cánh hoa bay */}
+          <path
+            id="mini-petal"
+            d="M4 0 C1 3, 0 5, 3 8 C5 7, 6 4, 4 0 Z"
+            fill="url(#sakura-petal-grad)"
+            opacity="0.8"
+          />
         </defs>
 
-        {/* 1. LỚP NỀN BẦU TRỜI & MẶT TRỜI MỜ ẢO */}
-        <rect width="1200" height="320" fill="url(#sky-grad)" />
+        {/* 1. NỀN BẦU TRỜI CHUYỂN SẮC */}
+        <rect width="1200" height="160" fill="url(#scenic-sky-grad)" />
 
-        {/* Vầng thái dương nhẹ phía sau Phú Sĩ */}
-        <circle cx="280" cy="140" r="90" fill="#fbcfe8" opacity="0.15" className="dark:opacity-10" />
+        {/* ================================================================= */}
+        {/* CÁNH TRÁI: NÚI PHÚ SĨ & HOA ANH ĐÀO SAKURA (BIỂU TƯỢNG NHẬT BẢN) */}
+        {/* ================================================================= */}
 
-        {/* 2. DÃY NÚI PHÚ SĨ (CÁNH TRÁI & TRUNG TÂM) */}
-        <g className="fuji-group">
-          {/* Thân núi Phú Sĩ */}
-          <path
-            d="M60 290 C120 250, 190 160, 240 76 C255 74, 265 74, 280 76 C330 160, 400 250, 460 290 Z"
-            fill="url(#fuji-body-grad)"
-          />
+        {/* Thân núi Phú Sĩ */}
+        <path
+          d="M 180 28 L 220 54 L 320 160 L 40 160 L 140 54 Z"
+          fill="url(#fuji-body-grad)"
+        />
 
-          {/* Đỉnh tuyết phủ (Snow cap với các rãnh tuyết lượn tự nhiên) */}
-          <path
-            d="M240 76 C255 74, 265 74, 280 76 C295 102, 305 115, 315 125 L300 128 L290 145 L275 130 L260 152 L245 132 L235 142 L225 126 C232 110, 236 95, 240 76 Z"
-            fill="url(#fuji-snow-grad)"
-          />
+        {/* Vệt bóng đổ dốc núi bên phải */}
+        <path
+          d="M 180 28 L 220 54 L 320 160 L 180 160 Z"
+          fill="#60a5fa"
+          opacity="0.15"
+          className="dark:fill-[#1e40af] dark:opacity-25"
+        />
 
-          {/* Dãy đồi thấp thoải chân núi */}
-          <path
-            d="M0 310 C100 270, 200 285, 320 295 C420 305, 520 280, 600 310 L600 320 L0 320 Z"
-            fill="#93c5fd"
-            opacity="0.18"
-            className="dark:fill-[#1e3a8a] dark:opacity-20"
-          />
+        {/* Vành tuyết phủ đỉnh Phú Sĩ */}
+        <path
+          d="M 180 28 L 220 54 C 210 65, 205 60, 195 72 C 188 64, 182 68, 175 74 C 168 62, 160 66, 152 70 C 146 60, 142 64, 140 54 Z"
+          fill="url(#fuji-snow-grad)"
+        />
+
+        {/* Cụm mây trắng lơ lửng chân núi */}
+        <g fill="#ffffff" opacity="0.6" className="dark:fill-[#38bdf8] dark:opacity-15">
+          <path d="M 20 135 C 30 120, 60 120, 75 135 C 90 118, 120 118, 135 135 C 150 135, 160 148, 150 160 L 20 160 Z" />
+          <path d="M 230 140 C 245 130, 275 130, 290 140 C 305 125, 335 125, 350 140 C 365 140, 375 152, 365 160 L 230 160 Z" />
         </g>
 
-        {/* 3. DẢI MÂY TRÔI BỒNG BỀNH (TRONG SUỐT, NHẸ NHÀNG) */}
-        <g fill="#ffffff" opacity="0.65" className="clouds-group dark:fill-[#38bdf8] dark:opacity-15">
-          {/* Cụm mây trái */}
-          <path d="M40 160 C50 145, 80 145, 95 160 C110 140, 145 140, 160 160 C180 160, 190 175, 180 190 C170 200, 50 200, 40 180 Z" />
-          {/* Cụm mây giữa chân núi */}
-          <path d="M360 210 C380 195, 420 195, 440 210 C460 190, 500 190, 520 210 C540 210, 560 225, 550 240 C530 250, 370 250, 360 230 Z" />
-          {/* Cụm mây lượn cao */}
-          <path d="M680 90 C700 80, 730 80, 745 90 C760 75, 790 75, 805 90 C820 90, 835 102, 825 115 C810 122, 690 122, 680 108 Z" opacity="0.5" />
-        </g>
-
-        {/* 4. CHÙA 5 TẦNG NHẬT BẢN (PAGODA - CÁNH PHẢI) */}
-        <g className="pagoda-group" transform="translate(1010, 100)">
-          {/* Cột thu lôi đỉnh tháp (Sorin) */}
-          <line x1="75" y1="-30" x2="75" y2="15" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
-          <circle cx="75" cy="-30" r="3.5" fill="#f59e0b" />
-          <circle cx="75" cy="-22" r="5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1" />
-          <circle cx="75" cy="-14" r="5.5" fill="#f59e0b" />
-          <circle cx="75" cy="-6" r="6" fill="#f59e0b" />
-
-          {/* Tầng 5 (Mái trên cùng) */}
-          <path d="M48 20 Q75 14, 102 20 L96 23 L54 23 Z" fill="#ffffff" />
-          <path d="M42 22 Q75 12, 108 22 L104 25 Q75 18, 46 25 Z" fill="#e11d48" />
-          <rect x="63" y="24" width="24" height="15" fill="#881337" rx="1" />
-
-          {/* Tầng 4 */}
-          <path d="M40 42 Q75 33, 110 42 L104 45 L46 45 Z" fill="#ffffff" />
-          <path d="M34 44 Q75 31, 116 44 L112 47 Q75 38, 38 47 Z" fill="#e11d48" />
-          <rect x="60" y="46" width="30" height="17" fill="#881337" rx="1" />
-
-          {/* Tầng 3 */}
-          <path d="M32 66 Q75 55, 118 66 L112 69 L38 69 Z" fill="#ffffff" />
-          <path d="M26 68 Q75 53, 124 68 L120 71 Q75 60, 30 71 Z" fill="#e11d48" />
-          <rect x="57" y="70" width="36" height="19" fill="#881337" rx="1" />
-
-          {/* Tầng 2 */}
-          <path d="M24 92 Q75 79, 126 92 L120 95 L30 95 Z" fill="#ffffff" />
-          <path d="M18 94 Q75 77, 132 94 L128 97 Q75 84, 22 97 Z" fill="#e11d48" />
-          <rect x="54" y="96" width="42" height="21" fill="#881337" rx="1" />
-
-          {/* Tầng 1 (Tầng trệt có lan can và cửa vòm) */}
-          <path d="M14 120 Q75 105, 136 120 L130 123 L20 123 Z" fill="#ffffff" />
-          <path d="M8 122 Q75 103, 142 122 L138 126 Q75 110, 12 126 Z" fill="#e11d48" />
-          <rect x="50" y="125" width="50" height="36" fill="#881337" rx="1" />
-
-          {/* Cửa vòm Chùa */}
-          <path d="M68 161 V140 A7 7 0 0 1 82 140 V161 Z" fill="#fecdd3" opacity="0.9" />
-
-          {/* Chân móng Chùa */}
-          <rect x="36" y="161" width="78" height="14" rx="2" fill="#64748b" opacity="0.8" />
-        </g>
-
-        {/* 5. CÀNH HOA ANH ĐÀO SAKURA (RỦ XUỐNG TỪ GÓC PHẢI TRÊN) */}
+        {/* Cành hoa anh đào Sakura vươn từ góc trên bên trái */}
         <g className="sakura-branch-group">
-          {/* Cành cây nâu uốn lượn */}
+          {/* Nhánh cây nâu thanh mảnh */}
           <path
-            d="M1210 10 C1140 30, 1070 15, 1010 45 C970 65, 930 40, 880 70"
+            d="M -10 15 C 40 10, 80 25, 120 18 C 150 12, 180 28, 210 22"
             stroke="#78350f"
-            strokeWidth="5"
+            strokeWidth="3.2"
             strokeLinecap="round"
-            opacity="0.8"
+            className="dark:stroke-[#451a03]"
           />
           <path
-            d="M1070 18 C1050 40, 1030 55, 990 60"
+            d="M 75 24 C 95 38, 115 36, 135 48"
             stroke="#78350f"
-            strokeWidth="3"
+            strokeWidth="2"
             strokeLinecap="round"
-            opacity="0.8"
+            className="dark:stroke-[#451a03]"
           />
           <path
-            d="M970 65 C960 90, 940 105, 910 115"
+            d="M 140 16 C 160 8, 185 10, 200 4"
             stroke="#78350f"
-            strokeWidth="2.5"
+            strokeWidth="1.8"
             strokeLinecap="round"
-            opacity="0.7"
+            className="dark:stroke-[#451a03]"
           />
 
-          {/* Các chùm hoa nở */}
-          <use href="#blossom-flower" x="870" y="55" transform="scale(1.2)" />
-          <use href="#blossom-flower" x="900" y="100" transform="scale(0.9)" />
-          <use href="#blossom-flower" x="950" y="45" transform="scale(1.1)" />
-          <use href="#blossom-flower" x="980" y="70" transform="scale(0.85)" />
-          <use href="#blossom-flower" x="1005" y="30" transform="scale(1.3)" />
-          <use href="#blossom-flower" x="1040" y="50" transform="scale(1)" />
-          <use href="#blossom-flower" x="1080" y="15" transform="scale(1.2)" />
-          <use href="#blossom-flower" x="1130" y="35" transform="scale(1.1)" />
+          {/* Các chùm hoa anh đào tươi thắm */}
+          <use href="#mini-blossom" x="40" y="8" transform="scale(1.2)" />
+          <use href="#mini-blossom" x="90" y="24" transform="scale(1.1)" />
+          <use href="#mini-blossom" x="125" y="10" transform="scale(1.3)" />
+          <use href="#mini-blossom" x="175" y="16" transform="scale(1.05)" />
+          <use href="#mini-blossom" x="205" y="18" transform="scale(0.9)" />
+          <use href="#mini-blossom" x="130" y="44" transform="scale(0.95)" />
 
-          {/* Những cánh hoa rơi lượn trong gió */}
-          <use href="#falling-petal" x="840" y="90" transform="rotate(25 840 90)" />
-          <use href="#falling-petal" x="890" y="140" transform="rotate(-15 890 140)" />
-          <use href="#falling-petal" x="780" y="120" transform="rotate(40 780 120)" />
-          <use href="#falling-petal" x="720" y="160" transform="rotate(65 720 160)" />
+          {/* Cánh hoa Sakura bay lơ lửng */}
+          <use href="#mini-petal" x="160" y="48" transform="rotate(25 160 48)" />
+          <use href="#mini-petal" x="235" y="42" transform="rotate(-15 235 42)" />
+          <use href="#mini-petal" x="270" y="75" transform="rotate(40 270 75)" opacity="0.65" />
+          <use href="#mini-petal" x="320" y="105" transform="rotate(-30 320 105)" opacity="0.5" />
         </g>
 
-        {/* 6. CHÚ MASCOT TOOLIO NINJA BAY TRÊN TRỜI CÙNG CUỘN THƯ & BONG BÓNG THOẠI */}
-        <g className="mascot-with-quote" transform="translate(790, 48)">
-          {/* A. BONG BÓNG THOẠI CHÂM NGÔN (QUOTE BUBBLE) */}
-          <g filter="url(#quote-card-shadow)">
-            {/* Thân thẻ bong bóng thoại */}
-            <rect
-              x="-60"
-              y="0"
-              width="210"
-              height="62"
-              rx="14"
-              fill="#ffffff"
-              stroke="#e2e8f0"
-              strokeWidth="1.2"
-              className="dark:fill-[#1e293b] dark:stroke-[#334155]"
-            />
+        {/* ================================================================= */}
+        {/* CÁNH PHẢI: CHÙA MỘT CỘT & RẶNG TRE NGỌC BÍCH (BIỂU TƯỢNG VIỆT NAM) */}
+        {/* ================================================================= */}
+        <g className="vietnam-one-pillar-pagoda-group" transform="translate(940, 10)">
+          {/* Vầng hào quang ngọc bích sau chùa */}
+          <circle cx="120" cy="70" r="70" fill="url(#vn-halo-glow)" />
 
-            {/* Mũi tên chỉ về phía chú ninja */}
-            <path
-              d="M 150 25 L 165 31 L 150 37 Z"
-              fill="#ffffff"
-              className="dark:fill-[#1e293b]"
-            />
-
-            {/* Chữ châm ngôn thương hiệu */}
-            <text
-              x="-46"
-              y="26"
-              fill="#0f172a"
-              className="dark:fill-[#f8fafc]"
-              fontFamily="Inter, system-ui, sans-serif"
-              fontSize="11.5"
-              fontWeight="600"
-              letterSpacing="-0.01em"
-            >
-              {currentQuote.line1}
-            </text>
-            <text
-              x="-46"
-              y="44"
-              fill="#0284c7"
-              className="dark:fill-[#38bdf8]"
-              fontFamily="Inter, system-ui, sans-serif"
-              fontSize="11.5"
-              fontWeight="700"
-              letterSpacing="-0.01em"
-            >
-              {currentQuote.line2}
-            </text>
+          {/* Rặng tre xanh bên phải */}
+          <g opacity="0.65">
+            <path d="M 200 150 C 205 110, 198 75, 185 45" stroke="#10b981" strokeWidth="2.2" strokeLinecap="round" />
+            <path d="M 215 150 C 218 120, 212 95, 200 70" stroke="#059669" strokeWidth="1.8" strokeLinecap="round" />
+            {/* Cụm lá tre */}
+            <path d="M 185 45 C 192 38, 206 40, 215 45 C 203 48, 195 48, 185 45 Z" fill="#34d399" />
+            <path d="M 185 45 C 178 37, 166 35, 156 37 C 168 42, 176 43, 185 45 Z" fill="#10b981" />
+            <path d="M 190 68 C 198 62, 210 65, 216 70 C 205 72, 198 71, 190 68 Z" fill="#34d399" />
           </g>
 
-          {/* B. CHÚ MASCOT NINJA TOOLIO (ĐANG BAY VỚI CUỘN THƯ VÀNG) */}
-          <g transform="translate(170, 10)">
-            {/* Vệt gió lướt bay */}
-            <path d="M-15 15 C-25 12, -35 18, -45 15" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-            <path d="M-12 24 C-22 22, -30 28, -40 26" stroke="#38bdf8" strokeWidth="1.6" strokeLinecap="round" opacity="0.4" />
+          {/* Kiến trúc Chùa Một Cột (Liên Hoa Đài) */}
+          {/* Cột trụ đá đơn vươn lên từ mặt nước */}
+          <rect x="111" y="76" width="18" height="66" rx="3" fill="url(#vn-pagoda-pillar)" />
 
-            {/* Dải khăn ruy-băng đỏ bay phía sau */}
-            <path d="M-4 12 Q-16 6, -24 14 Q-14 10, -4 15 Z" fill="#ef4444" />
-            <path d="M-4 15 Q-18 16, -26 24 Q-15 17, -4 18 Z" fill="#dc2626" />
+          {/* Giằng gỗ trợ lực đỡ đài sen */}
+          <path d="M 98 76 L 111 90 L 129 90 L 142 76 Z" fill="#047857" opacity="0.9" />
 
-            {/* Thân ninja xanh dương bo tròn */}
-            <rect x="0" y="16" width="22" height="18" rx="8" fill="#0284c7" />
+          {/* Thân đài chùa */}
+          <rect
+            x="94"
+            y="48"
+            width="52"
+            height="28"
+            rx="2.5"
+            fill="#ecfdf5"
+            className="dark:fill-[#064e3b]"
+            stroke="#059669"
+            strokeWidth="1.8"
+          />
 
-            {/* Đầu ninja */}
-            <circle cx="11" cy="11" r="13" fill="#0284c7" />
+          {/* Cửa vòm then gỗ */}
+          <path d="M 112 76 V 58 A 8 8 0 0 1 128 58 V 76 Z" fill="#059669" />
+          <line x1="120" y1="58" x2="120" y2="76" stroke="#ecfdf5" strokeWidth="1.2" />
 
-            {/* Khung mặt hở tone da ấm */}
-            <ellipse cx="15" cy="11" rx="8" ry="6" fill="#fed7aa" />
+          {/* Tầng mái đao cong vút dưới */}
+          <path
+            d="M 74 52 C 90 48, 120 46, 120 46 C 120 46, 150 48, 166 52 C 163 47, 154 42, 134 41 L 106 41 C 86 42, 77 47, 74 52 Z"
+            fill="url(#vn-pagoda-roof)"
+          />
 
-            {/* Đôi mắt đen to tròn thân thiện */}
-            <circle cx="14" cy="10" r="2" fill="#0f172a" />
-            <circle cx="19" cy="10" r="2" fill="#0f172a" />
-            <circle cx="14.6" cy="9.4" r="0.7" fill="#ffffff" />
-            <circle cx="19.6" cy="9.4" r="0.7" fill="#ffffff" />
+          {/* Tầng mái đao cong vút trên */}
+          <path
+            d="M 82 41 C 94 36, 120 34, 120 34 C 120 34, 146 36, 158 41 C 154 34, 144 27, 128 26 L 112 26 C 96 27, 86 34, 82 41 Z"
+            fill="url(#vn-pagoda-roof)"
+          />
 
-            {/* Băng trán đỏ ninja */}
-            <rect x="-1" y="4" width="24" height="4.5" rx="1.5" fill="#ef4444" />
+          {/* Đỉnh mái hồ lô / mặt trời */}
+          <line x1="120" y1="26" x2="120" y2="16" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="120" cy="15" r="2.8" fill="#f59e0b" />
+          <circle cx="120" cy="11" r="1.5" fill="#f59e0b" />
 
-            {/* Cuộn thư vàng mang trên tay */}
-            <g transform="translate(12, 20) rotate(-15)">
-              <rect x="0" y="0" width="16" height="7" rx="2" fill="#facc15" stroke="#ca8a04" strokeWidth="1" />
-              <line x1="8" y1="0" x2="8" y2="7" stroke="#dc2626" strokeWidth="1.5" />
+          {/* Đầm sen dưới chân chùa */}
+          <g className="lotus-pond-elements">
+            {/* Làn sóng nước xanh ngọc */}
+            <path d="M 50 144 C 80 140, 110 146, 140 142 C 170 138, 210 144, 230 144" stroke="#6ee7b7" strokeWidth="1.8" strokeLinecap="round" opacity="0.6" />
+            <path d="M 70 152 C 100 148, 130 154, 160 150 C 190 147, 210 152, 220 152" stroke="#34d399" strokeWidth="1.2" strokeLinecap="round" opacity="0.4" />
+
+            {/* Lá sen lớn bên trái trụ */}
+            <ellipse cx="85" cy="145" rx="20" ry="6" fill="#059669" />
+            <ellipse cx="85" cy="144" rx="16" ry="4.5" fill="#10b981" />
+
+            {/* Búp sen hồng vươn lên */}
+            <path d="M 100 144 C 101 136, 103 130, 107 125 C 111 130, 113 136, 114 144 Z" fill="#fb7185" />
+            <path d="M 105 144 C 106 138, 107 132, 107 125 C 107 132, 108 138, 109 144 Z" fill="#fda4af" />
+
+            {/* Bông hoa sen nở rộ bên phải */}
+            <g transform="translate(155, 135) scale(0.38)">
+              <path d="M 0 10 C -15 0, -10 -20, 0 -30 C 10 -20, 15 0, 0 10 Z" fill="#f43f5e" />
+              <path d="M -8 8 C -20 2, -18 -15, -4 -24 Z" fill="#fb7185" />
+              <path d="M 8 8 C 20 2, 18 -15, 4 -24 Z" fill="#fb7185" />
+              <circle cx="0" cy="-5" r="4" fill="#fef08a" />
             </g>
           </g>
         </g>

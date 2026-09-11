@@ -187,14 +187,14 @@ export default function DomainCatalogue({
                 ? 'Vietnam Life は現在開発中です'
                 : displayLang === 'en'
                 ? 'Vietnam Life is under development'
-                : 'Vietnam Life đang được phát triển'}
+                : 'Đời sống Việt Nam đang được phát triển'}
             </h2>
             <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant leading-relaxed">
               {displayLang === 'ja'
                 ? '私たちはベトナムでの生活に役立つ実用的なツールを構築しています。近日公開予定ですので、どうぞお楽しみに！'
                 : displayLang === 'en'
                 ? 'We are actively building purpose-built tools for everyday life and procedures in Vietnam. Please check back soon!'
-                : 'Chúng tôi đang xây dựng các công cụ hữu ích cho cuộc sống tại Việt Nam. Hãy quay lại sớm nhé!'}
+                : 'Chúng tôi đang xây dựng các công cụ hữu ích cho đời sống tại Việt Nam. Hãy quay lại sớm nhé!'}
             </p>
           </div>
 
@@ -356,8 +356,8 @@ export default function DomainCatalogue({
 
       {/* 5. HIỂN THỊ DANH SÁCH MINIAPP */}
       <div className="relative z-10">
-        {/* A. Desktop & Tablet: Lưới Card Grid 2 đến 3 cột */}
-        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {/* A. Desktop & Tablet: Lưới Card Grid 4 cột tinh gọn */}
+        <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">
           {filteredTools.map((tool) => (
             <ToolCard
               key={tool.id}

@@ -19,12 +19,12 @@ test('hubPresentation: Trilingual Top-Level Domain names (VI, EN, JA) strictly m
   assert.equal(getDomainName('common', 'ja'), 'ツール');
 
   // Japan Life domain
-  assert.equal(getDomainName('japan-life', 'vi'), 'Cuộc sống tại Nhật');
+  assert.equal(getDomainName('japan-life', 'vi'), 'Đời sống Nhật Bản');
   assert.equal(getDomainName('japan-life', 'en'), 'Japan Life');
   assert.equal(getDomainName('japan-life', 'ja'), '日本生活');
 
   // Vietnam Life domain
-  assert.equal(getDomainName('vietnam-life', 'vi'), 'Cuộc sống tại Việt Nam');
+  assert.equal(getDomainName('vietnam-life', 'vi'), 'Đời sống Việt Nam');
   assert.equal(getDomainName('vietnam-life', 'en'), 'Vietnam Life');
   assert.equal(getDomainName('vietnam-life', 'ja'), 'ベトナム生活');
 });

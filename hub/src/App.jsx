@@ -416,7 +416,7 @@ export default function App() {
               </div>
 
               {/* Search Result Miniapp Display (Grid on Desktop, Compact List on Mobile) */}
-              <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="hidden sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4">
                 {searchResults.map((tool) => (
                   <ToolCard
                     key={tool.id}

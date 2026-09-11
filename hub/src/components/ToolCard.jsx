@@ -50,13 +50,13 @@ export default function ToolCard({
     if (!showGroupContext) return null;
     if (tool.group === 'japan-life') {
       return {
-        label: displayLang === 'ja' ? '日本生活' : displayLang === 'en' ? 'Japan Life' : 'Cuộc sống Nhật',
+        label: displayLang === 'ja' ? '日本生活' : displayLang === 'en' ? 'Japan Life' : 'Đời sống Nhật',
         className: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/25',
       };
     }
     if (tool.group === 'vietnam-life') {
       return {
-        label: displayLang === 'ja' ? 'ベトナム生活' : displayLang === 'en' ? 'Vietnam Life' : 'Cuộc sống VN',
+        label: displayLang === 'ja' ? 'ベトナム生活' : displayLang === 'en' ? 'Vietnam Life' : 'Đời sống VN',
         className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
       };
     }
@@ -122,7 +122,7 @@ export default function ToolCard({
   }
 
   // =========================================================================
-  // BIẾN THỂ 2: GRID CARD (CHUẨN DESKTOP / TABLET THEO HÌNH 1)
+  // BIẾN THỂ 2: GRID CARD (CHUẨN 4 CỘT TINH GỌN CHO DESKTOP / TABLET)
   // =========================================================================
   return (
     <article
@@ -131,40 +131,40 @@ export default function ToolCard({
       tabIndex={isDisabled ? -1 : 0}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`tool-card flex flex-col justify-between p-5 sm:p-6 rounded-2xl bg-surface-container hover:bg-surface-container-high border border-border-subtle hover:border-primary-container/50 transition-all duration-200 shadow-xs hover:shadow-md group relative overflow-hidden select-none outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+      className={`tool-card flex flex-col justify-between p-3.5 sm:p-4 rounded-xl bg-surface-container hover:bg-surface-container-high border border-border-subtle hover:border-primary-container/50 transition-all duration-200 shadow-2xs hover:shadow-sm group relative overflow-hidden select-none outline-none focus-visible:ring-2 focus-visible:ring-primary ${
         isDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
       }`}
       aria-label={`${getName()} - ${getDesc()}`}
     >
       {/* Vầng sáng ambient nhẹ nhàng khi hover */}
       <div
-        className="absolute -top-10 -right-10 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-15 transition-opacity pointer-events-none"
+        className="absolute -top-10 -right-10 w-20 h-20 rounded-full blur-xl opacity-0 group-hover:opacity-15 transition-opacity pointer-events-none"
         style={{ backgroundColor: iconColor }}
       />
 
-      <div className="space-y-3.5 relative z-10">
-        {/* Hàng trên: Icon vuông nổi bật và Badge trạng thái */}
+      <div className="space-y-2.5 relative z-10">
+        {/* Hàng trên: Icon vuông và Badge trạng thái */}
         <div className="flex items-start justify-between gap-2">
           <div
-            className="w-11 h-11 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center transition-transform duration-200 group-hover:scale-105 shadow-inner shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-surface-subtle border border-border-subtle flex items-center justify-center transition-transform duration-200 group-hover:scale-105 shadow-inner shrink-0"
             style={{ color: iconColor }}
           >
-            {renderToolIcon(tool.icon, { size: 22 })}
+            {renderToolIcon(tool.icon, { size: 19 })}
           </div>
 
-          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          <div className="flex items-center gap-1 flex-wrap justify-end">
             {groupBadge && (
-              <span className={`px-2 py-0.5 rounded-full font-label-sm text-[10px] font-bold border ${groupBadge.className}`}>
+              <span className={`px-1.5 py-0.5 rounded-full font-label-sm text-[9px] font-bold border ${groupBadge.className}`}>
                 {groupBadge.label}
               </span>
             )}
             {tool.readiness === 'beta' && (
-              <span className="px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-label-sm text-[10px] font-semibold tracking-wide">
+              <span className="px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary font-label-sm text-[9px] font-semibold tracking-wide">
                 BETA
               </span>
             )}
             {isDisabled && (
-              <span className="px-2 py-0.5 rounded-full bg-surface-subtle border border-border-subtle text-outline font-label-sm text-[10px]">
+              <span className="px-1.5 py-0.5 rounded-full bg-surface-subtle border border-border-subtle text-outline font-label-sm text-[9px]">
                 ĐANG PHÁT TRIỂN
               </span>
             )}
@@ -173,23 +173,23 @@ export default function ToolCard({
 
         {/* Tiêu đề & Mô tả ngắn gọn */}
         <div>
-          <h3 className="font-title-sm text-[15px] sm:text-base font-bold text-on-surface group-hover:text-primary transition-colors flex items-center gap-1.5 leading-snug">
-            <span>{getName()}</span>
+          <h3 className="font-title-sm text-sm sm:text-[15px] font-bold text-on-surface group-hover:text-primary transition-colors flex items-center gap-1 leading-snug">
+            <span className="line-clamp-1">{getName()}</span>
             {!isDisabled && (
-              <ArrowUpRight size={14} className="text-outline opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+              <ArrowUpRight size={13} className="text-outline opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             )}
           </h3>
-          <p className="font-body-sm text-xs sm:text-[13px] text-on-surface-variant mt-1.5 line-clamp-2 leading-relaxed">
+          <p className="font-body-sm text-xs text-on-surface-variant mt-1 line-clamp-2 leading-relaxed">
             {getDesc()}
           </p>
         </div>
       </div>
 
       {/* Chân thẻ: Mũi tên tinh tế góc dưới bên phải */}
-      <div className="pt-3.5 mt-2 border-t border-border-subtle/50 flex items-center justify-end relative z-10">
+      <div className="pt-2 mt-1.5 border-t border-border-subtle/40 flex items-center justify-end relative z-10">
         <span className="font-label-sm text-xs text-outline group-hover:text-primary group-hover:translate-x-1 transition-all flex items-center gap-1">
           {!isDisabled && (
-            <ArrowRight size={14} />
+            <ArrowRight size={13} />
           )}
         </span>
       </div>

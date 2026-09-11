@@ -25,7 +25,7 @@ export const TOOL_GROUPS = {
     id: 'japan-life',
     country: 'JP',
     name: {
-      vi: 'Cuộc sống tại Nhật',
+      vi: 'Đời sống Nhật Bản',
       en: 'Japan Life',
       ja: '日本生活',
     },
@@ -34,7 +34,7 @@ export const TOOL_GROUPS = {
     id: 'vietnam-life',
     country: 'VN',
     name: {
-      vi: 'Cuộc sống tại Việt Nam',
+      vi: 'Đời sống Việt Nam',
       en: 'Vietnam Life',
       ja: 'ベトナム生活',
     },
