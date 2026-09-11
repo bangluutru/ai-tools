@@ -7,11 +7,9 @@ export default function Navbar({
   displayLang,
   onLangChange,
   onOpenSettings,
-  activeCategory,
-  onSelectCategory,
-  categoryIds,
   searchQuery = '',
   onSearchChange,
+  onGoHome,
   showFlappyBird = true,
   onOpenFlappyGame,
   showToolioNinja = true,
@@ -19,16 +17,6 @@ export default function Navbar({
 }) {
   const [langDropdown, setLangDropdown] = useState(false);
   const searchInputRef = useRef(null);
-
-  const categoryLabels = {
-    all: { vi: 'Tất cả', en: 'All', ja: 'すべて' },
-    pdf: { vi: 'PDF', en: 'PDF', ja: 'PDF' },
-    image: { vi: 'Hình ảnh & WebP', en: 'Image & WebP', ja: '画像＆WebP' },
-    office: { vi: 'Excel & Hóa đơn', en: 'Excel & Invoices', ja: 'Excel・請求書' },
-    utils: { vi: 'Tiện ích', en: 'Utilities', ja: '便利ツール' },
-    ai: { vi: 'Dịch thuật & AI', en: 'AI & Translation', ja: 'AI・翻訳' },
-    'in-development': { vi: 'Đang phát triển', en: 'In development', ja: '開発中' },
-  };
 
   // Shortcut Ctrl+K / Cmd+K to focus search bar
   useEffect(() => {
@@ -48,8 +36,8 @@ export default function Navbar({
         {/* Brand Logo */}
         <div
           onClick={() => {
-            if (onSelectCategory) onSelectCategory('all');
             if (onSearchChange) onSearchChange('');
+            if (onGoHome) onGoHome();
           }}
           className="flex items-center gap-2.5 cursor-pointer select-none shrink-0 group"
           title={displayLang === 'vi' ? 'Toolio — Tiện ích nhỏ, hiệu quả lớn' : displayLang === 'ja' ? 'Toolio — 小さなツール、大きな効果' : 'Toolio — Tiny Tools. Huge Impact.'}
@@ -81,10 +69,10 @@ export default function Navbar({
               onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
               placeholder={
                 displayLang === 'vi'
-                  ? 'Tìm kiếm...'
+                  ? 'Tìm kiếm công cụ (PDF, Thuế, Visa, Hóa đơn...)'
                   : displayLang === 'en'
-                  ? 'Search tools...'
-                  : 'ツールを検索...'
+                  ? 'Search tools (PDF, Tax, Visa, Invoices...)'
+                  : 'ツールを検索 (PDF, 税金, ビザ, 請求書...)'
               }
               className="w-full min-w-0 pl-9 pr-8 sm:pr-14 py-1.5 bg-surface-subtle/80 hover:bg-surface-subtle focus:bg-surface-container border border-border-subtle focus:border-primary-container text-on-surface placeholder:text-outline text-xs rounded-lg transition-colors outline-none shadow-inner"
             />
@@ -200,36 +188,6 @@ export default function Navbar({
           </a>
         </div>
       </div>
-
-      {/* Primary Category Navigation Sub-bar */}
-      {onSelectCategory && (
-        <div className="bg-surface-dim/70 border-t border-border-subtle/40">
-          <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
-            <nav className="flex items-center gap-6 overflow-x-auto py-1 scrollbar-none">
-              {['all', 'pdf', 'image', 'office', 'utils']
-                .filter((catId) => !categoryIds || (categoryIds.has ? categoryIds.has(catId) : categoryIds.includes(catId)))
-                .map((catId) => {
-                  const isActive = activeCategory === catId;
-                  const label = categoryLabels[catId]?.[displayLang] || catId;
-                  return (
-                    <button
-                      key={catId}
-                      type="button"
-                      onClick={() => onSelectCategory(catId)}
-                      className={`py-2 text-xs sm:text-sm whitespace-nowrap transition-colors border-b-2 font-medium ${
-                        isActive
-                          ? 'border-primary-container text-primary font-semibold'
-                          : 'border-transparent text-on-surface-variant hover:text-on-surface'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-            </nav>
-          </div>
-        </div>
-      )}
     </header>
   );
 }

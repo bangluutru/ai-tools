@@ -6,29 +6,31 @@ import ToolErrorBoundary from './components/ToolErrorBoundary';
 import CommandPalette from './components/CommandPalette';
 import DataPolicyModal from './components/DataPolicyModal';
 import SettingsModal from './components/SettingsModal';
-import { tools, isInDevelopment, TOOL_GROUPS } from './config/toolsRegistry';
+import HubDomainCard from './components/HubDomainCard';
+import DomainCatalogue from './components/DomainCatalogue';
+import { tools, isInDevelopment } from './config/toolsRegistry';
 import { buildVersion } from './config/buildInfo';
-import { resolveToolId, toolUrl } from './utils/toolRoute';
+import {
+  resolveHubRoute,
+  buildDomainHash,
+  saveLastBrowseContext,
+  getLastBrowseContext,
+} from './utils/hubRoute';
+import { HUB_DOMAINS, getDomainName } from './config/hubPresentation';
 import {
   Loader2,
-  SearchX
+  SearchX,
+  ShieldCheck,
+  Zap,
+  Lock,
 } from 'lucide-react';
 import {
   defaultHiddenToolIds,
   loadHiddenToolIds,
   saveHiddenToolIds,
 } from './utils/toolVisibility';
-import {
-  ALL_CATEGORY,
-  IN_DEVELOPMENT_CATEGORY,
-  ALL_GROUPS,
-  partitionTools,
-  toolsForCategory,
-  visibleCategoryIds,
-  visibleGroupIds,
-} from './utils/toolFilter';
+import { partitionTools } from './utils/toolFilter';
 import { useTheme } from '@ai-tools/core';
-
 import { lazyWithRetry as lazy } from './utils/lazyWithRetry';
 
 // =========================================================================
@@ -143,18 +145,14 @@ const toolComponentMap = {
   'japan-life-navigator': JapanLifeNavigatorTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,
   'flappy-bird': FlappyBirdTool,
-  'toolio-ninja': ToolioNinjaTool
+  'toolio-ninja': ToolioNinjaTool,
 };
 
 export default function App() {
   useTheme();
   const [displayLang, setDisplayLang] = useState(() => localStorage.getItem('hub_lang') || 'vi');
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [activeGroup, setActiveGroup] = useState('all');
+  const [route, setRoute] = useState(() => resolveHubRoute(window.location.hash, tools));
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeToolId, setActiveToolId] = useState(() =>
-    resolveToolId(window.location.hash, tools)
-  );
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -199,25 +197,25 @@ export default function App() {
     } catch {}
   }, [showToolioNinja]);
 
-  // Hash routes work on static hosting and preserve the selected miniapp on refresh/share.
+  // Synchronize route from window location hash
   useEffect(() => {
-    const syncToolFromUrl = () => {
-      setActiveToolId(resolveToolId(window.location.hash, tools));
+    const syncRouteFromUrl = () => {
+      setRoute(resolveHubRoute(window.location.hash, tools));
     };
-    window.addEventListener('hashchange', syncToolFromUrl);
-    window.addEventListener('popstate', syncToolFromUrl);
+    window.addEventListener('hashchange', syncRouteFromUrl);
+    window.addEventListener('popstate', syncRouteFromUrl);
     return () => {
-      window.removeEventListener('hashchange', syncToolFromUrl);
-      window.removeEventListener('popstate', syncToolFromUrl);
+      window.removeEventListener('hashchange', syncRouteFromUrl);
+      window.removeEventListener('popstate', syncRouteFromUrl);
     };
   }, []);
 
-  // Cmd + K Shortcut: on Home, focus header search; in tool view, open CommandPalette
+  // Cmd + K Shortcut: on Hub, focus global search; in tool view, open CommandPalette
   useEffect(() => {
     const handleKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        if (activeToolId) {
+        if (route.type === 'tool') {
           setIsSearchOpen((prev) => !prev);
         } else {
           const input = document.querySelector('header input[type="text"]');
@@ -227,78 +225,120 @@ export default function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeToolId]);
+  }, [route.type]);
 
-  const selectTool = useCallback((toolId) => {
-    const tool = tools.find((candidate) => candidate.id === toolId);
-    if (!tool || isInDevelopment(tool) || !toolComponentMap[toolId]) return;
-    window.history.pushState({ toolId }, '', toolUrl(window.location, toolId));
-    setActiveToolId(toolId);
+  // Partition tools by visibility
+  const { active: activeTools } = useMemo(() => partitionTools(tools, hiddenToolIds), [hiddenToolIds]);
+
+  // Split active tools by Top-Level Domain
+  const commonTools = useMemo(
+    () => activeTools.filter((t) => (t.group || 'common') === 'common'),
+    [activeTools]
+  );
+  const japanLifeTools = useMemo(
+    () => activeTools.filter((t) => t.group === 'japan-life'),
+    [activeTools]
+  );
+  const vietnamLifeTools = useMemo(
+    () => activeTools.filter((t) => t.group === 'vietnam-life'),
+    [activeTools]
+  );
+
+  // Navigation handlers
+  const handleSelectDomain = useCallback((domainId) => {
+    setSearchQuery('');
+    saveLastBrowseContext(domainId, 'all');
+    window.location.hash = buildDomainHash(domainId, 'all');
   }, []);
+
+  const handleSelectFilter = useCallback(
+    (filterId) => {
+      if (route.type === 'domain') {
+        saveLastBrowseContext(route.domain, filterId);
+        window.location.hash = buildDomainHash(route.domain, filterId);
+      }
+    },
+    [route]
+  );
+
+  const handleBackToHome = useCallback(() => {
+    setSearchQuery('');
+    window.location.hash = '#/';
+  }, []);
+
+  const selectTool = useCallback(
+    (toolId) => {
+      const tool = tools.find((candidate) => candidate.id === toolId);
+      if (!tool || isInDevelopment(tool) || !toolComponentMap[toolId]) return;
+
+      if (route.type === 'domain') {
+        saveLastBrowseContext(route.domain, route.filter);
+      } else if (tool.group === 'japan-life') {
+        saveLastBrowseContext('japan-life', 'all');
+      } else {
+        saveLastBrowseContext('common', 'all');
+      }
+
+      window.location.hash = `#/tools/${toolId}`;
+    },
+    [route]
+  );
 
   const backToHub = useCallback(() => {
-    window.history.pushState({ toolId: null }, '', toolUrl(window.location, null));
-    setActiveToolId(null);
+    const lastContext = getLastBrowseContext();
+    if (lastContext && lastContext.domain) {
+      window.location.hash = buildDomainHash(lastContext.domain, lastContext.filter);
+    } else {
+      window.location.hash = '#/';
+    }
   }, []);
 
-  const currentTool = tools.find((t) => t.id === activeToolId);
-  const ActiveComponent = activeToolId ? toolComponentMap[activeToolId] : null;
-
-  const { active: activeTools } = partitionTools(tools, hiddenToolIds);
-  const filteredTools = toolsForCategory(tools, activeCategory, hiddenToolIds);
-  const categoryIds = visibleCategoryIds(tools, hiddenToolIds);
-  const groupIds = useMemo(() => visibleGroupIds(tools, hiddenToolIds), [hiddenToolIds]);
-
-  // Live search and domain group filtering
-  const displayedTools = useMemo(() => {
-    let list = filteredTools;
-    if (activeGroup !== ALL_GROUPS && !searchQuery.trim()) {
-      list = list.filter((t) => (t.group || 'common') === activeGroup);
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      // Search finds matching tools across all active tools regardless of active group
-      list = activeTools.filter((t) => {
-        const nameVn = (t.name_vn || '').toLowerCase();
-        const nameEn = (t.name_en || '').toLowerCase();
-        const nameJa = (t.name_ja || '').toLowerCase();
-        const descVn = (t.desc_vn || '').toLowerCase();
-        const descEn = (t.desc_en || '').toLowerCase();
-        const id = (t.id || '').toLowerCase();
-        const category = (t.category || '').toLowerCase();
-        const group = (t.group || '').toLowerCase();
-        const tags = Array.isArray(t.tags) ? t.tags.join(' ').toLowerCase() : '';
-        return (
-          nameVn.includes(q) ||
-          nameEn.includes(q) ||
-          nameJa.includes(q) ||
-          descVn.includes(q) ||
-          descEn.includes(q) ||
-          (t.desc_ja || '').toLowerCase().includes(q) ||
-          id.includes(q) ||
-          category.includes(q) ||
-          group.includes(q) ||
-          tags.includes(q)
-        );
-      });
-    }
-    return list;
-  }, [filteredTools, activeTools, activeGroup, searchQuery]);
+  // Global Cross-Domain Search
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase().trim();
+    return activeTools.filter((t) => {
+      const nameVn = (t.name_vn || '').toLowerCase();
+      const nameEn = (t.name_en || '').toLowerCase();
+      const nameJa = (t.name_ja || '').toLowerCase();
+      const descVn = (t.desc_vn || '').toLowerCase();
+      const descEn = (t.desc_en || '').toLowerCase();
+      const descJa = (t.desc_ja || '').toLowerCase();
+      const id = (t.id || '').toLowerCase();
+      const category = (t.category || '').toLowerCase();
+      const group = (t.group || '').toLowerCase();
+      const domain = (t.domain || '').toLowerCase();
+      const tags = Array.isArray(t.tags) ? t.tags.join(' ').toLowerCase() : '';
+      return (
+        nameVn.includes(q) ||
+        nameEn.includes(q) ||
+        nameJa.includes(q) ||
+        descVn.includes(q) ||
+        descEn.includes(q) ||
+        descJa.includes(q) ||
+        id.includes(q) ||
+        category.includes(q) ||
+        group.includes(q) ||
+        domain.includes(q) ||
+        tags.includes(q)
+      );
+    });
+  }, [activeTools, searchQuery]);
 
   const toggleToolVisibility = useCallback((toolId) => {
-    const nextHiddenToolIds = hiddenToolIds.includes(toolId)
-      ? hiddenToolIds.filter((id) => id !== toolId)
-      : [...hiddenToolIds, toolId];
-    setHiddenToolIds(nextHiddenToolIds);
+    setHiddenToolIds((prev) =>
+      prev.includes(toolId) ? prev.filter((id) => id !== toolId) : [...prev, toolId]
+    );
+  }, []);
 
-    if (activeCategory === ALL_CATEGORY || activeCategory === IN_DEVELOPMENT_CATEGORY) return;
-    const categoryStillVisible = toolsForCategory(tools, activeCategory, nextHiddenToolIds).length > 0;
-    if (!categoryStillVisible) setActiveCategory(ALL_CATEGORY);
-  }, [activeCategory, hiddenToolIds]);
+  // Active Tool Resolution
+  const activeToolId = route.type === 'tool' ? route.toolId : null;
+  const currentTool = activeToolId ? tools.find((t) => t.id === activeToolId) : null;
+  const ActiveComponent = activeToolId ? toolComponentMap[activeToolId] : null;
 
   return (
     <div className="min-h-screen bg-surface-canvas text-on-surface font-sans selection:bg-primary-container selection:text-white flex flex-col">
-      {/* CASE 1: TOOL VIEW (WHEN A TOOL IS ACTIVE) */}
+      {/* CASE 1: ACTIVE TOOL VIEW */}
       {activeToolId && currentTool && ActiveComponent ? (
         <ToolContainer
           currentTool={currentTool}
@@ -308,15 +348,18 @@ export default function App() {
           onLangChange={setDisplayLang}
           tools={activeTools}
         >
-          <ToolErrorBoundary
-            toolName={currentTool.name_vn}
-            onBackToHub={backToHub}
-          >
+          <ToolErrorBoundary toolName={currentTool.name_vn} onBackToHub={backToHub}>
             <Suspense
               fallback={
                 <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
                   <Loader2 size={36} className="animate-spin text-primary" />
-                  <p className="font-label-sm text-xs text-outline">Đang khởi tạo công cụ...</p>
+                  <p className="font-label-sm text-xs text-outline">
+                    {displayLang === 'ja'
+                      ? 'ツールを読み込み中...'
+                      : displayLang === 'en'
+                      ? 'Initializing tool...'
+                      : 'Đang khởi tạo công cụ...'}
+                  </p>
                 </div>
               }
             >
@@ -325,135 +368,224 @@ export default function App() {
           </ToolErrorBoundary>
         </ToolContainer>
       ) : (
-        /* CASE 2: MAIN HUB DASHBOARD (Discovery Hub Flow) */
+        /* CASE 2: DISCOVERY HUB FLOW (HOME, DOMAIN CATALOGUE, OR SEARCH) */
         <>
+          {/* Single Global Navbar SOT */}
           <Navbar
             displayLang={displayLang}
             onLangChange={setDisplayLang}
             onOpenSettings={() => setIsSettingsOpen(true)}
-            activeCategory={activeCategory}
-            onSelectCategory={setActiveCategory}
-            categoryIds={categoryIds}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
+            onGoHome={handleBackToHome}
             showFlappyBird={showFlappyBird}
             onOpenFlappyGame={() => setShowFlappyGame(true)}
             showToolioNinja={showToolioNinja}
             onOpenNinjaGame={() => setShowNinjaGame(true)}
           />
 
-          <main className="flex-1 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-4">
-            {/* Minimal 1-line tool count, group filter & privacy note */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-on-surface-variant pt-1 pb-1">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="font-semibold text-on-surface">
-                  {activeCategory === ALL_CATEGORY
-                    ? (activeGroup === ALL_GROUPS
-                        ? (displayLang === 'ja' ? 'すべてのツール' : displayLang === 'en' ? 'All Tools' : 'Tất cả công cụ')
-                        : (TOOL_GROUPS[activeGroup]?.name[displayLang] || activeGroup))
-                    : `Danh mục: ${activeCategory.toUpperCase()}`}
-                </span>
-                <span className="text-outline font-mono">({displayedTools.length})</span>
-
-                {/* Subtle Domain Group Filter (only visible when activeCategory is ALL and no search query) */}
-                {activeCategory === ALL_CATEGORY && !searchQuery.trim() && (
-                  <div
-                    className="inline-flex items-center p-0.5 rounded-lg bg-surface-subtle border border-border-subtle text-[11px] font-medium"
-                    role="tablist"
-                    aria-label="Bộ lọc nhóm công cụ"
-                  >
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={activeGroup === ALL_GROUPS}
-                      onClick={() => setActiveGroup(ALL_GROUPS)}
-                      className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
-                        activeGroup === ALL_GROUPS
-                          ? 'bg-surface-container-high text-primary font-semibold shadow-xs'
-                          : 'text-on-surface-variant hover:text-on-surface'
-                      }`}
-                    >
-                      {displayLang === 'ja' ? 'すべて' : displayLang === 'en' ? 'All' : 'Tất cả'}
-                    </button>
-                    {Object.values(TOOL_GROUPS)
-                      .filter((g) => groupIds.has(g.id))
-                      .map((g) => {
-                        const isSelected = activeGroup === g.id;
-                        const label = g.name[displayLang] || g.id;
-                        return (
-                          <button
-                            key={g.id}
-                            type="button"
-                            role="tab"
-                            aria-selected={isSelected}
-                            onClick={() => setActiveGroup(g.id)}
-                            className={`px-2 py-0.5 rounded-md transition-colors cursor-pointer ${
-                              isSelected
-                                ? 'bg-surface-container-high text-primary font-semibold shadow-xs'
-                                : 'text-on-surface-variant hover:text-on-surface'
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
-              <span className="hidden sm:inline-block text-outline font-normal">
-                {displayLang === 'ja'
-                  ? '100% ブラウザ内処理・ファイルは外部サーバーに送信されません。'
-                  : displayLang === 'en'
-                  ? 'Client-side processing — your files never leave your device.'
-                  : 'Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.'}
-              </span>
-            </div>
-
-            {/* Main Tools Catalog Grid immediately above the fold */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {displayedTools.map((tool) => (
-                <ToolCard
-                  key={tool.id}
-                  tool={tool}
-                  onSelectTool={selectTool}
-                  displayLang={displayLang}
-                />
-              ))}
-            </div>
-
-            {/* Empty state */}
-            {displayedTools.length === 0 && (
-              <div className="rounded-xl border border-dashed border-border-subtle bg-surface-container/50 px-6 py-12 text-center flex flex-col items-center justify-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-surface-subtle flex items-center justify-center text-outline">
-                  <SearchX size={24} />
+          {/* VIEW A: GLOBAL CROSS-DOMAIN SEARCH RESULTS */}
+          {searchQuery.trim() ? (
+            <main className="flex-1 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6">
+              {/* Search Result Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border-subtle/70">
+                <div className="space-y-1">
+                  <h1 className="font-title-lg text-xl sm:text-2xl font-bold text-on-surface">
+                    {displayLang === 'ja'
+                      ? `検索結果: 「${searchQuery}」`
+                      : displayLang === 'en'
+                      ? `Search Results for "${searchQuery}"`
+                      : `Kết quả tìm kiếm: "${searchQuery}"`}
+                  </h1>
+                  <p className="font-body-sm text-xs text-on-surface-variant">
+                    {displayLang === 'ja'
+                      ? `全ドメインから ${searchResults.length} 件のツールが見つかりました`
+                      : displayLang === 'en'
+                      ? `Found ${searchResults.length} tools across all domains`
+                      : `Tìm thấy ${searchResults.length} công cụ trên toàn bộ hệ thống`}
+                  </p>
                 </div>
-                <p className="font-title-sm text-sm font-semibold text-on-surface">
-                  Không tìm thấy công cụ phù hợp với từ khóa &ldquo;{searchQuery}&rdquo;
-                </p>
-                <p className="font-body-sm text-xs text-on-surface-variant max-w-sm">
-                  Vui lòng thử từ khóa khác như &ldquo;PDF&rdquo;, &ldquo;WebP&rdquo;, &ldquo;Hóa đơn&rdquo;, hoặc xóa bộ lọc tìm kiếm.
-                </p>
-                <div className="flex items-center gap-3 pt-2">
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="px-3.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-variant text-primary font-label-sm text-xs font-semibold border border-border-subtle transition-colors"
-                    >
-                      Xóa tìm kiếm
-                    </button>
-                  )}
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="self-start sm:self-auto px-3 py-1.5 rounded-lg text-xs font-semibold text-primary hover:bg-surface-container bg-surface-subtle border border-border-subtle transition-colors cursor-pointer"
+                >
+                  {displayLang === 'ja' ? '検索をクリア' : displayLang === 'en' ? 'Clear search' : 'Xóa tìm kiếm'}
+                </button>
+              </div>
+
+              {/* Search Result Miniapp Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                {searchResults.map((tool) => (
+                  <ToolCard
+                    key={tool.id}
+                    tool={tool}
+                    onSelectTool={selectTool}
+                    displayLang={displayLang}
+                    showGroupContext={true}
+                  />
+                ))}
+              </div>
+
+              {/* No Search Results State */}
+              {searchResults.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-border-subtle bg-surface-container/50 px-6 py-14 text-center flex flex-col items-center justify-center space-y-4">
+                  <div className="w-14 h-14 rounded-full bg-surface-subtle flex items-center justify-center text-outline">
+                    <SearchX size={28} />
+                  </div>
+                  <div className="space-y-1.5 max-w-md">
+                    <h2 className="font-title-sm text-base font-bold text-on-surface">
+                      {displayLang === 'ja'
+                        ? `「${searchQuery}」に一致するツールは見つかりませんでした`
+                        : displayLang === 'en'
+                        ? `No tools matched "${searchQuery}"`
+                        : `Không tìm thấy công cụ phù hợp với "${searchQuery}"`}
+                    </h2>
+                    <p className="font-body-sm text-xs text-on-surface-variant leading-relaxed">
+                      {displayLang === 'ja'
+                        ? 'キーワードを変えてお試しください (例: PDF, 画像, 税金, ビザ, 請求書)。'
+                        : displayLang === 'en'
+                        ? 'Try alternative keywords such as PDF, Image, Tax, Visa, or Invoice.'
+                        : 'Vui lòng thử từ khóa khác như "PDF", "Ảnh", "Thuế", "Visa", "Hóa đơn".'}
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="px-3.5 py-1.5 rounded-lg bg-surface-subtle hover:bg-surface-container-high text-on-surface-variant font-label-sm text-xs border border-border-subtle transition-colors"
+                    onClick={() => setSearchQuery('')}
+                    className="px-4 py-2 rounded-xl bg-primary text-on-primary font-label-sm text-xs font-semibold hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
                   >
-                    Cài đặt miniapp ẩn/hiện
+                    {displayLang === 'ja' ? '検索をクリアして戻る' : displayLang === 'en' ? 'Clear search' : 'Xóa tìm kiếm'}
                   </button>
                 </div>
+              )}
+            </main>
+          ) : route.type === 'domain' ? (
+            /* VIEW B: TOP-LEVEL DOMAIN CATALOGUE */
+            <DomainCatalogue
+              group={route.domain}
+              tools={
+                route.domain === 'japan-life'
+                  ? japanLifeTools
+                  : route.domain === 'vietnam-life'
+                  ? vietnamLifeTools
+                  : commonTools
+              }
+              displayLang={displayLang}
+              activeFilter={route.filter || 'all'}
+              onSelectFilter={handleSelectFilter}
+              onSelectTool={selectTool}
+              onBackToHome={handleBackToHome}
+            />
+          ) : (
+            /* VIEW C: HOMEPAGE WITH 3 TOP-LEVEL DOMAIN CARDS */
+            <main className="flex-1 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
+              {/* Welcoming Hero Section */}
+              <div className="text-center space-y-3 pt-2 max-w-2xl mx-auto">
+                <h1 className="font-title-lg text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
+                  {displayLang === 'ja'
+                    ? 'Toolio へようこそ'
+                    : displayLang === 'en'
+                    ? 'Welcome to Toolio Hub'
+                    : 'Chào mừng đến với Toolio'}
+                </h1>
+                <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+                  {displayLang === 'ja'
+                    ? '日々の作業効率化から日本での生活手続きまで、目的に応じたツールセットをお届けします。'
+                    : displayLang === 'en'
+                    ? 'Discover purpose-built suites optimized for everyday productivity and life in Japan.'
+                    : 'Khám phá các bộ công cụ chuyên biệt được tối ưu hóa cho từng nhu cầu công việc và đời sống.'}
+                </p>
               </div>
-            )}
-          </main>
+
+              {/* 3 Top-Level Domains Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* 1. Tools Domain */}
+                <HubDomainCard
+                  id="common"
+                  title={getDomainName('common', displayLang)}
+                  subtitle={HUB_DOMAINS.common.subtitle[displayLang] || HUB_DOMAINS.common.subtitle.vi}
+                  description={HUB_DOMAINS.common.description[displayLang] || HUB_DOMAINS.common.description.vi}
+                  toolCount={commonTools.length}
+                  accentColor={HUB_DOMAINS.common.accentColor}
+                  illustration={HUB_DOMAINS.common.illustration}
+                  displayLang={displayLang}
+                  onSelect={() => handleSelectDomain('common')}
+                />
+
+                {/* 2. Japan Life Domain */}
+                <HubDomainCard
+                  id="japan-life"
+                  title={getDomainName('japan-life', displayLang)}
+                  subtitle={HUB_DOMAINS['japan-life'].subtitle[displayLang] || HUB_DOMAINS['japan-life'].subtitle.vi}
+                  description={HUB_DOMAINS['japan-life'].description[displayLang] || HUB_DOMAINS['japan-life'].description.vi}
+                  toolCount={japanLifeTools.length}
+                  accentColor={HUB_DOMAINS['japan-life'].accentColor}
+                  illustration={HUB_DOMAINS['japan-life'].illustration}
+                  displayLang={displayLang}
+                  onSelect={() => handleSelectDomain('japan-life')}
+                />
+
+                {/* 3. Vietnam Life Domain */}
+                <HubDomainCard
+                  id="vietnam-life"
+                  title={getDomainName('vietnam-life', displayLang)}
+                  subtitle={HUB_DOMAINS['vietnam-life'].subtitle[displayLang] || HUB_DOMAINS['vietnam-life'].subtitle.vi}
+                  description={HUB_DOMAINS['vietnam-life'].description[displayLang] || HUB_DOMAINS['vietnam-life'].description.vi}
+                  toolCount={vietnamLifeTools.length}
+                  status={vietnamLifeTools.length === 0 ? 'coming_soon' : undefined}
+                  accentColor={HUB_DOMAINS['vietnam-life'].accentColor}
+                  illustration={HUB_DOMAINS['vietnam-life'].illustration}
+                  displayLang={displayLang}
+                  onSelect={() => handleSelectDomain('vietnam-life')}
+                />
+              </div>
+
+              {/* Trust and Privacy Feature Badges */}
+              <div className="pt-6 pb-2 border-t border-border-subtle/60 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center sm:text-left">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-container/40 border border-border-subtle/50">
+                  <div className="w-8 h-8 rounded-lg bg-secondary/15 text-secondary flex items-center justify-center shrink-0">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div>
+                    <p className="font-label-sm text-xs font-bold text-on-surface">
+                      {displayLang === 'ja' ? '100% ローカル処理' : displayLang === 'en' ? 'Client-Side Safe' : 'An toàn tuyệt đối'}
+                    </p>
+                    <p className="font-body-sm text-[11px] text-on-surface-variant">
+                      {displayLang === 'ja' ? '端末内ローカル完結' : displayLang === 'en' ? 'Files never leave browser' : 'Dữ liệu không rời máy tính'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-container/40 border border-border-subtle/50">
+                  <div className="w-8 h-8 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0">
+                    <Zap size={18} />
+                  </div>
+                  <div>
+                    <p className="font-label-sm text-xs font-bold text-on-surface">
+                      {displayLang === 'ja' ? '高速・即時処理' : displayLang === 'en' ? 'Instant & Fast' : 'Tốc độ tức thì'}
+                    </p>
+                    <p className="font-body-sm text-[11px] text-on-surface-variant">
+                      {displayLang === 'ja' ? '待機なしの瞬時実行' : displayLang === 'en' ? 'Zero network latency' : 'Không có độ trễ mạng'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-container/40 border border-border-subtle/50">
+                  <div className="w-8 h-8 rounded-lg bg-tertiary/15 text-tertiary flex items-center justify-center shrink-0">
+                    <Lock size={18} />
+                  </div>
+                  <div>
+                    <p className="font-label-sm text-xs font-bold text-on-surface">
+                      {displayLang === 'ja' ? 'ゼロトラスト' : displayLang === 'en' ? 'Zero Trust' : 'Bảo mật riêng tư'}
+                    </p>
+                    <p className="font-body-sm text-[11px] text-on-surface-variant">
+                      {displayLang === 'ja' ? 'ログイン不要・無料' : displayLang === 'en' ? 'No account required' : 'Không cần đăng nhập'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </main>
+          )}
 
           {/* Footer */}
           <footer className="no-print mt-auto border-t border-border-subtle bg-surface-canvas py-8 px-4 text-center text-xs text-outline">
@@ -470,16 +602,16 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsPolicyOpen(true)}
-                  className="font-body-sm text-xs text-on-surface-variant hover:text-primary transition-colors underline decoration-border-subtle underline-offset-4"
+                  className="font-body-sm text-xs text-on-surface-variant hover:text-primary transition-colors underline decoration-border-subtle underline-offset-4 cursor-pointer"
                 >
-                  Chính sách xử lý dữ liệu
+                  {displayLang === 'ja' ? 'データ処理方針' : displayLang === 'en' ? 'Data Policy' : 'Chính sách dữ liệu'}
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsSettingsOpen(true)}
-                  className="font-body-sm text-xs text-on-surface-variant hover:text-primary transition-colors"
+                  className="font-body-sm text-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
                 >
-                  Cài đặt miniapp
+                  {displayLang === 'ja' ? '設定' : displayLang === 'en' ? 'Settings' : 'Cài đặt'}
                 </button>
               </div>
             </div>
@@ -511,8 +643,8 @@ export default function App() {
         onToggleToolioNinja={() => setShowToolioNinja((prev) => !prev)}
       />
 
-      {/* Floating Flappy Bird Easter Egg (only on Hub dashboard when enabled) */}
-      {showFlappyBird && !activeToolId && (
+      {/* Floating Flappy Bird Easter Egg */}
+      {showFlappyBird && route.type !== 'tool' && (
         <Suspense fallback={null}>
           <FlappyBirdPet onOpenGame={() => setShowFlappyGame(true)} />
         </Suspense>
@@ -525,25 +657,20 @@ export default function App() {
         </Suspense>
       )}
 
-      {/* Floating Toolio Ninja Pet (only on Hub dashboard when enabled) */}
-      {showToolioNinja && !activeToolId && (
+      {/* Floating Toolio Ninja Pet */}
+      {showToolioNinja && route.type !== 'tool' && (
         <Suspense fallback={null}>
-          <ToolioNinjaPet
-            displayLang={displayLang}
-            onOpenGame={() => setShowNinjaGame(true)}
-          />
+          <ToolioNinjaPet displayLang={displayLang} onOpenGame={() => setShowNinjaGame(true)} />
         </Suspense>
       )}
 
       {/* Toolio Ninja Game Modal */}
       {showNinjaGame && (
         <Suspense fallback={null}>
-          <ToolioNinjaModal
-            displayLang={displayLang}
-            onClose={() => setShowNinjaGame(false)}
-          />
+          <ToolioNinjaModal displayLang={displayLang} onClose={() => setShowNinjaGame(false)} />
         </Suspense>
       )}
     </div>
   );
 }
+

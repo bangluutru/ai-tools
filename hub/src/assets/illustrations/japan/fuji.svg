@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <!-- Subtle rising sun circle behind mountain -->
+  <circle cx="120" cy="52" r="32" stroke-width="1.2" stroke-opacity="0.25" fill="currentColor" fill-opacity="0.04" />
+
+  <!-- Background cloud strokes -->
+  <path d="M28 38 C36 34, 48 34, 56 38 C62 42, 68 40, 74 38" stroke-width="1.2" stroke-opacity="0.35" />
+  <path d="M168 32 C176 28, 188 28, 196 32 C202 36, 208 34, 216 33" stroke-width="1.2" stroke-opacity="0.35" />
+
+  <!-- Mountain Body with elegant bezier curves -->
+  <path d="M25 105 C55 85, 85 50, 120 20 C155 50, 185 85, 215 105 Z" fill="currentColor" fill-opacity="0.08" />
+
+  <!-- Snow Cap with characteristic notched tongue contours -->
+  <path d="M88 50 L105 47 L115 56 L125 47 L139 52 C146 62, 150 68, 153 72 L142 66 L134 74 L120 62 L106 74 L98 66 L87 72 C90 66, 94 60, 99 53 Z" fill="currentColor" fill-opacity="0.22" stroke-width="1.2" stroke-opacity="0.6" />
+
+  <!-- Mountain base water / ground waves -->
+  <path d="M14 108 C34 105, 54 111, 74 108 C94 105, 114 111, 134 108 C154 105, 174 111, 194 108 C210 105, 222 108, 230 108" stroke-width="1.4" stroke-opacity="0.4" />
+  <path d="M30 114 C50 112, 70 116, 90 114 C110 112, 130 116, 150 114 C170 112, 190 116, 210 114" stroke-width="1.1" stroke-opacity="0.25" />
+</svg>

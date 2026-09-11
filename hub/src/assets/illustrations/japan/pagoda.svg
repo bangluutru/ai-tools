@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <!-- Central Spire / Mast (Sorin) -->
+  <line x1="80" y1="12" x2="80" y2="38" stroke-width="2" />
+  <circle cx="80" cy="12" r="2.5" fill="currentColor" />
+  <circle cx="80" cy="18" r="4.5" stroke-width="1.2" />
+  <circle cx="80" cy="24" r="5" stroke-width="1.2" />
+  <circle cx="80" cy="30" r="5.5" stroke-width="1.2" />
+
+  <!-- Floor 5 (Topmost) Roof width ~48 (56 to 104) -->
+  <path d="M56 42 Q80 37, 104 42" stroke-width="2" />
+  <path d="M54 41 C55 42, 57 43, 60 43 L100 43 C103 43, 105 42, 106 41" stroke-width="1.4" fill="currentColor" fill-opacity="0.1" />
+  <!-- Floor 5 body -->
+  <rect x="71" y="43" width="18" height="12" fill="currentColor" fill-opacity="0.08" />
+
+  <!-- Floor 4 Roof width ~60 (50 to 110) -->
+  <path d="M48 57 Q80 52, 112 57" stroke-width="2" />
+  <path d="M46 56 C48 58, 52 58, 56 58 L104 58 C108 58, 112 58, 114 56" stroke-width="1.4" fill="currentColor" fill-opacity="0.1" />
+  <!-- Floor 4 body -->
+  <rect x="68" y="58" width="24" height="13" fill="currentColor" fill-opacity="0.08" />
+
+  <!-- Floor 3 Roof width ~72 (44 to 116) -->
+  <path d="M42 73 Q80 67, 118 73" stroke-width="2" />
+  <path d="M40 72 C42 74, 46 75, 52 75 L108 75 C114 75, 118 74, 120 72" stroke-width="1.4" fill="currentColor" fill-opacity="0.1" />
+  <!-- Floor 3 body -->
+  <rect x="66" y="75" width="28" height="14" fill="currentColor" fill-opacity="0.08" />
+
+  <!-- Floor 2 Roof width ~86 (37 to 123) -->
+  <path d="M35 91 Q80 84, 125 91" stroke-width="2" />
+  <path d="M33 90 C36 92, 40 93, 48 93 L112 93 C120 93, 124 92, 127 90" stroke-width="1.4" fill="currentColor" fill-opacity="0.1" />
+  <!-- Floor 2 body -->
+  <rect x="64" y="93" width="32" height="15" fill="currentColor" fill-opacity="0.08" />
+
+  <!-- Floor 1 (Ground) Roof width ~100 (30 to 130) -->
+  <path d="M28 110 Q80 102, 132 110" stroke-width="2.2" />
+  <path d="M26 109 C29 111, 35 112, 44 112 L116 112 C125 112, 131 111, 134 109" stroke-width="1.6" fill="currentColor" fill-opacity="0.1" />
+  <!-- Floor 1 ground body & pillars -->
+  <rect x="60" y="112" width="40" height="24" fill="currentColor" fill-opacity="0.08" />
+  <line x1="72" y1="112" x2="72" y2="136" stroke-width="1.4" />
+  <line x1="88" y1="112" x2="88" y2="136" stroke-width="1.4" />
+  <!-- Center entrance door -->
+  <path d="M75 136 V122 C75 120, 85 120, 85 122 V136" stroke-width="1.4" fill="currentColor" fill-opacity="0.15" />
+
+  <!-- Foundation Stone Platform -->
+  <path d="M46 136 H114 L120 144 H40 Z" fill="currentColor" fill-opacity="0.18" stroke-width="1.6" />
+</svg>

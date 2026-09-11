@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <!-- Toolbox handle -->
+  <path d="M60 46 V32 C60 27.6 63.6 24 68 24 H92 C96.4 24 100 27.6 100 32 V46" />
+  
+  <!-- Toolbox top lid -->
+  <path d="M26 46 H134 C138.4 46 142 49.6 142 54 V64 H18 V54 C18 49.6 21.6 46 26 46 Z" />
+  
+  <!-- Toolbox main body -->
+  <path d="M20 64 H140 V126 C140 131.5 135.5 136 130 136 H30 C24.5 136 20 131.5 20 126 Z" />
+  
+  <!-- Center latch & lock plate -->
+  <rect x="70" y="58" width="20" height="18" rx="3" fill="currentColor" fill-opacity="0.12" />
+  <circle cx="80" cy="67" r="2.5" fill="currentColor" />
+  
+  <!-- Left and right clasps -->
+  <rect x="36" y="60" width="12" height="10" rx="2" />
+  <rect x="112" y="60" width="12" height="10" rx="2" />
+  
+  <!-- Bottom reinforced ribs -->
+  <line x1="42" y1="92" x2="42" y2="120" stroke-opacity="0.35" />
+  <line x1="80" y1="92" x2="80" y2="120" stroke-opacity="0.35" />
+  <line x1="118" y1="92" x2="118" y2="120" stroke-opacity="0.35" />
+</svg>

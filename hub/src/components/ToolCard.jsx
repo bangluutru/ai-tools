@@ -2,7 +2,12 @@ import React from 'react';
 import { ArrowRight, ArrowUpRight, ShieldCheck, Cpu, HardDrive } from 'lucide-react';
 import { renderToolIcon } from '../config/toolIcons.js';
 
-export default function ToolCard({ tool, onSelectTool, displayLang = 'vi' }) {
+export default function ToolCard({
+  tool,
+  onSelectTool,
+  displayLang = 'vi',
+  showGroupContext = false,
+}) {
   const isDisabled = tool.readiness === 'in-development';
 
   const getName = () => {
@@ -17,12 +22,57 @@ export default function ToolCard({ tool, onSelectTool, displayLang = 'vi' }) {
     return tool.desc_vn;
   };
 
-  const getCategoryTag = () => {
+  const getSemanticBadge = () => {
+    // 1. Japan Life Tools: Semantic Domain Badges
+    if (tool.group === 'japan-life') {
+      const domainBadges = {
+        tax: { vi: 'THUẾ', en: 'TAX', ja: '税金' },
+        insurance: { vi: 'BẢO HIỂM', en: 'INSURANCE', ja: '保険・年金' },
+        employment: { vi: 'VIỆC LÀM', en: 'EMPLOYMENT', ja: '労働・雇用' },
+        family: { vi: 'GIA ĐÌNH', en: 'FAMILY', ja: '子育て' },
+        housing: { vi: 'NHÀ Ở', en: 'HOUSING', ja: '住まい' },
+        immigration: { vi: 'CƯ TRÚ', en: 'IMMIGRATION', ja: '在留・入管' },
+        'procedures-documents': { vi: 'THỦ TỤC', en: 'PROCEDURES', ja: '行政手続' },
+        navigator: { vi: 'ĐIỀU PHỐI', en: 'NAVIGATOR', ja: 'ナビ' },
+      };
+      const badgeObj = domainBadges[tool.domain] || { vi: 'NHẬT BẢN', en: 'JAPAN', ja: '日本' };
+      return badgeObj[displayLang] || badgeObj.vi;
+    }
+
+    // 2. Vietnam Life Tools
+    if (tool.group === 'vietnam-life') {
+      const vnBadge = { vi: 'VIỆT NAM', en: 'VIETNAM', ja: 'ベトナム' };
+      return vnBadge[displayLang] || vnBadge.vi;
+    }
+
+    // 3. Common Tools: Purpose/Category Badges
     if (tool.category === 'pdf') return 'PDF';
-    if (tool.category === 'image') return 'ẢNH';
-    if (tool.category === 'office') return tool.id.includes('invoice') ? 'HÓA ĐƠN' : 'EXCEL';
+    if (tool.category === 'image') return displayLang === 'ja' ? '画像' : displayLang === 'en' ? 'IMAGE' : 'ẢNH';
+    if (tool.id.includes('invoice')) return displayLang === 'ja' ? '請求書' : displayLang === 'en' ? 'INVOICE' : 'HÓA ĐƠN';
+    if (tool.id.includes('accounting')) return displayLang === 'ja' ? '会計' : displayLang === 'en' ? 'FINANCE' : 'KẾ TOÁN';
+    if (tool.id.includes('card')) return displayLang === 'ja' ? '名刺' : displayLang === 'en' ? 'BIZ CARD' : 'DANH THIẾP';
+    if (tool.category === 'office') return 'EXCEL';
     if (tool.category === 'ai') return 'AI / BI';
-    return 'TIỆN ÍCH';
+    return displayLang === 'ja' ? '便利' : displayLang === 'en' ? 'UTILITY' : 'TIỆN ÍCH';
+  };
+
+  const getGroupContextBadge = () => {
+    if (tool.group === 'japan-life') {
+      return {
+        label: displayLang === 'ja' ? '日本生活' : displayLang === 'en' ? 'Japan Life' : 'Cuộc sống Nhật',
+        className: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/25',
+      };
+    }
+    if (tool.group === 'vietnam-life') {
+      return {
+        label: displayLang === 'ja' ? 'ベトナム生活' : displayLang === 'en' ? 'Vietnam Life' : 'Cuộc sống VN',
+        className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/25',
+      };
+    }
+    return {
+      label: displayLang === 'ja' ? 'ツール' : displayLang === 'en' ? 'Tools' : 'Công cụ',
+      className: 'bg-primary/15 text-primary border-primary/25',
+    };
   };
 
   const getProcessingInfo = () => {
@@ -51,11 +101,12 @@ export default function ToolCard({ tool, onSelectTool, displayLang = 'vi' }) {
   };
 
   const proc = getProcessingInfo();
+  const groupContext = showGroupContext ? getGroupContextBadge() : null;
 
   return (
     <article
       data-category={tool.category}
-      className={`tool-card flex flex-col justify-between p-5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-border-subtle hover:border-primary-container/50 transition-all duration-200 shadow-sm group relative overflow-hidden ${
+      className={`tool-card flex flex-col justify-between p-5 sm:p-6 rounded-2xl bg-surface-container hover:bg-surface-container-high border border-border-subtle hover:border-primary-container/50 transition-all duration-200 shadow-xs hover:shadow-md group relative overflow-hidden ${
         isDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
       }`}
       onClick={() => !isDisabled && onSelectTool(tool.id)}
@@ -66,17 +117,24 @@ export default function ToolCard({ tool, onSelectTool, displayLang = 'vi' }) {
         style={{ backgroundColor: tool.color || '#0ea5e9' }}
       />
 
-      <div className="space-y-3 relative z-10">
+      <div className="space-y-3.5 relative z-10">
         {/* Header with Icon and Badges */}
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-2">
           <div
-            className="w-11 h-11 rounded-lg bg-surface-subtle border border-border-subtle flex items-center justify-center transition-transform duration-200 group-hover:scale-105 shadow-inner"
+            className="w-12 h-12 rounded-xl bg-surface-subtle border border-border-subtle flex items-center justify-center transition-transform duration-200 group-hover:scale-105 shadow-inner shrink-0"
             style={{ color: tool.color || '#38BDF8' }}
           >
-            {renderToolIcon(tool.icon, { size: 22 })}
+            {renderToolIcon(tool.icon, { size: 24 })}
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            {/* Cross-domain Search Context Pill */}
+            {groupContext && (
+              <span className={`px-2 py-0.5 rounded-full font-label-sm text-[10px] font-bold border ${groupContext.className}`}>
+                {groupContext.label}
+              </span>
+            )}
+
             {tool.priority && (
               <span className="px-2 py-0.5 rounded bg-secondary/15 border border-secondary/30 text-secondary font-label-sm text-[11px] font-semibold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
@@ -93,8 +151,8 @@ export default function ToolCard({ tool, onSelectTool, displayLang = 'vi' }) {
                 ĐANG PHÁT TRIỂN
               </span>
             ) : (
-              <span className="px-2 py-0.5 rounded bg-surface-subtle border border-border-subtle text-outline font-label-sm text-[11px]">
-                {getCategoryTag()}
+              <span className="px-2 py-0.5 rounded bg-surface-subtle border border-border-subtle text-outline font-label-sm text-[11px] font-medium tracking-tight">
+                {getSemanticBadge()}
               </span>
             )}
           </div>
@@ -108,7 +166,7 @@ export default function ToolCard({ tool, onSelectTool, displayLang = 'vi' }) {
               <ArrowUpRight size={15} className="text-outline opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             )}
           </h3>
-          <p className="font-body-sm text-xs text-on-surface-variant mt-1.5 line-clamp-2 leading-relaxed">
+          <p className="font-body-sm text-xs sm:text-[13px] text-on-surface-variant mt-1.5 line-clamp-3 leading-relaxed">
             {getDesc()}
           </p>
           {isDisabled && tool.unavailableReason && (
@@ -128,7 +186,7 @@ export default function ToolCard({ tool, onSelectTool, displayLang = 'vi' }) {
         <span className="font-label-sm text-xs text-outline group-hover:text-primary group-hover:translate-x-0.5 transition-all flex items-center gap-1">
           {isDisabled ? 'Chưa mở lại' : (
             <>
-              <span>Mở Tool</span>
+              <span>{displayLang === 'ja' ? '開く' : displayLang === 'en' ? 'Open' : 'Mở Tool'}</span>
               <ArrowRight size={13} />
             </>
           )}

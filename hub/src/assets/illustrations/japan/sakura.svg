@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <defs>
+    <!-- Sakura petal with notched tip at top, anchored at (80, 80) -->
+    <path id="sakura-petal" d="M80 72 C74 58, 62 46, 68 34 C72 26, 77 28, 80 33 C83 28, 88 26, 92 34 C98 46, 86 58, 80 72 Z" fill="currentColor" fill-opacity="0.08" />
+  </defs>
+
+  <!-- 5 Rotated Petals -->
+  <g transform="rotate(0 80 80)"><use href="#sakura-petal" /></g>
+  <g transform="rotate(72 80 80)"><use href="#sakura-petal" /></g>
+  <g transform="rotate(144 80 80)"><use href="#sakura-petal" /></g>
+  <g transform="rotate(216 80 80)"><use href="#sakura-petal" /></g>
+  <g transform="rotate(288 80 80)"><use href="#sakura-petal" /></g>
+
+  <!-- Radial Stamens -->
+  <line x1="80" y1="80" x2="80" y2="60" stroke-opacity="0.45" stroke-width="1.2" />
+  <circle cx="80" cy="58" r="1.5" fill="currentColor" stroke="none" />
+
+  <g transform="rotate(72 80 80)">
+    <line x1="80" y1="80" x2="80" y2="60" stroke-opacity="0.45" stroke-width="1.2" />
+    <circle cx="80" cy="58" r="1.5" fill="currentColor" stroke="none" />
+  </g>
+  <g transform="rotate(144 80 80)">
+    <line x1="80" y1="80" x2="80" y2="60" stroke-opacity="0.45" stroke-width="1.2" />
+    <circle cx="80" cy="58" r="1.5" fill="currentColor" stroke="none" />
+  </g>
+  <g transform="rotate(216 80 80)">
+    <line x1="80" y1="80" x2="80" y2="60" stroke-opacity="0.45" stroke-width="1.2" />
+    <circle cx="80" cy="58" r="1.5" fill="currentColor" stroke="none" />
+  </g>
+  <g transform="rotate(288 80 80)">
+    <line x1="80" y1="80" x2="80" y2="60" stroke-opacity="0.45" stroke-width="1.2" />
+    <circle cx="80" cy="58" r="1.5" fill="currentColor" stroke="none" />
+  </g>
+
+  <!-- Flower center pistil circle -->
+  <circle cx="80" cy="80" r="7" fill="currentColor" fill-opacity="0.18" stroke="currentColor" stroke-width="1.6" />
+  <circle cx="80" cy="80" r="2.5" fill="currentColor" />
+</svg>

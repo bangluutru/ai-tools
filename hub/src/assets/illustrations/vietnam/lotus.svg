@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <!-- Bottom Pad Leaves -->
+  <path d="M22 128 C45 120, 65 125, 80 134 C95 125, 115 120, 138 128 C120 140, 100 138, 80 144 C60 138, 40 140, 22 128 Z" fill="currentColor" fill-opacity="0.08" stroke-width="1.6" />
+
+  <!-- Outer Low Petals (Left & Right) -->
+  <path d="M30 114 C36 94, 52 82, 70 94 C54 106, 42 116, 30 114 Z" fill="currentColor" fill-opacity="0.06" stroke-width="1.6" />
+  <path d="M130 114 C124 94, 108 82, 90 94 C106 106, 118 116, 130 114 Z" fill="currentColor" fill-opacity="0.06" stroke-width="1.6" />
+
+  <!-- Mid Lateral Petals (Left & Right) -->
+  <path d="M38 96 C40 68, 60 54, 76 86 C62 98, 48 104, 38 96 Z" fill="currentColor" fill-opacity="0.1" stroke-width="1.7" />
+  <path d="M122 96 C120 68, 100 54, 84 86 C98 98, 112 104, 122 96 Z" fill="currentColor" fill-opacity="0.1" stroke-width="1.7" />
+
+  <!-- Inner Upper Petals (Left & Right) -->
+  <path d="M50 82 C52 46, 68 36, 78 82 C68 88, 56 88, 50 82 Z" fill="currentColor" fill-opacity="0.14" stroke-width="1.7" />
+  <path d="M110 82 C108 46, 92 36, 82 82 C92 88, 104 88, 110 82 Z" fill="currentColor" fill-opacity="0.14" stroke-width="1.7" />
+
+  <!-- Tall Center Main Petal -->
+  <path d="M80 25 C60 48, 63 78, 80 95 C97 78, 100 48, 80 25 Z" fill="currentColor" fill-opacity="0.22" stroke-width="1.9" />
+
+  <!-- Water ripples underneath -->
+  <path d="M48 142 C64 139, 96 139, 112 142" stroke-width="1.4" stroke-opacity="0.4" />
+  <path d="M60 148 C72 146, 88 146, 100 148" stroke-width="1.2" stroke-opacity="0.25" />
+</svg>

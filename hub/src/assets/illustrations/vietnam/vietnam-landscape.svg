@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <!-- Distant undulating karst hills -->
+  <path d="M15 90 C35 55, 60 50, 85 75 C105 52, 135 48, 155 70 C175 42, 205 45, 230 85" stroke-width="1.4" stroke-opacity="0.4" fill="currentColor" fill-opacity="0.05" />
+
+  <!-- Midground rounded riverbank hills -->
+  <path d="M5 102 C30 78, 60 72, 90 92 C120 74, 150 82, 185 105" stroke-width="1.6" stroke-opacity="0.6" fill="currentColor" fill-opacity="0.08" />
+
+  <!-- Winding Mekong / Red River curves -->
+  <path d="M185 105 C150 96, 120 106, 80 102 C40 98, 20 108, 0 106" stroke-width="1.6" />
+  <path d="M220 114 C180 106, 140 116, 90 112 C50 108, 20 116, 0 114" stroke-width="1.2" stroke-opacity="0.4" />
+
+  <!-- Small stylized conical hat boatman / sampan on water -->
+  <path d="M136 94 C140 92, 144 92, 148 94 L152 98 H132 Z" fill="currentColor" fill-opacity="0.2" stroke-width="1.2" />
+  <!-- Conical hat (Non la) silhouette -->
+  <path d="M140 91 L142 86 L144 91 Z" fill="currentColor" />
+
+  <!-- Floating Lotus silhouette in foreground left -->
+  <g transform="translate(38, 92) scale(0.18)">
+    <path d="M80 25 C60 48, 63 78, 80 95 C97 78, 100 48, 80 25 Z" fill="currentColor" fill-opacity="0.3" stroke-width="2" />
+    <path d="M50 82 C52 46, 68 36, 78 82 C68 88, 56 88, 50 82 Z" stroke-width="2" />
+    <path d="M110 82 C108 46, 92 36, 82 82 C92 88, 104 88, 110 82 Z" stroke-width="2" />
+    <path d="M22 128 C45 120, 65 125, 80 134 C95 125, 115 120, 138 128" stroke-width="2" />
+  </g>
+</svg>

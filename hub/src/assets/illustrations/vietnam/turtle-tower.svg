@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 140" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+  <!-- Water ripples in Hoan Kiem Lake -->
+  <path d="M15 128 C45 125, 75 131, 105 128 C135 125, 165 131, 195 128 C215 126, 230 128, 235 128" stroke-width="1.4" stroke-opacity="0.35" />
+  <path d="M30 134 C60 132, 90 136, 120 134 C150 132, 180 136, 210 134" stroke-width="1.1" stroke-opacity="0.25" />
+
+  <!-- Base grassy island (Guom lake mound) -->
+  <path d="M30 124 C60 114, 180 114, 210 124 C190 128, 50 128, 30 124 Z" fill="currentColor" fill-opacity="0.12" stroke-width="1.6" />
+
+  <!-- Ground Floor (Tầng 1): Width 110 (65 to 175), Height 32 (86 to 118) -->
+  <rect x="65" y="86" width="110" height="32" rx="2" fill="currentColor" fill-opacity="0.08" />
+  <!-- Ground Floor 3 Arched Openings -->
+  <path d="M76 118 V100 A8 8 0 0 1 92 100 V118" fill="currentColor" fill-opacity="0.16" />
+  <path d="M112 118 V98 A8 8 0 0 1 128 98 V118" fill="currentColor" fill-opacity="0.2" />
+  <path d="M148 118 V100 A8 8 0 0 1 164 100 V118" fill="currentColor" fill-opacity="0.16" />
+
+  <!-- Eaves / Cornice 1 -->
+  <path d="M60 86 Q120 82, 180 86" stroke-width="2.2" />
+  <path d="M58 85 H182" stroke-width="1.2" />
+
+  <!-- Second Floor (Tầng 2): Width 78 (81 to 159), Height 24 (60 to 84) -->
+  <rect x="81" y="60" width="78" height="24" rx="1.5" fill="currentColor" fill-opacity="0.08" />
+  <!-- Second Floor 3 Small Arched Openings -->
+  <path d="M91 84 V71 A5 5 0 0 1 101 71 V84" fill="currentColor" fill-opacity="0.16" />
+  <path d="M115 84 V69 A5 5 0 0 1 125 69 V84" fill="currentColor" fill-opacity="0.18" />
+  <path d="M139 84 V71 A5 5 0 0 1 149 71 V84" fill="currentColor" fill-opacity="0.16" />
+
+  <!-- Eaves / Cornice 2 -->
+  <path d="M76 60 Q120 56, 164 60" stroke-width="2" />
+  <path d="M74 59 H166" stroke-width="1.2" />
+
+  <!-- Upper Pavilion (Tầng 3 / Vọng lâu): Width 42 (99 to 141), Height 18 (39 to 57) -->
+  <rect x="99" y="39" width="42" height="18" rx="1" fill="currentColor" fill-opacity="0.08" />
+  <!-- Center Circular / Arched window -->
+  <circle cx="120" cy="48" r="4.5" fill="currentColor" fill-opacity="0.2" stroke-width="1.2" />
+
+  <!-- Curved Pagoda Roof -->
+  <path d="M92 39 Q120 31, 148 39" stroke-width="2.2" />
+  <path d="M90 38 L120 28 L150 38" stroke-width="1.4" fill="currentColor" fill-opacity="0.15" />
+
+  <!-- Top Finial / Small Spire -->
+  <line x1="120" y1="28" x2="120" y2="18" stroke-width="1.8" />
+  <circle cx="120" cy="18" r="2.5" fill="currentColor" />
+</svg>
