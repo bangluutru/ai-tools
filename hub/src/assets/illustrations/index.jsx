@@ -219,3 +219,9 @@ export function VietnamLandscapeIllustration({ className = 'w-full h-auto text-e
     </svg>
   );
 }
+
+// Re-export high-fidelity domain icons, scenic landscape, and watermarks
+export { ToolboxIcon, SakuraIcon, LotusIcon } from './DomainIcons.jsx';
+export { default as ScenicLandscapeIllustration } from './ScenicLandscapeIllustration.jsx';
+export { default as VietnamLifeHeroIllustration } from './VietnamLifeHeroIllustration.jsx';
+export { ToolsWatermark, JapanLifeWatermark } from './Watermarks.jsx';

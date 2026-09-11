@@ -20,7 +20,7 @@ import {
   MoveHorizontal,
   X
 } from 'lucide-react';
-import { convertImage, convertImageToWebP, SUPPORTED_TARGET_FORMATS } from '@ai-tools/core/utils/image/converter.js';
+import { convertImage, SUPPORTED_TARGET_FORMATS } from '@ai-tools/core/utils/image/converter.js';
 import { downloadAllAsZip } from '@ai-tools/core/utils/image/zipExporter.js';
 import { IMAGE_LIMITS, validateImageFiles } from '@ai-tools/core/utils/image/limits.js';
 import { verifyDocumentSignature } from '@ai-tools/core/utils/documentFiles.js';

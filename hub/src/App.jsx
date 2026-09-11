@@ -8,6 +8,7 @@ import DataPolicyModal from './components/DataPolicyModal';
 import SettingsModal from './components/SettingsModal';
 import HubDomainCard from './components/HubDomainCard';
 import DomainCatalogue from './components/DomainCatalogue';
+import HeroScenicBanner from './components/HeroScenicBanner';
 import { tools, isInDevelopment } from './config/toolsRegistry';
 import { buildVersion } from './config/buildInfo';
 import {
@@ -414,8 +415,8 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Search Result Miniapp Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {/* Search Result Miniapp Display (Grid on Desktop, Compact List on Mobile) */}
+              <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {searchResults.map((tool) => (
                   <ToolCard
                     key={tool.id}
@@ -423,6 +424,19 @@ export default function App() {
                     onSelectTool={selectTool}
                     displayLang={displayLang}
                     showGroupContext={true}
+                    variant="grid"
+                  />
+                ))}
+              </div>
+              <div className="flex flex-col gap-2.5 sm:hidden">
+                {searchResults.map((tool) => (
+                  <ToolCard
+                    key={tool.id}
+                    tool={tool}
+                    onSelectTool={selectTool}
+                    displayLang={displayLang}
+                    showGroupContext={true}
+                    variant="compact-list"
                   />
                 ))}
               </div>
@@ -478,24 +492,9 @@ export default function App() {
             />
           ) : (
             /* VIEW C: HOMEPAGE WITH 3 TOP-LEVEL DOMAIN CARDS */
-            <main className="flex-1 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
-              {/* Welcoming Hero Section */}
-              <div className="text-center space-y-3 pt-2 max-w-2xl mx-auto">
-                <h1 className="font-title-lg text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">
-                  {displayLang === 'ja'
-                    ? 'Toolio へようこそ'
-                    : displayLang === 'en'
-                    ? 'Welcome to Toolio Hub'
-                    : 'Chào mừng đến với Toolio'}
-                </h1>
-                <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-                  {displayLang === 'ja'
-                    ? '日々の作業効率化から日本での生活手続きまで、目的に応じたツールセットをお届けします。'
-                    : displayLang === 'en'
-                    ? 'Discover purpose-built suites optimized for everyday productivity and life in Japan.'
-                    : 'Khám phá các bộ công cụ chuyên biệt được tối ưu hóa cho từng nhu cầu công việc và đời sống.'}
-                </p>
-              </div>
+            <main className="flex-1 max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-7">
+              {/* Welcoming Scenic Hero Banner with Mascot & Brand Quote */}
+              <HeroScenicBanner displayLang={displayLang} />
 
               {/* 3 Top-Level Domains Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -506,8 +505,6 @@ export default function App() {
                   subtitle={HUB_DOMAINS.common.subtitle[displayLang] || HUB_DOMAINS.common.subtitle.vi}
                   description={HUB_DOMAINS.common.description[displayLang] || HUB_DOMAINS.common.description.vi}
                   toolCount={commonTools.length}
-                  accentColor={HUB_DOMAINS.common.accentColor}
-                  illustration={HUB_DOMAINS.common.illustration}
                   displayLang={displayLang}
                   onSelect={() => handleSelectDomain('common')}
                 />
@@ -519,8 +516,6 @@ export default function App() {
                   subtitle={HUB_DOMAINS['japan-life'].subtitle[displayLang] || HUB_DOMAINS['japan-life'].subtitle.vi}
                   description={HUB_DOMAINS['japan-life'].description[displayLang] || HUB_DOMAINS['japan-life'].description.vi}
                   toolCount={japanLifeTools.length}
-                  accentColor={HUB_DOMAINS['japan-life'].accentColor}
-                  illustration={HUB_DOMAINS['japan-life'].illustration}
                   displayLang={displayLang}
                   onSelect={() => handleSelectDomain('japan-life')}
                 />
@@ -532,9 +527,7 @@ export default function App() {
                   subtitle={HUB_DOMAINS['vietnam-life'].subtitle[displayLang] || HUB_DOMAINS['vietnam-life'].subtitle.vi}
                   description={HUB_DOMAINS['vietnam-life'].description[displayLang] || HUB_DOMAINS['vietnam-life'].description.vi}
                   toolCount={vietnamLifeTools.length}
-                  status={vietnamLifeTools.length === 0 ? 'coming_soon' : undefined}
-                  accentColor={HUB_DOMAINS['vietnam-life'].accentColor}
-                  illustration={HUB_DOMAINS['vietnam-life'].illustration}
+                  status="coming_soon"
                   displayLang={displayLang}
                   onSelect={() => handleSelectDomain('vietnam-life')}
                 />
