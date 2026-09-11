@@ -9,6 +9,7 @@ import SettingsModal from './components/SettingsModal';
 import HubDomainCard from './components/HubDomainCard';
 import DomainCatalogue from './components/DomainCatalogue';
 import HeroScenicBanner from './components/HeroScenicBanner';
+import DomainQuickShortcuts from './components/DomainQuickShortcuts';
 import { tools, isInDevelopment } from './config/toolsRegistry';
 import { buildVersion } from './config/buildInfo';
 import {
@@ -21,9 +22,6 @@ import { HUB_DOMAINS, getDomainName } from './config/hubPresentation';
 import {
   Loader2,
   SearchX,
-  ShieldCheck,
-  Zap,
-  Lock,
 } from 'lucide-react';
 import {
   defaultHiddenToolIds,
@@ -496,85 +494,61 @@ export default function App() {
               {/* Welcoming Scenic Hero Banner with Mascot & Brand Quote */}
               <HeroScenicBanner displayLang={displayLang} />
 
-              {/* 3 Top-Level Domains Cards Grid */}
+              {/* 3 Top-Level Domains Cards Grid with Quick Access Shortcuts */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* 1. Tools Domain */}
-                <HubDomainCard
-                  id="common"
-                  title={getDomainName('common', displayLang)}
-                  subtitle={HUB_DOMAINS.common.subtitle[displayLang] || HUB_DOMAINS.common.subtitle.vi}
-                  description={HUB_DOMAINS.common.description[displayLang] || HUB_DOMAINS.common.description.vi}
-                  toolCount={commonTools.length}
-                  displayLang={displayLang}
-                  onSelect={() => handleSelectDomain('common')}
-                />
-
-                {/* 2. Japan Life Domain */}
-                <HubDomainCard
-                  id="japan-life"
-                  title={getDomainName('japan-life', displayLang)}
-                  subtitle={HUB_DOMAINS['japan-life'].subtitle[displayLang] || HUB_DOMAINS['japan-life'].subtitle.vi}
-                  description={HUB_DOMAINS['japan-life'].description[displayLang] || HUB_DOMAINS['japan-life'].description.vi}
-                  toolCount={japanLifeTools.length}
-                  displayLang={displayLang}
-                  onSelect={() => handleSelectDomain('japan-life')}
-                />
-
-                {/* 3. Vietnam Life Domain */}
-                <HubDomainCard
-                  id="vietnam-life"
-                  title={getDomainName('vietnam-life', displayLang)}
-                  subtitle={HUB_DOMAINS['vietnam-life'].subtitle[displayLang] || HUB_DOMAINS['vietnam-life'].subtitle.vi}
-                  description={HUB_DOMAINS['vietnam-life'].description[displayLang] || HUB_DOMAINS['vietnam-life'].description.vi}
-                  toolCount={vietnamLifeTools.length}
-                  status="coming_soon"
-                  displayLang={displayLang}
-                  onSelect={() => handleSelectDomain('vietnam-life')}
-                />
-              </div>
-
-              {/* Trust and Privacy Feature Badges */}
-              <div className="pt-6 pb-2 border-t border-border-subtle/60 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center sm:text-left">
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-container/40 border border-border-subtle/50">
-                  <div className="w-8 h-8 rounded-lg bg-secondary/15 text-secondary flex items-center justify-center shrink-0">
-                    <ShieldCheck size={18} />
-                  </div>
-                  <div>
-                    <p className="font-label-sm text-xs font-bold text-on-surface">
-                      {displayLang === 'ja' ? '100% ローカル処理' : displayLang === 'en' ? 'Client-Side Safe' : 'An toàn tuyệt đối'}
-                    </p>
-                    <p className="font-body-sm text-[11px] text-on-surface-variant">
-                      {displayLang === 'ja' ? '端末内ローカル完結' : displayLang === 'en' ? 'Files never leave browser' : 'Dữ liệu không rời máy tính'}
-                    </p>
-                  </div>
+                {/* 1. Tools Domain Column */}
+                <div className="flex flex-col gap-3">
+                  <HubDomainCard
+                    id="common"
+                    title={getDomainName('common', displayLang)}
+                    subtitle={HUB_DOMAINS.common.subtitle[displayLang] || HUB_DOMAINS.common.subtitle.vi}
+                    description={HUB_DOMAINS.common.description[displayLang] || HUB_DOMAINS.common.description.vi}
+                    toolCount={commonTools.length}
+                    displayLang={displayLang}
+                    onSelect={() => handleSelectDomain('common')}
+                  />
+                  <DomainQuickShortcuts
+                    domainId="common"
+                    onSelectTool={selectTool}
+                    displayLang={displayLang}
+                  />
                 </div>
 
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-container/40 border border-border-subtle/50">
-                  <div className="w-8 h-8 rounded-lg bg-primary/15 text-primary flex items-center justify-center shrink-0">
-                    <Zap size={18} />
-                  </div>
-                  <div>
-                    <p className="font-label-sm text-xs font-bold text-on-surface">
-                      {displayLang === 'ja' ? '高速・即時処理' : displayLang === 'en' ? 'Instant & Fast' : 'Tốc độ tức thì'}
-                    </p>
-                    <p className="font-body-sm text-[11px] text-on-surface-variant">
-                      {displayLang === 'ja' ? '待機なしの瞬時実行' : displayLang === 'en' ? 'Zero network latency' : 'Không có độ trễ mạng'}
-                    </p>
-                  </div>
+                {/* 2. Japan Life Domain Column */}
+                <div className="flex flex-col gap-3">
+                  <HubDomainCard
+                    id="japan-life"
+                    title={getDomainName('japan-life', displayLang)}
+                    subtitle={HUB_DOMAINS['japan-life'].subtitle[displayLang] || HUB_DOMAINS['japan-life'].subtitle.vi}
+                    description={HUB_DOMAINS['japan-life'].description[displayLang] || HUB_DOMAINS['japan-life'].description.vi}
+                    toolCount={japanLifeTools.length}
+                    displayLang={displayLang}
+                    onSelect={() => handleSelectDomain('japan-life')}
+                  />
+                  <DomainQuickShortcuts
+                    domainId="japan-life"
+                    onSelectTool={selectTool}
+                    displayLang={displayLang}
+                  />
                 </div>
 
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-container/40 border border-border-subtle/50">
-                  <div className="w-8 h-8 rounded-lg bg-tertiary/15 text-tertiary flex items-center justify-center shrink-0">
-                    <Lock size={18} />
-                  </div>
-                  <div>
-                    <p className="font-label-sm text-xs font-bold text-on-surface">
-                      {displayLang === 'ja' ? 'ゼロトラスト' : displayLang === 'en' ? 'Zero Trust' : 'Bảo mật riêng tư'}
-                    </p>
-                    <p className="font-body-sm text-[11px] text-on-surface-variant">
-                      {displayLang === 'ja' ? 'ログイン不要・無料' : displayLang === 'en' ? 'No account required' : 'Không cần đăng nhập'}
-                    </p>
-                  </div>
+                {/* 3. Vietnam Life Domain Column */}
+                <div className="flex flex-col gap-3">
+                  <HubDomainCard
+                    id="vietnam-life"
+                    title={getDomainName('vietnam-life', displayLang)}
+                    subtitle={HUB_DOMAINS['vietnam-life'].subtitle[displayLang] || HUB_DOMAINS['vietnam-life'].subtitle.vi}
+                    description={HUB_DOMAINS['vietnam-life'].description[displayLang] || HUB_DOMAINS['vietnam-life'].description.vi}
+                    toolCount={vietnamLifeTools.length}
+                    status="coming_soon"
+                    displayLang={displayLang}
+                    onSelect={() => handleSelectDomain('vietnam-life')}
+                  />
+                  <DomainQuickShortcuts
+                    domainId="vietnam-life"
+                    onSelectTool={selectTool}
+                    displayLang={displayLang}
+                  />
                 </div>
               </div>
             </main>

@@ -133,3 +133,32 @@ test('Zero Horizontal Shift: Header, Main, and Footer share identical 1240px con
   assert.ok(tcMatch[1].includes('max-w-[1240px]'), 'ToolContainer inner div thiếu max-w-[1240px]');
   assert.ok(tcMatch[1].includes('px-4 sm:px-6 lg:px-8'), 'ToolContainer inner div thiếu px-4 sm:px-6 lg:px-8');
 });
+
+/**
+ * Kiểm tra 12 Shortcut trang chủ:
+ * - Chia đều cho 3 domain (mỗi domain đúng 4 shortcut)
+ * - Tất cả 12 toolId đều phải tồn tại trong toolsRegistry.js
+ * - Mỗi shortcut phải có đủ tên đa ngữ (VI, EN, JA) và icon
+ */
+test('Homepage Quick Shortcuts: 12 shortcuts across 3 domains are all valid and registered', async () => {
+  const { DOMAIN_SHORTCUTS } = await import('../src/config/domainShortcuts.js');
+  const { iconMap } = await import('../src/config/toolIcons.js');
+  const validToolIds = new Set(tools.map((t) => t.id));
+
+  const expectedDomains = ['common', 'japan-life', 'vietnam-life'];
+  for (const domain of expectedDomains) {
+    const list = DOMAIN_SHORTCUTS[domain];
+    assert.ok(Array.isArray(list), `DOMAIN_SHORTCUTS.${domain} phải là một mảng`);
+    assert.equal(list.length, 4, `Domain "${domain}" phải có đúng 4 shortcut`);
+
+    for (const item of list) {
+      assert.ok(validToolIds.has(item.id), `Shortcut ID "${item.id}" không tồn tại trong toolsRegistry.js`);
+      assert.ok(item.icon, `Shortcut "${item.id}" thiếu icon`);
+      assert.ok(iconMap[item.icon], `Shortcut "${item.id}" có icon "${item.icon}" chưa có trong iconMap`);
+      assert.ok(item.names?.vi, `Shortcut "${item.id}" thiếu tên tiếng Việt`);
+      assert.ok(item.names?.en, `Shortcut "${item.id}" thiếu tên tiếng Anh`);
+      assert.ok(item.names?.ja, `Shortcut "${item.id}" thiếu tên tiếng Nhật`);
+    }
+  }
+});
+

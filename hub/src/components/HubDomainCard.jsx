@@ -95,7 +95,7 @@ export default function HubDomainCard({
       tabIndex={0}
       onClick={() => onSelect?.(id)}
       onKeyDown={handleKeyDown}
-      className={`group relative flex flex-col justify-between p-6 sm:p-7 rounded-2xl ${style.cardBg} border ${style.cardBorder} transition-all duration-200 shadow-xs hover:shadow-md cursor-pointer overflow-hidden select-none outline-none focus-visible:ring-2 focus-visible:ring-primary`}
+      className={`group relative flex-1 flex flex-col justify-between p-6 sm:p-7 rounded-2xl ${style.cardBg} border ${style.cardBorder} transition-all duration-200 shadow-xs hover:shadow-md cursor-pointer overflow-hidden select-none outline-none focus-visible:ring-2 focus-visible:ring-primary`}
       aria-label={`${title} - ${getBadgeLabel()}`}
     >
       <div className="space-y-4">
