@@ -14,9 +14,9 @@ The interface is strictly **TOOL-FIRST**, NOT architecture-first or marketing-fi
 
 ---
 
-### 1.1 The 6 Mandatory Design Rules
+### 1.1 The 7 Mandatory Design Rules
 
-Every page, tool, execution state, and future mini-app MUST adhere to these six unbreakable rules:
+Every page, tool, execution state, and future mini-app MUST adhere to these seven unbreakable rules:
 
 1. **Rule 1: Tool-First UX (Task Speed over Architecture)**
    - Prioritize immediate utility above all else.
@@ -43,6 +43,12 @@ Every page, tool, execution state, and future mini-app MUST adhere to these six 
 6. **Rule 6: Screen-Space Maximization**
    - Maximize screen real estate for the actual workspace, canvas, and file processing stages.
    - Non-functional marketing cards, SEO guide paragraphs, and "Assurance Guarantee" cards at the bottom of tools are prohibited.
+
+7. **Rule 7: Universal Container & Grid Alignment (Zero Horizontal Shift)**
+   - All vertical layout tiers (Header, Hub Domain Views, Catalogue, Tool Workspaces, and Footer) MUST share the identical bounded inner container geometry:
+     `max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8`.
+   - The outer shell (`<header>`, `<footer>`, background wrapper) expands 100% width to carry background color and border, but MUST NOT have horizontal padding.
+   - The inner container carries the responsive gutter (`px-4 sm:px-6 lg:px-8`). Content on the leftmost edge (e.g., Header Logo, Domain Card 1, Footer Brand) and rightmost edge (e.g., Header controls, Domain Card 3, Footer Links) must be aligned with 0px horizontal deviation across all breakpoints.
 
 ---
 
@@ -95,34 +101,47 @@ Rather than using heavy drop shadows, depth is achieved through **luminance step
 
 ## 3. Layout Architecture
 
-### 3.1 Global Container Constraints
+### 3.1 Global Container Constraints (The 1240px SSOT)
 - **Desktop Max Width**: `1240px` (`max-w-[1240px] mx-auto`)
-- **Horizontal Padding**:
-  - Desktop (>=1024px): `px-6` to `px-8` (24px to 32px)
-  - Tablet (768px): `px-6` (24px)
-  - Mobile (375px–390px): `px-4` (16px)
+- **Responsive Gutter (Horizontal Padding)**:
+  - Desktop (`lg:`, `>=1024px`): `lg:px-8` (32px)
+  - Tablet (`sm:`, `>=640px` to `<1024px`): `sm:px-6` (24px)
+  - Mobile (`<640px`, 375px–390px): `px-4` (16px)
+- **Standard Layout Class Combination**: `max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8`
 
 ### 3.2 Home "Tool Discovery Hub" Layout Diagram
 ```
 +-----------------------------------------------------------------------------------+
-|  NAVBAR (h-16, fixed, backdrop-blur-xl, max-w-[1240px])                           |
-|  [Logo: AI-Tools HUB]  [Search input: ⌘K or / (Clear ✕)]  [Lang] [Settings]       |
-+-----------------------------------------------------------------------------------+
-|  CATEGORY SUBNAV BAR (Tất cả | Công cụ PDF | Hình ảnh | Excel | Tiện ích)         |
+|  NAVBAR SHELL (w-full, border-b, backdrop-blur-xl)                                |
+|  [CONTAINER: max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8]                         |
+|  [Logo: Toolio HUB]    [Search input: ⌘K or /]       [Theme] [Lang] [Settings] [<>]|
 +-----------------------------------------------------------------------------------+
 |                                                                                   |
-|  TOOL CATALOG GRID (Immediate 12-Tool Catalog Grid — Above the fold)              |
+|  MAIN WORKSPACE CONTAINER (max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8)           |
 |  +--------------------+ +--------------------+ +--------------------+             |
-|  | [Icon] Card Title  | | [Icon] Card Title  | | [Icon] Card Title  |             |
-|  | Category Tag       | | Category Tag       | | Category Tag       |             |
-|  | Description        | | Description        | | Description        |             |
-|  | [Mở công cụ →]     | | [Mở công cụ →]     | | [Mở công cụ →]     |             |
+|  | Card 1: Công cụ    | | Card 2: Japan Life | | Card 3: VN Life    |             |
+|  | (Starts at left 0) | |                    | | (Ends at right 0)  |             |
 |  +--------------------+ +--------------------+ +--------------------+             |
-|  (All 12 tools instantly accessible without scrolling past promotional banners)   |
+|  ↑ Mép trái khớp Logo                                ↑ Mép phải khớp nút điều khiển|
 |                                                                                   |
-|  FOOTER (max-w-[1240px], border-t, build info, data policy modal link)            |
+|  FOOTER SHELL (w-full, border-t, bg-surface-canvas, py-8)                         |
+|  [CONTAINER: max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8]                         |
+|  Toolio - Tiny Tools... Build xxxxx                       Chính sách dữ liệu Cài đặt|
+|  ↑ Mép trái khớp Logo & Card 1                       ↑ Mép phải khớp nút điều khiển |
 +-----------------------------------------------------------------------------------+
 ```
+
+### 3.3 The Shell vs. Bounded Content Pattern (Zero-Shift Alignment)
+To eliminate any risk of misaligned headers, main cards, miniapp workspaces, or footers:
+1. **Outer Shells MUST be Full-Bleed (100% width)**:
+   - Elements such as `<header>`, `<footer>`, `<nav>`, or `<section>` spanning full viewport width MUST NOT apply horizontal padding (`px-4`, `px-6`, etc.).
+   - Outer shells are strictly responsible for background luminance (`bg-surface-canvas`), backdrop blurs, top/bottom borders (`border-b`, `border-t`), and vertical padding (`py-8`, `h-16`).
+2. **Inner Containers MUST Apply the Bounded Constraint**:
+   - The immediate child `<div>` (or `<main>`) MUST apply:
+     `max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8`.
+   - This guarantees that content at the leftmost boundary and rightmost boundary has identical horizontal offsets across Header, Body, and Footer at every viewport width.
+3. **Miniapps and Shared Layouts**:
+   - Every standalone miniapp or shared component (`StandardToolLayout`, `MiniAppLayout`) adheres strictly to this bounding box, preventing any layout jump when navigating between Hub and tools.
 
 ---
 

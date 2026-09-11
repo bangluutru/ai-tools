@@ -581,8 +581,8 @@ export default function App() {
           )}
 
           {/* Footer */}
-          <footer className="no-print mt-auto border-t border-border-subtle bg-surface-canvas py-8 px-4 text-center text-xs text-outline">
-            <div className="max-w-[1240px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <footer className="no-print mt-auto border-t border-border-subtle bg-surface-canvas py-8 text-center text-xs text-outline">
+            <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2 flex-wrap justify-center font-label-sm text-xs">
                 <span className="font-bold text-on-surface">Toolio</span>
                 <span className="text-on-surface-variant/80 font-normal hidden sm:inline">— Tiny Tools. Huge Impact.</span>

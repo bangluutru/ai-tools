@@ -54,7 +54,7 @@ export default function ToolContainer({
     <div className="min-h-screen flex flex-col bg-surface-canvas text-on-surface">
       {/* Top Tool Navigation Bar: Unified h-16 Header matching Navbar aesthetics */}
       <header className="no-print bg-surface-canvas/95 backdrop-blur-xl border-b border-border-subtle sticky top-0 z-50 shadow-sm">
-        <div className="max-w-[1240px] mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-3">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-3">
           {/* Left Cluster: Logo -> Divider -> Back to Hub -> Quick Tool Switcher */}
           <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
             {/* Brand Logo */}

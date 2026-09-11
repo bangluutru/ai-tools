@@ -47,14 +47,32 @@ Tuyệt đối không sử dụng mã màu tùy tiện. Toàn bộ màu sắc, n
 > Nghiêm cấm sử dụng các class tĩnh như: `bg-white`, `bg-slate-50`, `bg-gray-100`, `text-black`, `text-slate-900`, `border-slate-200`.  
 > *Lý do*: Sẽ gây lỗi chói mắt ở Dark Mode, hoặc làm "tàng hình chữ" khi người dùng bật Light Mode. Mọi thành phần phải dùng token ngữ nghĩa (ví dụ: `bg-surface-container text-on-surface border border-border-subtle`).
 
-### 2.2. Khung Bố Cục & Layout Container
-- **Chiều rộng chuẩn**: Mọi màn hình miniapp phải nằm trọn trong giới hạn `max-w-[1240px] mx-auto`.
-- **Padding chuẩn**: Responsive `px-4 sm:px-6 lg:px-8 py-6`.
-- **Component Layout bắt buộc**: Miniapp phải sử dụng layout dùng chung từ `@ai-tools/core`:
+### 2.2. Khung Bố Cục & Layout Container (Quy Chuẩn Zero Horizontal Shift)
+- **Chiều rộng chuẩn duy nhất (SSOT)**: Mọi màn hình miniapp phải nằm trọn trong giới hạn `max-w-[1240px] mx-auto`.
+- **Hệ thống Padding đáp ứng (Responsive Gutters)**:
+  - Mobile (`<640px`): `px-4` (16px)
+  - Tablet (`sm:`, `640px–1023px`): `sm:px-6` (24px)
+  - Desktop (`lg:`, `>=1024px`): `lg:px-8` (32px)
+  - Đệm dọc: `py-6`
+  - Chuỗi class chuẩn bắt buộc: `max-w-[1240px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6`
+- **Mô hình Vỏ Ngoài (Shell) vs. Khung Bounded (Container)**:
+  - Nếu miniapp có thanh công cụ hoặc header riêng bọc toàn trang (`w-full`), thanh này đóng vai trò là Shell: chỉ mang màu nền (`bg-surface-canvas`) và đường viền (`border-b border-border-subtle`), **TUYỆT ĐỐI KHÔNG mang padding ngang**.
+  - Phần tử con trực tiếp bên trong Shell phải dùng `max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8` để các nút bấm, tiêu đề gióng thẳng hàng 100% với Header chính của Portal và Footer.
+- **Component Layout bắt buộc**: Miniapp phải ưu tiên sử dụng layout dùng chung từ `@ai-tools/core`:
   ```jsx
   import { StandardToolLayout, ToolHeader, SectionCard } from '@ai-tools/core';
   // Hoặc dùng MiniAppLayout, MiniAppPanel
   ```
+  Nếu tự dựng thẻ bọc (wrapper div), thẻ đó **bắt buộc** phải mang chính xác class:
+  ```jsx
+  <div className="max-w-[1240px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col text-on-surface">
+  ```
+
+> [!CAUTION]
+> **ĐIỀU CẤM KỶ LUẬT SỐ 2: CẤM LỆCH CHUẨN CONTAINER & PADDING NGANG**
+> - Nghiêm cấm sử dụng các class giới hạn độ rộng khác như: `max-w-7xl`, `max-w-6xl`, `max-w-screen-xl`, `container mx-auto`.
+> - Nghiêm cấm tự ý đổi padding ngang sang `px-2`, `px-3`, `px-space-4 lg:px-space-6` hay hardcode padding bất đối xứng.
+> - Nghiêm cấm đặt `px-4` ở thẻ vỏ ngoài (outer shell) bao quanh container `max-w-[1240px] mx-auto` vì sẽ gây co hẹp kép hoặc làm lệch trục thẳng đứng với Header và Footer.
 
 ### 2.3. Nhịp Điệu Bố Cục 3 Tầng (The 3-Tier Workspace Rhythm)
 Mọi miniapp bắt buộc tuân theo cấu trúc 3 tầng:

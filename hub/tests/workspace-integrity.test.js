@@ -94,3 +94,42 @@ test('packages/core declares every library it imports', () => {
     `packages/core import nhưng không khai báo: ${[...missing.entries()].map(([n, f]) => `${n} (${f[0]})`).join(', ')}`,
   );
 });
+
+/**
+ * Zero Horizontal Shift Gate: Header, Main Content và Footer phải chia sẻ
+ * chính xác cùng một hình học bounded container: max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8.
+ * Thẻ outer shell không được áp padding ngang làm lệch trục gióng biên.
+ */
+test('Zero Horizontal Shift: Header, Main, and Footer share identical 1240px container geometry', () => {
+  const appSrc = readFileSync(join(hubRoot, 'src/App.jsx'), 'utf8');
+  const navbarSrc = readFileSync(join(hubRoot, 'src/components/Navbar.jsx'), 'utf8');
+  const toolContainerSrc = readFileSync(join(hubRoot, 'src/components/ToolContainer.jsx'), 'utf8');
+
+  // 1. Footer outer shell phải full-bleed (không có padding ngang px-4, px-6, px-8)
+  const footerMatch = appSrc.match(/<footer[^>]*className=["']([^"']+)["']/);
+  assert.ok(footerMatch, 'App.jsx phải có thẻ <footer>');
+  const footerClasses = footerMatch[1].split(/\s+/);
+  assert.equal(
+    footerClasses.includes('px-4') || footerClasses.includes('px-6') || footerClasses.includes('px-8'),
+    false,
+    `Outer <footer> trong App.jsx không được áp padding ngang (${footerMatch[1]}), padding ngang phải nằm ở inner container`,
+  );
+
+  // 2. Footer inner container phải có max-w-[1240px] và px-4 sm:px-6 lg:px-8
+  const footerInnerMatch = appSrc.match(/<footer[\s\S]*?<div[^>]*className=["']([^"']+)["']/);
+  assert.ok(footerInnerMatch, 'Footer phải có thẻ inner <div>');
+  assert.ok(footerInnerMatch[1].includes('max-w-[1240px]'), 'Footer inner div thiếu max-w-[1240px]');
+  assert.ok(footerInnerMatch[1].includes('px-4 sm:px-6 lg:px-8'), 'Footer inner div thiếu px-4 sm:px-6 lg:px-8');
+
+  // 3. Navbar inner container phải có max-w-[1240px] và px-4 sm:px-6 lg:px-8
+  const navbarMatch = navbarSrc.match(/<header[\s\S]*?<div[^>]*className=["']([^"']+)["']/);
+  assert.ok(navbarMatch, 'Navbar.jsx phải có header inner <div>');
+  assert.ok(navbarMatch[1].includes('max-w-[1240px]'), 'Navbar inner div thiếu max-w-[1240px]');
+  assert.ok(navbarMatch[1].includes('px-4 sm:px-6 lg:px-8'), 'Navbar inner div thiếu px-4 sm:px-6 lg:px-8');
+
+  // 4. ToolContainer inner container phải có max-w-[1240px] và px-4 sm:px-6 lg:px-8
+  const tcMatch = toolContainerSrc.match(/<header[\s\S]*?<div[^>]*className=["']([^"']+)["']/);
+  assert.ok(tcMatch, 'ToolContainer.jsx phải có header inner <div>');
+  assert.ok(tcMatch[1].includes('max-w-[1240px]'), 'ToolContainer inner div thiếu max-w-[1240px]');
+  assert.ok(tcMatch[1].includes('px-4 sm:px-6 lg:px-8'), 'ToolContainer inner div thiếu px-4 sm:px-6 lg:px-8');
+});

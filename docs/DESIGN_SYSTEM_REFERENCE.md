@@ -106,6 +106,25 @@ Mọi miniapp bắt buộc đặt tên súc tích theo công thức: `[Hành đ�
 | `invoice-studio` | `office` | **Tạo Đề Nghị Thanh Toán** | **Payment Request Maker** | **支払依頼書作成** |
 | `watermark-studio` | `image` | **Đóng Dấu Tài Liệu** | **Document Watermark** | **文書透かし・押印** |
 
+### 1.6. Đặc Tả Quy Chuẩn Căn Lề 3 Tầng & Ma Trận Kiểm Định Breakpoint (Zero Horizontal Shift Architecture)
+
+Nhằm đảm bảo 100% ứng dụng được thiết kế mới hoặc tích hợp vào portal Toolio luôn cân đối hoàn hảo và gióng thẳng hàng tuyệt đối từ đầu trang đến chân trang:
+
+#### 1. Mô hình Vỏ Ngoài (Full-bleed Shell) vs. Khung Giới Hạn (Bounded Container)
+| Tầng Giao Diện | Thẻ Ngoài Cùng (Shell) | Thẻ Con Chứa Nội Dung (Inner Container) | Tọa Độ Gióng Mép Trái | Tọa Độ Gióng Mép Phải |
+|:---|:---|:---|:---|:---|
+| **Header (Navbar)** | `<header className="w-full bg-surface-canvas/95 border-b border-border-subtle ...">` *(KHÔNG có padding ngang)* | `<div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-16 ...">` | Logo Toolio gióng thẳng hàng biên trái | Nút điều khiển `</>` gióng thẳng hàng biên phải |
+| **Main (Hub Cards / Miniapp)** | `<div className="flex-1 w-full bg-surface-canvas ...">` | `<main className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full ...">` | Thẻ Card 1 ("Công cụ") gióng thẳng hàng Logo | Thẻ Card 3 ("VN Life") gióng thẳng hàng nút `</>` |
+| **Footer (Chân trang)** | `<footer className="w-full bg-surface-canvas border-t border-border-subtle py-8 ...">` *(KHÔNG có padding ngang)* | `<div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 ...">` | Chữ "Toolio" gióng thẳng hàng Logo & Card 1 | Chữ "Cài đặt" gióng thẳng hàng nút `</>` & Card 3 |
+
+#### 2. Ma Trận Kiểm Định Breakpoint (Responsive Alignment Matrix)
+| Breakpoint | Chiều Rộng Màn Hình | Token Padding Ngang | Khoảng Đệm Thực Tế | Hành Vi Căn Lề Mép |
+|:---|:---|:---:|:---:|:---|
+| **Mobile** | `< 640px` (375–390px) | `px-4` | 16px | Cách đều mép viền màn hình 16px ở cả 3 tầng |
+| **Tablet** | `640px – 1023px` | `sm:px-6` | 24px | Cách đều mép viền màn hình 24px ở cả 3 tầng |
+| **Desktop** | `1024px – 1239px` | `lg:px-8` | 32px | Cách đều mép viền màn hình 32px ở cả 3 tầng |
+| **Wide Desktop** | `$\ge$ 1240px` (1440px, 1920px) | `max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8` | 32px (bên trong 1240px) | Căn giữa màn hình, mép trái và phải của cả 3 tầng thẳng hàng 0px sai lệch |
+
 ---
 
 ## 🧩 2. KHO MẪU COMPONENT THỰC CHIẾN (COPY-PASTE READY)
