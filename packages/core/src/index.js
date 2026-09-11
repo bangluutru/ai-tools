@@ -90,3 +90,12 @@ export * from './documents/index.js';
 // Japan Life - Navigator Layer
 export * from './navigator/index.js';
 
+// Vietnam Life - Components
+export { default as SalaryCalculatorVNView } from './components/vietnam/SalaryCalculatorVNView.jsx';
+export { default as PITCalculatorVNView } from './components/vietnam/PITCalculatorVNView.jsx';
+export { default as SocialInsuranceCalculatorVNView } from './components/vietnam/SocialInsuranceCalculatorVNView.jsx';
+export { default as ElectricityCalculatorVNView } from './components/vietnam/ElectricityCalculatorVNView.jsx';
+
+// Vietnam Life - Domain & Legal Engines
+export * from './vietnam/index.js';
+

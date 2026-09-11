@@ -189,8 +189,11 @@ test('every miniapp has a valid product group defaulting safely to common', () =
   assert.equal(jPl.type, 'checker');
   assert.equal(jPl.regulatory, true);
 
+  const vietnamLifeTools = tools.filter((t) => t.group === 'vietnam-life');
+  assert.equal(vietnamLifeTools.length, 4);
+
   // All other tools must be in common group
   const commonTools = tools.filter((t) => t.group === 'common');
-  assert.equal(commonTools.length, tools.length - japanLifeTools.length, 'All other tools must default to common');
+  assert.equal(commonTools.length, tools.length - japanLifeTools.length - vietnamLifeTools.length, 'All other tools must default to common');
 });
 

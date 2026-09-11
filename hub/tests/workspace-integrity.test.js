@@ -150,7 +150,7 @@ test('Homepage Quick Shortcuts: domain shortcuts are all valid and registered', 
   const expectedCounts = {
     common: 8,
     'japan-life': 8,
-    'vietnam-life': 4,
+    'vietnam-life': 8,
   };
 
   for (const [domain, expectedCount] of Object.entries(expectedCounts)) {

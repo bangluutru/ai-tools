@@ -91,7 +91,7 @@ export default function DomainCatalogue({
 
   // Nhãn badge số lượng công cụ
   const getBadgeLabel = () => {
-    if (isVietnamLife) {
+    if (isVietnamLife && tools.length === 0) {
       if (displayLang === 'ja') return '近日公開';
       if (displayLang === 'en') return 'Coming Soon';
       return 'Sắp ra mắt';

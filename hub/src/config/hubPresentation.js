@@ -105,19 +105,19 @@ export const HUB_DOMAINS = {
     },
     cardTitle: 'Vietnam Life',
     subtitle: {
-      vi: 'Hỗ trợ đời sống tại Việt Nam (đang phát triển).',
-      en: 'Life support in Vietnam (under development).',
-      ja: 'ベトナム生活サポート（開発中）。',
+      vi: 'Thuế thu nhập, lương bổng, BHXH, điện sinh hoạt và tiện ích đời sống tại Việt Nam.',
+      en: 'Personal tax, salary, social insurance, electricity, and daily life utilities in Vietnam.',
+      ja: 'ベトナムでの個人所得税、給与、社会保険、電気料金、生活便利ツール。',
     },
     description: {
       vi: 'Đời sống Việt Nam: Thuế, bảo hiểm, hành chính, giáo dục và các tiện ích cho đời sống tại Việt Nam.',
       en: 'Life in Vietnam: Personal tax, social insurance, public administration, education, and daily life utilities.',
-      ja: 'ベトナムでの生活：税金、社会保障、行政手続き、教育、生活便利ツールを順次提供予定。',
+      ja: 'ベトナムでの生活：税金、社会保障、行政手続き、教育、生活便利ツールを提供。',
     },
     badge: {
-      vi: 'Sắp ra mắt',
-      en: 'Coming Soon',
-      ja: '近日公開',
+      vi: 'Mới ra mắt',
+      en: 'New',
+      ja: '新登場',
     },
     accentColor: '#10b981', // Lotus emerald
     themeClass: 'text-emerald-500 dark:text-emerald-400',
@@ -125,7 +125,7 @@ export const HUB_DOMAINS = {
     borderClass: 'border-emerald-500/20',
     hoverBorderClass: 'hover:border-emerald-500/50',
     illustration: 'LotusIcon',
-    status: 'coming_soon',
+    status: 'active',
     // Content filter chips for Vietnam Life (Khớp 100% Mockup)
     filters: [
       { id: 'all', label: { vi: 'Tất cả', en: 'All', ja: 'すべて' } },

@@ -25,7 +25,7 @@ export default function HubDomainCard({
   displayLang = 'vi',
   onSelect,
 }) {
-  const isComingSoon = status === 'coming_soon' || toolCount === 0 || id === 'vietnam-life';
+  const isComingSoon = status === 'coming_soon' || toolCount === 0;
 
   // Lựa chọn Icon tương ứng
   const renderIcon = () => {

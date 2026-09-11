@@ -161,11 +161,47 @@ export const DOMAIN_SHORTCUTS = {
   ],
   'vietnam-life': [
     {
+      id: 'salary-calculator-vn',
+      icon: toolRegistryMap.get('salary-calculator-vn')?.icon || 'Calculator',
+      names: {
+        vi: 'Lương Gross - Net',
+        en: 'Gross - Net Salary',
+        ja: '給与 Gross - Net',
+      },
+    },
+    {
+      id: 'pit-calculator-vn',
+      icon: toolRegistryMap.get('pit-calculator-vn')?.icon || 'FileText',
+      names: {
+        vi: 'Thuế TNCN',
+        en: 'PIT Calculator',
+        ja: '個人所得税',
+      },
+    },
+    {
+      id: 'social-insurance-calculator-vn',
+      icon: toolRegistryMap.get('social-insurance-calculator-vn')?.icon || 'ShieldCheck',
+      names: {
+        vi: 'BHXH - BHYT - BHTN',
+        en: 'Social Insurance',
+        ja: 'ベトナム社会保険',
+      },
+    },
+    {
+      id: 'electricity-calculator-vn',
+      icon: toolRegistryMap.get('electricity-calculator-vn')?.icon || 'Zap',
+      names: {
+        vi: 'Tính tiền điện',
+        en: 'Electricity Bill',
+        ja: '電気代計算',
+      },
+    },
+    {
       id: 'tax-calculator',
       icon: toolRegistryMap.get('tax-calculator')?.icon || 'Calculator',
       names: {
-        vi: 'Tính Thuế TNCN',
-        en: 'PIT Calculator',
+        vi: 'Tính Thuế TNCN (Cũ)',
+        en: 'PIT Calculator (Old)',
         ja: '所得税計算',
       },
     },

@@ -51,7 +51,8 @@ import {
   PlaneLanding,
   FileCheck,
   Calendar,
-  Store
+  Store,
+  Zap
 } from 'lucide-react';
 
 
@@ -108,7 +109,8 @@ export const iconMap = {
   PlaneLanding,
   FileCheck,
   Calendar,
-  Store
+  Store,
+  Zap
 };
 
 

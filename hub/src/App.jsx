@@ -85,6 +85,10 @@ const ProcedureRequirementCheckerTool = lazy(() => import('./tools/procedure-req
 const AdministrativeNavigatorTool = lazy(() => import('./tools/administrative-navigator-jp/AdministrativeNavigatorTool.jsx'));
 const JapanLifeNavigatorTool = lazy(() => import('./tools/japan-life-navigator/JapanLifeNavigatorTool.jsx'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
+const SalaryCalculatorVNTool = lazy(() => import('./tools/salary-calculator-vn/SalaryCalculatorVNTool.jsx'));
+const PITCalculatorVNTool = lazy(() => import('./tools/pit-calculator-vn/PITCalculatorVNTool.jsx'));
+const SocialInsuranceCalculatorVNTool = lazy(() => import('./tools/social-insurance-calculator-vn/SocialInsuranceCalculatorVNTool.jsx'));
+const ElectricityCalculatorVNTool = lazy(() => import('./tools/electricity-calculator-vn/ElectricityCalculatorVNTool.jsx'));
 const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
 const FlappyBirdPet = lazy(() => import('./components/FlappyBirdPet'));
 const FlappyGameModal = lazy(() => import('./components/FlappyGameModal'));
@@ -142,6 +146,10 @@ const toolComponentMap = {
   'procedure-requirement-checker-jp': ProcedureRequirementCheckerTool,
   'administrative-navigator-jp': AdministrativeNavigatorTool,
   'japan-life-navigator': JapanLifeNavigatorTool,
+  'salary-calculator-vn': SalaryCalculatorVNTool,
+  'pit-calculator-vn': PITCalculatorVNTool,
+  'social-insurance-calculator-vn': SocialInsuranceCalculatorVNTool,
+  'electricity-calculator-vn': ElectricityCalculatorVNTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,
   'flappy-bird': FlappyBirdTool,
   'toolio-ninja': ToolioNinjaTool,
@@ -540,7 +548,6 @@ export default function App() {
                     subtitle={HUB_DOMAINS['vietnam-life'].subtitle[displayLang] || HUB_DOMAINS['vietnam-life'].subtitle.vi}
                     description={HUB_DOMAINS['vietnam-life'].description[displayLang] || HUB_DOMAINS['vietnam-life'].description.vi}
                     toolCount={vietnamLifeTools.length}
-                    status="coming_soon"
                     displayLang={displayLang}
                     onSelect={() => handleSelectDomain('vietnam-life')}
                   />

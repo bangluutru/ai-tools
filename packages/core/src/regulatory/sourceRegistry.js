@@ -717,6 +717,130 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     lastVerifiedAt: '2026-09-11',
     status: 'official-current',
     notes: 'Quy định về Người đại diện nộp thuế (納税管理人): Người nước ngoài xuất cảnh khỏi Nhật Bản không còn địa chỉ cư trú phải cử người cư trú tại Nhật để thay mặt nộp thuế thu nhập, thuế cư trú và xin hoàn thuế 20.42% từ Nenkin rút 1 lần.'
+  },
+
+  // =========================================================================
+  // VIETNAM LIFE - PRIMARY REGULATORY SOURCES (Thuế, Bảo hiểm, Lương, Điện)
+  // =========================================================================
+  'vn-na-law-109-2025': {
+    id: 'vn-na-law-109-2025',
+    country: 'VN',
+    authority: 'Quốc hội nước CHXHCN Việt Nam',
+    title: 'Luật Thuế thu nhập cá nhân số 109/2025/QH15',
+    url: 'https://chinhphu.vn',
+    sourceType: 'law',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-12',
+    status: 'official-primary',
+    notes: 'Biểu thuế lũy tiến từng phần 5 bậc áp dụng từ kỳ tính thuế 2026 (5%, 10%, 20%, 30%, 35%).'
+  },
+  'vn-ubtvqh-res-110-2025': {
+    id: 'vn-ubtvqh-res-110-2025',
+    country: 'VN',
+    authority: 'Ủy ban Thường vụ Quốc hội',
+    title: 'Nghị quyết số 110/2025/UBTVQH15 về điều chỉnh mức giảm trừ gia cảnh thuế TNCN',
+    url: 'https://chinhphu.vn',
+    sourceType: 'regulation',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-12',
+    status: 'official-primary',
+    notes: 'Nâng mức giảm trừ gia cảnh: Bản thân 15.5 triệu đồng/tháng (186 triệu đồng/năm), Người phụ thuộc 6.2 triệu đồng/người/tháng từ 2026.'
+  },
+  'vn-gov-decree-253-2026': {
+    id: 'vn-gov-decree-253-2026',
+    country: 'VN',
+    authority: 'Chính phủ nước CHXHCN Việt Nam',
+    title: 'Nghị định số 253/2026/NĐ-CP quy định chi tiết thi hành Luật Thuế thu nhập cá nhân',
+    url: 'https://chinhphu.vn',
+    sourceType: 'regulation',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-12',
+    status: 'official-primary',
+    notes: 'Chi tiết các khoản giảm trừ bắt buộc (bảo hiểm xã hội, y tế, thất nghiệp) và mức giảm trừ khác khi tính thuế TNCN.'
+  },
+  'vn-gov-decree-161-2026': {
+    id: 'vn-gov-decree-161-2026',
+    country: 'VN',
+    authority: 'Chính phủ nước CHXHCN Việt Nam',
+    title: 'Nghị định số 161/2026/NĐ-CP quy định mức lương cơ sở đối với cán bộ, công chức, viên chức và lực lượng vũ trang',
+    url: 'https://chinhphu.vn',
+    sourceType: 'regulation',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-12',
+    status: 'official-primary',
+    notes: 'Mức lương cơ sở 2.530.000 đồng/tháng từ 01/07/2026, làm căn cứ tính trần đóng BHXH, BHYT tối đa 20 lần (50.600.000 đồng/tháng).'
+  },
+  'vn-gov-decree-73-2024': {
+    id: 'vn-gov-decree-73-2024',
+    country: 'VN',
+    authority: 'Chính phủ nước CHXHCN Việt Nam',
+    title: 'Nghị định số 73/2024/NĐ-CP quy định mức lương cơ sở',
+    url: 'https://chinhphu.vn',
+    sourceType: 'regulation',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-12',
+    status: 'official-primary',
+    notes: 'Mức lương cơ sở 2.340.000 đồng/tháng áp dụng giai đoạn trước 01/07/2026, làm căn cứ trần đóng BHXH/BHYT 46.800.000 đồng/tháng.'
+  },
+  'vn-gov-decree-293-2025': {
+    id: 'vn-gov-decree-293-2025',
+    country: 'VN',
+    authority: 'Chính phủ nước CHXHCN Việt Nam',
+    title: 'Nghị định số 293/2025/NĐ-CP quy định mức lương tối thiểu đối với người lao động làm việc theo hợp đồng lao động',
+    url: 'https://chinhphu.vn',
+    sourceType: 'regulation',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-12',
+    status: 'official-primary',
+    notes: 'Mức lương tối thiểu vùng từ 01/01/2026: Vùng I (5.31tr), Vùng II (4.73tr), Vùng III (4.14tr), Vùng IV (3.70tr). Làm căn cứ tính trần BHTN tối đa 20 lần.'
+  },
+  'vn-bct-dec-1279-2025': {
+    id: 'vn-bct-dec-1279-2025',
+    country: 'VN',
+    authority: 'Bộ Công Thương (Ministry of Industry and Trade)',
+    title: 'Quyết định số 1279/QĐ-BCT quy định về giá bán điện',
+    url: 'https://moit.gov.vn',
+    sourceType: 'official-table',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-12',
+    status: 'official-primary',
+    notes: 'Biểu giá bán lẻ điện sinh hoạt 6 bậc lũy tiến trước VAT áp dụng từ 10/05/2025 (1.984đ - 3.460đ/kWh).'
+  },
+  'vn-na-law-bhxh-2024': {
+    id: 'vn-na-law-bhxh-2024',
+    country: 'VN',
+    authority: 'Quốc hội nước CHXHCN Việt Nam',
+    title: 'Luật Bảo hiểm xã hội số 41/2024/QH15',
+    url: 'https://chinhphu.vn',
+    sourceType: 'law',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-12',
+    status: 'official-primary',
+    notes: 'Quy định các chế độ BHXH bắt buộc, tỷ lệ đóng của NLĐ (8%) và NSDLĐ (14% hưu trí, 3% ốm đau thai sản, 0.5% TNLĐ-BNN).'
+  },
+  'vn-na-law-bhyt-2024': {
+    id: 'vn-na-law-bhyt-2024',
+    country: 'VN',
+    authority: 'Quốc hội nước CHXHCN Việt Nam',
+    title: 'Luật sửa đổi, bổ sung một số điều của Luật Bảo hiểm y tế số 51/2024/QH15',
+    url: 'https://chinhphu.vn',
+    sourceType: 'law',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-12',
+    status: 'official-primary',
+    notes: 'Tỷ lệ đóng BHYT: NLĐ đóng 1.5%, NSDLĐ đóng 3% căn cứ tiền lương đóng BHXH.'
+  },
+  'vn-na-law-employment-2025': {
+    id: 'vn-na-law-employment-2025',
+    country: 'VN',
+    authority: 'Quốc hội nước CHXHCN Việt Nam',
+    title: 'Luật Việc làm năm 2025',
+    url: 'https://chinhphu.vn',
+    sourceType: 'law',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-12',
+    status: 'official-primary',
+    notes: 'Tỷ lệ đóng BHTN: NLĐ đóng 1%, NSDLĐ đóng 1% theo mức tiền lương tháng làm căn cứ, trần 20 lần mức lương tối thiểu vùng.'
   }
 });
 
