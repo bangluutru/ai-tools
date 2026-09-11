@@ -1,7 +1,10 @@
 import React from 'react';
 import { DOMAIN_SHORTCUTS } from '../config/domainShortcuts.js';
+import { tools } from '../config/toolsRegistry.js';
 import { iconMap } from '../config/toolIcons.js';
 import { HelpCircle } from 'lucide-react';
+
+const toolRegistryMap = new Map(tools.map((t) => [t.id, t]));
 
 /**
  * Phong cách điểm xuyết màu sắc nhẹ nhàng riêng theo từng Domain
@@ -36,7 +39,8 @@ export default function DomainQuickShortcuts({
   return (
     <div className="grid grid-cols-2 gap-2 sm:gap-2.5 w-full">
       {shortcuts.map((tool) => {
-        const IconComponent = iconMap[tool.icon] || HelpCircle;
+        const canonicalIcon = toolRegistryMap.get(tool.id)?.icon || tool.icon;
+        const IconComponent = iconMap[canonicalIcon] || HelpCircle;
         const toolTitle = tool.names[displayLang] || tool.names.vi;
 
         return (

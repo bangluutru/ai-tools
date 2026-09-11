@@ -1,13 +1,20 @@
+import { tools } from './toolsRegistry.js';
+
+/**
+ * Tra cứu nhanh thông tin miniapp từ registry
+ */
+const toolRegistryMap = new Map(tools.map((t) => [t.id, t]));
+
 /**
  * Cấu hình 12 Shortcut truy cập nhanh miniapp trang chủ theo 3 Domain
  * Chia đều 4 shortcut cho mỗi domain (Lưới 2x2, diện tích ~1/4 thẻ Domain)
+ * Tất cả icon đều dùng chung 100% với icon gốc của miniapp trong toolsRegistry.js
  */
-
 export const DOMAIN_SHORTCUTS = {
   common: [
     {
       id: 'pdf-toolkit',
-      icon: 'FileText',
+      icon: toolRegistryMap.get('pdf-toolkit')?.icon || 'FileText',
       names: {
         vi: 'PDF đa năng',
         en: 'PDF Multi-Tool',
@@ -16,7 +23,7 @@ export const DOMAIN_SHORTCUTS = {
     },
     {
       id: 'id-photo-studio',
-      icon: 'Camera',
+      icon: toolRegistryMap.get('id-photo-studio')?.icon || 'UserCheck',
       names: {
         vi: 'Tạo ảnh thẻ',
         en: 'ID Photo',
@@ -25,7 +32,7 @@ export const DOMAIN_SHORTCUTS = {
     },
     {
       id: 'screen-capture',
-      icon: 'Camera',
+      icon: toolRegistryMap.get('screen-capture')?.icon || 'Camera',
       names: {
         vi: 'Chụp màn hình',
         en: 'Screen Capture',
@@ -34,7 +41,7 @@ export const DOMAIN_SHORTCUTS = {
     },
     {
       id: 'screen-recorder',
-      icon: 'Video',
+      icon: toolRegistryMap.get('screen-recorder')?.icon || 'Video',
       names: {
         vi: 'Quay màn hình',
         en: 'Screen Recorder',
@@ -45,7 +52,7 @@ export const DOMAIN_SHORTCUTS = {
   'japan-life': [
     {
       id: 'japan-tax-simulator',
-      icon: 'Calculator',
+      icon: toolRegistryMap.get('japan-tax-simulator')?.icon || 'Coins',
       names: {
         vi: 'Mô phỏng thuế',
         en: 'Tax Simulator',
@@ -54,7 +61,7 @@ export const DOMAIN_SHORTCUTS = {
     },
     {
       id: 'social-insurance-jp',
-      icon: 'ShieldCheck',
+      icon: toolRegistryMap.get('social-insurance-jp')?.icon || 'ShieldCheck',
       names: {
         vi: 'Mô phỏng BHXH',
         en: 'Social Insurance',
@@ -63,7 +70,7 @@ export const DOMAIN_SHORTCUTS = {
     },
     {
       id: 'child-allowance-jp',
-      icon: 'Baby',
+      icon: toolRegistryMap.get('child-allowance-jp')?.icon || 'Baby',
       names: {
         vi: 'Trợ cấp trẻ em',
         en: 'Child Allowance',
@@ -72,7 +79,7 @@ export const DOMAIN_SHORTCUTS = {
     },
     {
       id: 'leaving-japan-wizard-jp',
-      icon: 'PlaneTakeoff',
+      icon: toolRegistryMap.get('leaving-japan-wizard-jp')?.icon || 'PlaneTakeoff',
       names: {
         vi: 'Thủ tục về nước',
         en: 'Leaving Japan',
@@ -83,7 +90,7 @@ export const DOMAIN_SHORTCUTS = {
   'vietnam-life': [
     {
       id: 'tax-calculator',
-      icon: 'Coins',
+      icon: toolRegistryMap.get('tax-calculator')?.icon || 'Calculator',
       names: {
         vi: 'Tính Thuế TNCN',
         en: 'PIT Calculator',
@@ -92,7 +99,7 @@ export const DOMAIN_SHORTCUTS = {
     },
     {
       id: 'invoice-xml-fetcher',
-      icon: 'FileDown',
+      icon: toolRegistryMap.get('invoice-xml-fetcher')?.icon || 'FileDown',
       names: {
         vi: 'Lấy hoá đơn XML',
         en: 'Fetch XML',
@@ -101,7 +108,7 @@ export const DOMAIN_SHORTCUTS = {
     },
     {
       id: 'invoice-studio',
-      icon: 'Receipt',
+      icon: toolRegistryMap.get('invoice-studio')?.icon || 'Receipt',
       names: {
         vi: 'Đề nghị thanh toán',
         en: 'Payment Request',
@@ -110,7 +117,7 @@ export const DOMAIN_SHORTCUTS = {
     },
     {
       id: 'watermark-studio',
-      icon: 'Stamp',
+      icon: toolRegistryMap.get('watermark-studio')?.icon || 'Stamp',
       names: {
         vi: 'Đóng dấu văn bản',
         en: 'Watermark & Stamp',

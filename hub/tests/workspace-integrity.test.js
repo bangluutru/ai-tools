@@ -153,6 +153,13 @@ test('Homepage Quick Shortcuts: 12 shortcuts across 3 domains are all valid and 
 
     for (const item of list) {
       assert.ok(validToolIds.has(item.id), `Shortcut ID "${item.id}" không tồn tại trong toolsRegistry.js`);
+      const toolInRegistry = tools.find((t) => t.id === item.id);
+      assert.ok(toolInRegistry, `Shortcut "${item.id}" không tìm thấy trong toolsRegistry.js`);
+      assert.equal(
+        item.icon,
+        toolInRegistry.icon,
+        `Shortcut "${item.id}" icon "${item.icon}" không khớp với icon miniapp "${toolInRegistry.icon}" trong toolsRegistry.js`
+      );
       assert.ok(item.icon, `Shortcut "${item.id}" thiếu icon`);
       assert.ok(iconMap[item.icon], `Shortcut "${item.id}" có icon "${item.icon}" chưa có trong iconMap`);
       assert.ok(item.names?.vi, `Shortcut "${item.id}" thiếu tên tiếng Việt`);
