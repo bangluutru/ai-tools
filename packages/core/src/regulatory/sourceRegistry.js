@@ -841,6 +841,18 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     lastVerifiedAt: '2026-09-12',
     status: 'official-primary',
     notes: 'Tỷ lệ đóng BHTN: NLĐ đóng 1%, NSDLĐ đóng 1% theo mức tiền lương tháng làm căn cứ, trần 20 lần mức lương tối thiểu vùng.'
+  },
+  'vn-gov-decree-vat-2026': {
+    id: 'vn-gov-decree-vat-2026',
+    country: 'VN',
+    authority: 'Chính phủ nước CHXHCN Việt Nam',
+    title: 'Nghị định quy định chính sách giảm thuế giá trị gia tăng & Luật Thuế GTGT',
+    url: 'https://chinhphu.vn',
+    sourceType: 'regulation',
+    language: 'vi',
+    lastVerifiedAt: '2026-09-12',
+    status: 'official-primary',
+    notes: 'Quy định thuế suất thuế GTGT áp dụng cho hàng hóa dịch vụ, mức ưu đãi 8% hoặc mức chuẩn 10% đối với điện thương phẩm sinh hoạt.'
   }
 });
 
