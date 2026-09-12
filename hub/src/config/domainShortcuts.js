@@ -173,7 +173,7 @@ export const DOMAIN_SHORTCUTS = {
       id: 'loan-apr-calculator-vn',
       icon: toolRegistryMap.get('loan-apr-calculator-vn')?.icon || 'Percent',
       names: {
-        vi: 'Lãi suất thực khoản vay',
+        vi: 'Tính lãi vay NH',
         en: 'Loan APR Calculator',
         ja: '融資実質年率（APR）',
       },
@@ -200,8 +200,8 @@ export const DOMAIN_SHORTCUTS = {
       id: 'tax-calculator',
       icon: toolRegistryMap.get('tax-calculator')?.icon || 'Calculator',
       names: {
-        vi: 'Tính Thuế TNCN (Cũ)',
-        en: 'PIT Calculator (Old)',
+        vi: 'Tính Thuế TNCN',
+        en: 'PIT Calculator',
         ja: '所得税計算',
       },
     },

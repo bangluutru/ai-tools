@@ -270,7 +270,12 @@ export default function App() {
 
   const handleBackToHome = useCallback(() => {
     setSearchQuery('');
-    window.location.hash = '#/';
+    if (window.location.hash === '#/' || window.location.hash === '' || window.location.hash === '#') {
+      setRoute({ type: 'home' });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.location.hash = '#/';
+    }
   }, []);
 
   const selectTool = useCallback(
@@ -350,6 +355,7 @@ export default function App() {
         <ToolContainer
           currentTool={currentTool}
           onBackToHub={backToHub}
+          onGoHome={handleBackToHome}
           onSelectTool={selectTool}
           displayLang={displayLang}
           onLangChange={setDisplayLang}

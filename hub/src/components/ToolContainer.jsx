@@ -6,6 +6,7 @@ import ToolioLogo from './ToolioLogo';
 export default function ToolContainer({
   currentTool,
   onBackToHub,
+  onGoHome,
   onSelectTool,
   displayLang = 'vi',
   onLangChange,
@@ -57,9 +58,15 @@ export default function ToolContainer({
         <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-3">
           {/* Left Cluster: Logo -> Divider -> Back to Hub -> Quick Tool Switcher */}
           <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-            {/* Brand Logo */}
+            {/* Brand Logo - Always returns to Homepage */}
             <div
-              onClick={onBackToHub}
+              onClick={() => {
+                if (onGoHome) {
+                  onGoHome();
+                } else {
+                  window.location.hash = '#/';
+                }
+              }}
               className="flex items-center gap-2 cursor-pointer select-none shrink-0 group"
               title={displayLang === 'vi' ? 'Toolio — Về trang chủ AI-Tools HUB' : displayLang === 'en' ? 'Toolio — Back to AI-Tools HUB' : 'Toolio — AI-Tools HUB ホームへ'}
               aria-label={displayLang === 'vi' ? 'Toolio — Về trang chủ AI-Tools HUB' : displayLang === 'en' ? 'Toolio — Back to AI-Tools HUB' : 'Toolio — AI-Tools HUB ホームへ'}
@@ -68,7 +75,11 @@ export default function ToolContainer({
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
-                  onBackToHub();
+                  if (onGoHome) {
+                    onGoHome();
+                  } else {
+                    window.location.hash = '#/';
+                  }
                 }
               }}
             >
