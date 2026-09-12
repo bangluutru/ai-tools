@@ -86,7 +86,7 @@ const AdministrativeNavigatorTool = lazy(() => import('./tools/administrative-na
 const JapanLifeNavigatorTool = lazy(() => import('./tools/japan-life-navigator/JapanLifeNavigatorTool.jsx'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
 const SalaryCalculatorVNTool = lazy(() => import('./tools/salary-calculator-vn/SalaryCalculatorVNTool.jsx'));
-const PITCalculatorVNTool = lazy(() => import('./tools/pit-calculator-vn/PITCalculatorVNTool.jsx'));
+const LoanAprCalculatorVNTool = lazy(() => import('./tools/loan-apr-calculator-vn/LoanAprCalculatorVNTool.jsx'));
 const SocialInsuranceCalculatorVNTool = lazy(() => import('./tools/social-insurance-calculator-vn/SocialInsuranceCalculatorVNTool.jsx'));
 const ElectricityCalculatorVNTool = lazy(() => import('./tools/electricity-calculator-vn/ElectricityCalculatorVNTool.jsx'));
 const FlappyBirdTool = lazy(() => import('./tools/flappy-bird/FlappyBirdTool'));
@@ -147,7 +147,7 @@ const toolComponentMap = {
   'administrative-navigator-jp': AdministrativeNavigatorTool,
   'japan-life-navigator': JapanLifeNavigatorTool,
   'salary-calculator-vn': SalaryCalculatorVNTool,
-  'pit-calculator-vn': PITCalculatorVNTool,
+  'loan-apr-calculator-vn': LoanAprCalculatorVNTool,
   'social-insurance-calculator-vn': SocialInsuranceCalculatorVNTool,
   'electricity-calculator-vn': ElectricityCalculatorVNTool,
   'invoice-xml-fetcher': InvoiceXmlFetcherTool,

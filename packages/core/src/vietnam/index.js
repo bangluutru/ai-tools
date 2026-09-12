@@ -15,3 +15,4 @@ export * from './engines/vietnamInsuranceEngine.js';
 export * from './engines/vietnamPITEngine.js';
 export * from './engines/vietnamSalaryEngine.js';
 export * from './engines/vietnamElectricityEngine.js';
+export * from './engines/loanAprEngine.js';

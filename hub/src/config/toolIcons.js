@@ -52,7 +52,8 @@ import {
   FileCheck,
   Calendar,
   Store,
-  Zap
+  Zap,
+  Percent
 } from 'lucide-react';
 
 
@@ -110,7 +111,8 @@ export const iconMap = {
   FileCheck,
   Calendar,
   Store,
-  Zap
+  Zap,
+  Percent
 };
 
 

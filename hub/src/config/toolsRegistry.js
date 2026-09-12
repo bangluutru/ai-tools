@@ -616,7 +616,7 @@ const toolGovernance = {
     type: 'calculator',
     regulatory: true,
   },
-  'pit-calculator-vn': {
+  'loan-apr-calculator-vn': {
     readiness: 'beta',
     processing: 'browser',
     outputPurpose: 'utility',
@@ -1741,25 +1741,25 @@ const toolDefinitions = [
     tags: ['lương', 'salary', 'gross net', 'gross', 'net', 'tính lương', 'bhxh', 'thuế tncn', 'vietnam life', 'việt nam']
   },
   {
-    id: 'pit-calculator-vn',
-    name_vn: 'Tính Thuế TNCN (PIT 2026)',
-    name_en: 'Vietnam PIT Calculator 2026',
-    name_ja: 'ベトナム個人所得税計算（PIT 2026）',
-    desc_vn: 'Tính thuế thu nhập cá nhân chuẩn xác theo Luật Thuế TNCN sửa đổi (Luật số 109/2025/QH15) và NQ 110/2025/UBTVQH15 với biểu thuế 5 bậc và mức giảm trừ gia cảnh mới.',
-    desc_en: 'Accurate Personal Income Tax calculator under amended PIT Law (Law 109/2025/QH15) and Res. 110/2025/UBTVQH15 with new 5-bracket progressive tax scale.',
-    desc_ja: '改正個人所得税法（法律第109号）および決議110号に基づく新5段階累進課税・新扶養控除枠に対応した個人所得税（PIT）試算ツール。',
+    id: 'loan-apr-calculator-vn',
+    name_vn: 'Tính Lãi Suất Thực Khoản Vay (APR & EAR)',
+    name_en: 'Loan APR & Effective Rate Calculator',
+    name_ja: 'ベトナム融資・実質年率計算（APR & EAR）',
+    desc_vn: 'Tính lãi suất thực tế khoản vay (APR/EAR) từ dòng tiền trả góp thực tế (IRR). Bóc tách phí bảo hiểm, phụ phí và cảnh báo bẫy lãi suất phẳng (Flat-rate) theo Thông tư 43/2016/TT-NHNN.',
+    desc_en: 'Calculate true loan APR and effective annual rate (EAR) from actual installment cash flows (IRR). Expose insurance, fees, and the flat-rate trap under Circular 43/2016/TT-NHNN.',
+    desc_ja: '実質キャッシュフロー（IRR）から融資の実質年率（APR/EAR）を算出。ローン保険・手数料を反映し、通達43号に準拠してフラットレートの罠を可視化します。',
     category: 'office',
     group: 'vietnam-life',
     domain: 'tax',
     country: 'VN',
     type: 'calculator',
     regulatory: true,
-    icon: 'FileText',
-    gradient: 'from-blue-600 via-indigo-600 to-emerald-600',
-    color: '#2563eb',
+    icon: 'Percent',
+    gradient: 'from-amber-500 via-orange-600 to-rose-600',
+    color: '#d97706',
     badge: 'VN 2026',
     popular: true,
-    tags: ['thuế tncn', 'pit', 'thuế thu nhập cá nhân', 'biểu 5 bậc', 'giảm trừ gia cảnh', 'nq 110', 'vietnam life', 'việt nam']
+    tags: ['lãi suất', 'loan', 'apr', 'ear', 'trả góp', 'lãi phẳng', 'flat rate', 'vay tiêu dùng', 'irr', 'vietnam life', 'việt nam']
   },
   {
     id: 'social-insurance-calculator-vn',

@@ -92,7 +92,7 @@ export * from './navigator/index.js';
 
 // Vietnam Life - Components
 export { default as SalaryCalculatorVNView } from './components/vietnam/SalaryCalculatorVNView.jsx';
-export { default as PITCalculatorVNView } from './components/vietnam/PITCalculatorVNView.jsx';
+export { default as LoanAprCalculatorVNView } from './components/vietnam/LoanAprCalculatorVNView.jsx';
 export { default as SocialInsuranceCalculatorVNView } from './components/vietnam/SocialInsuranceCalculatorVNView.jsx';
 export { default as ElectricityCalculatorVNView } from './components/vietnam/ElectricityCalculatorVNView.jsx';
 

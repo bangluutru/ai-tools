@@ -360,7 +360,7 @@ test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and
     'administrative-navigator-jp',
     'japan-life-navigator',
     'salary-calculator-vn',
-    'pit-calculator-vn',
+    'loan-apr-calculator-vn',
     'social-insurance-calculator-vn',
     'electricity-calculator-vn'
   ];

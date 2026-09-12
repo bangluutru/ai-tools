@@ -117,7 +117,7 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   assert.equal(vietnamTools.length, 4);
   assert.deepEqual(
     vietnamTools.map((t) => t.id).sort(),
-    ['salary-calculator-vn', 'pit-calculator-vn', 'social-insurance-calculator-vn', 'electricity-calculator-vn'].sort()
+    ['salary-calculator-vn', 'loan-apr-calculator-vn', 'social-insurance-calculator-vn', 'electricity-calculator-vn'].sort()
   );
 
   const commonTools = toolsForGroup(tools, 'common');

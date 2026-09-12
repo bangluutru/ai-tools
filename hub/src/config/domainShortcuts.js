@@ -170,12 +170,12 @@ export const DOMAIN_SHORTCUTS = {
       },
     },
     {
-      id: 'pit-calculator-vn',
-      icon: toolRegistryMap.get('pit-calculator-vn')?.icon || 'FileText',
+      id: 'loan-apr-calculator-vn',
+      icon: toolRegistryMap.get('loan-apr-calculator-vn')?.icon || 'Percent',
       names: {
-        vi: 'Thuế TNCN',
-        en: 'PIT Calculator',
-        ja: '個人所得税',
+        vi: 'Lãi suất thực khoản vay',
+        en: 'Loan APR Calculator',
+        ja: '融資実質年率（APR）',
       },
     },
     {
