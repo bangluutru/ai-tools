@@ -590,15 +590,15 @@ export default function ElectricityCalculatorVNView({ displayLang = 'vi' }) {
             <div className="space-y-2 font-mono text-outline">
               <p>
                 <span className="text-on-surface font-bold">{t.formulaSubtotalLabel}</span>{' '}
-                {result.formula.subtotal} = {result.subtotalBeforeVat.toLocaleString('vi-VN')} VND
+                {result?.formula?.subtotal ?? ''} = {(result?.subtotalBeforeVat ?? 0).toLocaleString('vi-VN')} VND
               </p>
               <p>
                 <span className="text-on-surface font-bold">{t.formulaVatLabel}</span>{' '}
-                {result.formula.vat}
+                {result?.formula?.vat ?? ''}
               </p>
               <p>
                 <span className="text-on-surface font-bold">{t.formulaTotalLabel}</span>{' '}
-                {result.formula.total}
+                {result?.formula?.total ?? ''}
               </p>
             </div>
 

@@ -498,7 +498,7 @@ export default function PITCalculatorVNView({ displayLang = 'vi' }) {
             </span>
             <div>
               <div className="text-2xl lg:text-3xl font-black text-on-surface tracking-tight">
-                {result.effectiveRate}%
+                {((result?.effectiveRate ?? 0) * 100).toFixed(1)}%
               </div>
               <span className="text-xs text-on-surface-variant mt-1 block">
                 {t.effectiveRateHint}
@@ -529,17 +529,18 @@ export default function PITCalculatorVNView({ displayLang = 'vi' }) {
             </thead>
             <tbody className="divide-y divide-border-subtle/50">
               {result.bracketsBreakdown.map((b) => {
-                const isActive = b.taxableInBracket > 0;
+                const isActive = (b.taxableAmount || b.taxableInBracket || 0) > 0;
+                const rangeLabel = displayLang === 'ja' ? b.label_ja : displayLang === 'en' ? b.label_en : (b.label_vn || b.rangeLabel);
                 return (
                   <tr
-                    key={b.bracket}
+                    key={b.bracket ?? b.tier}
                     className={`transition-colors ${
                       isActive ? 'bg-primary/5 font-semibold text-on-surface' : 'text-on-surface-variant bg-surface'
                     }`}
                   >
                     <td className="py-3 px-4 font-bold">
                       <div className="flex items-center gap-2">
-                        <span>Bậc {b.bracket}</span>
+                        <span>Bậc {b.bracket ?? b.tier}</span>
                         {isActive && (
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary">
                             {t.activeTag}
@@ -548,10 +549,10 @@ export default function PITCalculatorVNView({ displayLang = 'vi' }) {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-on-surface-variant font-medium">
-                      {b.rangeLabel}
+                      {rangeLabel}
                     </td>
                     <td className="py-3 px-4 text-center font-bold text-primary">
-                      {b.rate}%
+                      {Math.round((b.rate || 0) * 100)}%
                     </td>
                     <td className="py-3 px-4 text-right font-black">
                       {formatVND(b.taxAmount)}
@@ -596,7 +597,7 @@ export default function PITCalculatorVNView({ displayLang = 'vi' }) {
             <div>
               <span className="font-bold text-on-surface block mb-0.5">{t.formulaTaxTitle}</span>
               <p className="p-2.5 rounded-lg bg-surface-container text-on-surface font-semibold">
-                {result.bracketsBreakdown.filter(b => b.taxAmount > 0).map(b => b.formula).join(' + ') || '0 VND'} = {result.totalTax.toLocaleString('vi-VN')} VND
+                {(result?.bracketsBreakdown || []).filter(b => b.taxAmount > 0).map(b => b.formula).join(' + ') || '0 VND'} = {(result?.totalTax ?? 0).toLocaleString('vi-VN')} VND
               </p>
             </div>
           </div>

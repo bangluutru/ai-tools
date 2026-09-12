@@ -880,6 +880,19 @@ export const SOURCE_ALIASES = Object.freeze({
   'isa-act-art19-2': 'isa-ica-art19-work-scope',
   'isa-family-guidelines': 'isa-family-stay-table',
   'isa-pr-guidelines': 'isa-pr-guidelines-current',
+
+  // Vietnam regulatory source aliases
+  'vn-res-110-2025': 'vn-ubtvqh-res-110-2025',
+  'vn-law-109-2025': 'vn-na-law-109-2025',
+  'vn-dec-293-2025': 'vn-gov-decree-293-2025',
+  'vn-dec-73-2024': 'vn-gov-decree-73-2024',
+  'vn-dec-1279-bct-2024': 'vn-bct-dec-1279-2025',
+  'vn-dec-1279-bct-2025': 'vn-bct-dec-1279-2025',
+  'vn-bct-dec-1279-2024': 'vn-bct-dec-1279-2025',
+  'vn-law-bhxh-2024': 'vn-na-law-bhxh-2024',
+  'vn-law-bhyt-2024': 'vn-na-law-bhyt-2024',
+  'vn-law-employment-2025': 'vn-na-law-employment-2025',
+  'vn-dec-vat-2026': 'vn-gov-decree-vat-2026',
 });
 
 /**

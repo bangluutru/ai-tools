@@ -352,7 +352,7 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
             </span>
             <div>
               <div className="text-2xl lg:text-3xl font-black text-primary tracking-tight">
-                {formatVND(result.combined.total)}
+                {formatVND(result?.totalCombined ?? result?.combined?.total ?? 0)}
               </div>
               <span className="text-xs text-on-surface-variant mt-1 block">
                 {t.metricCombinedShare}
@@ -367,7 +367,7 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
             </span>
             <div>
               <div className="text-2xl lg:text-3xl font-black text-on-surface tracking-tight">
-                {formatVND(result.employee.total)}
+                {formatVND(result?.employee?.total ?? 0)}
               </div>
               <span className="text-xs text-on-surface-variant mt-1 block">
                 BHXH 8% • BHYT 1.5% • BHTN 1%
@@ -382,7 +382,7 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
             </span>
             <div>
               <div className="text-2xl lg:text-3xl font-black text-on-surface tracking-tight">
-                {formatVND(result.employer.total)}
+                {formatVND(result?.employer?.total ?? 0)}
               </div>
               <span className="text-xs text-on-surface-variant mt-1 block">
                 Hưu trí 14% • Y tế 3% • Thất nghiệp 1% • Khác 3.5%
@@ -401,7 +401,7 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
               {t.breakdownTitle}
             </h3>
           </div>
-          {(result.employee.isBhxhCapped || result.employee.isBhtnCapped) && (
+          {(result?.isBhxhCapped || result?.isBhtnCapped || result?.employee?.isBhxhCapped || result?.employee?.isBhtnCapped) && (
             <span className="text-xs text-amber-800 dark:text-amber-300 font-semibold flex items-center gap-1">
               <AlertCircle size={14} />
               {t.cappedNote}
@@ -426,15 +426,15 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
                   {t.fundBhxh}
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <div className="font-bold text-on-surface">{formatVND(result.employee.bhxh)}</div>
-                  <div className="text-[11px] text-on-surface-variant">8% {result.employee.isBhxhCapped ? `(${t.cappedTag})` : ''}</div>
+                  <div className="font-bold text-on-surface">{formatVND(result?.employee?.bhxh ?? 0)}</div>
+                  <div className="text-[11px] text-on-surface-variant">8% {(result?.isBhxhCapped || result?.employee?.isBhxhCapped) ? `(${t.cappedTag})` : ''}</div>
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <div className="font-bold text-on-surface">{formatVND(result.employer.bhxhRetirement)}</div>
-                  <div className="text-[11px] text-on-surface-variant">14% {result.employer.isBhxhCapped ? `(${t.cappedTag})` : ''}</div>
+                  <div className="font-bold text-on-surface">{formatVND(result?.employer?.bhxhRetirement ?? 0)}</div>
+                  <div className="text-[11px] text-on-surface-variant">14% {(result?.isBhxhCapped || result?.employer?.isBhxhCapped) ? `(${t.cappedTag})` : ''}</div>
                 </td>
                 <td className="py-3 px-4 text-right font-black text-on-surface">
-                  {formatVND(result.combined.bhxhRetirement)}
+                  {formatVND(result?.combined?.bhxhRetirement ?? ((result?.employee?.bhxh || 0) + (result?.employer?.bhxhRetirement || 0)))}
                 </td>
               </tr>
 
@@ -448,11 +448,11 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
                   <div className="text-[11px]">0%</div>
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <div className="font-bold text-on-surface">{formatVND(result.employer.bhxhSicknessMaternity)}</div>
+                  <div className="font-bold text-on-surface">{formatVND(result?.employer?.bhxhMaternity ?? result?.employer?.bhxhSicknessMaternity ?? 0)}</div>
                   <div className="text-[11px] text-on-surface-variant">3%</div>
                 </td>
                 <td className="py-3 px-4 text-right font-black text-on-surface">
-                  {formatVND(result.combined.bhxhSicknessMaternity)}
+                  {formatVND(result?.combined?.bhxhSicknessMaternity ?? result?.employer?.bhxhMaternity ?? 0)}
                 </td>
               </tr>
 
@@ -466,11 +466,11 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
                   <div className="text-[11px]">0%</div>
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <div className="font-bold text-on-surface">{formatVND(result.employer.bhxhAccident)}</div>
+                  <div className="font-bold text-on-surface">{formatVND(result?.employer?.occupationalAccident ?? result?.employer?.bhxhAccident ?? 0)}</div>
                   <div className="text-[11px] text-on-surface-variant">0.5%</div>
                 </td>
                 <td className="py-3 px-4 text-right font-black text-on-surface">
-                  {formatVND(result.combined.bhxhAccident)}
+                  {formatVND(result?.combined?.bhxhAccident ?? result?.employer?.occupationalAccident ?? 0)}
                 </td>
               </tr>
 
@@ -480,15 +480,15 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
                   {t.fundBhyt}
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <div className="font-bold text-on-surface">{formatVND(result.employee.bhyt)}</div>
-                  <div className="text-[11px] text-on-surface-variant">1.5%</div>
+                  <div className="font-bold text-on-surface">{formatVND(result?.employee?.bhyt ?? 0)}</div>
+                  <div className="text-[11px] text-on-surface-variant">1.5% {(result?.isBhxhCapped || result?.employee?.isBhxhCapped) ? `(${t.cappedTag})` : ''}</div>
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <div className="font-bold text-on-surface">{formatVND(result.employer.bhyt)}</div>
-                  <div className="text-[11px] text-on-surface-variant">3%</div>
+                  <div className="font-bold text-on-surface">{formatVND(result?.employer?.bhyt ?? 0)}</div>
+                  <div className="text-[11px] text-on-surface-variant">3% {(result?.isBhxhCapped || result?.employer?.isBhxhCapped) ? `(${t.cappedTag})` : ''}</div>
                 </td>
                 <td className="py-3 px-4 text-right font-black text-on-surface">
-                  {formatVND(result.combined.bhyt)}
+                  {formatVND(result?.combined?.bhyt ?? ((result?.employee?.bhyt || 0) + (result?.employer?.bhyt || 0)))}
                 </td>
               </tr>
 
@@ -498,15 +498,15 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
                   {t.fundBhtn}
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <div className="font-bold text-on-surface">{formatVND(result.employee.bhtn)}</div>
-                  <div className="text-[11px] text-on-surface-variant">1% {result.employee.isBhtnCapped ? `(${t.cappedTag})` : ''}</div>
+                  <div className="font-bold text-on-surface">{formatVND(result?.employee?.bhtn ?? 0)}</div>
+                  <div className="text-[11px] text-on-surface-variant">1% {(result?.isBhtnCapped || result?.employee?.isBhtnCapped) ? `(${t.cappedTag})` : ''}</div>
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <div className="font-bold text-on-surface">{formatVND(result.employer.bhtn)}</div>
-                  <div className="text-[11px] text-on-surface-variant">1% {result.employer.isBhtnCapped ? `(${t.cappedTag})` : ''}</div>
+                  <div className="font-bold text-on-surface">{formatVND(result?.employer?.bhtn ?? 0)}</div>
+                  <div className="text-[11px] text-on-surface-variant">1% {(result?.isBhtnCapped || result?.employer?.isBhtnCapped) ? `(${t.cappedTag})` : ''}</div>
                 </td>
                 <td className="py-3 px-4 text-right font-black text-on-surface">
-                  {formatVND(result.combined.bhtn)}
+                  {formatVND(result?.combined?.bhtn ?? ((result?.employee?.bhtn || 0) + (result?.employer?.bhtn || 0)))}
                 </td>
               </tr>
 
@@ -514,13 +514,13 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
               <tr className="font-black text-on-surface bg-primary/10 text-sm sm:text-base border-t-2 border-primary/30">
                 <td className="py-3.5 px-4 text-primary">{t.totalRow}</td>
                 <td className="py-3.5 px-4 text-right text-primary font-black">
-                  {formatVND(result.employee.total)}
+                  {formatVND(result?.employee?.total ?? 0)}
                 </td>
                 <td className="py-3.5 px-4 text-right text-primary font-black">
-                  {formatVND(result.employer.total)}
+                  {formatVND(result?.employer?.total ?? 0)}
                 </td>
                 <td className="py-3.5 px-4 text-right text-primary font-black">
-                  {formatVND(result.combined.total)}
+                  {formatVND(result?.totalCombined ?? result?.combined?.total ?? 0)}
                 </td>
               </tr>
             </tbody>
@@ -551,10 +551,10 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
               • {t.formulaBhtnCap}
             </p>
             <p className="p-2.5 rounded-lg bg-surface-container text-on-surface font-semibold">
-              • Lương đóng bảo hiểm thực tế BHXH/BHYT: {result.salaryBase.bhxhBase.toLocaleString('vi-VN')} VND
+              • Lương đóng bảo hiểm thực tế BHXH/BHYT: {(result?.cappedBhxhSalary ?? result?.salaryBase?.bhxhBase ?? 0).toLocaleString('vi-VN')} VND
             </p>
             <p className="p-2.5 rounded-lg bg-surface-container text-on-surface font-semibold">
-              • Lương đóng bảo hiểm thực tế BHTN: {result.salaryBase.bhtnBase.toLocaleString('vi-VN')} VND
+              • Lương đóng bảo hiểm thực tế BHTN: {(result?.cappedBhtnSalary ?? result?.salaryBase?.bhtnBase ?? 0).toLocaleString('vi-VN')} VND
             </p>
           </div>
         )}
@@ -562,7 +562,7 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
 
       {/* 6. Standard Toolio Regulatory Basis View */}
       <RegulatorySourceView
-        sourceIds={['vn-dec-73-2024', 'vn-dec-293-2025']}
+        sourceIds={['vn-dec-73-2024', 'vn-dec-293-2025', 'vn-law-bhxh-2024', 'vn-law-bhyt-2024']}
         applicablePeriodText={t.applicablePeriodText}
         era={t.eraText}
         lastVerified={t.verifiedDateText}

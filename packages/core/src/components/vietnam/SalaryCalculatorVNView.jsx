@@ -680,7 +680,7 @@ export default function SalaryCalculatorVNView({ displayLang = 'vi' }) {
             <div>
               <span className="font-bold text-on-surface block mb-0.5">{t.formulaPITTitle}</span>
               <p className="p-2.5 rounded-lg bg-surface-container text-on-surface font-semibold">
-                {result.pitBracketsBreakdown.filter(b => b.taxAmount > 0).map(b => b.formula).join(' + ') || '0 VND'} = {result.pitTax.toLocaleString('vi-VN')} VND
+                {(result?.pitBracketsBreakdown || []).filter(b => b.taxAmount > 0).map(b => b.formula).join(' + ') || '0 VND'} = {(result?.pitTax ?? 0).toLocaleString('vi-VN')} VND
               </p>
             </div>
           </div>

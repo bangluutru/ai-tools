@@ -79,6 +79,11 @@ export function calculateVietnamInsurance(salaryBase, region = 1, date = '2026-0
     bhtnCeiling,
     baseSalaryReference: insuranceRule.baseSalary,
     regionalMinWage: regionConfig.minWage,
+    salaryBase: {
+      bhxhBase: cappedBhxhSalary,
+      bhtnBase: cappedBhtnSalary,
+      declared: safeSalary,
+    },
     isBhxhCapped,
     isBhtnCapped,
     employee: {
@@ -86,6 +91,8 @@ export function calculateVietnamInsurance(salaryBase, region = 1, date = '2026-0
       bhyt: empBhyt,
       bhtn: empBhtn,
       total: employeeTotal,
+      isBhxhCapped,
+      isBhtnCapped,
       rateBreakdown: {
         bhxh: insuranceRule.employeeRates.bhxh,
         bhyt: insuranceRule.employeeRates.bhyt,
@@ -96,11 +103,15 @@ export function calculateVietnamInsurance(salaryBase, region = 1, date = '2026-0
     employer: {
       bhxhRetirement: compBhxhRetirement,
       bhxhMaternity: compBhxhMaternity,
+      bhxhSicknessMaternity: compBhxhMaternity,
       bhxhTotal: compBhxhTotal,
       bhyt: compBhyt,
       bhtn: compBhtn,
       occupationalAccident: compOccupationalAccident,
+      bhxhAccident: compOccupationalAccident,
       total: employerTotal,
+      isBhxhCapped,
+      isBhtnCapped,
       rateBreakdown: {
         bhxhRetirement: insuranceRule.employerRates.bhxhRetirement,
         bhxhMaternity: insuranceRule.employerRates.bhxhMaternity,
@@ -110,6 +121,15 @@ export function calculateVietnamInsurance(salaryBase, region = 1, date = '2026-0
         occupationalAccident: insuranceRule.employerRates.occupationalAccident,
         total: insuranceRule.employerRates.totalNormal,
       }
+    },
+    combined: {
+      bhxhRetirement: empBhxh + compBhxhRetirement,
+      bhxhSicknessMaternity: compBhxhMaternity,
+      bhxhAccident: compOccupationalAccident,
+      bhxhTotal: empBhxh + compBhxhTotal,
+      bhyt: empBhyt + compBhyt,
+      bhtn: empBhtn + compBhtn,
+      total: totalCombined,
     },
     totalCombined,
     applicableRules: {

@@ -219,3 +219,16 @@ test('Electricity Meter Reading Calculation: newReading - oldReading', () => {
   assert.equal(invalid.kwh, 0);
   assert.ok(invalid.validationError);
 });
+
+test('TC-BHXH-04: UI Contract Shape for SocialInsuranceCalculatorVNView', () => {
+  const res = calculateVietnamInsurance(30_000_000, 1, '2026-09-01');
+  assert.ok(res.combined, 'res.combined must exist');
+  assert.equal(res.combined.total, 9_600_000);
+  assert.equal(res.totalCombined, 9_600_000);
+  assert.ok(res.salaryBase, 'res.salaryBase must exist');
+  assert.equal(typeof res.salaryBase.bhxhBase, 'number');
+  assert.equal(typeof res.salaryBase.bhtnBase, 'number');
+  assert.equal(typeof res.employee.total, 'number');
+  assert.equal(typeof res.employer.total, 'number');
+});
+
