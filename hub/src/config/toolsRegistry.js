@@ -4,11 +4,7 @@ export const categories = [
   { id: 'image', label_vn: 'Ảnh & WebP', label_en: 'Images & WebP', label_ja: '画像・WebP', icon: 'Image' },
   { id: 'office', label_vn: 'Kế toán & Hóa đơn', label_en: 'Finance & Invoices', label_ja: '会計・請求書', icon: 'FileSpreadsheet' },
   { id: 'utils', label_vn: 'Tiện ích', label_en: 'Utilities', label_ja: '便利ツール', icon: 'Wrench' },
-  { id: 'ai', label_vn: 'Dịch thuật & AI', label_en: 'AI & Translation', label_ja: 'AI・翻訳', icon: 'Globe' },
-  // Nhóm riêng cho miniapp tạm dừng. Chúng không xuất hiện ở bất kỳ nhóm nào
-  // khác, kể cả "Tất cả công cụ", nhưng vẫn được liệt kê ở đây để nhắc rằng
-  // các công cụ này đang chờ phát triển tiếp.
-  { id: 'in-development', label_vn: 'Đang phát triển', label_en: 'In development', label_ja: '開発中', icon: 'Wrench' }
+  { id: 'ai', label_vn: 'Dịch thuật & AI', label_en: 'AI & Translation', label_ja: 'AI・翻訳', icon: 'Globe' }
 ];
 
 // Nhóm sản phẩm / Tên miền (Domain Groups) chuẩn hóa
@@ -44,10 +40,6 @@ export const TOOL_GROUPS = {
 /** Lấy group của miniapp, mặc định an toàn về 'common' nếu chưa khai báo */
 export const getToolGroup = (tool) => tool?.group || 'common';
 
-// Miniapp tạm dừng phát triển. Chúng không được build vào portal, không mở được
-// từ URL/command palette, và chỉ xuất hiện trong nhóm "Đang phát triển" — không
-// nằm trong bất kỳ nhóm nào khác, kể cả "Tất cả công cụ". Xem
-// hub/src/tools-in-development/README.md trước khi mở lại bất kỳ công cụ nào.
 export const IN_DEVELOPMENT = 'in-development';
 
 const toolGovernance = {
@@ -85,30 +77,6 @@ const toolGovernance = {
     verified: true,
     verifiedAt: '2026-09-07'
   },
-  'pdf-overlay': {
-    readiness: IN_DEVELOPMENT,
-    processing: 'browser',
-    outputPurpose: 'reference',
-    unavailableReason: 'Tạm dừng phát triển. Luồng hiện tại dựng HTML thay vì overlay lên PDF nguồn và còn rủi ro XSS; sẽ làm lại bằng pdf-lib khi có nhu cầu.'
-  },
-  'legal-studio': {
-    readiness: IN_DEVELOPMENT,
-    processing: 'backend-antigravity',
-    outputPurpose: 'reference',
-    unavailableReason: 'Tạm dừng phát triển. Phụ thuộc quyết định runtime Antigravity và kiểm thử đầu ra pháp lý.'
-  },
-  'long-translator': {
-    readiness: IN_DEVELOPMENT,
-    processing: 'backend-antigravity',
-    outputPurpose: 'reference',
-    unavailableReason: 'Tạm dừng phát triển theo định hướng sản phẩm; sẽ nghiên cứu lại khi cần.'
-  },
-  'certificate-studio': {
-    readiness: IN_DEVELOPMENT,
-    processing: 'manual',
-    outputPurpose: 'reference',
-    unavailableReason: 'Tạm dừng phát triển. Cần sanitize SVG/HTML đầu vào và bỏ dữ liệu mẫu gây hiểu nhầm.'
-  },
   // priority chỉ đánh dấu ba miniapp ưu tiên sản phẩm (kế toán, hóa đơn, ảnh);
   // omniconvert là tiện ích nên không mang số ưu tiên.
   'omniconvert': {
@@ -131,19 +99,6 @@ const toolGovernance = {
     outputPurpose: 'reference',
     verified: true,
     verifiedAt: '2026-09-07'
-  },
-  'contract-auditor': {
-    readiness: IN_DEVELOPMENT,
-    processing: 'browser',
-    outputPurpose: 'reference',
-    unavailableReason: 'Tạm dừng phát triển. Luồng hiện tại chưa đọc đủ ba bộ chứng từ và còn fallback dữ liệu giả.'
-  },
-  'auto-bi': { readiness: 'experimental', processing: 'browser', outputPurpose: 'reference' },
-  'policy-assistant': {
-    readiness: IN_DEVELOPMENT,
-    processing: 'browser',
-    outputPurpose: 'reference',
-    unavailableReason: 'Tạm dừng phát triển. Cần kho chính sách có nguồn, phiên bản và ngày hiệu lực do pháp chế duyệt.'
   },
   'accounting-reconcile': {
     readiness: 'beta',
@@ -768,80 +723,16 @@ const toolDefinitions = [
     name_vn: 'Công Cụ PDF Đa Năng',
     name_en: 'PDF Multi-Tool',
     name_ja: '万能PDFツール',
-    desc_vn: 'Tách, gộp và nén file PDF 100% trên trình duyệt — tất cả trong một.',
-    desc_en: 'Split, merge and compress PDF files 100% in-browser — all in one.',
-    desc_ja: 'ブラウザ上で100%完結するPDF分割・結合・圧縮ツール。',
+    desc_vn: 'Tách, gộp và sắp xếp trang PDF 100% trên trình duyệt.',
+    desc_en: 'Split, merge, and organize PDF pages entirely in your browser.',
+    desc_ja: 'ブラウザ上でPDFページを分割・結合・並べ替えます。',
     category: 'pdf',
     icon: 'FileText',
     gradient: 'from-rose-500 via-violet-500 to-teal-500',
     color: '#8b5cf6',
-    badge: '3-IN-1',
+    badge: 'PDF TOOLS',
     popular: true,
-    tags: ['pdf', 'split', 'tách', 'trích xuất', 'extract', 'merge', 'gộp', 'ghép', 'combine', 'compress', 'nén', 'thu nhỏ', 'dung lượng', 'size', 'slim', 'optimizer']
-  },
-  {
-    id: 'pdf-overlay',
-    name_vn: 'Đè Dữ Liệu Lên Form PDF',
-    name_en: 'PDF Template Overlay',
-    name_ja: 'PDF テンプレート重ね合わせ',
-    desc_vn: 'Điền dữ liệu, văn bản, chữ ký trực tiếp lên phôi biểu mẫu PDF có sẵn.',
-    desc_en: 'Overlay dynamic text, signatures, and fields onto pre-existing PDF forms.',
-    desc_ja: '既存のPDFフォーム上にテキスト、署名、フィールドを重ねて入力します。',
-    category: 'pdf',
-    icon: 'Printer',
-    gradient: 'from-fuchsia-500 to-purple-600',
-    color: '#d946ef',
-    badge: 'CANVAS',
-    popular: false,
-    tags: ['pdf', 'overlay', 'template', 'form', 'đè dữ liệu', 'chữ ký']
-  },
-  {
-    id: 'legal-studio',
-    name_vn: 'Soạn Thảo & Dịch Pháp Lý',
-    name_en: 'Legal Document Studio',
-    name_ja: '法律文書スタジオ',
-    desc_vn: 'Soạn thảo, đối chiếu và dịch văn bản pháp lý 2 cột song ngữ chuẩn xác.',
-    desc_en: 'Draft, compare, and translate legal contracts with dual-column bilingual alignment.',
-    desc_ja: '2列のバイリンガル表示で契約書や法律文書を作成・翻訳します。',
-    category: 'ai',
-    icon: 'Scale',
-    gradient: 'from-emerald-600 to-cyan-600',
-    color: '#059669',
-    badge: 'AI READY',
-    popular: true,
-    tags: ['legal', 'pháp lý', 'hợp đồng', 'song ngữ', 'dịch', 'contract']
-  },
-  {
-    id: 'long-translator',
-    name_vn: 'Dịch Tài Liệu Dài EJV',
-    name_en: 'Long Doc & EJV Translator',
-    name_ja: '長文ドキュメント翻訳',
-    desc_vn: 'Dịch thuật tài liệu dài đa trang (Anh - Nhật - Việt) giữ nguyên bố cục định dạng.',
-    desc_en: 'Translate multi-page documents (English, Japanese, Vietnamese) preserving formatting.',
-    desc_ja: '書式を維持したまま長文ドキュメント（英語・日本語・ベトナム語）を翻訳します。',
-    category: 'ai',
-    icon: 'Globe',
-    gradient: 'from-teal-500 to-cyan-600',
-    color: '#0d9488',
-    badge: 'EJV ENGINE',
-    popular: true,
-    tags: ['translator', 'dịch thuật', 'tiếng nhật', 'tiếng anh', 'long doc']
-  },
-  {
-    id: 'certificate-studio',
-    name_vn: 'Dịch Bằng Cấp & Chứng Chỉ',
-    name_en: 'Certificate Studio',
-    name_ja: '証明書・資格証スタジオ',
-    desc_vn: 'Phân tích cấu trúc, dịch thuật và xuất bản mẫu bằng lái, bằng đại học, chứng chỉ A4.',
-    desc_en: 'Analyze, translate and generate A4 print-ready certificates, diplomas, and licenses.',
-    desc_ja: '卒業証明書、資格証、免許証のA4印刷レイアウトを作成・翻訳します。',
-    category: 'ai',
-    icon: 'Award',
-    gradient: 'from-indigo-500 to-blue-600',
-    color: '#6366f1',
-    badge: 'A4 LAYOUT',
-    popular: false,
-    tags: ['certificate', 'bằng cấp', 'chứng chỉ', 'bằng lái', 'diploma']
+    tags: ['pdf', 'split', 'tách', 'trích xuất', 'extract', 'merge', 'gộp', 'ghép', 'combine', 'organize', 'sắp xếp']
   },
   {
     id: 'omniconvert',
@@ -922,54 +813,6 @@ const toolDefinitions = [
     badge: 'XML GET',
     popular: true,
     tags: ['invoice', 'hóa đơn', 'xml', 'tra cứu', 'pdf', 'minvoice', 'hilo', 'vnpt', 'viettel', 'misa']
-  },
-  {
-    id: 'contract-auditor',
-    name_vn: 'Đối Soát Hợp Đồng & Thanh Quyết Toán',
-    name_en: 'Contract & Payment Auditor',
-    name_ja: '契約書・支払突合監査',
-    desc_vn: 'Đối chiếu chéo 3 chiều (Hợp đồng ↔ Biên bản nghiệm thu ↔ Hóa đơn) và phát hiện sai lệch.',
-    desc_en: '3-way matching cross-audit between Contracts, Acceptance Records, and Invoices.',
-    desc_ja: '契約書、検収書、請求書の3者間突合を行い、差異や上限超過を検出します。',
-    category: 'office',
-    icon: 'Scale',
-    gradient: 'from-emerald-500 to-teal-600',
-    color: '#10b981',
-    badge: '3-WAY AUDIT',
-    popular: true,
-    tags: ['contract', 'hợp đồng', 'đối soát', 'nghiệm thu', 'audit', 'matching']
-  },
-  {
-    id: 'auto-bi',
-    name_vn: 'Phân Tích Dữ Liệu & Báo Cáo BI',
-    name_en: 'Auto-BI Smart Analytics',
-    name_ja: '自動BIデータ分析',
-    desc_vn: 'Nạp file Excel/CSV thô, tự động nhận diện chỉ số, vẽ biểu đồ tương tác và sinh nhận xét điều hành.',
-    desc_en: 'Upload raw Excel/CSV, auto-detect metrics, render interactive charts and executive insights.',
-    desc_ja: 'Excel/CSVデータを読み込み、指標を自動集計してグラフと要約レポートを生成します。',
-    category: 'office',
-    icon: 'BarChart3',
-    gradient: 'from-cyan-500 to-blue-600',
-    color: '#06b6d4',
-    badge: 'SMART BI',
-    popular: true,
-    tags: ['bi', 'chart', 'analytics', 'báo cáo', 'phân tích', 'excel', 'csv']
-  },
-  {
-    id: 'policy-assistant',
-    name_vn: 'Trợ Lý Quy Chế & Soạn Biểu Mẫu',
-    name_en: 'Policy & Expense Assistant',
-    name_ja: '規程・旅費申請アシスタント',
-    desc_vn: 'Tra cứu định mức công tác phí theo vùng, tự động tính toán dự toán và xuất biểu mẫu đề xuất.',
-    desc_en: 'Look up per-diem policy rates by region, auto-calculate travel budget and generate forms.',
-    desc_ja: '地域別の旅費日当基準を参照し、出張予算を自動計算して申請書を作成します。',
-    category: 'ai',
-    icon: 'HelpCircle',
-    gradient: 'from-purple-500 to-indigo-600',
-    color: '#a855f7',
-    badge: 'POLICY AI',
-    popular: true,
-    tags: ['policy', 'quy chế', 'công tác phí', 'expense', 'dự toán'],
   },
   {
     id: 'accounting-reconcile',

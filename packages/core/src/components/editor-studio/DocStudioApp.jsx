@@ -142,7 +142,6 @@ export default function DocStudioApp({ displayLang }) {
     const [statusType, setStatusType] = useState('success'); // success | info | error
     const [suggestions, setSuggestions] = useState([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [selectionRange, setSelectionRange] = useState(null);
     const fileInputRef = useRef(null);
     const textareaRef = useRef(null);
 
@@ -206,50 +205,6 @@ export default function DocStudioApp({ displayLang }) {
         setValidationIssues(issues);
         setStatusMessage('');
         setSuggestions([]);
-    };
-
-    // Handle Text Selection for Notion-like AI Toolbar
-    const handleTextSelect = (e) => {
-        const { selectionStart, selectionEnd, value } = e.target;
-        if (selectionStart !== selectionEnd && selectionStart !== null) {
-            setSelectionRange({
-                start: selectionStart,
-                end: selectionEnd,
-                text: value.substring(selectionStart, selectionEnd)
-            });
-        } else {
-            setSelectionRange(null);
-        }
-    };
-
-    // Simulate Notion AI rewrite
-    const applyAIRewrite = (type) => {
-        if (!selectionRange) return;
-        setStatusMessage('AI đang viết lại...');
-        setStatusType('info');
-
-        // Hide menu & capture current range
-        const { start, end, text } = selectionRange;
-        setSelectionRange(null);
-
-        // Simulate network delay
-        setTimeout(() => {
-            let newText = text;
-            if (type === 'longer') newText = text + '\\n\\n(✨ AI đã mở rộng nội dung chi tiết dựa trên ngữ cảnh...)';
-            if (type === 'shorter') newText = '(✨ Bản tóm tắt AI) ' + text.substring(0, Math.floor(text.length / 2)) + '...';
-            if (type === 'professional') newText = '(✨ Đã làm mềm giọng văn) ' + text.replace(/tôi/gi, 'chúng tôi').replace(/yêu cầu/gi, 'đề xuất');
-
-            const newRawInput = rawInput.substring(0, start) + newText + rawInput.substring(end);
-            setRawInput(newRawInput);
-            setStatusMessage('✨ AI đã viết lại đoạn văn bản của bạn!');
-            setStatusType('success');
-
-            // Auto trigger analysis
-            setTimeout(() => {
-                const results = analyzeAndSuggest(newRawInput);
-                setSuggestions(results);
-            }, 500);
-        }, 1200);
     };
 
     // File upload handler — supports .txt, .md, .doc, .docx
@@ -588,24 +543,9 @@ export default function DocStudioApp({ displayLang }) {
                                             ref={textareaRef}
                                             value={rawInput}
                                             onChange={(e) => setRawInput(e.target.value)}
-                                            onSelect={handleTextSelect}
-                                            onBlur={() => setTimeout(() => setSelectionRange(null), 200)}
                                             className="flex-1 p-4 resize-none outline-none font-mono text-sm text-on-surface custom-scrollbar bg-transparent"
                                             placeholder={t.rawInputPlaceholder}
                                         />
-
-                                        {/* Notion-style AI Floating Toolbar */}
-                                        {selectionRange && (
-                                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface-container-high border border-border-subtle text-on-surface rounded-lg shadow-2xl p-1.5 flex items-center gap-1 z-50 animate-in slide-in-from-bottom-3 fade-in duration-200">
-                                                <span className="text-xs font-bold text-on-surface px-2 flex-1 whitespace-nowrap">
-                                                    <Sparkles size={12} className="inline mr-1 text-brand-cyan-bright" /> AI Rewrite
-                                                </span>
-                                                <div className="w-px h-4 bg-border-subtle mx-1"></div>
-                                                <button type="button" onClick={() => applyAIRewrite('longer')} className="px-2.5 py-1.5 hover:bg-surface-subtle rounded-md text-xs font-semibold text-on-surface transition-colors cursor-pointer">Dài hơn</button>
-                                                <button type="button" onClick={() => applyAIRewrite('shorter')} className="px-2.5 py-1.5 hover:bg-surface-subtle rounded-md text-xs font-semibold text-on-surface transition-colors cursor-pointer">Ngắn gọn</button>
-                                                <button type="button" onClick={() => applyAIRewrite('professional')} className="px-2.5 py-1.5 hover:bg-surface-subtle rounded-md text-xs font-semibold text-on-surface transition-colors cursor-pointer">Văn phong Pro</button>
-                                            </div>
-                                        )}
                                     </div>
 
                                     {/* Format Suggestion Panel */}

@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
-  globalIgnores(['**/dist/**', '**/node_modules/**', '**/venv/**']),
+  globalIgnores(['**/dist/**', '**/node_modules/**', '**/venv/**', 'scripts/vendor/**']),
   {
     files: ['**/*.{js,jsx,mjs}'],
     extends: [
@@ -34,7 +34,8 @@ export default defineConfig([
   {
     files: [
       '**/CertificateStudioTool.jsx',
-      '**/TemplateOverlayView.jsx'
+      '**/TemplateOverlayView.jsx',
+      '**/OmniConvertView.jsx'
     ],
     rules: {
       // These legacy editors derive synchronized preview state in effects.

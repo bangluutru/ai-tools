@@ -445,7 +445,7 @@ function auditGate3(tool, files) {
 }
 
 // Gate R: Regulatory Integrity & Source Verification Gate V1
-function auditGateRegulatory(tool, files) {
+function auditGateRegulatory(tool, _files) {
   if (!tool.regulatory) {
     return {
       name: 'Gate R: Regulatory Gate V1',

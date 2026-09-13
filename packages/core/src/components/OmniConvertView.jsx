@@ -530,11 +530,23 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
     const zip = new JSZip();
     const folder = zip.folder('OmniConvert_Files');
+    const usedNames = new Set();
 
     for (let i = 0; i < completedItems.length; i++) {
       const item = completedItems[i];
       const buffer = await item.result.blob.arrayBuffer();
-      folder.file(item.result.filename, buffer);
+      const originalName = item.result.filename;
+      const dotIndex = originalName.lastIndexOf('.');
+      const stem = dotIndex > 0 ? originalName.slice(0, dotIndex) : originalName;
+      const extension = dotIndex > 0 ? originalName.slice(dotIndex) : '';
+      let filename = originalName;
+      let copyNumber = 2;
+      while (usedNames.has(filename.toLowerCase())) {
+        filename = `${stem} (${copyNumber})${extension}`;
+        copyNumber += 1;
+      }
+      usedNames.add(filename.toLowerCase());
+      folder.file(filename, buffer);
     }
 
     const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -1182,7 +1194,6 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
             zoomLevel={zoomLevel}
             setZoomLevel={setZoomLevel}
             onDownloadSingle={handleDownloadSingle}
-            displayLang={displayLang}
           />
         </div>
       </div>
@@ -1387,12 +1398,12 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
  * Realtime Dynamic Preview Viewport
  * Renders actual uploaded file contents (images, rendered PDF canvas, Excel tables, Docx text)
  */
-function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, onDownloadSingle, displayLang }) {
+function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, onDownloadSingle }) {
   const [previewTab, setPreviewTab] = useState('source'); // 'source' or 'result'
   const [isLoading, setIsLoading] = useState(false);
   const [previewState, setPreviewState] = useState(null);
   const [pdfPage, setPdfPage] = useState(1);
-  const [pdfTotalPages, setPdfTotalPages] = useState(1);
+  const [, setPdfTotalPages] = useState(1);
   const [activeSheetIdx, setActiveSheetIdx] = useState(0);
 
   // Auto switch tab when completed

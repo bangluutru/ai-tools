@@ -17,11 +17,7 @@
     "dev:invoice-legacy": "cd legacy/invoice-webapp && python3 -m uvicorn backend.main:app --reload --port 8001",
     "dev:excel": "npm run dev --workspace=excel-mapping",
     "dev:editor": "npm run dev --workspace=editor-studio",
-    "dev:certificate": "npm run dev --workspace=certificate-studio",
-    "dev:legal": "npm run dev --workspace=legal-studio",
-    "dev:translator": "npm run dev --workspace=long-translator",
-    "build:all": "npm run build --workspace=hub --workspace=image-convert --workspace=excel-mapping --workspace=editor-studio --workspace=auto-bi --workspace=accounting-reconcile --if-present",
-    "build:in-development": "npm run build --workspace=legal-studio --workspace=long-translator --workspace=certificate-studio --workspace=contract-auditor --workspace=policy-assistant --if-present",
+    "build:all": "npm run build --workspace=hub --workspace=image-convert --workspace=excel-mapping --workspace=editor-studio --workspace=accounting-reconcile --if-present",
     "fixtures:excel": "node packages/core/scripts/create-excel-mock-files.mjs",
     "golden:accounting": "node packages/core/scripts/accounting-golden.mjs",
     "lint": "eslint eslint.config.js scripts --config eslint.config.js --no-error-on-unmatched-pattern && npm run lint --workspaces --if-present",
@@ -43,6 +39,7 @@
   },
   "overrides": {
     "pdfjs-dist": "6.2.108",
-    "sharp": "0.35.3"
+    "sharp": "0.35.4",
+    "@xmldom/xmldom": "0.9.12"
   }
 }

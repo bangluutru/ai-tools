@@ -7,7 +7,6 @@ const TOOL_ROUTE = /^#\/tools\/([a-z0-9-]+)/;
 const LEGACY_REDIRECTS = {
   'pdf-split': { toolId: 'pdf-toolkit', tab: 'split' },
   'pdf-merge': { toolId: 'pdf-toolkit', tab: 'merge' },
-  'pdf-compress': { toolId: 'pdf-toolkit', tab: 'compress' },
   'invoice-webapp': { toolId: 'invoice-studio' },
 };
 

@@ -529,7 +529,9 @@ async function processDocxWatermark(docxFile, config) {
     let docXml = await documentFile.async('text');
     const headerRefTag = '<w:headerReference w:type="default" r:id="' + headerRelId + '"/>';
     if (!docXml.includes(headerRelId)) {
-      if (docXml.includes('<w:sectPr')) {
+      if (docXml.includes('<w:sectPr/>')) {
+        docXml = docXml.replace(/<w:sectPr\s*\/>/g, '<w:sectPr>' + headerRefTag + '</w:sectPr>');
+      } else if (docXml.includes('<w:sectPr')) {
         docXml = docXml.replace(/<w:sectPr([^>]*)>/g, '<w:sectPr$1>' + headerRefTag);
       } else if (docXml.includes('</w:body>')) {
         docXml = docXml.replace('</w:body>', '<w:sectPr>' + headerRefTag + '</w:sectPr></w:body>');

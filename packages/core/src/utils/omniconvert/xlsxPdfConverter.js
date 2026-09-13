@@ -70,7 +70,6 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {
           </thead>
           <tbody>
             ${rows
-              .slice(0, 100) // Giới hạn tối đa 100 hàng cho 1 sheet
               .map(
                 (row, rIdx) => `
               <tr style="background-color: ${rIdx % 2 === 0 ? '#ffffff' : '#f8fafc'}; color: #334155;">

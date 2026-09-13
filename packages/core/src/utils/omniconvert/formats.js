@@ -146,10 +146,8 @@ export const FORMAT_DETAILS = {
 
 export const COMPATIBILITY_MATRIX = {
   docx: ['pdf', 'txt', 'md'],
-  pptx: ['pdf'],
   xlsx: ['pdf', 'csv', 'md'],
-  // PDF→PPTX được dựng bằng engine OpenXML PresentationML chuẩn qua JSZip
-  pdf: ['docx', 'xlsx', 'pptx', 'md', 'png', 'jpg', 'webp', 'txt'],
+  pdf: ['docx', 'xlsx', 'md', 'png', 'jpg', 'webp', 'txt'],
   png: ['pdf', 'jpg', 'webp'],
   jpg: ['pdf', 'png', 'webp'],
   jpeg: ['pdf', 'png', 'webp'],

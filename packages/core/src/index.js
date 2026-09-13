@@ -7,7 +7,6 @@
 export { default as MiniAppLayout } from './components/shared/MiniAppLayout.jsx';
 export { default as StandardToolLayout } from './components/shared/StandardToolLayout.jsx';
 export { default as AccountingReconcileView } from './components/AccountingReconcileView.jsx';
-export { default as AutoBiView } from './components/AutoBiView.jsx';
 export { default as BarcodeQrStudioView } from './components/BarcodeQrStudioView.jsx';
 export { default as ExcelMappingView } from './components/ExcelMappingView.jsx';
 export { default as IdPhotoStudioView } from './components/IdPhotoStudioView.jsx';
@@ -111,4 +110,3 @@ export { default as OfficialFormPreview } from './components/consular/OfficialFo
 export { default as FormOutputToolbar } from './components/consular/FormOutputToolbar.jsx';
 export { default as EasyFillForm } from './components/consular/EasyFillForm.jsx';
 export * from './consular/index.js';
-

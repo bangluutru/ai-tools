@@ -8,7 +8,6 @@ import {
   Zap,
   Combine,
   Scissors,
-  Minimize2,
   Layers,
   RotateCw,
   Trash2,
@@ -58,7 +57,6 @@ const loadDegrees = () => import('pdf-lib').then((m) => m.degrees);
 const MODES = [
   { id: 'merge', label: 'Gộp PDF', sub: 'Merge', icon: Combine },
   { id: 'split', label: 'Tách trang', sub: 'Split', icon: Scissors },
-  { id: 'compress', label: 'Nén PDF', sub: 'Compress', icon: Minimize2 },
   { id: 'organize', label: 'Sắp xếp', sub: 'Organize', icon: Layers },
 ];
 
@@ -92,7 +90,6 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
   const [normalizeA4, setNormalizeA4] = useState(true);
   const [pageNumbering, setPageNumbering] = useState(false);
   const [splitRange, setSplitRange] = useState('1-5');
-  const [compressionLevel, setCompressionLevel] = useState('50'); // 20 | 50 | 75
 
   const fileInputRef = useRef(null);
 
@@ -337,76 +334,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
       let pdfBytes;
       let resultingPageCount = 0;
 
-      if (activeMode === 'compress') {
-        // Real raster-assisted compression via pdfjs-dist canvas downsampling + pdf-lib embed
-        let scale = 1.2;
-        let jpegQuality = 0.65;
-        if (compressionLevel === '20') {
-          scale = 1.5;
-          jpegQuality = 0.80;
-        } else if (compressionLevel === '75') {
-          scale = 0.95;
-          jpegQuality = 0.45;
-        }
-
-        const pdfjsLib = await loadPdfJs();
-
-        for (const f of files) {
-          const loadingTask = pdfjsLib.getDocument({ data: f.arrayBuffer.slice(0) });
-          const pdfDoc = await loadingTask.promise;
-          const numPages = pdfDoc.numPages;
-
-          for (let i = 0; i < numPages; i++) {
-            const pageConfig = f.pages?.find((p) => p.pageIndex === i);
-            if (pageConfig?.isDeleted) continue;
-
-            const page = await pdfDoc.getPage(i + 1);
-            const unscaledViewport = page.getViewport({ scale: 1.0 });
-            const renderViewport = page.getViewport({ scale });
-
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.floor(renderViewport.width);
-            canvas.height = Math.floor(renderViewport.height);
-            const ctx = canvas.getContext('2d');
-            await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
-
-            const imgBlob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', jpegQuality));
-            const imgBytes = await imgBlob.arrayBuffer();
-            const embeddedImg = await mergedDoc.embedJpg(imgBytes);
-
-            const newPage = mergedDoc.addPage([unscaledViewport.width, unscaledViewport.height]);
-            if (pageConfig?.rotation) {
-              newPage.setRotation(degrees(pageConfig.rotation));
-            }
-            newPage.drawImage(embeddedImg, {
-              x: 0,
-              y: 0,
-              width: unscaledViewport.width,
-              height: unscaledViewport.height,
-            });
-          }
-        }
-
-        pdfBytes = await mergedDoc.save({ useObjectStreams: true });
-
-        // Safety check: In compress mode, if the compressed raster output is larger than input (e.g. tiny vector PDF),
-        // fallback to direct stream compression or keep original bytes. Never inflate file size!
-        if (pdfBytes.length >= totalSize && files.length === 1) {
-          try {
-            const srcDirectDoc = await PDFDocument.load(files[0].arrayBuffer);
-            const directBytes = await srcDirectDoc.save({ useObjectStreams: true });
-            if (directBytes.length < totalSize) {
-              pdfBytes = directBytes;
-            } else {
-              pdfBytes = new Uint8Array(files[0].arrayBuffer);
-              setNotice('Tệp PDF gốc đã đạt dung lượng tối ưu, hệ thống giữ nguyên chất lượng cao nhất.');
-            }
-          } catch {
-            // Keep pdfBytes if direct load fails
-          }
-        }
-        resultingPageCount = mergedDoc.getPageCount() || totalPages;
-      } else if (activeMode === 'merge' || activeMode === 'organize') {
+      if (activeMode === 'merge' || activeMode === 'organize') {
         for (const f of files) {
           const srcDoc = await PDFDocument.load(f.arrayBuffer);
           const activePages = (f.pages || []).filter((p) => !p.isDeleted);
@@ -775,65 +703,6 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                   <p className="font-body-sm text-body-sm text-outline">
                     Nhập dải trang muốn trích xuất từ tệp PDF đầu tiên.
                   </p>
-                </div>
-              )}
-
-              {activeMode === 'compress' && (
-                <div className="space-y-space-2">
-                  <span className="font-label-sm text-label-sm text-outline uppercase tracking-wider">
-                    Mức độ nén tối ưu
-                  </span>
-                  <div className="space-y-space-2">
-                    <label className={`flex items-center justify-between p-space-3 rounded-lg cursor-pointer border transition-colors ${
-                      compressionLevel === '20' ? 'bg-surface-container-high border-primary-container/40' : 'bg-surface-subtle border-border-subtle'
-                    }`}>
-                      <div className="flex items-center gap-space-2">
-                        <input
-                          type="radio"
-                          name="compression"
-                          checked={compressionLevel === '20'}
-                          onChange={() => setCompressionLevel('20')}
-                          className="accent-primary-container"
-                        />
-                        <span className="font-body-sm text-body-sm text-on-surface">Nén nhẹ (20%) — Giữ nguyên nét in ấn</span>
-                      </div>
-                      <span className="font-label-sm text-label-sm text-outline">~{formatSize(totalSize * 0.8)}</span>
-                    </label>
-
-                    <label className={`flex items-center justify-between p-space-3 rounded-lg cursor-pointer border transition-colors ${
-                      compressionLevel === '50' ? 'bg-surface-container-high border-primary-container/40' : 'bg-surface-subtle border-border-subtle'
-                    }`}>
-                      <div className="flex items-center gap-space-2">
-                        <input
-                          type="radio"
-                          name="compression"
-                          checked={compressionLevel === '50'}
-                          onChange={() => setCompressionLevel('50')}
-                          className="accent-primary-container"
-                        />
-                        <span className="font-body-sm text-body-sm text-primary font-semibold">Nén cân bằng (50%) — Chuẩn gửi Email</span>
-                      </div>
-                      <span className="px-space-1 py-[2px] bg-surface-container-high text-secondary font-label-sm text-label-sm rounded border border-secondary/30">
-                        ~{formatSize(totalSize * 0.5)}
-                      </span>
-                    </label>
-
-                    <label className={`flex items-center justify-between p-space-3 rounded-lg cursor-pointer border transition-colors ${
-                      compressionLevel === '75' ? 'bg-surface-container-high border-primary-container/40' : 'bg-surface-subtle border-border-subtle'
-                    }`}>
-                      <div className="flex items-center gap-space-2">
-                        <input
-                          type="radio"
-                          name="compression"
-                          checked={compressionLevel === '75'}
-                          onChange={() => setCompressionLevel('75')}
-                          className="accent-primary-container"
-                        />
-                        <span className="font-body-sm text-body-sm text-on-surface">Nén siêu sâu (75%) — Tối ưu dung lượng</span>
-                      </div>
-                      <span className="font-label-sm text-label-sm text-outline">~{formatSize(totalSize * 0.25)}</span>
-                    </label>
-                  </div>
                 </div>
               )}
 
@@ -1271,14 +1140,3 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
     </div>
   );
 }
-
-// Internal legacy-to-tab map for route redirects
-const LEGACY_TO_TAB = {
-  'pdf-split': 'split',
-  'pdf-merge': 'merge',
-  'pdf-compress': 'compress',
-};
-
-// Use void to prevent unused variable warning if needed
-void LEGACY_TO_TAB;
-

@@ -7,7 +7,6 @@ import { getFileExtension } from './formats.js';
 const imageEngine = () => import('./imagePdfConverter.js');
 const docxEngine = () => import('./docxPdfConverter.js');
 const xlsxEngine = () => import('./xlsxPdfConverter.js');
-const pptxEngine = () => import('./pptxPdfConverter.js');
 const markdownEngine = () => import('./markdownConverter.js');
 
 const convertImagesToPdf = async (...args) => (await imageEngine()).convertImagesToPdf(...args);
@@ -20,8 +19,6 @@ const convertPdfToTxt = async (...args) => (await docxEngine()).convertPdfToTxt(
 const convertXlsxToPdf = async (...args) => (await xlsxEngine()).convertXlsxToPdf(...args);
 const convertPdfToXlsx = async (...args) => (await xlsxEngine()).convertPdfToXlsx(...args);
 const convertXlsxToCsv = async (...args) => (await xlsxEngine()).convertXlsxToCsv(...args);
-const convertPptxToPdf = async (...args) => (await pptxEngine()).convertPptxToPdf(...args);
-const convertPdfToPptx = async (...args) => (await pptxEngine()).convertPdfToPptx(...args);
 const convertDocxToMd = async (...args) => (await markdownEngine()).convertDocxToMd(...args);
 const convertPdfToMd = async (...args) => (await markdownEngine()).convertPdfToMd(...args);
 const convertXlsxToMd = async (...args) => (await markdownEngine()).convertXlsxToMd(...args);
@@ -81,16 +78,10 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
     }
   }
 
-  // 3. PPTX
-  if (sourceExt === 'pptx') {
-    if (targetExt === 'pdf') return await convertPptxToPdf(file, options, onProgress);
-  }
-
-  // 4. PDF
+  // 3. PDF
   if (sourceExt === 'pdf') {
     if (targetExt === 'docx') return await convertPdfToDocx(file, options, onProgress);
     if (targetExt === 'xlsx') return await convertPdfToXlsx(file, options, onProgress);
-    if (targetExt === 'pptx') return await convertPdfToPptx(file, options, onProgress);
     if (targetExt === 'md') return await convertPdfToMd(file, options, onProgress);
     if (['png', 'jpg', 'jpeg', 'webp'].includes(targetExt)) {
       return await convertPdfToImages(file, targetExt, options, onProgress);
@@ -98,7 +89,7 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
     if (targetExt === 'txt') return await convertPdfToTxt(file, options, onProgress);
   }
 
-  // 5. Images
+  // 4. Images
   const isSourceImage = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'bmp'].includes(sourceExt);
   if (isSourceImage) {
     if (targetExt === 'pdf') {
@@ -116,7 +107,7 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
     }
   }
 
-  // 6. TXT
+  // 5. TXT
   if (sourceExt === 'txt') {
     if (targetExt === 'md') return await convertTxtToMd(file, options, onProgress);
     if (targetExt === 'pdf') {

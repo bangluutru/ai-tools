@@ -44,7 +44,6 @@ const OmniConvertTool = lazy(() => import('./tools/omniconvert/OmniConvertTool')
 const ExcelMappingTool = lazy(() => import('./tools/excel-mapping/ExcelMappingTool'));
 const EditorStudioTool = lazy(() => import('./tools/editor-studio/EditorStudioTool'));
 const InvoiceTool = lazy(() => import('./tools/invoice-studio/InvoiceTool'));
-const AutoBiTool = lazy(() => import('./tools/auto-bi/AutoBiTool'));
 const AccountingReconcileTool = lazy(() => import('./tools/accounting-reconcile/AccountingReconcileTool'));
 const WatermarkStudioTool = lazy(() => import('./tools/watermark-studio/WatermarkStudioTool'));
 const IdPhotoStudioTool = lazy(() => import('./tools/id-photo-studio/IdPhotoStudioTool'));
@@ -107,7 +106,6 @@ const toolComponentMap = {
   'excel-mapping': ExcelMappingTool,
   'editor-studio': EditorStudioTool,
   'invoice-studio': InvoiceTool,
-  'auto-bi': AutoBiTool,
   'accounting-reconcile': AccountingReconcileTool,
   'watermark-studio': WatermarkStudioTool,
   'id-photo-studio': IdPhotoStudioTool,
@@ -658,4 +656,3 @@ export default function App() {
     </div>
   );
 }
-

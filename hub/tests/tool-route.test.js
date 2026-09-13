@@ -22,7 +22,7 @@ test('resolves only known and available miniapp routes', () => {
 test('legacy tool URLs redirect to new merged/renamed tools', () => {
   assert.equal(resolveToolId('#/tools/pdf-split', registry), 'pdf-toolkit');
   assert.equal(resolveToolId('#/tools/pdf-merge', registry), 'pdf-toolkit');
-  assert.equal(resolveToolId('#/tools/pdf-compress', registry), 'pdf-toolkit');
+  assert.equal(resolveToolId('#/tools/pdf-compress', registry), null);
   assert.equal(resolveToolId('#/tools/invoice-webapp', registry), 'invoice-studio');
 });
 

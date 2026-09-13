@@ -4,23 +4,12 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import {
-  IN_DEVELOPMENT,
   activeTools,
   inDevelopmentTools,
   tools,
   TOOL_GROUPS,
   getToolGroup,
 } from '../src/config/toolsRegistry.js';
-
-const PAUSED_TOOL_IDS = [
-  'certificate-studio',
-  'contract-auditor',
-  'legal-studio',
-  'long-translator',
-  'pdf-overlay',
-  'policy-assistant',
-];
-
 
 test('every miniapp declares readiness, processing mode and output purpose', () => {
   assert.ok(tools.length >= 18, 'Cần có tối thiểu 18 miniapps');
@@ -56,17 +45,8 @@ test('the three production priorities are explicit and unique', () => {
 });
 
 
-test('paused miniapps stay in the in-development area with a stated reason', () => {
-  assert.deepEqual(inDevelopmentTools.map((tool) => tool.id).sort(), PAUSED_TOOL_IDS);
-
-  for (const tool of inDevelopmentTools) {
-    assert.equal(tool.readiness, IN_DEVELOPMENT, `${tool.id} must be in-development`);
-    assert.equal(
-      typeof tool.unavailableReason === 'string' && tool.unavailableReason.length > 0,
-      true,
-      `${tool.id} must explain why it is paused`,
-    );
-  }
+test('the registry has no paused miniapps after their workspaces were retired', () => {
+  assert.deepEqual(inDevelopmentTools, []);
 });
 
 
@@ -87,9 +67,6 @@ test('every active miniapp is wired to a lazy-loaded component in App.jsx', () =
     activeTools.map((tool) => tool.id).sort(),
     'toolComponentMap must contain exactly the active miniapps',
   );
-  for (const toolId of PAUSED_TOOL_IDS) {
-    assert.equal(wiredIds.includes(toolId), false, `${toolId} must stay out of the bundle`);
-  }
 });
 
 
@@ -196,4 +173,3 @@ test('every miniapp has a valid product group defaulting safely to common', () =
   const commonTools = tools.filter((t) => t.group === 'common');
   assert.equal(commonTools.length, tools.length - japanLifeTools.length - vietnamLifeTools.length, 'All other tools must default to common');
 });
-

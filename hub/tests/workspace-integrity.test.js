@@ -24,26 +24,18 @@ const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
  */
 test('every miniapp folder has a registry entry and vice versa', () => {
   const activeFolders = listDirs(join(hubRoot, 'src/tools'));
-  const pausedFolders = listDirs(join(hubRoot, 'src/tools-in-development'));
-
-  const activeIds = tools.filter((tool) => tool.readiness !== 'in-development').map((tool) => tool.id).sort();
-  const pausedIds = tools.filter((tool) => tool.readiness === 'in-development').map((tool) => tool.id).sort();
+  const activeIds = tools.map((tool) => tool.id).sort();
 
   assert.deepEqual(
     activeFolders,
     activeIds,
     'hub/src/tools và registry phải liệt kê đúng cùng một tập miniapp đang hoạt động',
   );
-  assert.deepEqual(
-    pausedFolders,
-    pausedIds,
-    'hub/src/tools-in-development và registry phải liệt kê đúng cùng một tập miniapp tạm dừng',
-  );
 });
 
 
 test('no miniapp folder is left without a component file', () => {
-  for (const root of ['src/tools', 'src/tools-in-development']) {
+  for (const root of ['src/tools']) {
     for (const folder of listDirs(join(hubRoot, root))) {
       const files = readdirSync(join(hubRoot, root, folder)).filter((name) => name.endsWith('.jsx'));
       assert.notEqual(files.length, 0, `${root}/${folder} không có file component nào`);
@@ -175,4 +167,3 @@ test('Homepage Quick Shortcuts: domain shortcuts are all valid and registered', 
     }
   }
 });
-

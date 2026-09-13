@@ -78,20 +78,12 @@ test('partitionTools splits the registry into two disjoint sets', () => {
 });
 
 
-test('against the real registry, the AI category is now empty of openable tools', () => {
-  // Cả bốn miniapp dịch thuật/pháp lý đều đang tạm dừng.
+test('against the real registry, the AI category has no active tool', () => {
   assert.deepEqual(toolsForCategory(tools, 'ai'), []);
   assert.equal(visibleCategoryIds(tools).has('ai'), false);
 
-  const paused = toolsForCategory(tools, IN_DEVELOPMENT_CATEGORY).map((tool) => tool.id).sort();
-  assert.deepEqual(paused, [
-    'certificate-studio',
-    'contract-auditor',
-    'legal-studio',
-    'long-translator',
-    'pdf-overlay',
-    'policy-assistant',
-  ]);
+  assert.deepEqual(toolsForCategory(tools, IN_DEVELOPMENT_CATEGORY), []);
+  assert.equal(visibleCategoryIds(tools).has(IN_DEVELOPMENT_CATEGORY), false);
 
   for (const tool of toolsForCategory(tools, ALL_CATEGORY)) {
     assert.notEqual(tool.readiness, 'in-development', `${tool.id} lọt vào nhóm Tất cả công cụ`);
@@ -121,11 +113,11 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   );
 
   const commonTools = toolsForGroup(tools, 'common');
-  assert.equal(commonTools.length, 18);
+  assert.equal(commonTools.length, 17);
   assert.equal(commonTools.every((t) => t.group === 'common'), true);
 
   const allTools = toolsForGroup(tools, ALL_GROUPS);
-  assert.equal(allTools.length, 57);
+  assert.equal(allTools.length, 56);
 
   // filterTools combined
   const officeJapan = filterTools(tools, { category: 'office', group: 'japan-life' });
@@ -254,5 +246,3 @@ test('search finds Japan Insurance and Employment miniapps across ja, en, and vi
   const birthWiz = search('birth wizard');
   assert.ok(birthWiz.some((t) => t.id === 'birth-wizard-jp'));
 });
-
-
