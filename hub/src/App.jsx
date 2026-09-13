@@ -84,6 +84,7 @@ const OfficialFormHelperTool = lazy(() => import('./tools/official-form-helper-j
 const ProcedureRequirementCheckerTool = lazy(() => import('./tools/procedure-requirement-checker-jp/ProcedureRequirementCheckerTool.jsx'));
 const AdministrativeNavigatorTool = lazy(() => import('./tools/administrative-navigator-jp/AdministrativeNavigatorTool.jsx'));
 const JapanLifeNavigatorTool = lazy(() => import('./tools/japan-life-navigator/JapanLifeNavigatorTool.jsx'));
+const VietnamConsularTool = lazy(() => import('./tools/vietnam-consular-jp/VietnamConsularTool.jsx'));
 const InvoiceXmlFetcherTool = lazy(() => import('./tools/invoice-xml-fetcher/InvoiceXmlFetcherTool'));
 const SalaryCalculatorVNTool = lazy(() => import('./tools/salary-calculator-vn/SalaryCalculatorVNTool.jsx'));
 const LoanAprCalculatorVNTool = lazy(() => import('./tools/loan-apr-calculator-vn/LoanAprCalculatorVNTool.jsx'));
@@ -146,6 +147,7 @@ const toolComponentMap = {
   'procedure-requirement-checker-jp': ProcedureRequirementCheckerTool,
   'administrative-navigator-jp': AdministrativeNavigatorTool,
   'japan-life-navigator': JapanLifeNavigatorTool,
+  'vietnam-consular-jp': VietnamConsularTool,
   'salary-calculator-vn': SalaryCalculatorVNTool,
   'loan-apr-calculator-vn': LoanAprCalculatorVNTool,
   'social-insurance-calculator-vn': SocialInsuranceCalculatorVNTool,
@@ -509,7 +511,7 @@ export default function App() {
               <HeroScenicBanner displayLang={displayLang} />
 
               {/* 3 Top-Level Domains Cards Grid with Quick Access Shortcuts */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.45fr_1fr] gap-6 items-start">
                 {/* 1. Tools Domain Column */}
                 <div className="flex flex-col gap-3">
                   <HubDomainCard
@@ -524,6 +526,7 @@ export default function App() {
                   <DomainQuickShortcuts
                     domainId="common"
                     onSelectTool={selectTool}
+                    onSelectDomain={handleSelectDomain}
                     displayLang={displayLang}
                   />
                 </div>
@@ -542,6 +545,7 @@ export default function App() {
                   <DomainQuickShortcuts
                     domainId="japan-life"
                     onSelectTool={selectTool}
+                    onSelectDomain={handleSelectDomain}
                     displayLang={displayLang}
                   />
                 </div>
@@ -560,6 +564,7 @@ export default function App() {
                   <DomainQuickShortcuts
                     domainId="vietnam-life"
                     onSelectTool={selectTool}
+                    onSelectDomain={handleSelectDomain}
                     displayLang={displayLang}
                   />
                 </div>

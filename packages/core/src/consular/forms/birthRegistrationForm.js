@@ -1,0 +1,197 @@
+/**
+ * @file forms/birthRegistrationForm.js
+ * Canonical Form: Tờ khai đăng ký khai sinh
+ * Cơ quan ban hành: Bộ Tư pháp (Thông tư số 04/2020/TT-BTP ngày 28/05/2020)
+ * Áp dụng thống nhất cho các Cơ quan đại diện Việt Nam ở nước ngoài.
+ */
+
+export const BIRTH_REGISTRATION_FORM = {
+  id: 'birth_registration',
+  code: 'TP/HT-2020-TKKS.1',
+  title: 'Tờ khai đăng ký khai sinh',
+  legal_basis: 'Thông tư số 04/2020/TT-BTP ngày 28/05/2020 của Bộ Tư pháp',
+  authority: 'Bộ Tư pháp Việt Nam',
+  version: '2020.1',
+  status: 'VERIFIED',
+  fingerprint: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+  verified_at: '2026-09-12',
+  official_source_url: 'https://vnembassy-jp.org/vi/thu-tuc-cap-giay-khai-sinh',
+  page_size: 'A4',
+  orientation: 'portrait',
+
+  sections: [
+    {
+      id: 'requester_info',
+      title: '1. Thông tin người yêu cầu đăng ký',
+      fields: [
+        {
+          id: 'requester_name',
+          label: 'Họ và tên người yêu cầu',
+          type: 'text',
+          required: true,
+          placeholder: 'NGUYỄN VĂN A',
+          help: 'Ghi chữ in hoa có dấu theo đúng hộ chiếu/CCCD',
+          dossier_key: 'father_name',
+        },
+        {
+          id: 'requester_relation',
+          label: 'Quan hệ với người được khai sinh',
+          type: 'select',
+          required: true,
+          options: [
+            { value: 'father', label: 'Cha đẻ' },
+            { value: 'mother', label: 'Mẹ đẻ' },
+            { value: 'other', label: 'Người giám hộ / Khác' },
+          ],
+          default: 'father',
+        },
+        {
+          id: 'requester_identity',
+          label: 'Giấy tờ tùy thân (Hộ chiếu / CCCD số)',
+          type: 'text',
+          required: true,
+          placeholder: 'P01234567 cấp ngày...',
+        },
+        {
+          id: 'requester_address',
+          label: 'Nơi cư trú hiện tại (Địa chỉ tại Nhật Bản)',
+          type: 'text',
+          required: true,
+          placeholder: '〒150-0001 Tokyo, Shibuya-ku...',
+          dossier_key: 'japan_address',
+        },
+      ],
+    },
+    {
+      id: 'child_info',
+      title: '2. Thông tin người được khai sinh (Trẻ em)',
+      fields: [
+        {
+          id: 'child_name',
+          label: 'Họ, chữ đệm và tên của con',
+          type: 'text',
+          required: true,
+          placeholder: 'NGUYỄN VĂN B (hoặc Watanabe Linh)',
+          help: 'Tên và chữ đệm phải bằng tiếng Việt hoặc tiếng dân tộc Việt Nam. Họ theo cha hoặc mẹ.',
+          dossier_key: 'child_name',
+        },
+        {
+          id: 'child_gender',
+          label: 'Giới tính',
+          type: 'radio',
+          required: true,
+          options: [
+            { value: 'nam', label: 'Nam' },
+            { value: 'nu', label: 'Nữ' },
+          ],
+          default: 'nam',
+          dossier_key: 'child_gender',
+        },
+        {
+          id: 'child_dob',
+          label: 'Ngày, tháng, năm sinh (Dương lịch)',
+          type: 'date',
+          required: true,
+          dossier_key: 'child_dob',
+        },
+        {
+          id: 'child_pob',
+          label: 'Nơi sinh (Tên bệnh viện, cơ sở y tế tại Nhật)',
+          type: 'text',
+          required: true,
+          placeholder: 'Bệnh viện XYZ, Quận ABC, Tokyo, Nhật Bản',
+          dossier_key: 'child_pob',
+        },
+        {
+          id: 'child_ethnicity',
+          label: 'Dân tộc',
+          type: 'text',
+          required: true,
+          placeholder: 'Kinh',
+          default: 'Kinh',
+        },
+        {
+          id: 'child_nationality',
+          label: 'Quốc tịch',
+          type: 'text',
+          required: true,
+          default: 'Việt Nam',
+          readOnly: true,
+        },
+        {
+          id: 'child_hometown',
+          label: 'Quê quán (theo quê cha hoặc mẹ)',
+          type: 'text',
+          required: true,
+          placeholder: 'Xã..., Huyện..., Tỉnh...',
+        },
+      ],
+    },
+    {
+      id: 'parents_info',
+      title: '3. Thông tin cha và mẹ',
+      fields: [
+        {
+          id: 'mother_name',
+          label: 'Họ, chữ đệm, tên mẹ',
+          type: 'text',
+          required: true,
+          placeholder: 'TRẦN THỊ C',
+          dossier_key: 'mother_name',
+        },
+        {
+          id: 'mother_dob',
+          label: 'Năm sinh mẹ',
+          type: 'text',
+          required: true,
+          placeholder: '1995',
+          dossier_key: 'mother_dob',
+        },
+        {
+          id: 'mother_ethnicity',
+          label: 'Dân tộc mẹ',
+          type: 'text',
+          default: 'Kinh',
+        },
+        {
+          id: 'mother_nationality',
+          label: 'Quốc tịch mẹ',
+          type: 'text',
+          required: true,
+          default: 'Việt Nam',
+          dossier_key: 'mother_nationality',
+        },
+        {
+          id: 'father_name',
+          label: 'Họ, chữ đệm, tên cha',
+          type: 'text',
+          required: false,
+          placeholder: 'NGUYỄN VĂN A (để trống nếu mẹ đơn thân)',
+          dossier_key: 'father_name',
+        },
+        {
+          id: 'father_dob',
+          label: 'Năm sinh cha',
+          type: 'text',
+          required: false,
+          placeholder: '1992',
+          dossier_key: 'father_dob',
+        },
+        {
+          id: 'father_ethnicity',
+          label: 'Dân tộc cha',
+          type: 'text',
+          default: 'Kinh',
+        },
+        {
+          id: 'father_nationality',
+          label: 'Quốc tịch cha',
+          type: 'text',
+          required: false,
+          default: 'Việt Nam',
+          dossier_key: 'father_nationality',
+        },
+      ],
+    },
+  ],
+};

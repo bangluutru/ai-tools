@@ -20,14 +20,14 @@ export const HUB_DOMAINS = {
     },
     cardTitle: 'Tools',
     subtitle: {
-      vi: 'Các công cụ tiện ích hàng ngày, giúp bạn xử lý công việc nhanh hơn.',
-      en: 'Everyday utility tools to help you get work done faster.',
-      ja: '毎日の作業をより迅速かつ効率的にする便利ツール。',
+      vi: 'Công cụ tính toán',
+      en: 'Calculation Tools',
+      ja: '計算ツール',
     },
     description: {
-      vi: 'Các công cụ tiện ích hàng ngày xử lý PDF, hình ảnh, Excel, văn bản và nhiều công cụ hữu ích khác.',
-      en: 'Everyday utilities for PDF handling, images, Excel, documents, QR codes, and more.',
-      ja: 'PDF、画像、Excel、文書処理、QRコードなど、日々の業務を支援する多彩なツール。',
+      vi: 'Các công cụ tính toán chính xác, giúp bạn lập kế hoạch tài chính và đưa ra quyết định dễ dàng hơn.',
+      en: 'Accurate calculation tools to help you plan your finances and make decisions more easily.',
+      ja: '高精度な計算ツールで、資金計画や意思決定をより簡単にサポート。',
     },
     badge: {
       vi: 'Tools',
@@ -62,14 +62,14 @@ export const HUB_DOMAINS = {
     },
     cardTitle: 'Japan Life',
     subtitle: {
-      vi: 'Hỗ trợ đời sống tại Nhật Bản với thông tin chính xác, dễ hiểu.',
-      en: 'Life support in Japan with verified and intuitive tools.',
-      ja: '日本での暮らしと手続きを、正確かつ分かりやすくサポート。',
+      vi: 'Đời sống Nhật Bản',
+      en: 'Japan Life',
+      ja: '日本生活',
     },
     description: {
-      vi: 'Đời sống Nhật Bản: Thuế, bảo hiểm, việc làm, cư trú, gia đình, nhà ở và các thủ tục hành chính.',
-      en: 'Life in Japan: Income tax, social insurance, employment, residence, family, housing, and municipal procedures.',
-      ja: '日本での生活：税金、社会保険、年金、就労、在留資格、子育て、引越、行政手続きまで網羅。',
+      vi: 'Thông tin và hướng dẫn đầy đủ về cuộc sống tại Nhật: thuế, bảo hiểm, việc làm, cư trú, gia đình, nhà ở, thủ tục hành chính và lãnh sự Việt Nam.',
+      en: 'Comprehensive guide for life in Japan: taxes, insurance, jobs, residence, family, housing, administrative and VN consular procedures.',
+      ja: '日本での生活に関する完全ガイド：税金、保険、就職、在留資格、家族、住居、行政手続きおよびベトナム領事手続き。',
     },
     badge: {
       vi: 'Japan Life',
@@ -86,6 +86,7 @@ export const HUB_DOMAINS = {
     // Content filter chips based on verified regulatory domains (Khớp 100% Mockup)
     filters: [
       { id: 'all', label: { vi: 'Tất cả', en: 'All', ja: 'すべて' } },
+      { id: 'consular-vn', label: { vi: '🇻🇳 Lãnh sự Việt Nam', en: 'VN Consular', ja: '領事手続き' } },
       { id: 'tax', label: { vi: 'Thuế & Tài chính', en: 'Tax & Finance', ja: '税金・財務' } },
       { id: 'insurance', label: { vi: 'Bảo hiểm & Lương hưu', en: 'Insurance & Pension', ja: '保険・年金' } },
       { id: 'employment', label: { vi: 'Việc làm & Trợ cấp', en: 'Jobs & Benefits', ja: '労働・手当' } },
@@ -105,14 +106,14 @@ export const HUB_DOMAINS = {
     },
     cardTitle: 'Vietnam Life',
     subtitle: {
-      vi: 'Thuế thu nhập, lương bổng, BHXH, điện sinh hoạt và tiện ích đời sống tại Việt Nam.',
-      en: 'Personal tax, salary, social insurance, electricity, and daily life utilities in Vietnam.',
-      ja: 'ベトナムでの個人所得税、給与、社会保険、電気料金、生活便利ツール。',
+      vi: 'Đời sống Việt Nam',
+      en: 'Vietnam Life',
+      ja: 'ベトナム生活',
     },
     description: {
-      vi: 'Đời sống Việt Nam: Thuế, bảo hiểm, hành chính, giáo dục và các tiện ích cho đời sống tại Việt Nam.',
-      en: 'Life in Vietnam: Personal tax, social insurance, public administration, education, and daily life utilities.',
-      ja: 'ベトナムでの生活：税金、社会保障、行政手続き、教育、生活便利ツールを提供。',
+      vi: 'Thông tin hữu ích cho cuộc sống tại Việt Nam: thủ tục hành chính, pháp lý, tài chính, giáo dục và nhiều hơn nữa.',
+      en: 'Helpful information for life in Vietnam: administrative procedures, legal, finance, education and more.',
+      ja: 'ベトナムでの生活に役立つ情報：行政手続、法務、金融、教育など。',
     },
     badge: {
       vi: 'Mới ra mắt',

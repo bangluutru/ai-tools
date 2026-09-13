@@ -362,7 +362,8 @@ test('MAIS Gate 4: Verified miniapps must have stability beta, verified flag and
     'salary-calculator-vn',
     'loan-apr-calculator-vn',
     'social-insurance-calculator-vn',
-    'electricity-calculator-vn'
+    'electricity-calculator-vn',
+    'vietnam-consular-jp'
   ];
 
 

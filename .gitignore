@@ -45,3 +45,6 @@ docs/reports/screenshots/*.png
 *.traineddata
 hub/japan_tax_report_*.pdf
 *.pdf
+brain/
+.brain/
+

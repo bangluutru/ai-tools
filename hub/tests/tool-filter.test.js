@@ -110,7 +110,7 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   const japanTools = toolsForGroup(tools, 'japan-life');
   assert.deepEqual(
     japanTools.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp', 'moving-cost-jp', 'moving-admin-checker-jp', 'address-change-checklist-jp', 'moving-wizard-jp', 'work-scope-checker-jp', 'residence-renewal-guide-jp', 'affiliation-change-checker-jp', 'status-change-guide-jp', 'family-immigration-guide-jp', 'pr-readiness-checker-jp', 'arriving-in-japan-wizard-jp', 'leaving-japan-wizard-jp', 'document-finder-jp', 'certificate-acquisition-guide-jp', 'mynumber-procedure-guide-jp', 'official-form-helper-jp', 'procedure-requirement-checker-jp', 'administrative-navigator-jp', 'japan-life-navigator'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp', 'moving-cost-jp', 'moving-admin-checker-jp', 'address-change-checklist-jp', 'moving-wizard-jp', 'work-scope-checker-jp', 'residence-renewal-guide-jp', 'affiliation-change-checker-jp', 'status-change-guide-jp', 'family-immigration-guide-jp', 'pr-readiness-checker-jp', 'arriving-in-japan-wizard-jp', 'leaving-japan-wizard-jp', 'document-finder-jp', 'certificate-acquisition-guide-jp', 'mynumber-procedure-guide-jp', 'official-form-helper-jp', 'procedure-requirement-checker-jp', 'administrative-navigator-jp', 'japan-life-navigator', 'vietnam-consular-jp'].sort()
   );
 
   const vietnamTools = toolsForGroup(tools, 'vietnam-life');
@@ -125,13 +125,13 @@ test('toolsForGroup and visibleGroupIds accurately filter tools by product group
   assert.equal(commonTools.every((t) => t.group === 'common'), true);
 
   const allTools = toolsForGroup(tools, ALL_GROUPS);
-  assert.equal(allTools.length, 56);
+  assert.equal(allTools.length, 57);
 
   // filterTools combined
   const officeJapan = filterTools(tools, { category: 'office', group: 'japan-life' });
   assert.deepEqual(
     officeJapan.map((t) => t.id).sort(),
-    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp', 'moving-cost-jp', 'moving-admin-checker-jp', 'address-change-checklist-jp', 'moving-wizard-jp', 'work-scope-checker-jp', 'residence-renewal-guide-jp', 'affiliation-change-checker-jp', 'status-change-guide-jp', 'family-immigration-guide-jp', 'pr-readiness-checker-jp', 'arriving-in-japan-wizard-jp', 'leaving-japan-wizard-jp', 'document-finder-jp', 'certificate-acquisition-guide-jp', 'mynumber-procedure-guide-jp', 'procedure-requirement-checker-jp', 'administrative-navigator-jp', 'japan-life-navigator'].sort()
+    ['japan-tax-simulator', 'social-insurance-jp', 'social-insurance-eligibility-jp', 'national-pension-jp', 'dependent-insurance-jp', 'overtime-calculator-jp', 'paid-leave-checker-jp', 'unemployment-eligibility-jp', 'unemployment-benefit-jp', 'leaving-job-wizard-jp', 'maternity-allowance-jp', 'childcare-leave-eligibility-jp', 'childcare-benefit-jp', 'child-allowance-jp', 'birth-wizard-jp', 'moving-cost-jp', 'moving-admin-checker-jp', 'address-change-checklist-jp', 'moving-wizard-jp', 'work-scope-checker-jp', 'residence-renewal-guide-jp', 'affiliation-change-checker-jp', 'status-change-guide-jp', 'family-immigration-guide-jp', 'pr-readiness-checker-jp', 'arriving-in-japan-wizard-jp', 'leaving-japan-wizard-jp', 'document-finder-jp', 'certificate-acquisition-guide-jp', 'mynumber-procedure-guide-jp', 'procedure-requirement-checker-jp', 'administrative-navigator-jp', 'japan-life-navigator', 'vietnam-consular-jp'].sort()
   );
 
   const officeCommon = filterTools(tools, { category: 'office', group: 'common' });

@@ -53,7 +53,8 @@ import {
   Calendar,
   Store,
   Zap,
-  Percent
+  Percent,
+  Landmark,
 } from 'lucide-react';
 
 
@@ -112,7 +113,8 @@ export const iconMap = {
   Calendar,
   Store,
   Zap,
-  Percent
+  Percent,
+  Landmark,
 };
 
 

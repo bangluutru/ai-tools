@@ -99,3 +99,12 @@ export { default as ElectricityCalculatorVNView } from './components/vietnam/Ele
 // Vietnam Life - Domain & Legal Engines
 export * from './vietnam/index.js';
 
+// Vietnam Consular in Japan - Components & Engines
+export { default as VietnamConsularWorkspace } from './components/consular/VietnamConsularWorkspace.jsx';
+export { default as ConsularHeader } from './components/consular/ConsularHeader.jsx';
+export { default as ProcedureNavigatorPane } from './components/consular/ProcedureNavigatorPane.jsx';
+export { default as ProcedureGuidePane } from './components/consular/ProcedureGuidePane.jsx';
+export { default as DocumentWorkspacePane } from './components/consular/DocumentWorkspacePane.jsx';
+export { default as StructuredFormEditor } from './components/consular/StructuredFormEditor.jsx';
+export * from './consular/index.js';
+
