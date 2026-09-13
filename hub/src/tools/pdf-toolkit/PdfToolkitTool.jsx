@@ -1,15 +1,12 @@
 import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { Scissors, Combine, Minimize2, Loader2 } from 'lucide-react';
+import { Scissors, Combine, Loader2 } from 'lucide-react';
 
-// ─── Lazy-load the 3 core views (same imports the old wrappers used) ───
+// ─── Lazy-load the available core views ─────────────────────────────────
 const PdfSplitterView = lazy(() =>
   import('@ai-tools/core/components/PdfSplitterView.jsx')
 );
 const PdfMergerView = lazy(() =>
   import('@ai-tools/core/components/PdfMergerView.jsx')
-);
-const PdfCompressorView = lazy(() =>
-  import('@ai-tools/core/components/PdfCompressorView.jsx')
 );
 
 // ─── Tab definitions ────────────────────────────────────────────────────
@@ -32,15 +29,6 @@ const TABS = [
     color: 'violet',
     gradient: 'from-violet-500 to-purple-600',
   },
-  {
-    id: 'compress',
-    icon: Minimize2,
-    label_vn: 'Nén PDF',
-    label_en: 'Compress',
-    label_ja: '圧縮',
-    color: 'teal',
-    gradient: 'from-teal-500 to-emerald-600',
-  },
 ];
 
 const VALID_TAB_IDS = new Set(TABS.map((t) => t.id));
@@ -49,7 +37,6 @@ const VALID_TAB_IDS = new Set(TABS.map((t) => t.id));
 const LEGACY_TO_TAB = {
   'pdf-split': 'split',
   'pdf-merge': 'merge',
-  'pdf-compress': 'compress',
 };
 
 /**
@@ -116,12 +103,10 @@ export default function PdfToolkitTool({ displayLang }) {
   const activeColorMap = {
     rose: 'border-rose-500 text-rose-400',
     violet: 'border-violet-500 text-violet-400',
-    teal: 'border-teal-500 text-teal-400',
   };
   const activeBgMap = {
     rose: 'bg-rose-500/10',
     violet: 'bg-violet-500/10',
-    teal: 'bg-teal-500/10',
   };
 
   return (
@@ -168,9 +153,7 @@ export default function PdfToolkitTool({ displayLang }) {
       </div>
 
       {/* ─── Tab Panels ───────────────────────────────────────── */}
-      {/* We keep all 3 panels mounted (display:none when inactive) so user
-          state is preserved when switching tabs. Suspense wraps each panel
-          independently to allow progressive loading. */}
+      {/* Hai thao tác đều được nạp riêng khi công cụ được mở. */}
       <div
         id="panel-split"
         role="tabpanel"
@@ -192,20 +175,9 @@ export default function PdfToolkitTool({ displayLang }) {
           <PdfMergerView displayLang={displayLang} />
         </Suspense>
       </div>
-
-      <div
-        id="panel-compress"
-        role="tabpanel"
-        aria-labelledby="tab-compress"
-        style={{ display: activeTab === 'compress' ? 'block' : 'none' }}
-      >
-        <Suspense fallback={<TabLoadingFallback />}>
-          <PdfCompressorView displayLang={displayLang} />
-        </Suspense>
-      </div>
     </div>
   );
 }
 
-// Export the legacy-to-tab map so toolRoute.js can use it for redirects
+// Export the legacy-to-tab map so callers can retain bookmark compatibility.
 export { LEGACY_TO_TAB };

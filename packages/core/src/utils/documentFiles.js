@@ -23,18 +23,11 @@ export const PDF_MERGE_LIMITS = Object.freeze({
   extensions: ['.pdf'],
 });
 
-export const PDF_COMPRESS_LIMITS = Object.freeze({
-  maxFiles: 20,
-  maxFileBytes: 100 * MIB,
-  maxTotalBytes: 300 * MIB,
-  extensions: ['.pdf'],
-});
-
 export const CONVERT_LIMITS = Object.freeze({
   maxFiles: 20,
   maxFileBytes: 50 * MIB,
   maxTotalBytes: 200 * MIB,
-  extensions: ['.docx', '.pptx', '.xlsx', '.pdf', '.png', '.jpg', '.jpeg', '.webp', '.svg'],
+  extensions: ['.docx', '.xlsx', '.pdf', '.png', '.jpg', '.jpeg', '.webp', '.svg'],
 });
 
 /**

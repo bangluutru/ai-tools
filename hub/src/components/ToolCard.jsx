@@ -1,44 +1,32 @@
 import {
-  Image, Scissors, Combine, Printer, Scale, Globe,
-  Award, FileSpreadsheet, LayoutTemplate, Receipt, ArrowRight, Sparkles,
-  BarChart3, HelpCircle, Calculator, Minimize2, Camera, QrCode, Barcode, UserCheck
+  Image, Scissors, Combine, FileSpreadsheet, LayoutTemplate, Receipt, ArrowRight, Sparkles,
+  Calculator, Camera, QrCode, Barcode, UserCheck
 } from 'lucide-react';
 
 const iconMap = {
   Image,
   Scissors,
   Combine,
-  Minimize2,
   Camera,
   QrCode,
   Barcode,
-  Printer,
-  Scale,
-  Globe,
-  Award,
   FileSpreadsheet,
   LayoutTemplate,
   Receipt,
-  BarChart3,
-  HelpCircle,
   Calculator,
   UserCheck
 };
 
 export default function ToolCard({ tool, onSelectTool, displayLang }) {
   const Icon = iconMap[tool.icon] || Sparkles;
-  const isDisabled = tool.readiness === 'in-development';
-
   const readinessLabel = {
     beta: 'BETA',
-    experimental: 'THỬ NGHIỆM',
-    'in-development': 'ĐANG PHÁT TRIỂN'
+    experimental: 'THỬ NGHIỆM'
   }[tool.readiness] || 'THỬ NGHIỆM';
 
   const readinessClass = {
     beta: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300',
-    experimental: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
-    'in-development': 'border-slate-500/40 bg-slate-500/10 text-slate-300'
+    experimental: 'border-amber-500/30 bg-amber-500/10 text-amber-300'
   }[tool.readiness];
 
   const getName = () => {
@@ -56,13 +44,8 @@ export default function ToolCard({ tool, onSelectTool, displayLang }) {
   return (
     <button
       type="button"
-      disabled={isDisabled}
       onClick={() => onSelectTool(tool.id)}
-      className={`group relative w-full text-left bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 flex flex-col justify-between transition-all duration-300 overflow-hidden backdrop-blur-sm ${
-        isDisabled
-          ? 'cursor-not-allowed opacity-60'
-          : 'hover:bg-slate-800/80 hover:border-slate-700 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-black/50 cursor-pointer'
-      }`}
+      className="group relative w-full text-left bg-slate-900/60 border border-slate-800/80 rounded-3xl p-6 flex flex-col justify-between transition-all duration-300 overflow-hidden backdrop-blur-sm hover:bg-slate-800/80 hover:border-slate-700 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-black/50 cursor-pointer"
     >
       {/* Top ambient glow on hover */}
       <div
@@ -96,16 +79,11 @@ export default function ToolCard({ tool, onSelectTool, displayLang }) {
         <p className="text-xs text-slate-400 mt-2 line-clamp-2 leading-relaxed">
           {getDesc()}
         </p>
-        {isDisabled && tool.unavailableReason && (
-          <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-            {tool.unavailableReason}
-          </p>
-        )}
       </div>
 
       {/* Card Action Footer */}
       <div className="mt-6 pt-4 border-t border-slate-800/60 flex items-center justify-between text-xs font-bold text-slate-400 group-hover:text-emerald-400 transition-colors">
-        <span>{isDisabled ? 'Chưa mở lại' : 'Sử dụng công cụ'}</span>
+        <span>Sử dụng công cụ</span>
         <div className="w-7 h-7 rounded-full bg-slate-800 group-hover:bg-emerald-500/20 flex items-center justify-center text-slate-400 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all">
           <ArrowRight size={14} />
         </div>

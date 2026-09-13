@@ -1,0 +1,956 @@
+
+> test
+> npm run test --workspaces --if-present
+
+
+> @ai-tools/core@1.0.0 test
+> node --test tests/**/*.test.js
+
+TAP version 13
+# Subtest: the fixture set is present and each case documents what it protects
+ok 1 - the fixture set is present and each case documents what it protects
+  ---
+  duration_ms: 0.773417
+  type: 'test'
+  ...
+# Subtest: golden: Bảng kê có hai dòng cùng số hóa đơn
+ok 2 - golden: Bảng kê có hai dòng cùng số hóa đơn
+  ---
+  duration_ms: 3.712875
+  type: 'test'
+  ...
+# Subtest: golden: Số theo locale, dòng trống và số 0 đầu
+ok 3 - golden: Số theo locale, dòng trống và số 0 đầu
+  ---
+  duration_ms: 3.910875
+  type: 'test'
+  ...
+# Subtest: golden: Khớp hoàn toàn
+ok 4 - golden: Khớp hoàn toàn
+  ---
+  duration_ms: 0.841041
+  type: 'test'
+  ...
+# Subtest: golden: Lệch số tiền và thiếu một phía
+ok 5 - golden: Lệch số tiền và thiếu một phía
+  ---
+  duration_ms: 0.564833
+  type: 'test'
+  ...
+# Subtest: golden: VAT hàng tặng và bảng kê máy tính tiền
+ok 6 - golden: VAT hàng tặng và bảng kê máy tính tiền
+  ---
+  duration_ms: 0.478875
+  type: 'test'
+  ...
+# Subtest: rows needing manual confirmation are listed before the rest
+ok 7 - rows needing manual confirmation are listed before the rest
+  ---
+  duration_ms: 0.349125
+  type: 'test'
+  ...
+# Subtest: an unrecognised workbook is reported rather than dropped
+ok 8 - an unrecognised workbook is reported rather than dropped
+  ---
+  duration_ms: 3.107334
+  type: 'test'
+  ...
+# Subtest: the approved rule version and tolerance are pinned
+ok 9 - the approved rule version and tolerance are pinned
+  ---
+  duration_ms: 0.545083
+  type: 'test'
+  ...
+# Subtest: normalizes invoice numbers without losing alphanumeric prefixes
+ok 10 - normalizes invoice numbers without losing alphanumeric prefixes
+  ---
+  duration_ms: 0.54625
+  type: 'test'
+  ...
+# Subtest: parses common Vietnamese and international numeric formats
+ok 11 - parses common Vietnamese and international numeric formats
+  ---
+  duration_ms: 2.206375
+  type: 'test'
+  ...
+# Subtest: aggregates duplicate BR rows and marks them for human review
+ok 12 - aggregates duplicate BR rows and marks them for human review
+  ---
+  duration_ms: 0.410333
+  type: 'test'
+  ...
+# Subtest: uses tolerance and distinguishes missing ledger from missing BR
+ok 13 - uses tolerance and distinguishes missing ledger from missing BR
+  ---
+  duration_ms: 3.752166
+  type: 'test'
+  ...
+# Subtest: normalizes Vietnamese column labels regardless of diacritics and spacing
+ok 14 - normalizes Vietnamese column labels regardless of diacritics and spacing
+  ---
+  duration_ms: 4.277084
+  type: 'test'
+  ...
+# Subtest: resolves ledger columns by label and never reuses one column twice
+ok 15 - resolves ledger columns by label and never reuses one column twice
+  ---
+  duration_ms: 0.276708
+  type: 'test'
+  ...
+# Subtest: never mistakes a tax-rate column for the tax amount column
+ok 16 - never mistakes a tax-rate column for the tax amount column
+  ---
+  duration_ms: 0.188417
+  type: 'test'
+  ...
+# Subtest: finds the header by content instead of a fixed offset
+ok 17 - finds the header by content instead of a fixed offset
+  ---
+  duration_ms: 0.46225
+  type: 'test'
+  ...
+# Subtest: reads every ledger row and reports the real Excel row as evidence
+ok 18 - reads every ledger row and reports the real Excel row as evidence
+  ---
+  duration_ms: 0.954084
+  type: 'test'
+  ...
+# Subtest: skips the column-numbering row that sits under a BR header
+ok 19 - skips the column-numbering row that sits under a BR header
+  ---
+  duration_ms: 0.40625
+  type: 'test'
+  ...
+# Subtest: parses BR sheets independently so MTT column drift cannot corrupt GTGT
+ok 20 - parses BR sheets independently so MTT column drift cannot corrupt GTGT
+  ---
+  duration_ms: 1.649625
+  type: 'test'
+  ...
+# Subtest: classifies BR sheets by name
+ok 21 - classifies BR sheets by name
+  ---
+  duration_ms: 0.0685
+  type: 'test'
+  ...
+# Subtest: detects workbook kind from sheet names and heading text
+ok 22 - detects workbook kind from sheet names and heading text
+  ---
+  duration_ms: 0.438125
+  type: 'test'
+  ...
+# Subtest: reports a readable reason when a sheet has no recognisable header
+ok 23 - reports a readable reason when a sheet has no recognisable header
+  ---
+  duration_ms: 0.438375
+  type: 'test'
+  ...
+# Subtest: document limits reject unsupported, oversized and excess files
+ok 24 - document limits reject unsupported, oversized and excess files
+  ---
+  duration_ms: 0.798667
+  type: 'test'
+  ...
+# Subtest: recognizes PDF, XLSX and legacy XLS signatures
+ok 25 - recognizes PDF, XLSX and legacy XLS signatures
+  ---
+  duration_ms: 0.1405
+  type: 'test'
+  ...
+# Subtest: recognises the signatures of the formats the newer miniapps accept
+ok 26 - recognises the signatures of the formats the newer miniapps accept
+  ---
+  duration_ms: 0.203792
+  type: 'test'
+  ...
+# Subtest: the newer miniapps have limit presets to share
+ok 27 - the newer miniapps have limit presets to share
+  ---
+  duration_ms: 0.153959
+  type: 'test'
+  ...
+# Subtest: accepts only the browser formats explicitly supported by the portal
+ok 28 - accepts only the browser formats explicitly supported by the portal
+  ---
+  duration_ms: 0.821791
+  type: 'test'
+  ...
+# Subtest: enforces per-file, total-byte and count limits
+ok 29 - enforces per-file, total-byte and count limits
+  ---
+  duration_ms: 0.154625
+  type: 'test'
+  ...
+# Subtest: image limits come from the shared preset, not a second copy
+ok 30 - image limits come from the shared preset, not a second copy
+  ---
+  duration_ms: 0.162791
+  type: 'test'
+  ...
+# Subtest: counts bytes already loaded, which the tool tracks as originalSize
+ok 31 - counts bytes already loaded, which the tool tracks as originalSize
+  ---
+  duration_ms: 0.153125
+  type: 'test'
+  ...
+# Subtest: reads the amount-in-words line printed on an invoice
+ok 32 - reads the amount-in-words line printed on an invoice
+  ---
+  duration_ms: 0.696417
+  type: 'test'
+  ...
+# Subtest: handles linh, mốt, lăm, tư and mười versus mươi
+ok 33 - handles linh, mốt, lăm, tư and mười versus mươi
+  ---
+  duration_ms: 2.496166
+  type: 'test'
+  ...
+# Subtest: accepts ngàn as a synonym of nghìn and ignores trailing notes
+ok 34 - accepts ngàn as a synonym of nghìn and ignores trailing notes
+  ---
+  duration_ms: 0.100584
+  type: 'test'
+  ...
+# Subtest: returns null when no Vietnamese number words are present
+ok 35 - returns null when no Vietnamese number words are present
+  ---
+  duration_ms: 0.068166
+  type: 'test'
+  ...
+# Subtest: round-trips against the number-to-words writer
+ok 36 - round-trips against the number-to-words writer
+  ---
+  duration_ms: 0.515041
+  type: 'test'
+  ...
+# Subtest: invoices are grouped by the buyer tax code, not the buyer name
+ok 37 - invoices are grouped by the buyer tax code, not the buyer name
+  ---
+  duration_ms: 11.320958
+  type: 'test'
+  ...
+# Subtest: an invoice without a buyer falls into one clearly-unassigned group
+ok 38 - an invoice without a buyer falls into one clearly-unassigned group
+  ---
+  duration_ms: 0.44525
+  type: 'test'
+  ...
+# Subtest: a manual company key overrides what the invoice says
+ok 39 - a manual company key overrides what the invoice says
+  ---
+  duration_ms: 1.658334
+  type: 'test'
+  ...
+# Subtest: user edits to the company name and address win over the invoice
+ok 40 - user edits to the company name and address win over the invoice
+  ---
+  duration_ms: 0.266083
+  type: 'test'
+  ...
+# Subtest: form rows come out sorted by document date
+ok 41 - form rows come out sorted by document date
+  ---
+  duration_ms: 6.689625
+  type: 'test'
+  ...
+# Subtest: a hand-typed expense note replaces the auto description
+ok 42 - a hand-typed expense note replaces the auto description
+  ---
+  duration_ms: 1.005875
+  type: 'test'
+  ...
+# Subtest: the payment content only claims a date range it could read
+ok 43 - the payment content only claims a date range it could read
+  ---
+  duration_ms: 0.278208
+  type: 'test'
+  ...
+# Subtest: expenses are described the way the form words them
+ok 44 - expenses are described the way the form words them
+  ---
+  duration_ms: 0.685458
+  type: 'test'
+  ...
+# Subtest: unknown airport codes are printed as-is instead of guessed
+ok 45 - unknown airport codes are printed as-is instead of guessed
+  ---
+  duration_ms: 0.372458
+  type: 'test'
+  ...
+# Subtest: the short company label drops the legal-form prefix
+ok 46 - the short company label drops the legal-form prefix
+  ---
+  duration_ms: 3.08825
+  type: 'test'
+  ...
+# Subtest: an extra row is appended after the last invoice of its company only
+ok 47 - an extra row is appended after the last invoice of its company only
+  ---
+  duration_ms: 1.305041
+  type: 'test'
+  ...
+# Subtest: the payment content ignores the per diem row when reading the date range
+ok 48 - the payment content ignores the per diem row when reading the date range
+  ---
+  duration_ms: 0.4465
+  type: 'test'
+  ...
+# Subtest: reads the leading group without a spurious "không trăm" or "linh"
+ok 49 - reads the leading group without a spurious "không trăm" or "linh"
+  ---
+  duration_ms: 0.618458
+  type: 'test'
+  ...
+# Subtest: keeps "không trăm linh" inside trailing groups so the value stays unambiguous
+ok 50 - keeps "không trăm linh" inside trailing groups so the value stays unambiguous
+  ---
+  duration_ms: 0.129584
+  type: 'test'
+  ...
+# Subtest: applies Vietnamese readings for mười, mươi, mốt and lăm
+ok 51 - applies Vietnamese readings for mười, mươi, mốt and lăm
+  ---
+  duration_ms: 4.486792
+  type: 'test'
+  ...
+# Subtest: handles realistic invoice totals
+ok 52 - handles realistic invoice totals
+  ---
+  duration_ms: 0.287125
+  type: 'test'
+  ...
+# Subtest: handles zero, decimals and negative amounts safely
+ok 53 - handles zero, decimals and negative amounts safely
+  ---
+  duration_ms: 0.102667
+  type: 'test'
+  ...
+# Subtest: counts whole days, both ends of the trip included
+ok 54 - counts whole days, both ends of the trip included
+  ---
+  duration_ms: 1.191083
+  type: 'test'
+  ...
+# Subtest: a trip that ends before it starts pays nothing
+ok 55 - a trip that ends before it starts pays nothing
+  ---
+  duration_ms: 0.179167
+  type: 'test'
+  ...
+# Subtest: day counting survives a daylight saving shift
+ok 56 - day counting survives a daylight saving shift
+  ---
+  duration_ms: 2.024083
+  type: 'test'
+  ...
+# Subtest: the amount is the day count times the daily rate
+ok 57 - the amount is the day count times the daily rate
+  ---
+  duration_ms: 0.125209
+  type: 'test'
+  ...
+# Subtest: the row is dated the day the request is raised, not the trip
+ok 58 - the row is dated the day the request is raised, not the trip
+  ---
+  duration_ms: 0.310625
+  type: 'test'
+  ...
+# Subtest: no row is produced while the fields are still incomplete
+ok 59 - no row is produced while the fields are still incomplete
+  ---
+  duration_ms: 0.116958
+  type: 'test'
+  ...
+# Subtest: rejects dates that do not exist
+ok 60 - rejects dates that do not exist
+  ---
+  duration_ms: 0.062417
+  type: 'test'
+  ...
+# Subtest: never invents a tax rate when only the total is known
+ok 61 - never invents a tax rate when only the total is known
+  ---
+  duration_ms: 1.148167
+  type: 'test'
+  ...
+# Subtest: derives only direct arithmetic from fields present in the document
+ok 62 - derives only direct arithmetic from fields present in the document
+  ---
+  duration_ms: 0.664917
+  type: 'test'
+  ...
+# Subtest: an airline authorized collection is part of the amount payable
+ok 63 - an airline authorized collection is part of the amount payable
+  ---
+  duration_ms: 0.173083
+  type: 'test'
+  ...
+# Subtest: the untaxed remainder is recovered even when no field names it
+ok 64 - the untaxed remainder is recovered even when no field names it
+  ---
+  duration_ms: 0.113625
+  type: 'test'
+  ...
+# Subtest: a remainder bigger than the goods is a misread, not a collection
+ok 65 - a remainder bigger than the goods is a misread, not a collection
+  ---
+  duration_ms: 0.065667
+  type: 'test'
+  ...
+# Subtest: a total that already adds up gains no phantom collection
+ok 66 - a total that already adds up gains no phantom collection
+  ---
+  duration_ms: 0.058625
+  type: 'test'
+  ...
+# Subtest: detects unsafe ZIP paths and unknown invoice numbers
+ok 67 - detects unsafe ZIP paths and unknown invoice numbers
+  ---
+  duration_ms: 0.088084
+  type: 'test'
+  ...
+# Subtest: the batch limits cover a full month of invoice archives
+ok 68 - the batch limits cover a full month of invoice archives
+  ---
+  duration_ms: 0.0795
+  type: 'test'
+  ...
+# Subtest: the same invoice number from two sellers stays two invoices
+ok 69 - the same invoice number from two sellers stays two invoices
+  ---
+  duration_ms: 0.349625
+  type: 'test'
+  ...
+# Subtest: files with the same name in two archives are not collapsed
+ok 70 - files with the same name in two archives are not collapsed
+  ---
+  duration_ms: 0.338
+  type: 'test'
+  ...
+# Subtest: the XML and the PDF rendering of one invoice are recognised as one
+ok 71 - the XML and the PDF rendering of one invoice are recognised as one
+  ---
+  duration_ms: 0.120375
+  type: 'test'
+  ...
+# Subtest: documents with no readable invoice number are never merged by number
+ok 72 - documents with no readable invoice number are never merged by number
+  ---
+  duration_ms: 0.055958
+  type: 'test'
+  ...
+# Subtest: two archives holding different sellers both land on the table
+ok 73 - two archives holding different sellers both land on the table
+  ---
+  duration_ms: 0.111875
+  type: 'test'
+  ...
+# Subtest: re-reading the same archive adds nothing
+ok 74 - re-reading the same archive adds nothing
+  ---
+  duration_ms: 0.052708
+  type: 'test'
+  ...
+# Subtest: the XML replaces the PDF rendering whichever order they arrive in
+ok 75 - the XML replaces the PDF rendering whichever order they arrive in
+  ---
+  duration_ms: 0.1535
+  type: 'test'
+  ...
+# Subtest: an itinerary with neither invoice number nor seller tax code is not an invoice
+ok 76 - an itinerary with neither invoice number nor seller tax code is not an invoice
+  ---
+  duration_ms: 0.054166
+  type: 'test'
+  ...
+# Subtest: a hard-to-read invoice still counts as one when a mandatory field survives
+ok 77 - a hard-to-read invoice still counts as one when a mandatory field survives
+  ---
+  duration_ms: 0.039125
+  type: 'test'
+  ...
+# Subtest: the user can overrule the tool and pull an attachment into the table
+ok 78 - the user can overrule the tool and pull an attachment into the table
+  ---
+  duration_ms: 0.66325
+  type: 'test'
+  ...
+# Subtest: a file that could not be opened is never treated as an invoice
+ok 79 - a file that could not be opened is never treated as an invoice
+  ---
+  duration_ms: 0.0435
+  type: 'test'
+  ...
+# Subtest: totals are summed from the confirmed invoices only
+ok 80 - totals are summed from the confirmed invoices only
+  ---
+  duration_ms: 245.020167
+  type: 'test'
+  ...
+# Subtest: the sheet carries the Vietnamese form heading
+ok 81 - the sheet carries the Vietnamese form heading
+  ---
+  duration_ms: 0.629875
+  type: 'test'
+  ...
+# Subtest: the printed form carries no draft stamp
+ok 82 - the printed form carries no draft stamp
+  ---
+  duration_ms: 0.657416
+  type: 'test'
+  ...
+# Subtest: money columns stay numeric with a thousands format
+ok 83 - money columns stay numeric with a thousands format
+  ---
+  duration_ms: 1.905959
+  type: 'test'
+  ...
+# Subtest: a highlighted total row closes the table
+ok 84 - a highlighted total row closes the table
+  ---
+  duration_ms: 1.009875
+  type: 'test'
+  ...
+# Subtest: the amount in words matches the printed total
+ok 85 - the amount in words matches the printed total
+  ---
+  duration_ms: 0.369667
+  type: 'test'
+  ...
+# Subtest: signature blocks and a signing gap are laid out for printing
+ok 86 - signature blocks and a signing gap are laid out for printing
+  ---
+  duration_ms: 0.528334
+  type: 'test'
+  ...
+# Subtest: the form is set up to print on one A4 width with repeating headers
+ok 87 - the form is set up to print on one A4 width with repeating headers
+  ---
+  duration_ms: 0.418416
+  type: 'test'
+  ...
+# Subtest: an empty invoice list still produces a valid form
+ok 88 - an empty invoice list still produces a valid form
+  ---
+  duration_ms: 0.775458
+  type: 'test'
+  ...
+# Subtest: the whole period lands on one sheet named after the month
+ok 89 - the whole period lands on one sheet named after the month
+  ---
+  duration_ms: 236.948667
+  type: 'test'
+  ...
+# Subtest: a hand-typed period name replaces the default sheet name
+ok 90 - a hand-typed period name replaces the default sheet name
+  ---
+  duration_ms: 3.010416
+  type: 'test'
+  ...
+# Subtest: each company keeps its own form, stacked down the same sheet
+ok 91 - each company keeps its own form, stacked down the same sheet
+  ---
+  duration_ms: 1.298208
+  type: 'test'
+  ...
+# Subtest: a page break separates one form from the next
+ok 92 - a page break separates one form from the next
+  ---
+  duration_ms: 0.734125
+  type: 'test'
+  ...
+# Subtest: the heading block follows the Vietnamese payment request form
+ok 93 - the heading block follows the Vietnamese payment request form
+  ---
+  duration_ms: 0.771083
+  type: 'test'
+  ...
+# Subtest: the detail table keeps the STT / date / content / amount / invoice columns
+ok 94 - the detail table keeps the STT / date / content / amount / invoice columns
+  ---
+  duration_ms: 0.734625
+  type: 'test'
+  ...
+# Subtest: the table is boxed with thin borders like the paper form
+ok 95 - the table is boxed with thin borders like the paper form
+  ---
+  duration_ms: 0.777417
+  type: 'test'
+  ...
+# Subtest: the total, invoice link and amount rows sit where the form expects them
+ok 96 - the total, invoice link and amount rows sit where the form expects them
+  ---
+  duration_ms: 0.825625
+  type: 'test'
+  ...
+# Subtest: the amount in words uses the form wording
+ok 97 - the amount in words uses the form wording
+  ---
+  duration_ms: 13.314875
+  type: 'test'
+  ...
+# Subtest: an http invoice link becomes a real hyperlink
+ok 98 - an http invoice link becomes a real hyperlink
+  ---
+  duration_ms: 0.972625
+  type: 'test'
+  ...
+# Subtest: the signature block leaves room to sign by hand
+ok 99 - the signature block leaves room to sign by hand
+  ---
+  duration_ms: 0.562458
+  type: 'test'
+  ...
+# Subtest: a shorter table pulls the whole block up with it
+ok 100 - a shorter table pulls the whole block up with it
+  ---
+  duration_ms: 0.478291
+  type: 'test'
+  ...
+# Subtest: every sheet prints on portrait A4 with the form column widths
+ok 101 - every sheet prints on portrait A4 with the form column widths
+  ---
+  duration_ms: 0.452458
+  type: 'test'
+  ...
+# Subtest: an empty list still produces one printable blank form
+ok 102 - an empty list still produces one printable blank form
+  ---
+  duration_ms: 0.32
+  type: 'test'
+  ...
+# Subtest: reconciliation separates matched, different and one-sided invoices
+ok 103 - reconciliation separates matched, different and one-sided invoices
+  ---
+  duration_ms: 1.611875
+  type: 'test'
+  ...
+# Subtest: evidence keeps the file, sheet and source row of every record
+ok 104 - evidence keeps the file, sheet and source row of every record
+  ---
+  duration_ms: 0.254833
+  type: 'test'
+  ...
+# Subtest: every exported sheet is set up to print on A4
+ok 105 - every exported sheet is set up to print on A4
+  ---
+  duration_ms: 238.497583
+  type: 'test'
+  ...
+# Subtest: detail sheets repeat and freeze their header row and carry a total line
+ok 106 - detail sheets repeat and freeze their header row and carry a total line
+  ---
+  duration_ms: 3.438208
+  type: 'test'
+  ...
+# Subtest: rows that need attention are shaded so a printed page stays readable
+ok 107 - rows that need attention are shaded so a printed page stays readable
+  ---
+  duration_ms: 0.863041
+  type: 'test'
+  ...
+# Subtest: the source-log sheet is added only when diagnostics exist
+ok 108 - the source-log sheet is added only when diagnostics exist
+  ---
+  duration_ms: 16.5845
+  type: 'test'
+  ...
+# Subtest: reads a bilingual invoice where English labels sit in brackets
+ok 109 - reads a bilingual invoice where English labels sit in brackets
+  ---
+  duration_ms: 15.785125
+  type: 'test'
+  ...
+# Subtest: does not let a bracketed translation hijack the total
+ok 110 - does not let a bracketed translation hijack the total
+  ---
+  duration_ms: 3.174375
+  type: 'test'
+  ...
+# Subtest: picks the longest matching label so buyer name is not truncated
+ok 111 - picks the longest matching label so buyer name is not truncated
+  ---
+  duration_ms: 2.4015
+  type: 'test'
+  ...
+# Subtest: falls back to the amount in words when the total line cannot be read
+ok 112 - falls back to the amount in words when the total line cannot be read
+  ---
+  duration_ms: 1.0025
+  type: 'test'
+  ...
+# Subtest: parses the invoice symbol exactly as Phụ lục I defines it
+ok 113 - parses the invoice symbol exactly as Phụ lục I defines it
+  ---
+  duration_ms: 0.214708
+  type: 'test'
+  ...
+# Subtest: rejects strings that do not follow the six-character symbol rule
+ok 114 - rejects strings that do not follow the six-character symbol rule
+  ---
+  duration_ms: 0.108291
+  type: 'test'
+  ...
+# Subtest: normalises Vietnamese tax codes including 13-digit branch codes
+ok 115 - normalises Vietnamese tax codes including 13-digit branch codes
+  ---
+  duration_ms: 0.056875
+  type: 'test'
+  ...
+# Subtest: reads every mandatory field from a VAT invoice
+ok 116 - reads every mandatory field from a VAT invoice
+  ---
+  duration_ms: 1.976958
+  type: 'test'
+  ...
+# Subtest: assigns the first tax code to the seller and the second to the buyer
+ok 117 - assigns the first tax code to the seller and the second to the buyer
+  ---
+  duration_ms: 2.404458
+  type: 'test'
+  ...
+# Subtest: never mistakes Số tài khoản, Số lượng or Mã số thuế for the invoice number
+ok 118 - never mistakes Số tài khoản, Số lượng or Mã số thuế for the invoice number
+  ---
+  duration_ms: 2.286042
+  type: 'test'
+  ...
+# Subtest: reads a direct-method sales invoice without inventing VAT
+ok 119 - reads a direct-method sales invoice without inventing VAT
+  ---
+  duration_ms: 3.2855
+  type: 'test'
+  ...
+# Subtest: reads a layout where labels and values sit on separate lines
+ok 120 - reads a layout where labels and values sit on separate lines
+  ---
+  duration_ms: 1.232333
+  type: 'test'
+  ...
+# Subtest: flags a total that disagrees with the printed amount in words
+ok 121 - flags a total that disagrees with the printed amount in words
+  ---
+  duration_ms: 2.184625
+  type: 'test'
+  ...
+# Subtest: flags a tax breakdown that does not add up to the total
+ok 122 - flags a tax breakdown that does not add up to the total
+  ---
+  duration_ms: 2.13075
+  type: 'test'
+  ...
+# Subtest: flags a symbol year that disagrees with the invoice date
+ok 123 - flags a symbol year that disagrees with the invoice date
+  ---
+  duration_ms: 3.56075
+  type: 'test'
+  ...
+# Subtest: reports which mandatory fields are missing instead of guessing them
+ok 124 - reports which mandatory fields are missing instead of guessing them
+  ---
+  duration_ms: 0.443875
+  type: 'test'
+  ...
+# Subtest: label helpers pick the most specific amount label first
+ok 125 - label helpers pick the most specific amount label first
+  ---
+  duration_ms: 0.09925
+  type: 'test'
+  ...
+# Subtest: reads thousands grouped with spaces instead of stopping at the first digit
+ok 126 - reads thousands grouped with spaces instead of stopping at the first digit
+  ---
+  duration_ms: 1.775125
+  type: 'test'
+  ...
+# Subtest: a leading line number does not get mistaken for the amount
+ok 127 - a leading line number does not get mistaken for the amount
+  ---
+  duration_ms: 2.952083
+  type: 'test'
+  ...
+# Subtest: an amount read a thousand times too big is corrected from the words
+ok 128 - an amount read a thousand times too big is corrected from the words
+  ---
+  duration_ms: 1.89175
+  type: 'test'
+  ...
+# Subtest: a total backed by the tax breakdown is kept even if the words disagree
+ok 129 - a total backed by the tax breakdown is kept even if the words disagree
+  ---
+  duration_ms: 0.8105
+  type: 'test'
+  ...
+# Subtest: reads the authorized collection an airline invoice charges on top
+ok 130 - reads the authorized collection an airline invoice charges on top
+  ---
+  duration_ms: 1.20225
+  type: 'test'
+  ...
+# Subtest: an airline invoice that adds up through the collection raises no warning
+ok 131 - an airline invoice that adds up through the collection raises no warning
+  ---
+  duration_ms: 1.3305
+  type: 'test'
+  ...
+# Subtest: the balance check still catches a total that is genuinely wrong
+ok 132 - the balance check still catches a total that is genuinely wrong
+  ---
+  duration_ms: 0.140959
+  type: 'test'
+  ...
+# Subtest: rounding differences are tolerated, not reported
+ok 133 - rounding differences are tolerated, not reported
+  ---
+  duration_ms: 0.040875
+  type: 'test'
+  ...
+1..133
+# tests 133
+# suites 0
+# pass 133
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 468.176375
+
+> hub@1.0.0 test
+> node --test tests/**/*.test.js
+
+TAP version 13
+# Subtest: paused miniapps are kept out of every ordinary category
+ok 1 - paused miniapps are kept out of every ordinary category
+  ---
+  duration_ms: 1.708708
+  type: 'test'
+  ...
+# Subtest: paused miniapps are kept out of "Tất cả công cụ" as well
+ok 2 - paused miniapps are kept out of "Tất cả công cụ" as well
+  ---
+  duration_ms: 0.111541
+  type: 'test'
+  ...
+# Subtest: the in-development group lists exactly the paused miniapps
+ok 3 - the in-development group lists exactly the paused miniapps
+  ---
+  duration_ms: 0.062
+  type: 'test'
+  ...
+# Subtest: hiding tools never removes a paused miniapp from its own group
+ok 4 - hiding tools never removes a paused miniapp from its own group
+  ---
+  duration_ms: 0.114417
+  type: 'test'
+  ...
+# Subtest: a category tab only shows when it still holds something
+ok 5 - a category tab only shows when it still holds something
+  ---
+  duration_ms: 0.090375
+  type: 'test'
+  ...
+# Subtest: partitionTools splits the registry into two disjoint sets
+ok 6 - partitionTools splits the registry into two disjoint sets
+  ---
+  duration_ms: 0.122917
+  type: 'test'
+  ...
+# Subtest: against the real registry, the AI category is now empty of openable tools
+ok 7 - against the real registry, the AI category is now empty of openable tools
+  ---
+  duration_ms: 0.210834
+  type: 'test'
+  ...
+# Subtest: resolves only known and available miniapp routes
+ok 8 - resolves only known and available miniapp routes
+  ---
+  duration_ms: 0.538209
+  type: 'test'
+  ...
+# Subtest: legacy tool URLs redirect to new merged/renamed tools
+ok 9 - legacy tool URLs redirect to new merged/renamed tools
+  ---
+  duration_ms: 0.158416
+  type: 'test'
+  ...
+# Subtest: resolves routes with query parameters (tab hint)
+ok 10 - resolves routes with query parameters (tab hint)
+  ---
+  duration_ms: 0.060333
+  type: 'test'
+  ...
+# Subtest: builds static-host-compatible hash URLs without dropping query parameters
+ok 11 - builds static-host-compatible hash URLs without dropping query parameters
+  ---
+  duration_ms: 0.072166
+  type: 'test'
+  ...
+# Subtest: uses registry defaults when no valid preference exists
+ok 12 - uses registry defaults when no valid preference exists
+  ---
+  duration_ms: 0.864542
+  type: 'test'
+  ...
+# Subtest: keeps only unique miniapp ids that still exist
+ok 13 - keeps only unique miniapp ids that still exist
+  ---
+  duration_ms: 0.102334
+  type: 'test'
+  ...
+# Subtest: persists the hidden miniapp list under a versioned key
+ok 14 - persists the hidden miniapp list under a versioned key
+  ---
+  duration_ms: 0.153
+  type: 'test'
+  ...
+# Subtest: every miniapp declares readiness, processing mode and output purpose
+ok 15 - every miniapp declares readiness, processing mode and output purpose
+  ---
+  duration_ms: 1.578084
+  type: 'test'
+  ...
+# Subtest: the three production priorities are explicit and unique
+ok 16 - the three production priorities are explicit and unique
+  ---
+  duration_ms: 0.495209
+  type: 'test'
+  ...
+# Subtest: paused miniapps stay in the in-development area with a stated reason
+ok 17 - paused miniapps stay in the in-development area with a stated reason
+  ---
+  duration_ms: 0.085916
+  type: 'test'
+  ...
+# Subtest: every active miniapp is wired to a lazy-loaded component in App.jsx
+ok 18 - every active miniapp is wired to a lazy-loaded component in App.jsx
+  ---
+  duration_ms: 0.501917
+  type: 'test'
+  ...
+# Subtest: every miniapp folder has a registry entry and vice versa
+ok 19 - every miniapp folder has a registry entry and vice versa
+  ---
+  duration_ms: 2.139875
+  type: 'test'
+  ...
+# Subtest: no miniapp folder is left without a component file
+ok 20 - no miniapp folder is left without a component file
+  ---
+  duration_ms: 1.4285
+  type: 'test'
+  ...
+# Subtest: packages/core declares every library it imports
+ok 21 - packages/core declares every library it imports
+  ---
+  duration_ms: 9.442291
+  type: 'test'
+  ...
+1..21
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 92.401334

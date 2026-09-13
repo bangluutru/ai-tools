@@ -6,7 +6,6 @@ import {
   EXCEL_FILE_LIMITS,
   hasExpectedDocumentSignature,
   IMAGE_INPUT_LIMITS,
-  PDF_COMPRESS_LIMITS,
   validateDocumentFiles,
 } from '../src/utils/documentFiles.js';
 
@@ -32,9 +31,8 @@ test('recognizes PDF, XLSX and legacy XLS signatures', () => {
 test('recognises the signatures of the formats the newer miniapps accept', () => {
   const bytes = (...values) => Uint8Array.from(values);
 
-  // OOXML (.docx/.pptx) dùng chung vỏ ZIP với .xlsx.
+  // DOCX dùng chung vỏ ZIP với .xlsx.
   assert.equal(hasExpectedDocumentSignature(bytes(0x50, 0x4b, 0x03, 0x04), '.docx'), true);
-  assert.equal(hasExpectedDocumentSignature(bytes(0x50, 0x4b, 0x03, 0x04), '.pptx'), true);
   assert.equal(hasExpectedDocumentSignature(bytes(0x25, 0x50, 0x44, 0x46), '.docx'), false);
 
   assert.equal(hasExpectedDocumentSignature(bytes(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a), '.png'), true);
@@ -54,12 +52,13 @@ test('recognises the signatures of the formats the newer miniapps accept', () =>
 
 
 test('the newer miniapps have limit presets to share', () => {
-  for (const limits of [PDF_COMPRESS_LIMITS, CONVERT_LIMITS, IMAGE_INPUT_LIMITS]) {
+  for (const limits of [CONVERT_LIMITS, IMAGE_INPUT_LIMITS]) {
     assert.equal(limits.maxFiles > 0, true);
     assert.equal(limits.maxFileBytes > 0, true);
     assert.equal(limits.maxTotalBytes >= limits.maxFileBytes, true);
     assert.equal(Array.isArray(limits.extensions) && limits.extensions.length > 0, true);
   }
   assert.equal(CONVERT_LIMITS.extensions.includes('.docx'), true);
+  assert.equal(CONVERT_LIMITS.extensions.includes('.pptx'), false);
   assert.equal(IMAGE_INPUT_LIMITS.maxFiles, 1);
 });

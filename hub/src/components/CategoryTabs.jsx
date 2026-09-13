@@ -1,14 +1,12 @@
 import React from 'react';
-import { Sparkles, FileText, Image, FileSpreadsheet, Globe, Wrench } from 'lucide-react';
+import { Sparkles, FileText, Image, FileSpreadsheet } from 'lucide-react';
 import { categories } from '../config/toolsRegistry';
 
 const iconMap = {
-  Wrench,
   Sparkles,
   FileText,
   Image,
-  FileSpreadsheet,
-  Globe
+  FileSpreadsheet
 };
 
 export default function CategoryTabs({ activeCategory, onSelectCategory, displayLang, visibleCategoryIds }) {

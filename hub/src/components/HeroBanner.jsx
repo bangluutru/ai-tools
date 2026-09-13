@@ -35,7 +35,7 @@ export default function HeroBanner() {
           <div className="h-3 w-px bg-slate-800" />
           <div className="flex items-center gap-1.5">
             <Cpu size={14} className="text-cyan-400" />
-            <span>AI qua Antigravity</span>
+            <span>Tải theo nhu cầu</span>
           </div>
         </div>
       </div>

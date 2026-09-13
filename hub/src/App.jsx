@@ -8,7 +8,7 @@ import ToolErrorBoundary from './components/ToolErrorBoundary';
 import CommandPalette from './components/CommandPalette';
 import DataPolicyModal from './components/DataPolicyModal';
 import SettingsModal from './components/SettingsModal';
-import { tools, isInDevelopment } from './config/toolsRegistry';
+import { tools } from './config/toolsRegistry';
 import { buildVersion } from './config/buildInfo';
 import { resolveToolId, toolUrl } from './utils/toolRoute';
 import { Loader2 } from 'lucide-react';
@@ -19,8 +19,6 @@ import {
 } from './utils/toolVisibility';
 import {
   ALL_CATEGORY,
-  IN_DEVELOPMENT_CATEGORY,
-  partitionTools,
   toolsForCategory,
   visibleCategoryIds,
 } from './utils/toolFilter';
@@ -28,11 +26,7 @@ import {
 // =========================================================================
 // ISOLATED LAZY LOADED TOOLS (Code-Splitting)
 //
-// Chỉ miniapp đang hoạt động mới có mặt ở đây. Miniapp tạm dừng nằm trong
-// hub/src/tools-in-development/ và cố tình không được import để không lọt vào
-// bundle production. Khi mở lại một công cụ, bỏ readiness 'in-development'
-// trong toolsRegistry.js, chuyển wrapper về hub/src/tools/ rồi thêm vào
-// toolComponentMap; hub/tests/tools-registry.test.js sẽ nhắc nếu thiếu bước nào.
+// Mỗi miniapp công bố trong registry đều có một entry lazy-load ở đây.
 // =========================================================================
 const ImageConvertTool = lazy(() => import('./tools/image-convert/ImageConvertTool'));
 const ScreenCaptureTool = lazy(() => import('./tools/screen-capture/ScreenCaptureTool'));
@@ -42,7 +36,6 @@ const OmniConvertTool = lazy(() => import('./tools/omniconvert/OmniConvertTool')
 const ExcelMappingTool = lazy(() => import('./tools/excel-mapping/ExcelMappingTool'));
 const EditorStudioTool = lazy(() => import('./tools/editor-studio/EditorStudioTool'));
 const InvoiceTool = lazy(() => import('./tools/invoice-studio/InvoiceTool'));
-const AutoBiTool = lazy(() => import('./tools/auto-bi/AutoBiTool'));
 const AccountingReconcileTool = lazy(() => import('./tools/accounting-reconcile/AccountingReconcileTool'));
 const WatermarkStudioTool = lazy(() => import('./tools/watermark-studio/WatermarkStudioTool'));
 const IdPhotoStudioTool = lazy(() => import('./tools/id-photo-studio/IdPhotoStudioTool'));
@@ -56,7 +49,6 @@ const toolComponentMap = {
   'excel-mapping': ExcelMappingTool,
   'editor-studio': EditorStudioTool,
   'invoice-studio': InvoiceTool,
-  'auto-bi': AutoBiTool,
   'accounting-reconcile': AccountingReconcileTool,
   'watermark-studio': WatermarkStudioTool,
   'id-photo-studio': IdPhotoStudioTool
@@ -111,7 +103,7 @@ export default function App() {
 
   const selectTool = useCallback((toolId) => {
     const tool = tools.find((candidate) => candidate.id === toolId);
-    if (!tool || isInDevelopment(tool) || !toolComponentMap[toolId]) return;
+    if (!tool || !toolComponentMap[toolId]) return;
     window.history.pushState({ toolId }, '', toolUrl(window.location, toolId));
     setActiveToolId(toolId);
   }, []);
@@ -124,9 +116,7 @@ export default function App() {
   const currentTool = tools.find((t) => t.id === activeToolId);
   const ActiveComponent = activeToolId ? toolComponentMap[activeToolId] : null;
 
-  // Miniapp đang phát triển chỉ nằm trong nhóm của riêng chúng; nơi khác trong
-  // portal chỉ thấy công cụ mở được.
-  const { active: activeTools } = partitionTools(tools, hiddenToolIds);
+  const activeTools = tools.filter((tool) => !hiddenToolIds.includes(tool.id));
   const filteredTools = toolsForCategory(tools, activeCategory, hiddenToolIds);
   const categoryIds = visibleCategoryIds(tools, hiddenToolIds);
 
@@ -136,7 +126,7 @@ export default function App() {
       : [...hiddenToolIds, toolId];
     setHiddenToolIds(nextHiddenToolIds);
 
-    if (activeCategory === ALL_CATEGORY || activeCategory === IN_DEVELOPMENT_CATEGORY) return;
+    if (activeCategory === ALL_CATEGORY) return;
     const categoryStillVisible = toolsForCategory(tools, activeCategory, nextHiddenToolIds).length > 0;
     if (!categoryStillVisible) setActiveCategory(ALL_CATEGORY);
   }, [activeCategory, hiddenToolIds]);
@@ -213,7 +203,7 @@ export default function App() {
           <footer className="no-print mt-auto border-t border-slate-800/80 bg-slate-950 py-8 px-4 text-center text-xs text-slate-500">
             <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-400">AI-Tools Master Hub</span>
+                <span className="font-bold text-slate-400">Toolio</span>
                 <span>• Beta có kiểm soát</span>
                 <span>• Build {buildVersion}</span>
               </div>

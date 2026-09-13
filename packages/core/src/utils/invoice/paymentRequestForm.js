@@ -274,7 +274,7 @@ export async function buildPaymentRequestForms(forms, options = {}) {
   const issuedAt = options.issuedAt ?? new Date();
   const ExcelJS = await loadExcelJs();
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'AI-Tools • Giấy đề nghị thanh toán';
+  workbook.creator = 'Toolio • Giấy đề nghị thanh toán';
   workbook.created = issuedAt;
 
   const formList = Array.isArray(forms) && forms.length > 0 ? forms : [{ company: {}, rows: [] }];

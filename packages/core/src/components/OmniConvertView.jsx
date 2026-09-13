@@ -9,6 +9,7 @@ import { MiniAppError, MiniAppLayout } from './shared/MiniAppLayout.jsx';
 import confetti from 'canvas-confetti';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
+import { uniqueFilename } from '../utils/files/uniqueFilename.js';
 import { 
   FileStack, 
   UploadCloud, 
@@ -49,7 +50,7 @@ import {
 const I18N = {
   vi: {
     title: 'Chuyển Đổi Tài Liệu & Ảnh ⇄ PDF',
-    subtitle: 'Chuyển đổi 2 chiều giữa DOCX, PPTX, XLSX, Ảnh và PDF. 100% xử lý trên trình duyệt, riêng tư tuyệt đối.',
+    subtitle: 'Chuyển đổi giữa DOCX, XLSX, ảnh và PDF trên trình duyệt, với các cặp định dạng được liệt kê rõ ràng.',
     inputFormat: 'Định dạng Đầu vào (Gốc)',
     outputFormat: 'Định dạng Đầu ra (Đích)',
     dropTitle: 'Kéo thả tệp vào đây hoặc',
@@ -81,7 +82,7 @@ const I18N = {
   },
   en: {
     title: 'Universal Document & Image ⇄ PDF Converter',
-    subtitle: 'Bidirectional conversion between DOCX, PPTX, XLSX, Images and PDF. 100% in-browser, fully private.',
+    subtitle: 'Convert DOCX, XLSX, images, and PDF in the browser using the listed supported pairs.',
     inputFormat: 'Input Format (Source)',
     outputFormat: 'Output Format (Target)',
     dropTitle: 'Drag & drop files here or',
@@ -113,7 +114,7 @@ const I18N = {
   },
   ja: {
     title: '万能ファイル・画像 ⇄ PDF 相互変換',
-    subtitle: 'DOCX、PPTX、XLSX、画像とPDFをブラウザ上で100%相互変換。完全ローカル処理で安全。',
+    subtitle: 'DOCX、XLSX、画像、PDFを、表示された対応形式の範囲でブラウザ上で変換します。',
     inputFormat: '変換元フォーマット',
     outputFormat: '変換先フォーマット',
     dropTitle: 'ファイルをここにドラッグ＆ドロップ、または',
@@ -374,11 +375,12 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
     const zip = new JSZip();
     const folder = zip.folder('OmniConvert_Files');
+    const usedNames = new Set();
 
     for (let i = 0; i < completedItems.length; i++) {
       const item = completedItems[i];
       const buffer = await item.result.blob.arrayBuffer();
-      folder.file(item.result.filename, buffer);
+      folder.file(uniqueFilename(item.result.filename, usedNames), buffer);
     }
 
     const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -431,7 +433,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
   };
 
   const supportedTargets = getSupportedTargets(sourceFormat);
-  const sourceOptions = ['docx', 'pptx', 'xlsx', 'pdf', 'png', 'jpg', 'webp', 'svg'];
+  const sourceOptions = ['docx', 'xlsx', 'pdf', 'png', 'jpg', 'webp', 'svg'];
+  const formatNameKey = displayLang === 'ja' ? 'name_ja' : displayLang === 'en' ? 'name_en' : 'name_vn';
 
   const totalCount = queue.length;
   const completedCount = queue.filter(q => q.status === 'completed').length;
@@ -513,7 +516,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               >
                 {sourceOptions.map((ext) => (
                   <option key={ext} value={ext}>
-                    .{ext.toUpperCase()} — {FORMAT_DETAILS[ext]?.[`name_${displayLang}`] || FORMAT_DETAILS[ext]?.name_vi || ext}
+                    .{ext.toUpperCase()} — {FORMAT_DETAILS[ext]?.[formatNameKey] || ext}
                   </option>
                 ))}
               </select>
@@ -545,7 +548,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               >
                 {supportedTargets.map((ext) => (
                   <option key={ext} value={ext}>
-                    .{ext.toUpperCase()} — {FORMAT_DETAILS[ext]?.[`name_${displayLang}`] || FORMAT_DETAILS[ext]?.name_vi || ext}
+                    .{ext.toUpperCase()} — {FORMAT_DETAILS[ext]?.[formatNameKey] || ext}
                   </option>
                 ))}
               </select>
@@ -588,7 +591,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               }
             }}
             className="hidden"
-            accept=".docx,.pptx,.xlsx,.xls,.pdf,.png,.jpg,.jpeg,.webp,.svg,.bmp,.txt,.csv"
+            accept=".docx,.xlsx,.xls,.pdf,.png,.jpg,.jpeg,.webp,.svg,.bmp,.txt,.csv"
           />
 
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600/30 to-blue-500/20 text-brand-400 border border-brand-500/30 flex items-center justify-center mx-auto mb-3.5 group-hover:scale-110 transition-transform">
@@ -603,7 +606,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-lg mx-auto">
-            {['docx', 'pptx', 'xlsx', 'pdf', 'png', 'jpg', 'webp', 'svg'].map((ext) => (
+            {['docx', 'xlsx', 'pdf', 'png', 'jpg', 'webp', 'svg'].map((ext) => (
               <span
                 key={ext}
                 className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/60"

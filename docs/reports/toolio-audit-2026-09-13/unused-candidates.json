@@ -1,0 +1,727 @@
+[
+  {
+    "file": "hub/src/App.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/components/CategoryTabs.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/components/CommandPalette.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/components/HeroBanner.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/components/Navbar.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/components/SettingsModal.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/components/ToolContainer.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/components/ToolErrorBoundary.jsx",
+    "line": 2,
+    "name": "AlertTriangle"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 3,
+    "name": "HardDrive"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 3,
+    "name": "CheckCircle2"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 4,
+    "name": "Trash2"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 4,
+    "name": "Plus"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 4,
+    "name": "Sparkles"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 4,
+    "name": "BookOpen"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 4,
+    "name": "Layers"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 5,
+    "name": "ChevronDown"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 5,
+    "name": "ChevronUp"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 5,
+    "name": "SlidersHorizontal"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 5,
+    "name": "Settings2"
+  },
+  {
+    "file": "hub/src/tools-in-development/certificate-studio/CertificateStudioTool.jsx",
+    "line": 6,
+    "name": "FileSpreadsheet"
+  },
+  {
+    "file": "hub/src/tools-in-development/contract-auditor/ContractAuditorTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools-in-development/legal-studio/LegalStudioTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools-in-development/long-translator/LongTranslatorTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools-in-development/pdf-overlay/PdfOverlayTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools-in-development/policy-assistant/PolicyAssistantTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/accounting-reconcile/AccountingReconcileTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/auto-bi/AutoBiTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/barcode-qr/BarcodeQrTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/editor-studio/EditorStudioTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/excel-mapping/ExcelMappingTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/id-photo-studio/IdPhotoStudioTool.jsx",
+    "line": 7,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/image-convert/ImageConvertTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/image-convert/components/CompareModal.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/image-convert/components/DropZone.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/image-convert/components/DropZone.jsx",
+    "line": 2,
+    "name": "FileImage"
+  },
+  {
+    "file": "hub/src/tools/image-convert/components/Header.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/image-convert/components/Header.jsx",
+    "line": 2,
+    "name": "Zap"
+  },
+  {
+    "file": "hub/src/tools/image-convert/components/ImageCard.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/image-convert/components/ImageCard.jsx",
+    "line": 2,
+    "name": "Check"
+  },
+  {
+    "file": "hub/src/tools/image-convert/components/ImageGrid.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/image-convert/components/SettingsBar.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/image-convert/components/StatsOverview.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/invoice-studio/InvoiceTool.jsx",
+    "line": 2,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/omniconvert/OmniConvertTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/pdf-toolkit/PdfToolkitTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/screen-capture/ScreenCaptureTool.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "hub/src/tools/watermark-studio/WatermarkStudioTool.jsx",
+    "line": 7,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/AccountingReconcileView.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/AutoBiView.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/AutoBiView.jsx",
+    "line": 3,
+    "name": "UploadCloud"
+  },
+  {
+    "file": "packages/core/src/components/AutoBiView.jsx",
+    "line": 3,
+    "name": "RefreshCw"
+  },
+  {
+    "file": "packages/core/src/components/AutoBiView.jsx",
+    "line": 4,
+    "name": "PieChart"
+  },
+  {
+    "file": "packages/core/src/components/AutoBiView.jsx",
+    "line": 4,
+    "name": "Layers"
+  },
+  {
+    "file": "packages/core/src/components/AutoBiView.jsx",
+    "line": 4,
+    "name": "ArrowUpRight"
+  },
+  {
+    "file": "packages/core/src/components/AutoBiView.jsx",
+    "line": 4,
+    "name": "ArrowDownRight"
+  },
+  {
+    "file": "packages/core/src/components/AutoBiView.jsx",
+    "line": 5,
+    "name": "Filter"
+  },
+  {
+    "file": "packages/core/src/components/BarcodeQrStudioView.jsx",
+    "line": 17,
+    "name": "Sparkles"
+  },
+  {
+    "file": "packages/core/src/components/BarcodeQrStudioView.jsx",
+    "line": 24,
+    "name": "FileCode"
+  },
+  {
+    "file": "packages/core/src/components/BarcodeQrStudioView.jsx",
+    "line": 27,
+    "name": "Trash2"
+  },
+  {
+    "file": "packages/core/src/components/BarcodeQrStudioView.jsx",
+    "line": 30,
+    "name": "HelpCircle"
+  },
+  {
+    "file": "packages/core/src/components/BarcodeQrStudioView.jsx",
+    "line": 31,
+    "name": "ShieldCheck"
+  },
+  {
+    "file": "packages/core/src/components/BarcodeQrStudioView.jsx",
+    "line": 40,
+    "name": "Lock"
+  },
+  {
+    "file": "packages/core/src/components/BarcodeQrStudioView.jsx",
+    "line": 41,
+    "name": "Palette"
+  },
+  {
+    "file": "packages/core/src/components/BarcodeQrStudioView.jsx",
+    "line": 43,
+    "name": "Layout"
+  },
+  {
+    "file": "packages/core/src/components/BarcodeQrStudioView.jsx",
+    "line": 44,
+    "name": "Sliders"
+  },
+  {
+    "file": "packages/core/src/components/BarcodeQrStudioView.jsx",
+    "line": 45,
+    "name": "Type"
+  },
+  {
+    "file": "packages/core/src/components/BarcodeQrStudioView.jsx",
+    "line": 49,
+    "name": "ArrowRight"
+  },
+  {
+    "file": "packages/core/src/components/ContractAuditorView.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/ContractAuditorView.jsx",
+    "line": 4,
+    "name": "ArrowRight"
+  },
+  {
+    "file": "packages/core/src/components/ContractAuditorView.jsx",
+    "line": 4,
+    "name": "DollarSign"
+  },
+  {
+    "file": "packages/core/src/components/ContractAuditorView.jsx",
+    "line": 4,
+    "name": "Calendar"
+  },
+  {
+    "file": "packages/core/src/components/ContractAuditorView.jsx",
+    "line": 5,
+    "name": "Building"
+  },
+  {
+    "file": "packages/core/src/components/ContractAuditorView.jsx",
+    "line": 5,
+    "name": "FileCheck"
+  },
+  {
+    "file": "packages/core/src/components/ContractAuditorView.jsx",
+    "line": 5,
+    "name": "Layers"
+  },
+  {
+    "file": "packages/core/src/components/ContractAuditorView.jsx",
+    "line": 5,
+    "name": "HelpCircle"
+  },
+  {
+    "file": "packages/core/src/components/ContractAuditorView.jsx",
+    "line": 8,
+    "name": "JSZip"
+  },
+  {
+    "file": "packages/core/src/components/ExcelMappingView.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/IdPhotoStudioView.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/LegalDocumentView.jsx",
+    "line": 6,
+    "name": "PlusCircle"
+  },
+  {
+    "file": "packages/core/src/components/LegalDocumentView.jsx",
+    "line": 7,
+    "name": "Printer"
+  },
+  {
+    "file": "packages/core/src/components/LegalDocumentView.jsx",
+    "line": 8,
+    "name": "Languages"
+  },
+  {
+    "file": "packages/core/src/components/LegalDocumentView.jsx",
+    "line": 11,
+    "name": "FileText"
+  },
+  {
+    "file": "packages/core/src/components/LegalDocumentView.jsx",
+    "line": 15,
+    "name": "Edit3"
+  },
+  {
+    "file": "packages/core/src/components/LegalDocumentView.jsx",
+    "line": 16,
+    "name": "Eye"
+  },
+  {
+    "file": "packages/core/src/components/LegalDocumentView.jsx",
+    "line": 17,
+    "name": "ZoomIn"
+  },
+  {
+    "file": "packages/core/src/components/LegalDocumentView.jsx",
+    "line": 18,
+    "name": "ZoomOut"
+  },
+  {
+    "file": "packages/core/src/components/LegalDocumentView.jsx",
+    "line": 19,
+    "name": "FileDown"
+  },
+  {
+    "file": "packages/core/src/components/LongDocTranslatorView.jsx",
+    "line": 5,
+    "name": "Printer"
+  },
+  {
+    "file": "packages/core/src/components/LongDocTranslatorView.jsx",
+    "line": 6,
+    "name": "Languages"
+  },
+  {
+    "file": "packages/core/src/components/LongDocTranslatorView.jsx",
+    "line": 9,
+    "name": "FileText"
+  },
+  {
+    "file": "packages/core/src/components/LongDocTranslatorView.jsx",
+    "line": 13,
+    "name": "Type"
+  },
+  {
+    "file": "packages/core/src/components/LongDocTranslatorView.jsx",
+    "line": 14,
+    "name": "Landmark"
+  },
+  {
+    "file": "packages/core/src/components/LongDocTranslatorView.jsx",
+    "line": 15,
+    "name": "GraduationCap"
+  },
+  {
+    "file": "packages/core/src/components/LongDocTranslatorView.jsx",
+    "line": 16,
+    "name": "RotateCcw"
+  },
+  {
+    "file": "packages/core/src/components/LongDocTranslatorView.jsx",
+    "line": 17,
+    "name": "FileDown"
+  },
+  {
+    "file": "packages/core/src/components/LongDocTranslatorView.jsx",
+    "line": 22,
+    "name": "ZoomIn"
+  },
+  {
+    "file": "packages/core/src/components/LongDocTranslatorView.jsx",
+    "line": 22,
+    "name": "ZoomOut"
+  },
+  {
+    "file": "packages/core/src/components/OmniConvertView.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/OmniConvertView.jsx",
+    "line": 19,
+    "name": "CheckCircle2"
+  },
+  {
+    "file": "packages/core/src/components/PdfCompressorView.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/PdfMergerView.jsx",
+    "line": 12,
+    "name": "FileDown"
+  },
+  {
+    "file": "packages/core/src/components/PdfMergerView.jsx",
+    "line": 18,
+    "name": "Combine"
+  },
+  {
+    "file": "packages/core/src/components/PdfSplitterView.jsx",
+    "line": 12,
+    "name": "Scissors"
+  },
+  {
+    "file": "packages/core/src/components/PdfSplitterView.jsx",
+    "line": 18,
+    "name": "X"
+  },
+  {
+    "file": "packages/core/src/components/PolicyAssistantView.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/PolicyAssistantView.jsx",
+    "line": 3,
+    "name": "FileText"
+  },
+  {
+    "file": "packages/core/src/components/PolicyAssistantView.jsx",
+    "line": 3,
+    "name": "CheckCircle2"
+  },
+  {
+    "file": "packages/core/src/components/PolicyAssistantView.jsx",
+    "line": 4,
+    "name": "AlertCircle"
+  },
+  {
+    "file": "packages/core/src/components/PolicyAssistantView.jsx",
+    "line": 4,
+    "name": "MapPin"
+  },
+  {
+    "file": "packages/core/src/components/PolicyAssistantView.jsx",
+    "line": 4,
+    "name": "Users"
+  },
+  {
+    "file": "packages/core/src/components/PolicyAssistantView.jsx",
+    "line": 4,
+    "name": "Calendar"
+  },
+  {
+    "file": "packages/core/src/components/PolicyAssistantView.jsx",
+    "line": 4,
+    "name": "DollarSign"
+  },
+  {
+    "file": "packages/core/src/components/PolicyAssistantView.jsx",
+    "line": 5,
+    "name": "Printer"
+  },
+  {
+    "file": "packages/core/src/components/PolicyAssistantView.jsx",
+    "line": 5,
+    "name": "Sparkles"
+  },
+  {
+    "file": "packages/core/src/components/ScreenCaptureView.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/ScreenCaptureView.jsx",
+    "line": 31,
+    "name": "RotateCcw"
+  },
+  {
+    "file": "packages/core/src/components/ScreenCaptureView.jsx",
+    "line": 41,
+    "name": "ShieldCheck"
+  },
+  {
+    "file": "packages/core/src/components/TemplateOverlayView.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/TemplateOverlayView.jsx",
+    "line": 3,
+    "name": "Printer"
+  },
+  {
+    "file": "packages/core/src/components/TemplateOverlayView.jsx",
+    "line": 6,
+    "name": "Languages"
+  },
+  {
+    "file": "packages/core/src/components/TemplateOverlayView.jsx",
+    "line": 7,
+    "name": "Maximize2"
+  },
+  {
+    "file": "packages/core/src/components/TemplateOverlayView.jsx",
+    "line": 10,
+    "name": "RefreshCw"
+  },
+  {
+    "file": "packages/core/src/components/TemplateOverlayView.jsx",
+    "line": 11,
+    "name": "Download"
+  },
+  {
+    "file": "packages/core/src/components/TemplateOverlayView.jsx",
+    "line": 15,
+    "name": "ZoomIn"
+  },
+  {
+    "file": "packages/core/src/components/TemplateOverlayView.jsx",
+    "line": 16,
+    "name": "ZoomOut"
+  },
+  {
+    "file": "packages/core/src/components/TemplateOverlayView.jsx",
+    "line": 17,
+    "name": "FileDown"
+  },
+  {
+    "file": "packages/core/src/components/TemplateOverlayView.jsx",
+    "line": 25,
+    "name": "UNIFIED_TEMPLATE_NOTEBOOKLM_PROMPT"
+  },
+  {
+    "file": "packages/core/src/components/UserGuideView.jsx",
+    "line": 3,
+    "name": "Award"
+  },
+  {
+    "file": "packages/core/src/components/UserGuideView.jsx",
+    "line": 4,
+    "name": "Scale"
+  },
+  {
+    "file": "packages/core/src/components/UserGuideView.jsx",
+    "line": 5,
+    "name": "Scissors"
+  },
+  {
+    "file": "packages/core/src/components/UserGuideView.jsx",
+    "line": 6,
+    "name": "Combine"
+  },
+  {
+    "file": "packages/core/src/components/UserGuideView.jsx",
+    "line": 7,
+    "name": "Printer"
+  },
+  {
+    "file": "packages/core/src/components/UserGuideView.jsx",
+    "line": 8,
+    "name": "FileSpreadsheet"
+  },
+  {
+    "file": "packages/core/src/components/UserGuideView.jsx",
+    "line": 12,
+    "name": "Languages"
+  },
+  {
+    "file": "packages/core/src/components/WatermarkStudioView.jsx",
+    "line": 24,
+    "name": "Cpu"
+  },
+  {
+    "file": "packages/core/src/components/ZoneEditor.jsx",
+    "line": 2,
+    "name": "ChevronUp"
+  },
+  {
+    "file": "packages/core/src/components/ZoneEditor.jsx",
+    "line": 2,
+    "name": "ChevronDown"
+  },
+  {
+    "file": "packages/core/src/components/editor-studio/DocStudioPreview.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/editor-studio/FormatSuggestionPanel.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/editor-studio/FormatSuggestionPanel.jsx",
+    "line": 2,
+    "name": "Check"
+  },
+  {
+    "file": "packages/core/src/components/editor-studio/LayoutSettingsBar.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/components/editor-studio/LayoutSettingsBar.jsx",
+    "line": 2,
+    "name": "Check"
+  },
+  {
+    "file": "packages/core/src/components/shared/MiniAppLayout.jsx",
+    "line": 1,
+    "name": "React"
+  },
+  {
+    "file": "packages/core/src/lib/editor-studio/export.js",
+    "line": 12,
+    "name": "BorderStyle"
+  }
+]

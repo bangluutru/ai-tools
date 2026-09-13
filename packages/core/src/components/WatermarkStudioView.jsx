@@ -1,7 +1,7 @@
 /**
  * WatermarkStudioView.jsx
  * ========================================================================
- * Self-contained Watermark Studio miniapp for the AI-Tools portal.
+ * Self-contained Watermark Studio miniapp for the Toolio portal.
  * Adds text or image watermarks to PDF, DOCX, XLSX, PPTX, and images.
  *
  * Architecture:
@@ -15,6 +15,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { PDFDocument, degrees, rgb, StandardFonts } from 'pdf-lib';
 import JSZip from 'jszip';
+import { attachWatermarkHeaderReference } from '../utils/watermark/docxHeader.js';
+import { uniqueFilename } from '../utils/files/uniqueFilename.js';
 import {
   ShieldCheck, HelpCircle, Sparkles, LayoutGrid,
   Zap, Check, UploadCloud, FileText, Image as ImageIcon, FileSpreadsheet,
@@ -475,13 +477,8 @@ async function processDocxWatermark(docxFile, config) {
   var documentFile = zip.file('word/document.xml');
   if (documentFile) {
     var docXml = await documentFile.async('text');
-    var headerRefTag = '<w:headerReference w:type="default" r:id="' + headerRelId + '"/>';
     if (!docXml.includes(headerRelId)) {
-      if (docXml.includes('<w:sectPr')) {
-        docXml = docXml.replace(/<w:sectPr([^>]*)>/g, '<w:sectPr$1>' + headerRefTag);
-      } else if (docXml.includes('</w:body>')) {
-        docXml = docXml.replace('</w:body>', '<w:sectPr>' + headerRefTag + '</w:sectPr></w:body>');
-      }
+      docXml = attachWatermarkHeaderReference(docXml, headerRelId);
       zip.file('word/document.xml', docXml);
     }
   }
@@ -884,7 +881,10 @@ export default function WatermarkStudioView({ displayLang: _displayLang }) {
     var doneItems = fileItems.filter(function (i) { return i.status === 'done' && i.resultBlob; });
     if (doneItems.length === 0) return;
     var zip = new JSZip();
-    for (var i = 0; i < doneItems.length; i++) zip.file('watermarked_' + doneItems[i].name, doneItems[i].resultBlob);
+    var usedNames = new Set();
+    for (var i = 0; i < doneItems.length; i++) {
+      zip.file(uniqueFilename('watermarked_' + doneItems[i].name, usedNames), doneItems[i].resultBlob);
+    }
     var zipBlob = await zip.generateAsync({ type: 'blob' });
     downloadBlob(zipBlob, 'watermark_studio_batch.zip');
   }, [fileItems]);

@@ -1,6 +1,5 @@
 export const FORMAT_TYPES = {
   DOCX: 'docx',
-  PPTX: 'pptx',
   XLSX: 'xlsx',
   PDF: 'pdf',
   PNG: 'png',
@@ -22,15 +21,6 @@ export const FORMAT_DETAILS = {
     category: 'document',
     color: 'bg-blue-600/20 text-blue-400 border-blue-500/30',
     badgeColor: 'bg-blue-600 text-white'
-  },
-  pptx: {
-    ext: 'pptx',
-    name_vn: 'PowerPoint Slide (.pptx)',
-    name_en: 'PowerPoint Slide (.pptx)',
-    name_ja: 'PowerPoint スライド (.pptx)',
-    category: 'presentation',
-    color: 'bg-orange-600/20 text-orange-400 border-orange-500/30',
-    badgeColor: 'bg-orange-600 text-white'
   },
   xlsx: {
     ext: 'xlsx',
@@ -126,10 +116,7 @@ export const FORMAT_DETAILS = {
 
 export const COMPATIBILITY_MATRIX = {
   docx: ['pdf', 'txt'],
-  pptx: ['pdf'],
   xlsx: ['pdf', 'csv'],
-  // PDF→PPTX đã gỡ cùng pptxgenjs: thư viện phụ thuộc image-size, vốn dính
-  // advisory DoS ở mọi phiên bản và không có bản vá. Chiều PPTX→PDF giữ nguyên.
   pdf: ['docx', 'xlsx', 'png', 'jpg', 'webp', 'txt'],
   png: ['pdf', 'jpg', 'webp'],
   jpg: ['pdf', 'png', 'webp'],

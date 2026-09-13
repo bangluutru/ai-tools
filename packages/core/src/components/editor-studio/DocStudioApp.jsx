@@ -20,8 +20,8 @@ const dsTranslations = {
         navTemplates: 'Mẫu tài liệu',
         guestUser: 'Khách',
         openAccess: 'TRUY CẬP MỞ',
-        dashTitle: 'Tài liệu Workspace',
-        dashSubtitle: 'Quản lý và chỉnh sửa tài liệu nội bộ.',
+        dashTitle: 'Tài liệu mẫu',
+        dashSubtitle: 'Dữ liệu bên dưới chỉ để minh họa và không được lưu thành workspace.',
         createDoc: 'Tạo tài liệu',
         searchPlaceholder: 'Tìm kiếm tài liệu...',
         updated: 'Cập nhật',
@@ -55,8 +55,8 @@ const dsTranslations = {
         navTemplates: 'Templates',
         guestUser: 'Guest User',
         openAccess: 'OPEN ACCESS',
-        dashTitle: 'Workspace Documents',
-        dashSubtitle: 'Manage and edit your internal structured documents.',
+        dashTitle: 'Sample Documents',
+        dashSubtitle: 'The items below are for demonstration only and are not saved as a workspace.',
         createDoc: 'Create Document',
         searchPlaceholder: 'Search documents...',
         updated: 'Updated',
@@ -90,8 +90,8 @@ const dsTranslations = {
         navTemplates: 'テンプレート',
         guestUser: 'ゲスト',
         openAccess: 'オープンアクセス',
-        dashTitle: 'ワークスペースドキュメント',
-        dashSubtitle: '社内の構造化ドキュメントを管理・編集。',
+        dashTitle: 'サンプル文書',
+        dashSubtitle: '以下のデータはデモ用であり、ワークスペースには保存されません。',
         createDoc: 'ドキュメント作成',
         searchPlaceholder: 'ドキュメントを検索...',
         updated: '更新',
@@ -120,7 +120,7 @@ const dsTranslations = {
     },
 };
 
-const MOCK_DOCS = [
+const DEMO_DOCUMENTS = [
     { id: '1', title_vn: 'Quyết định bổ nhiệm NS', title_en: 'Appointment Decision', title_jp: '人事任命決定', type: 'Official Letter', status: 'DRAFT', updatedAt: '2026-03-10', content: `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n\nQUYẾT ĐỊNH BỔ NHIỆM\n\nSố: 01/2026/QĐ-BN\n\nKính gửi: Phòng Nhân sự, Ông/Bà Lê Trí Nam\n\nĐiều 1: Bổ nhiệm chức danh\nBổ nhiệm Ông Lê Trí Nam giữ chức vụ Trưởng phòng Công nghệ kể từ ngày 15/03/2026.\n\nĐiều 2: Mức lương và phụ cấp\nMức lương cơ bản và phụ cấp được hưởng theo quy định của công ty.` },
     { id: '2', title_vn: 'Biên bản nghiệm thu dự án', title_en: 'Project Acceptance Report', title_jp: 'プロジェクト検収議事録', type: 'Meeting Minutes', status: 'GENERATED', updatedAt: '2026-03-09', content: `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n\nBIÊN BẢN NGHIỆM THU DỰ ÁN\n\nHôm nay, ngày 09 tháng 03 năm 2026, tại văn phòng công ty.\n\nThành phần tham dự:\n1. Đại diện Bên A: Ông Trần Hải Bằng\n2. Đại diện Bên B: Ông Lê Trí Nam\n\nNội dung nghiệm thu:\n1. Phần mềm quản lý tài liệu DocStudio\n2. Module tích hợp AI Rewrite\n\nKết luận:\nHai bên đồng ý nghiệm thu và ghi nhận hệ thống hoạt động ổn định.` },
     { id: '3', title_vn: 'Hợp đồng nguyên tắc Hojokin', title_en: 'Hojokin Framework Contract', title_jp: 'Hojokin基本契約', type: 'Contract', status: 'VALIDATED', updatedAt: '2026-03-08', content: `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n\nHỢP ĐỒNG NGUYÊN TẮC\n\nSố: 05/2026/HĐNT-HOJOKIN\n\nBÊN A: Công ty Cổ phần Genki Fami Việt Nam\nĐại diện: Ông Trần Hải Bằng\n\nBÊN B: Đối tác Hojokin\n\nĐiều 1: Phạm vi hợp tác\nHai bên đồng ý hợp tác triển khai hệ thống phân tích trợ cấp Hojokin Navigator tại thị trường Nhật Bản.\n\nĐiều 2: Nghĩa vụ các bên\nBên A cung cấp tài nguyên máy chủ. Bên B cung cấp dữ liệu pháp lý.` },
@@ -142,9 +142,7 @@ export default function DocStudioApp({ displayLang }) {
     const [statusType, setStatusType] = useState('success'); // success | info | error
     const [suggestions, setSuggestions] = useState([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [selectionRange, setSelectionRange] = useState(null);
     const fileInputRef = useRef(null);
-    const textareaRef = useRef(null);
 
     // Layout Engine configuration state
     const [layoutConfig, setLayoutConfig] = useState({
@@ -208,50 +206,6 @@ export default function DocStudioApp({ displayLang }) {
         setSuggestions([]);
     };
 
-    // Handle Text Selection for Notion-like AI Toolbar
-    const handleTextSelect = (e) => {
-        const { selectionStart, selectionEnd, value } = e.target;
-        if (selectionStart !== selectionEnd && selectionStart !== null) {
-            setSelectionRange({
-                start: selectionStart,
-                end: selectionEnd,
-                text: value.substring(selectionStart, selectionEnd)
-            });
-        } else {
-            setSelectionRange(null);
-        }
-    };
-
-    // Simulate Notion AI rewrite
-    const applyAIRewrite = (type) => {
-        if (!selectionRange) return;
-        setStatusMessage('AI đang viết lại...');
-        setStatusType('info');
-
-        // Hide menu & capture current range
-        const { start, end, text } = selectionRange;
-        setSelectionRange(null);
-
-        // Simulate network delay
-        setTimeout(() => {
-            let newText = text;
-            if (type === 'longer') newText = text + '\\n\\n(✨ AI đã mở rộng nội dung chi tiết dựa trên ngữ cảnh...)';
-            if (type === 'shorter') newText = '(✨ Bản tóm tắt AI) ' + text.substring(0, Math.floor(text.length / 2)) + '...';
-            if (type === 'professional') newText = '(✨ Đã làm mềm giọng văn) ' + text.replace(/tôi/gi, 'chúng tôi').replace(/yêu cầu/gi, 'đề xuất');
-
-            const newRawInput = rawInput.substring(0, start) + newText + rawInput.substring(end);
-            setRawInput(newRawInput);
-            setStatusMessage('✨ AI đã viết lại đoạn văn bản của bạn!');
-            setStatusType('success');
-
-            // Auto trigger analysis
-            setTimeout(() => {
-                const results = analyzeAndSuggest(newRawInput);
-                setSuggestions(results);
-            }, 500);
-        }, 1200);
-    };
-
     // File upload handler — supports .txt, .md, .doc, .docx
     const handleFileUpload = async (e) => {
         const file = e.target.files?.[0];
@@ -303,7 +257,7 @@ export default function DocStudioApp({ displayLang }) {
         setGeneratedSchema(null);
         setValidationIssues([]);
         setSuggestions([]);
-        setStatusMessage('Đã tải tài liệu từ Workspace.');
+        setStatusMessage('Đã tải tài liệu mẫu. Đây là dữ liệu minh họa, không phải workspace.');
         setStatusType('success');
         setActiveSubTab('editor');
     };
@@ -407,7 +361,7 @@ export default function DocStudioApp({ displayLang }) {
                                     </div>
                                 </div>
                                 <div className="divide-y divide-slate-100">
-                                    {MOCK_DOCS.filter(d => getDocTitle(d).toLowerCase().includes(searchQuery.toLowerCase())).map(doc => (
+                                    {DEMO_DOCUMENTS.filter(d => getDocTitle(d).toLowerCase().includes(searchQuery.toLowerCase())).map(doc => (
                                         <div key={doc.id} onClick={() => handleLoadDocument(doc)} className="p-4 hover:bg-slate-800/60 flex items-center justify-between group transition-colors cursor-pointer">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center">
@@ -532,27 +486,11 @@ export default function DocStudioApp({ displayLang }) {
                                             <span className="text-[10px] text-slate-400">{t.uploadHint}</span>
                                         </div>
                                         <textarea
-                                            ref={textareaRef}
                                             value={rawInput}
                                             onChange={(e) => setRawInput(e.target.value)}
-                                            onSelect={handleTextSelect}
-                                            onBlur={() => setTimeout(() => setSelectionRange(null), 200)}
                                             className="flex-1 p-4 resize-none outline-none font-mono text-sm text-slate-200 custom-scrollbar"
                                             placeholder={t.rawInputPlaceholder}
                                         />
-
-                                        {/* Notion-style AI Floating Toolbar */}
-                                        {selectionRange && (
-                                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 text-white rounded-lg shadow-2xl p-1.5 flex items-center gap-1 z-50 animate-in slide-in-from-bottom-3 fade-in duration-200">
-                                                <span className="text-xs font-bold text-slate-300 px-2 flex-1 whitespace-nowrap">
-                                                    <Sparkles size={12} className="inline mr-1 text-indigo-400" /> AI Rewrite
-                                                </span>
-                                                <div className="w-px h-4 bg-slate-700 mx-1"></div>
-                                                <button onClick={() => applyAIRewrite('longer')} className="px-2.5 py-1.5 hover:bg-slate-800 rounded-md text-xs font-semibold text-slate-200 transition-colors">Dài hơn</button>
-                                                <button onClick={() => applyAIRewrite('shorter')} className="px-2.5 py-1.5 hover:bg-slate-800 rounded-md text-xs font-semibold text-slate-200 transition-colors">Ngắn gọn</button>
-                                                <button onClick={() => applyAIRewrite('professional')} className="px-2.5 py-1.5 hover:bg-slate-800 rounded-md text-xs font-semibold text-slate-200 transition-colors">Văn phong Pro</button>
-                                            </div>
-                                        )}
                                     </div>
 
                                     {/* Format Suggestion Panel */}

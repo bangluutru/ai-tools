@@ -6,18 +6,18 @@ export default function Navbar({ displayLang, onLangChange, onOpenSearch, onOpen
 
   return (
     <header className="no-print bg-slate-900/90 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-50 shadow-lg shadow-black/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-4">
         {/* Brand Logo */}
-        <div className="flex items-center gap-3 cursor-pointer select-none">
+        <div className="flex items-center gap-2 sm:gap-3 cursor-pointer select-none">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 via-teal-500 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25">
             <Sparkles size={22} className="animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="font-black text-xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                AI-Tools
+                Toolio
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-black text-emerald-400 uppercase tracking-wider">
+              <span className="hidden sm:inline px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-black text-emerald-400 uppercase tracking-wider">
                 HUB
               </span>
             </div>
@@ -38,7 +38,7 @@ export default function Navbar({ displayLang, onLangChange, onOpenSearch, onOpen
         </button>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1 sm:gap-2.5">
           {/* Mobile Search Button */}
           <button
             onClick={onOpenSearch}
@@ -87,7 +87,7 @@ export default function Navbar({ displayLang, onLangChange, onOpenSearch, onOpen
 
           <button
             onClick={onOpenSettings}
-            className="p-2.5 rounded-xl bg-slate-800/70 hover:bg-slate-800 text-slate-300 hover:text-emerald-400 border border-slate-700/60 transition-all"
+            className="hidden sm:block p-2.5 rounded-xl bg-slate-800/70 hover:bg-slate-800 text-slate-300 hover:text-emerald-400 border border-slate-700/60 transition-all"
             title="Cài đặt miniapp"
             aria-label="Cài đặt miniapp"
           >

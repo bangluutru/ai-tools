@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { loadPdfDocument, extractPdfStructuredText } from './pdfHelper.js';
+import { paginateRows } from './xlsxPagination.js';
 
 export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(15);
@@ -24,7 +25,21 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {
     format: 'a4'
   });
 
-  const totalSheets = sheetNames.length;
+  const sheets = sheetNames.map((sheetName) => {
+    const worksheet = workbook.Sheets[sheetName];
+    // raw: false trả về chuỗi đã áp định dạng của ô, nên ngày, tiền tệ và
+    // phần trăm hiện trong PDF đúng như người dùng thấy trong Excel.
+    const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
+    return { sheetName, headers: rawData[0] || [], rows: rawData.slice(1), hasData: rawData.length > 0 };
+  }).filter((sheet) => sheet.hasData);
+
+  if (sheets.length === 0) {
+    throw new Error('Tệp Excel không chứa dữ liệu để chuyển đổi.');
+  }
+
+  const pageJobs = sheets.flatMap((sheet) =>
+    paginateRows(sheet.rows).map((rows, pageIndex, pages) => ({ ...sheet, rows, pageIndex, pageCount: pages.length }))
+  );
   let hasRenderedAnyPage = false;
 
   const staging = document.createElement('div');
@@ -39,17 +54,8 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {
   document.body.appendChild(staging);
 
   try {
-    for (let sIndex = 0; sIndex < totalSheets; sIndex++) {
-      const sheetName = sheetNames[sIndex];
-      const worksheet = workbook.Sheets[sheetName];
-      // raw: false trả về chuỗi đã áp định dạng của ô, nên ngày, tiền tệ và
-      // phần trăm hiện trong PDF đúng như người dùng thấy trong Excel.
-      const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
-
-      if (rawData.length === 0) continue;
-
-      const headers = rawData[0] || [];
-      const rows = rawData.slice(1);
+    for (let jobIndex = 0; jobIndex < pageJobs.length; jobIndex++) {
+      const { sheetName, headers, rows, pageIndex, pageCount } = pageJobs[jobIndex];
 
       // Render table thành DOM element với styling đẹp và font Unicode chuẩn
       staging.innerHTML = '';
@@ -60,7 +66,7 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {
 
       tableWrapper.innerHTML = `
         <div style="font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">
-          Bảng tính: ${escapeHtml(sheetName)}
+          Bảng tính: ${escapeHtml(sheetName)} · Trang ${pageIndex + 1}/${pageCount}
         </div>
         <table style="width: 100%; border-collapse: collapse; font-size: 11px; font-family: inherit;">
           <thead>
@@ -69,9 +75,7 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {
             </tr>
           </thead>
           <tbody>
-            ${rows
-              .slice(0, 100) // Giới hạn tối đa 100 hàng cho 1 sheet
-              .map(
+            ${rows.map(
                 (row, rIdx) => `
               <tr style="background-color: ${rIdx % 2 === 0 ? '#ffffff' : '#f8fafc'}; color: #334155;">
                 ${headers.map((_, cIdx) => `<td style="border: 1px solid #cbd5e1; padding: 5px 10px; word-break: break-word;">${escapeHtml(String(row[cIdx] !== undefined ? row[cIdx] : ''))}</td>`).join('')}
@@ -145,7 +149,7 @@ export async function convertXlsxToPdf(file, _options = {}, onProgress = () => {
         }
       }
 
-      if (onProgress) onProgress(30 + Math.round(((sIndex + 1) / totalSheets) * 60));
+      if (onProgress) onProgress(30 + Math.round(((jobIndex + 1) / pageJobs.length) * 60));
     }
 
     const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'spreadsheet';

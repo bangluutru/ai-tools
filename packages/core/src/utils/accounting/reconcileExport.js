@@ -266,7 +266,7 @@ function addSourceSheet(workbook, diagnostics, generatedAt) {
 export async function buildReconcileWorkbook(results, { diagnostics = [], generatedAt = new Date() } = {}) {
   const ExcelJS = await loadExcelJs();
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'AI-Tools • Đối chiếu kế toán';
+  workbook.creator = 'Toolio • Đối chiếu kế toán';
   workbook.created = generatedAt;
 
   addSummarySheet(workbook, results, generatedAt);

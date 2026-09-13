@@ -67,7 +67,7 @@ export async function buildPaymentRequestWorkbook(invoices, options = {}) {
   const generatedAt = options.generatedAt ?? new Date();
   const ExcelJS = await loadExcelJs();
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'AI-Tools • Đề nghị thanh toán';
+  workbook.creator = 'Toolio • Đề nghị thanh toán';
   workbook.created = generatedAt;
 
   const sheet = workbook.addWorksheet('Bảng kê ĐNTT', { views: [{ showGridLines: false }] });

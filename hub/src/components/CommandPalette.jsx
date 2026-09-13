@@ -57,16 +57,11 @@ export default function CommandPalette({ isOpen, onClose, onSelectTool, displayL
             filteredTools.map((tool) => (
               <button
                 key={tool.id}
-                disabled={tool.readiness === 'in-development'}
                 onClick={() => {
                   onSelectTool(tool.id);
                   onClose();
                 }}
-                className={`w-full p-3 rounded-xl text-left flex items-center justify-between group transition-colors ${
-                  tool.readiness === 'in-development'
-                    ? 'cursor-not-allowed opacity-50'
-                    : 'hover:bg-slate-800/80'
-                }`}
+                className="w-full p-3 rounded-xl text-left flex items-center justify-between group transition-colors hover:bg-slate-800/80"
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${tool.gradient} flex items-center justify-center text-white text-xs`}>
@@ -78,7 +73,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectTool, displayL
                     </div>
                     <div className="text-[11px] text-slate-400 line-clamp-1">{tool.desc_vn}</div>
                     <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                      {tool.readiness === 'in-development' ? 'Đang phát triển' : tool.readiness}
+                      {tool.readiness}
                     </div>
                   </div>
                 </div>
@@ -95,7 +90,7 @@ export default function CommandPalette({ isOpen, onClose, onSelectTool, displayL
         {/* Footer info */}
         <div className="px-4 py-2 bg-slate-950/60 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 font-mono">
           <span>Nhấn ESC để đóng</span>
-          <span>{tools.filter((tool) => tool.readiness !== 'in-development').length}/{tools.length} công cụ khả dụng</span>
+          <span>{tools.length} công cụ khả dụng</span>
         </div>
       </div>
     </div>

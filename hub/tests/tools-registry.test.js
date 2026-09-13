@@ -3,27 +3,13 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import {
-  IN_DEVELOPMENT,
-  activeTools,
-  inDevelopmentTools,
-  tools,
-} from '../src/config/toolsRegistry.js';
-
-const PAUSED_TOOL_IDS = [
-  'certificate-studio',
-  'contract-auditor',
-  'legal-studio',
-  'long-translator',
-  'pdf-overlay',
-  'policy-assistant',
-];
+import { activeTools, tools } from '../src/config/toolsRegistry.js';
 
 
 test('every miniapp declares readiness, processing mode and output purpose', () => {
-  assert.equal(tools.length, 18);
+  assert.equal(tools.length, 11);
   for (const tool of tools) {
-    assert.match(tool.readiness, /^(beta|experimental|in-development)$/);
+    assert.match(tool.readiness, /^(beta|experimental)$/);
     // Trạng thái quyết định miniapp nằm nhóm nào, nên không dùng cờ ẩn riêng nữa.
     assert.equal(tool.defaultVisible, undefined, `${tool.id} không cần defaultVisible`);
     assert.match(tool.processing, /^(browser|hybrid|backend-antigravity|manual)$/);
@@ -54,23 +40,7 @@ test('the three production priorities are explicit and unique', () => {
 });
 
 
-test('paused miniapps stay in the in-development area with a stated reason', () => {
-  assert.deepEqual(inDevelopmentTools.map((tool) => tool.id).sort(), PAUSED_TOOL_IDS);
-
-  for (const tool of inDevelopmentTools) {
-    assert.equal(tool.readiness, IN_DEVELOPMENT, `${tool.id} must be in-development`);
-    assert.equal(
-      typeof tool.unavailableReason === 'string' && tool.unavailableReason.length > 0,
-      true,
-      `${tool.id} must explain why it is paused`,
-    );
-  }
-});
-
-
-// Mở lại một miniapp trong registry mà quên wire component sẽ khiến deep-link và
-// thẻ công cụ rơi im lặng về hub. Kiểm tra hai danh sách luôn khớp nhau.
-test('every active miniapp is wired to a lazy-loaded component in App.jsx', () => {
+test('every published miniapp is wired to a lazy-loaded component in App.jsx', () => {
   const appSource = readFileSync(
     fileURLToPath(new URL('../src/App.jsx', import.meta.url)),
     'utf8',
@@ -83,9 +53,6 @@ test('every active miniapp is wired to a lazy-loaded component in App.jsx', () =
   assert.deepEqual(
     wiredIds.slice().sort(),
     activeTools.map((tool) => tool.id).sort(),
-    'toolComponentMap must contain exactly the active miniapps',
+    'toolComponentMap must contain exactly the published miniapps',
   );
-  for (const toolId of PAUSED_TOOL_IDS) {
-    assert.equal(wiredIds.includes(toolId), false, `${toolId} must stay out of the bundle`);
-  }
 });
