@@ -8,7 +8,7 @@ import { VietnamConsularWorkspace } from '@ai-tools/core';
 
 export default function VietnamConsularTool({ displayLang = 'vi', onSelectTool }) {
   return (
-    <div className="w-full text-on-surface">
+    <div className="w-full max-w-[1240px] mx-auto text-on-surface">
       <VietnamConsularWorkspace
         onNavigateToTool={onSelectTool}
         displayLang={displayLang}

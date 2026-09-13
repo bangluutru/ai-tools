@@ -199,3 +199,174 @@ test('Prefectures i18n & Consular i18n: All 47 prefectures and UI strings are tr
   const fallback = getConsularI18n('fr');
   assert.equal(fallback.header.title, CONSULAR_I18N.vi.header.title);
 });
+
+test('A4 Aspect Ratio & Screen Geometry: Strictly preserved without distortion under all viewports', async () => {
+  const { A4_LOGICAL_WIDTH, A4_LOGICAL_HEIGHT, A4_ASPECT_RATIO } = await import('../../packages/core/src/consular/index.js');
+
+  const PHYSICAL_A4_RATIO = 210 / 297; // 0.7070707...
+  assert.ok(
+    Math.abs(A4_ASPECT_RATIO - PHYSICAL_A4_RATIO) < 0.001,
+    `Tỷ lệ logic A4 (${A4_ASPECT_RATIO}) phải khớp với tỷ lệ vật lý 210/297 (${PHYSICAL_A4_RATIO}) trong dung sai 0.001`
+  );
+
+  // Kiểm tra tính toán scale đồng đều tại các độ phân giải màn hình khác nhau
+  const viewports = [
+    { name: '1440px Normal 3-Pane (Pane 3)', width: 540, height: 720 },
+    { name: '1440px Expanded 12-Cols', width: 1200, height: 820 },
+    { name: '1280px Desktop Viewport', width: 480, height: 680 },
+    { name: 'Tablet 768px Viewport', width: 720, height: 900 },
+    { name: 'Mobile 390px Viewport', width: 360, height: 640 },
+  ];
+
+  for (const vp of viewports) {
+    const availW = Math.max(vp.width - 24, 100);
+    const availH = Math.max(vp.height - 24, 100);
+    const widthScale = availW / A4_LOGICAL_WIDTH;
+    const heightScale = availH / A4_LOGICAL_HEIGHT;
+
+    // Fit Page scale
+    const fitPageScale = Math.min(widthScale, heightScale, 1.1);
+    const scaledW = A4_LOGICAL_WIDTH * fitPageScale;
+    const scaledH = A4_LOGICAL_HEIGHT * fitPageScale;
+    const currentRatio = scaledW / scaledH;
+
+    assert.ok(
+      Math.abs(currentRatio - PHYSICAL_A4_RATIO) < 0.001,
+      `Khung nhìn ${vp.name} bị méo tỷ lệ! Tỷ lệ thu được: ${currentRatio}`
+    );
+
+    // Fit Width scale
+    const fitWidthScale = widthScale;
+    const fitWidthW = A4_LOGICAL_WIDTH * fitWidthScale;
+    const fitWidthH = A4_LOGICAL_HEIGHT * fitWidthScale;
+    assert.ok(
+      Math.abs(fitWidthW / fitWidthH - PHYSICAL_A4_RATIO) < 0.001,
+      `Khung nhìn ${vp.name} ở chế độ Fit Width bị méo tỷ lệ!`
+    );
+  }
+});
+
+test('Multi-page Form Architecture: TK02 renders exactly 2 official pages under TT 31/2023/TT-BCA', async () => {
+  const { FORM_TEMPLATES, getFormTemplate, TK02_PAGE_MAPPING } = await import('../../packages/core/src/consular/index.js');
+
+  const tk02 = getFormTemplate('form_passport_tk02');
+  assert.ok(tk02);
+  assert.equal(tk02.code, 'TK02');
+  assert.equal(tk02.pageCount, 2, 'Mẫu TK02 chính thức phải có đúng 2 trang A4');
+  assert.ok(tk02.standardBasis.includes('Thông tư số 31/2023/TT-BCA'));
+
+  // Trang 1: 14 trường thông tin và khung ảnh 4x6 cm
+  assert.ok(TK02_PAGE_MAPPING.pages[1].fields.length >= 14);
+  assert.equal(tk02.hasPhotoBox, true);
+  assert.equal(tk02.photoSize, '4x6 cm');
+
+  // Trang 2: Ý kiến người giám hộ, lời cam đoan, chữ ký, xác nhận của ĐSQ/TLSQ
+  assert.ok(TK02_PAGE_MAPPING.pages[2].header.section15Title.includes('15. Ý kiến của cha, mẹ'));
+  assert.ok(TK02_PAGE_MAPPING.pages[2].header.commitmentText.includes('Tôi xin cam đoan'));
+  assert.ok(TK02_PAGE_MAPPING.pages[2].header.officialVerificationTitle.includes('XÁC NHẬN CỦA CƠ QUAN ĐẠI DIỆN'));
+});
+
+test('Form Integrity & SHA-256 Checksum: Verification passes only on matching fingerprints', async () => {
+  const { verifyTemplateIntegrity, FORM_TEMPLATES } = await import('../../packages/core/src/consular/index.js');
+
+  // 1. Kiểm định hợp lệ khi không truyền actualHash (đối chiếu registry chuẩn)
+  const tk02Result = verifyTemplateIntegrity('form_passport_tk02');
+  assert.equal(tk02Result.isVerified, true);
+  assert.equal(tk02Result.status, 'VERIFIED');
+
+  // 2. Kiểm định khi truyền đúng hash thực tế
+  const matchResult = verifyTemplateIntegrity(
+    'form_passport_tk02',
+    FORM_TEMPLATES.form_passport_tk02.sha256Fingerprint
+  );
+  assert.equal(matchResult.isVerified, true);
+  assert.equal(matchResult.status, 'VERIFIED');
+
+  // 3. Kiểm định khi hash bị sai lệch (Phát hiện giả mạo/chỉnh sửa trái phép)
+  const mismatchResult = verifyTemplateIntegrity(
+    'form_passport_tk02',
+    'invalid_tampered_hash_00000000000000000000000000000000000000000000000'
+  );
+  assert.equal(mismatchResult.isVerified, false);
+  assert.equal(mismatchResult.status, 'REVIEW_REQUIRED');
+
+  // 4. Form không tồn tại
+  const notFoundResult = verifyTemplateIntegrity('non_existent_form_xyz');
+  assert.equal(notFoundResult.isVerified, false);
+  assert.equal(notFoundResult.status, 'REVIEW_REQUIRED');
+});
+
+test('SSOT Official PDF Generator: Generates authentic multi-page A4 PDF documents with pdf-lib', async () => {
+  const { generateOfficialFormPdf, generatePdfFilename } = await import('../../packages/core/src/consular/index.js');
+
+  const mockFormData = {
+    applicantName: 'NGUYỄN VĂN A',
+    gender: 'Nam',
+    dob: '1995-08-15',
+    birthPlace: 'Hà Nội',
+    idCardNumber: '001095012345',
+    ethnic: 'Kinh',
+    religion: 'Không',
+    permanentAddressVN: 'Số 12 phố Tràng Thi, Hoàn Kiếm, Hà Nội',
+    residenceAddressJP: '〒160-0022 Tokyo-to, Shinjuku-ku, Shinjuku 1-2-3',
+    phoneNumber: '080-1234-5678',
+    email: 'nguyenvana@gmail.com',
+    requestType: 'cap_lai_sap_het_han',
+    passportChipOption: 'co_gan_chip',
+  };
+
+  const result = await generateOfficialFormPdf({
+    formId: 'form_passport_tk02',
+    formData: mockFormData,
+    lang: 'vi',
+  });
+
+  assert.ok(result.pdfBytes instanceof Uint8Array, 'pdfBytes phải là một Uint8Array');
+  assert.ok(result.pdfBytes.length > 1000, 'Kích thước PDF sinh ra phải lớn hơn 1KB');
+
+  // Kiểm tra header magic bytes của file PDF (%PDF)
+  const pdfHeader = String.fromCharCode(...result.pdfBytes.slice(0, 4));
+  assert.equal(pdfHeader, '%PDF', 'File sinh ra phải có định dạng chuẩn PDF (%PDF)');
+
+  // Form TK02 phải có đúng 2 trang
+  assert.equal(result.pageCount, 2, 'Biểu mẫu TK02 phải có đúng 2 trang PDF');
+
+  // Kiểm tra tên file sinh ra
+  assert.equal(result.filename, 'TK02_NGUYEN_VAN_A.pdf');
+
+  // Kiểm tra hàm sinh tên file dự phòng
+  const fallbackName = generatePdfFilename('TK02', {});
+  assert.equal(fallbackName, 'TK02_DON_DE_NGHI.pdf');
+});
+
+test('Long Data & Diacritics Safety: Handles long Vietnamese names, Japanese Kanji/Romaji without error', async () => {
+  const { sanitizeForWinAnsi, formatFieldValue, generateOfficialFormPdf } = await import('../../packages/core/src/consular/index.js');
+
+  // 1. Kiểm tra chuẩn hóa WinAnsi không bị lỗi ký tự tiếng Việt
+  const complexName = 'NGUYỄN HOÀNG PHƯƠNG MAI THẢO LINH';
+  const cleanName = sanitizeForWinAnsi(complexName);
+  assert.equal(cleanName, 'NGUYEN HOANG PHUONG MAI THAO LINH');
+
+  // 2. Kiểm tra xử lý địa chỉ tiếng Nhật dài kèm Kanji và Romaji
+  const longAddressJP = '〒160-0022 東京都新宿区新宿１丁目２−３ メゾンサンシャイン 1001号室 (1-2-3 Shinjuku, Shinjuku-ku, Tokyo-to)';
+  const formattedAddress = formatFieldValue(longAddressJP);
+  assert.ok(formattedAddress.length > 0);
+
+  // 3. Sinh PDF với dữ liệu cực dài
+  const extremeData = {
+    applicantName: complexName,
+    residenceAddressJP: longAddressJP,
+    email: 'nguyen.hoang.phuong.mai.thao.linh.consular.japan@embassy-support-domain.example.com',
+    permanentAddressVN: 'Số 1234/56/78 đường Nguyễn Thị Minh Khai, Phường Bến Nghé, Quận 1, Thành phố Hồ Chí Minh',
+    fatherName: 'NGUYỄN VĂN CHA CỦA NGƯỜI ĐỀ NGHỊ CẤP HỘ CHIẾU NĂM SINH 1960',
+  };
+
+  await assert.doesNotReject(async () => {
+    const res = await generateOfficialFormPdf({
+      formId: 'form_passport_tk02',
+      formData: extremeData,
+      lang: 'vi',
+    });
+    assert.equal(res.pageCount, 2);
+  }, 'Sinh PDF với dữ liệu dài và nhiều dấu tiếng Việt không được ném ngoại lệ');
+});

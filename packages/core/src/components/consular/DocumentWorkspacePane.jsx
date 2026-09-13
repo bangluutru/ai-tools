@@ -17,7 +17,7 @@ export default function DocumentWorkspacePane({
 
   if (formConfig) {
     return (
-      <div className="h-full">
+      <div className="h-full min-h-[600px]">
         <StructuredFormEditor
           formConfig={formConfig}
           onClose={onCloseForm}

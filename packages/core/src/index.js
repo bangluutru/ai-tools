@@ -106,5 +106,9 @@ export { default as ProcedureNavigatorPane } from './components/consular/Procedu
 export { default as ProcedureGuidePane } from './components/consular/ProcedureGuidePane.jsx';
 export { default as DocumentWorkspacePane } from './components/consular/DocumentWorkspacePane.jsx';
 export { default as StructuredFormEditor } from './components/consular/StructuredFormEditor.jsx';
+export { default as A4PreviewViewport, A4_LOGICAL_WIDTH, A4_LOGICAL_HEIGHT, A4_ASPECT_RATIO } from './components/consular/A4PreviewViewport.jsx';
+export { default as OfficialFormPreview } from './components/consular/OfficialFormPreview.jsx';
+export { default as FormOutputToolbar } from './components/consular/FormOutputToolbar.jsx';
+export { default as EasyFillForm } from './components/consular/EasyFillForm.jsx';
 export * from './consular/index.js';
 

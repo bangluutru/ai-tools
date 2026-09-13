@@ -73,7 +73,7 @@ export default function ProcedureNavigatorPane({
           onClick={() => setActiveTab('categories')}
           className={`flex-1 py-1.5 px-2 rounded-xl font-medium transition-all text-center cursor-pointer ${
             activeTab === 'categories'
-              ? 'bg-surface-container-highest text-primary font-semibold shadow-2xs'
+              ? 'bg-primary text-on-primary font-semibold shadow-2xs'
               : 'text-on-surface-variant hover:text-on-surface'
           }`}
         >
@@ -84,11 +84,11 @@ export default function ProcedureNavigatorPane({
           onClick={() => setActiveTab('journeys')}
           className={`flex-1 py-1.5 px-2 rounded-xl font-medium transition-all text-center flex items-center justify-center gap-1 cursor-pointer ${
             activeTab === 'journeys'
-              ? 'bg-surface-container-highest text-primary font-semibold shadow-2xs'
+              ? 'bg-primary text-on-primary font-semibold shadow-2xs'
               : 'text-on-surface-variant hover:text-on-surface'
           }`}
         >
-          <Compass size={13} className="text-rose-500" />
+          <Compass size={13} className={activeTab === 'journeys' ? 'text-on-primary' : 'text-rose-500'} />
           <span>{t.navigator.tabJourneys} ({CROSS_SYSTEM_JOURNEYS.length})</span>
         </button>
       </div>
@@ -204,18 +204,18 @@ export default function ProcedureNavigatorPane({
                               <div className="line-clamp-2 leading-snug">
                                 {procTitle}
                               </div>
-                              {hasForm && (
-                                <span
-                                  className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.2 rounded text-[9.5px] font-medium tracking-wide ${
-                                    isSelected
-                                      ? 'bg-white/20 text-white'
-                                      : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
-                                  }`}
-                                >
-                                  <FileCheck2 size={10} />
-                                  <span>{t.navigator.onlineFormBadge}</span>
-                                </span>
-                              )}
+                                {hasForm && (
+                                  <span
+                                    className={`inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded text-[9.5px] font-semibold tracking-wide ${
+                                      isSelected
+                                        ? 'bg-white text-slate-900 shadow-2xs'
+                                        : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30'
+                                    }`}
+                                  >
+                                    <FileCheck2 size={10} />
+                                    <span>{t.navigator.onlineFormBadge}</span>
+                                  </span>
+                                )}
                             </div>
                           </button>
                         );

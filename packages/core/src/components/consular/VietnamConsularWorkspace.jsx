@@ -87,7 +87,7 @@ export default function VietnamConsularWorkspace({
   };
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-6 py-4 space-y-4">
+    <div className="w-full max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
       {/* Header điều hướng, Thẩm quyền địa phương & Tìm kiếm */}
       <ConsularHeader
         selectedPrefectureId={selectedPrefectureId}
