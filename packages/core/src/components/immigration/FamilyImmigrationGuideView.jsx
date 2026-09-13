@@ -41,7 +41,6 @@ export default function FamilyImmigrationGuideView({ lang = 'vi' }) {
   const sponsorIncomeInput = useId();
   const locationInput = useId();
   const birthDateInput = useId();
-  const appDateInput = useId();
   const taxCheckboxInput = useId();
   const partTimeCheckboxInput = useId();
 
@@ -52,7 +51,7 @@ export default function FamilyImmigrationGuideView({ lang = 'vi' }) {
   const [sponsorAnnualIncomeMan, setSponsorAnnualIncomeMan] = useState(380); // 万 (man) JPY
   const [currentLocation, setCurrentLocation] = useState('overseas');
   const [childBirthDate, setChildBirthDate] = useState('');
-  const [applicationDate, setApplicationDate] = useState(new Date().toISOString().slice(0, 10));
+  const [applicationDate] = useState(new Date().toISOString().slice(0, 10));
   const [sponsorTaxCompliant, setSponsorTaxCompliant] = useState(true);
   const [intendsToWorkPartTime, setIntendsToWorkPartTime] = useState(true);
 

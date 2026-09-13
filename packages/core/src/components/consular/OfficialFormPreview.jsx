@@ -43,7 +43,7 @@ export default function OfficialFormPreview({
 /**
  * BỐ CỤC CHÍNH THỨC TK02 — THÔNG TƯ 31/2023/TT-BCA (BỘ CÔNG AN)
  */
-function TK02OfficialLayout({ formData, currentPage = 1, t }) {
+function TK02OfficialLayout({ formData, currentPage = 1 }) {
   if (currentPage === 2) {
     return (
       <div className="w-full h-full p-[18mm_15mm_15mm_15mm] flex flex-col justify-between box-border text-[11px] leading-relaxed text-black font-serif relative">

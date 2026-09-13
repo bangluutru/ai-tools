@@ -277,7 +277,7 @@ export default function ChildAllowanceView({ lang = 'ja' }) {
           </p>
 
           <div className="space-y-4">
-            {children.map((child, index) => {
+            {children.map((child) => {
               const isSupportRelevant = child.age >= 19 && child.age <= 22;
               return (
                 <div

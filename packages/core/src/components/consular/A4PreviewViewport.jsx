@@ -6,7 +6,7 @@
  * Tuyệt đối không để responsive CSS làm méo mó hình học tỷ lệ A4 (210/297 ≈ 0.7071).
  */
 
-import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { useRef, useState, useLayoutEffect, useCallback } from 'react';
 import {
   A4_LOGICAL_WIDTH,
   A4_LOGICAL_HEIGHT,

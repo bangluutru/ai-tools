@@ -89,8 +89,6 @@ export function DocumentFinderView({ lang = 'vi' }) {
 
   const mandatoryList = filterList(finderResult?.mandatory || []);
   const conditionalList = filterList(finderResult?.conditional || []);
-  const ifApplicableList = filterList(finderResult?.ifApplicable || []);
-  const optionalList = filterList(finderResult?.optional || []);
 
   // Completion calculation
   const totalMandatory = finderResult?.mandatory?.length || 0;

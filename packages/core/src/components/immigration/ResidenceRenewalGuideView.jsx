@@ -72,7 +72,7 @@ export function ResidenceRenewalGuideView({ lang = 'vi' }) {
         hasPensionArrears,
         language: lang,
       });
-    } catch (err) {
+    } catch {
       return null;
     }
   }, [

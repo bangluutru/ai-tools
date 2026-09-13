@@ -24,8 +24,6 @@ import {
 import RegulatorySourceView from '../regulatory/RegulatorySourceView.jsx';
 import {
   calculateVietnamElectricity,
-  getElectricityTariff,
-  getElectricityVATRule,
 } from '../../vietnam/index.js';
 
 const I18N = {

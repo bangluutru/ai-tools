@@ -65,7 +65,7 @@ export function AffiliationChangeCheckerView({ lang = 'vi' }) {
         hasFiled14DayNotice,
         language: lang,
       });
-    } catch (err) {
+    } catch {
       return null;
     }
   }, [

@@ -128,7 +128,7 @@ export default function MovingAdminCheckerView({ lang = 'ja' }) {
   const [hasNationalPension, setHasNationalPension] = useState(false);
   const [hasChildren, setHasChildren] = useState(false);
   const [hasPetsDog, setHasPetsDog] = useState(false);
-  const [hasCareInsurance, setHasCareInsurance] = useState(false);
+  const [hasCareInsurance] = useState(false);
 
   // Checked documents in UI
   const [checkedDocs, setCheckedDocs] = useState({});

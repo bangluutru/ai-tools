@@ -55,7 +55,7 @@ export function generatePdfFilename(formCode, formData) {
  * @param {string} [params.lang='vi'] - Ngôn ngữ hiển thị
  * @returns {Promise<{ pdfBytes: Uint8Array, blob: Blob | null, objectUrl: string | null, filename: string, pageCount: number }>}
  */
-export async function generateOfficialFormPdf({ formId, formData = {}, lang = 'vi' }) {
+export async function generateOfficialFormPdf({ formId, formData = {} }) {
   const template = getFormTemplate(formId) || {
     id: formId,
     code: 'FORM',

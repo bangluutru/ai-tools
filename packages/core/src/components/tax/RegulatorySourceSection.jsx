@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { BookOpen, ChevronDown, ChevronUp, ExternalLink, ShieldCheck, Info } from 'lucide-react';
 import { OfficialSourceRegistry } from '../../regulatory/sourceRegistry.js';
 
-export default function RegulatorySourceSection({ rules, result, lang = 'ja' }) {
+export default function RegulatorySourceSection({ rules, lang = 'ja' }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const year = rules?.year || 2025;
