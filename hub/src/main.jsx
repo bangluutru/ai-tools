@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import './print.css';
-import { initTheme } from '@ai-tools/core';
+import { initTheme } from '@ai-tools/core/theme/themeManager.js';
 
 // Initialize theme from storage/system before mounting
 initTheme();

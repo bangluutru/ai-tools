@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { JapanLifeNavigatorView } from '@ai-tools/core';
+import { JapanLifeNavigatorView } from '@ai-tools/core/components/navigator/JapanLifeNavigatorView.jsx';
 
 export default function JapanLifeNavigatorTool({ displayLang }) {
   return (

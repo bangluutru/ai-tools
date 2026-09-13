@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Eye, EyeOff, RotateCcw, Settings2, Wrench, X, Sun, Moon, Monitor, Gamepad2, Swords } from 'lucide-react';
-import { useTheme, THEMES } from '@ai-tools/core';
+import { useTheme } from '@ai-tools/core/theme/useTheme.js';
+import { THEMES } from '@ai-tools/core/theme/themeManager.js';
 
 export default function SettingsModal({
   isOpen,

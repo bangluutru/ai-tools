@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sun, Moon, Monitor, Check } from 'lucide-react';
-import { useTheme, THEMES } from '@ai-tools/core';
+import { useTheme } from '@ai-tools/core/theme/useTheme.js';
+import { THEMES } from '@ai-tools/core/theme/themeManager.js';
 
 export default function ThemeToggle({ displayLang = 'vi', className = '' }) {
   const { themePreference, resolvedTheme, setTheme } = useTheme();

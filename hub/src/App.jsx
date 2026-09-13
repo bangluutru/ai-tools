@@ -29,7 +29,7 @@ import {
   saveHiddenToolIds,
 } from './utils/toolVisibility';
 import { partitionTools } from './utils/toolFilter';
-import { useTheme } from '@ai-tools/core';
+import { useTheme } from '@ai-tools/core/theme/useTheme.js';
 import { lazyWithRetry as lazy } from './utils/lazyWithRetry';
 
 // =========================================================================

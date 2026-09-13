@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { VietnamConsularWorkspace } from '@ai-tools/core';
+import VietnamConsularWorkspace from '@ai-tools/core/components/consular/VietnamConsularWorkspace.jsx';
 
 export default function VietnamConsularTool({ displayLang = 'vi', onSelectTool }) {
   return (
