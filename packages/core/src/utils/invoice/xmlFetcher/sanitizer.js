@@ -20,7 +20,7 @@ export function sanitizeLookupUrl(rawUrl) {
   cleaned = cleaned.replace(/[.,;:()\]'"<>]+$/, '');
 
   // Strip leading punctuation or noise
-  cleaned = cleaned.replace(/^[.,;:([{\'"<>]+/, '');
+  cleaned = cleaned.replace(/^[.,;:([{'"<>]+/, '');
 
   // If missing protocol, add https://
   if (/^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/.test(cleaned)) {
@@ -48,7 +48,7 @@ export function sanitizeLookupCode(rawCode) {
   let code = rawCode.trim();
 
   // Remove leading/trailing colons, dashes, quotes, brackets (NEVER strip asterisk *)
-  code = code.replace(/^[:\-\s'"`()\[\]]+/, '').replace(/[:\-\s'"`()\[\]]+$/, '');
+  code = code.replace(/^[[\s'"`()\]-]+/, '').replace(/[[\s'"`()\]-]+$/, '');
 
   // Strip trailing sentence period or comma if present (e.g. "ABC123*." -> "ABC123*")
   code = code.replace(/[.,;]+$/, '');

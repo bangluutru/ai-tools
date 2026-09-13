@@ -79,7 +79,7 @@ export default function App() {
           spread: 60,
           origin: { y: 0.8 }
         });
-      } catch (e) {
+      } catch {
         // Confetti fallback
       }
     }

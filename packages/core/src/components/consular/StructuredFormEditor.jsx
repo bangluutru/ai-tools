@@ -7,7 +7,7 @@
  *  - In ấn qua iframe cô lập, không dùng window.print() trực tiếp trên DOM của Toolio
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import FormOutputToolbar from './FormOutputToolbar.jsx';
 import EasyFillForm from './EasyFillForm.jsx';
 import A4PreviewViewport from './A4PreviewViewport.jsx';
@@ -49,7 +49,7 @@ export default function StructuredFormEditor({
   }, [formConfig?.id, formConfig?.initialValues]);
 
   // Cập nhật giá trị trường dữ liệu
-  const handleChange = useCallback((fieldId, value, transform) => {
+  const handleChange = (fieldId, value, transform) => {
     const finalVal = transform ? transform(value) : value;
     setFormData((prev) => {
       const updated = { ...prev, [fieldId]: finalVal };
@@ -63,10 +63,10 @@ export default function StructuredFormEditor({
       }
       return updated;
     });
-  }, [formConfig?.id]);
+  };
 
   // Reset form về mặc định
-  const handleReset = useCallback(() => {
+  const handleReset = () => {
     if (window.confirm(t.editor.resetConfirm)) {
       const init = formConfig?.initialValues || {};
       setFormData(init);
@@ -76,7 +76,7 @@ export default function StructuredFormEditor({
         console.error('Error clearing form data', err);
       }
     }
-  }, [formConfig?.id, formConfig?.initialValues, t.editor.resetConfirm]);
+  };
 
   // Xử lý zoom
   const handleZoomIn = () => setManualScaleDelta((prev) => Math.min(prev + 0.1, 0.5));
@@ -144,7 +144,7 @@ export default function StructuredFormEditor({
           try {
             printFrame.contentWindow.focus();
             printFrame.contentWindow.print();
-          } catch (e) {
+          } catch {
             // Fallback mở cửa sổ riêng
             const win = window.open(url, '_blank');
             if (win) win.print();

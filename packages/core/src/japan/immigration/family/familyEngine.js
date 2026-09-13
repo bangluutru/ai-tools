@@ -39,7 +39,6 @@ export function evaluateFamilyImmigration(input = {}) {
     sponsorAnnualIncome = 3500000,
     dependentCount = 1,
     sponsorTaxCompliant = true,
-    sponsorPensionCompliant = true,
     currentLocation = 'overseas',
     applicationDate = new Date().toISOString().slice(0, 10),
     childBirthDate = null,

@@ -112,7 +112,7 @@ export class MinvoiceProviderAdapter extends BaseProviderAdapter {
       }
 
       return null;
-    } catch (err) {
+    } catch {
       return null;
     }
   }

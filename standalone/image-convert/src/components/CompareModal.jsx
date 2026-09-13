@@ -1,16 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { X, SlidersHorizontal } from 'lucide-react';
 import { formatBytes } from '../utils/formatters.js';
 
 export default function CompareModal({ item, onClose }) {
   const [sliderPosition, setSliderPosition] = useState(50); // 0 to 100%
-  const containerRef = useRef(null);
 
   if (!item) return null;
 
-  const handleMove = (clientX) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
+  const handleMove = (clientX, container) => {
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
     const x = clientX - rect.left;
     let percentage = (x / rect.width) * 100;
     if (percentage < 0) percentage = 0;
@@ -20,13 +19,13 @@ export default function CompareModal({ item, onClose }) {
 
   const handleMouseMove = (e) => {
     if (e.buttons === 1) { // Left mouse button clicked/dragging
-      handleMove(e.clientX);
+      handleMove(e.clientX, e.currentTarget);
     }
   };
 
   const handleTouchMove = (e) => {
     if (e.touches && e.touches[0]) {
-      handleMove(e.touches[0].clientX);
+      handleMove(e.touches[0].clientX, e.currentTarget);
     }
   };
 
@@ -55,11 +54,11 @@ export default function CompareModal({ item, onClose }) {
         </div>
 
         <div
-          ref={containerRef}
           className="compare-container"
+          style={{ containerType: 'inline-size' }}
           onMouseMove={handleMouseMove}
           onTouchMove={handleTouchMove}
-          onClick={(e) => handleMove(e.clientX)}
+          onClick={(e) => handleMove(e.clientX, e.currentTarget)}
         >
           {/* Converted WebP Image (Full Background) */}
           <img
@@ -87,7 +86,7 @@ export default function CompareModal({ item, onClose }) {
               alt="Original"
               className="compare-img"
               style={{
-                width: containerRef.current ? `${containerRef.current.clientWidth}px` : '100%',
+                width: '100cqw',
                 maxWidth: 'none',
               }}
             />

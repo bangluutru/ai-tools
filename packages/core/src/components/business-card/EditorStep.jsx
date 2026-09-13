@@ -28,13 +28,19 @@ export const EditorStep = ({
 
   // Robust Deep-Cloned Undo/Redo History Stack
   const projectRef = useRef(project);
-  projectRef.current = project;
   const pendingProjectRef = useRef(null);
 
   const [history, setHistory] = useState([JSON.parse(JSON.stringify(project))]);
   const [historyIdx, setHistoryIdx] = useState(0);
   const historyIdxRef = useRef(historyIdx);
-  historyIdxRef.current = historyIdx;
+
+  useEffect(() => {
+    projectRef.current = project;
+  }, [project]);
+
+  useEffect(() => {
+    historyIdxRef.current = historyIdx;
+  }, [historyIdx]);
 
   const pushHistory = (newProject) => {
     const deepCloned = JSON.parse(JSON.stringify(newProject));

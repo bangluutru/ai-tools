@@ -8,7 +8,7 @@
  * 3. Never transmits draft data remotely.
  */
 
-import { getOfficialFormById, getAllOfficialForms } from './officialFormsRegistry.js';
+import { getOfficialFormById } from './officialFormsRegistry.js';
 
 /**
  * Get form assistance package by form ID.

@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { RotateCw, Layers, Undo2, Redo2 } from "lucide-react";
 import { ElementRenderer } from "./ElementRenderer.jsx";
 import { useLanguage } from "../../utils/business-card/LanguageContext.jsx";
@@ -36,25 +36,20 @@ export const CardCanvas = ({
   const bleed = dim.bleedMm;
   const safeMargin = dim.safeMarginMm;
   const mmToPx = 3.7795275591 * scale;
-  const [isFlipping, setIsFlipping] = useState(false);
 
   // Movement & Resize change tracking for clean single-step Undo/Redo commits
   const hasMovedRef = useRef(false);
   const hasResizedRef = useRef(false);
 
   // Normalize selected IDs
-  const effectiveSelectedIds = Array.isArray(selectedElementIds) && selectedElementIds.length > 0
-    ? selectedElementIds
-    : selectedElementId
-      ? [selectedElementId]
-      : [];
+  const effectiveSelectedIds = useMemo(() => (
+    Array.isArray(selectedElementIds) && selectedElementIds.length > 0
+      ? selectedElementIds
+      : selectedElementId
+        ? [selectedElementId]
+        : []
+  ), [selectedElementIds, selectedElementId]);
   const isMultiSelected = effectiveSelectedIds.length > 1;
-
-  useEffect(() => {
-    setIsFlipping(true);
-    const timer = setTimeout(() => setIsFlipping(false), 300);
-    return () => clearTimeout(timer);
-  }, [activeSide]);
 
   const [draggingElId, setDraggingElId] = useState(null);
   const [dragStartPos, setDragStartPos] = useState(null);
@@ -508,9 +503,8 @@ export const CardCanvas = ({
 
       {/* Centered Card Artwork Container with Flip Transition */}
       <div
-        className={`relative shadow-2xl transition-all duration-300 ${
-          isFlipping ? "scale-95 opacity-90" : "scale-100 opacity-100"
-        }`}
+        key={activeSide}
+        className="relative shadow-2xl transition-all duration-300 scale-100 opacity-100 animate-[card-side-enter_300ms_ease-out]"
         style={{
           width: `${(cardW + bleed * 2) * mmToPx}px`,
           height: `${(cardH + bleed * 2) * mmToPx}px`,

@@ -75,8 +75,8 @@ export async function convertPdfToMd(file, _options = {}, onProgress = () => {})
         pageLines.push(`\n### ${text}\n`);
       } else {
         // Nhận diện danh sách đầu dòng (bullet points hoặc numbered list)
-        const bulletMatch = text.match(/^[•\-\*\+]\s*(.*)$/);
-        const numberMatch = text.match(/^(\d+[\.\)])\s*(.*)$/);
+        const bulletMatch = text.match(/^[•\-*+]\s*(.*)$/);
+        const numberMatch = text.match(/^(\d+[.)])\s*(.*)$/);
 
         if (bulletMatch) {
           pageLines.push(`- ${bulletMatch[1]}`);
@@ -372,14 +372,14 @@ export async function convertMdToDocx(file, _options = {}, onProgress = () => {}
           children: parseInlineFormatting(line.slice(2), TextRun)
         })
       );
-    } else if (/^\d+[\.\)]\s+/.test(line)) {
+    } else if (/^\d+[.)]\s+/.test(line)) {
       // Numbered list
-      const content = line.replace(/^\d+[\.\)]\s+/, '');
+      const content = line.replace(/^\d+[.)]\s+/, '');
       children.push(
         new Paragraph({
           spacing: { after: 60 },
           children: [
-            new TextRun({ text: line.match(/^\d+[\.\)]/)[0] + ' ', bold: true }),
+            new TextRun({ text: line.match(/^\d+[.)]/)[0] + ' ', bold: true }),
             ...parseInlineFormatting(content, TextRun)
           ]
         })
@@ -544,7 +544,7 @@ export async function convertMdToPdf(file, _options = {}, onProgress = () => {})
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10.5);
       pdf.setTextColor(51, 65, 85);
-      const bulletText = line.replace(/^[\-\*]\s+/, '').replace(/\*\*/g, '');
+      const bulletText = line.replace(/^[-*]\s+/, '').replace(/\*\*/g, '');
       const wrapped = pdf.splitTextToSize(bulletText, usableWidth - 16);
 
       pdf.text('•', marginX + 4, y);
@@ -612,7 +612,7 @@ export async function convertMdToTxt(file, _options = {}, onProgress = () => {})
     .replace(/\*(.*?)\*/g, '$1') // Bỏ *italic*
     .replace(/`(.*?)`/g, '$1') // Bỏ inline code
     .replace(/```[\s\S]*?```/g, (match) => match.replace(/```[a-z]*\n?/g, '')) // Bỏ fence code
-    .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Bỏ [link](url)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Bỏ [link](url)
     .replace(/^\|\s*/gm, '') // Bỏ viền bảng
     .replace(/\s*\|$/gm, '')
     .replace(/\|/g, '\t'); // Đổi | sang tab

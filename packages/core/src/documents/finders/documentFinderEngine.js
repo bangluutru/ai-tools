@@ -4,7 +4,7 @@
  * Deterministic, catalog-driven requirement resolver.
  */
 
-import { getProcedureById, getAllProcedures, getRequirementsForProcedure } from '../resolvers/procedureRequirementResolver.js';
+import { getRequirementsForProcedure } from '../resolvers/procedureRequirementResolver.js';
 import { getDocumentById } from '../resolvers/documentResolver.js';
 
 export const USER_INTENT_CATALOG = [

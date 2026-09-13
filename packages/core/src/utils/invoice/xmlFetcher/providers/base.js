@@ -1,4 +1,4 @@
-import { sanitizeLookupUrl, sanitizeLookupCode } from '../sanitizer.js';
+import { sanitizeLookupUrl } from '../sanitizer.js';
 import { STATUS_TYPES } from '../types.js';
 
 /**

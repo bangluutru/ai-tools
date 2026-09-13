@@ -5,7 +5,7 @@
  */
 
 import { resolveAcquisitionGuidance } from '../resolvers/acquisitionResolver.js';
-import { getDocumentById, getAllDocuments } from '../resolvers/documentResolver.js';
+import { getDocumentById } from '../resolvers/documentResolver.js';
 
 export const COMMON_CERTIFICATES = [
   'document.resident-record-copy',

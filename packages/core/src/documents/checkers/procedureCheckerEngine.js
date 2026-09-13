@@ -33,7 +33,7 @@ export function evaluateProcedureReadiness({
   const reqData = getRequirementsForProcedure(procedureId);
   if (!reqData) return null;
 
-  const { procedure, allRequirements, groupedRequirements } = reqData;
+  const { procedure, allRequirements } = reqData;
 
   // 1. Evaluate Dimension 1: Procedure Prerequisites & Timing
   const timing = {

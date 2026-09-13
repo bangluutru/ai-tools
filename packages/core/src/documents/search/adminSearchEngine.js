@@ -8,8 +8,8 @@
  * 3. Structured intent routing to specific Phase 8 tools.
  */
 
-import { findDocumentsByQuery, getAllDocuments } from '../resolvers/documentResolver.js';
-import { findProceduresByQuery, getAllProcedures } from '../resolvers/procedureRequirementResolver.js';
+import { findDocumentsByQuery } from '../resolvers/documentResolver.js';
+import { findProceduresByQuery } from '../resolvers/procedureRequirementResolver.js';
 
 export const DISAMBIGUATION_CARDS = {
   tax_certificate_ambiguity: {

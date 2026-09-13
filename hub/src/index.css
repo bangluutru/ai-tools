@@ -649,3 +649,14 @@ body {
   background-repeat: repeat-y;
 }
 
+@keyframes card-side-enter {
+  from {
+    opacity: 0.9;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

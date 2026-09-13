@@ -405,7 +405,7 @@ export const TaxKnowledgeBase = {
 
     getLevel2(calc) {
       const summary = calc.summary || {};
-      const { salary = 0, businessRevenue = 0, businessExpenses = 0, sideIncomeRevenue = 0, sideIncomeExpenses = 0, employmentDeduction = 0, employmentIncome = 0, businessIncome = 0, sideIncome = 0, totalGrossIncome = 0 } = calc.incomeTax || {};
+      const { salary = 0, businessRevenue = 0, businessExpenses = 0, sideIncomeRevenue = 0, sideIncomeExpenses = 0, employmentDeduction = 0, employmentIncome = 0, sideIncome = 0, totalGrossIncome = 0 } = calc.incomeTax || {};
       return {
         ja: [
           salary > 0 ? `① 給与年収（額面）: ¥${salary.toLocaleString()}（給与所得控除 ¥${employmentDeduction.toLocaleString()} 差引後の給与所得: ¥${employmentIncome.toLocaleString()}）` : null,

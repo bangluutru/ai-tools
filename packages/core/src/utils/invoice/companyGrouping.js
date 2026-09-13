@@ -60,7 +60,7 @@ export function describeFormContent(rows, prefix = 'Chi phí đi lại công tá
 /** Làm sạch tên pháp nhân/đơn vị bóc tách được (bỏ tiền tố rác như ): , (Company): ) */
 export function sanitizeEntityName(value) {
   return String(value ?? '')
-    .replace(/^[\s):(\-–—\.]+/gu, '')
+    .replace(/^[\s):(–—.-]+/gu, '')
     .replace(/^\(?Company\)?[:\-\s]*/iu, '')
     .replace(/^Tên\s+đơn\s+vị[:\-\s]*/iu, '')
     .replace(/^Đơn\s+vị[:\-\s]*/iu, '')

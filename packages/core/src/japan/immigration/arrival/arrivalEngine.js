@@ -48,7 +48,6 @@ export function evaluateArrivalChecklist(context = {}, options = {}) {
     statusCategory = 'work', // 'work' | 'student' | 'dependent'
     hasCompanyShakaiHoken = statusCategory === 'work',
     needsPartTimeWork = statusCategory === 'student' || statusCategory === 'dependent',
-    hasDependents = false,
   } = context;
 
   const flatTasks = [];
