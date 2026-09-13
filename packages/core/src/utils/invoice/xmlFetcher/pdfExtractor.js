@@ -283,7 +283,7 @@ export function extractInvoiceMetadataFromText(text) {
     // 1. Search for tax code after "Đơn vị bán hàng", "Người bán", "Seller"
     const sellerBlockMatch = text.match(/(?:Đơn\s+vị\s+bán\s+hàng|Người\s+bán\s+hàng|Đơn\s+vị\s+bán|Seller)[\s\S]{1,400}?(?:Mã\s+số\s+thuế|MST|Tax\s*code)\s*(?:\([^)]*\))?\s*[:.]?\s*([0-9\s-]{10,24})/i);
     if (sellerBlockMatch && sellerBlockMatch[1]) {
-      sellerTaxCode = normalizeTaxCode(sellerBlockMatch[1]);
+      sellerTaxCode = sanitizeLookupCode(sellerBlockMatch[1]);
     }
   }
 
@@ -291,7 +291,7 @@ export function extractInvoiceMetadataFromText(text) {
   if (!sellerTaxCode && text) {
     const directTaxMatch = text.match(/(?:Mã\s+số\s+thuế|MST|Tax\s*code)\s*(?:\([^)]*\))?\s*[:.]?\s*([0-9\s-]{10,24})/i);
     if (directTaxMatch && directTaxMatch[1]) {
-      sellerTaxCode = normalizeTaxCode(directTaxMatch[1]);
+      sellerTaxCode = sanitizeLookupCode(directTaxMatch[1]);
     }
   }
 

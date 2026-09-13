@@ -224,19 +224,6 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     status: 'official-primary',
     notes: 'Quy chuẩn công nhận người phụ thuộc BHYT (thu nhập kỳ vọng < 130 vạn/năm, quan hệ nhân thân, cư trú trong nước).'
   },
-  'jps-national-pension-exemption-2026': {
-    id: 'jps-national-pension-exemption-2026',
-    country: 'JP',
-    authority: '日本年金機構 (Japan Pension Service)',
-    title: '国民年金保険料の免除制度・納付猶予制度・学生納付特例',
-    url: 'https://www.nenkin.go.jp/service/kokunen/menjo/index.html',
-    sourceType: 'official-guidance',
-    language: 'ja',
-    lastVerifiedAt: '2026-09-10',
-    status: 'official-primary',
-    notes: 'Chế độ miễn giảm toàn bộ/bán phần (全額・一部免除), hoãn nộp thanh niên/sinh viên và cơ chế nộp bù 10 năm (追納).'
-  },
-
   // =========================================================================
   // JAPAN LIFE - WORK & EMPLOYMENT (厚生労働省 / 労働基準法 / ハローワーク)
   // =========================================================================

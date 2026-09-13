@@ -13,7 +13,7 @@
  * ============================================================================
  */
 
-import { resolveToolId, toolUrl as baseToolUrl } from './toolRoute.js';
+import { resolveToolId } from './toolRoute.js';
 
 const DOMAIN_ROUTE_REGEX = /^#\/(tools|common|japan-life|vietnam-life)(\?.*)?$/;
 
