@@ -152,25 +152,26 @@ test('MAIS Gate 2: CSS color contrast & accessibility tokens adhere to WCAG 2.1 
     return (lighter + 0.05) / (darker + 0.05);
   }
 
-  // Extract light theme block
-  const lightBlockMatch = cssContent.match(/\[data-theme="light"\]\s*\{([^}]+)\}/);
-  assert.equal(Boolean(lightBlockMatch), true, 'Không tìm thấy block [data-theme="light"] trong index.css');
-  const lightBlock = lightBlockMatch[1];
-
-  function parseRgb(varName) {
-    const regex = new RegExp(`${varName}:\\s*(\\d+)\\s+(\\d+)\\s+(\\d+)`);
-    const match = lightBlock.match(regex);
-    assert.equal(Boolean(match), true, `Không tìm thấy biến ${varName} trong [data-theme="light"]`);
-    return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10)];
+  // Extract the declaration body of a token block by its exact selector line.
+  // Neo selector vào đầu dòng để "[data-theme=\"light\"]" không khớp nhầm
+  // phần đuôi của "[data-skin=\"chotto\"][data-theme=\"light\"]".
+  function extractBlock(selector) {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const opening = new RegExp(`^${escaped}\\s*\\{`, 'm').exec(cssContent);
+    assert.notEqual(opening, null, `Không tìm thấy block ${selector} trong index.css`);
+    const bodyStart = opening.index + opening[0].length;
+    const closing = /^\}/m.exec(cssContent.slice(bodyStart));
+    assert.notEqual(closing, null, `Block ${selector} không được đóng trong index.css`);
+    return cssContent.slice(bodyStart, bodyStart + closing.index);
   }
 
-  const secondaryRgb = parseRgb('--secondary-rgb');
-  const primaryRgb = parseRgb('--primary-rgb');
-  const outlineRgb = parseRgb('--outline-rgb');
-  const primaryContainerRgb = parseRgb('--primary-container-rgb');
+  // Mỗi skin phải tự đạt chuẩn WCAG AA trên chính bảng màu Sáng của nó.
+  const lightSelectorsBySkin = {
+    toolio: '[data-theme="light"]',
+    chotto: '[data-skin="chotto"][data-theme="light"]',
+  };
 
   const whiteRgb = [255, 255, 255];
-  const surfaceSubtleRgb = [241, 245, 249]; // #f1f5f9 slate-100
 
   // Pastel background helper (alpha blend over white)
   function blendOverWhite(rgb, alpha) {
@@ -181,51 +182,146 @@ test('MAIS Gate 2: CSS color contrast & accessibility tokens adhere to WCAG 2.1 
     ];
   }
 
-  // 1. Secondary text (Emerald) on pure white and on 15% pastel background
-  const secOnWhite = getContrastRatio(secondaryRgb, whiteRgb);
-  assert.equal(
-    secOnWhite >= 4.5,
-    true,
-    `--secondary trên nền trắng vi phạm WCAG AA: ${secOnWhite.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
-  );
-  const secPastelBg = blendOverWhite(secondaryRgb, 0.15);
-  const secOnPastel = getContrastRatio(secondaryRgb, secPastelBg);
-  assert.equal(
-    secOnPastel >= 4.5,
-    true,
-    `--secondary trên nền pastel bg-secondary/15 vi phạm WCAG AA: ${secOnPastel.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
-  );
+  for (const [skin, selector] of Object.entries(lightSelectorsBySkin)) {
+    const lightBlock = extractBlock(selector);
 
-  // 2. Primary text (Sky) on pure white and on 15% pastel container background
-  const primOnWhite = getContrastRatio(primaryRgb, whiteRgb);
-  assert.equal(
-    primOnWhite >= 4.5,
-    true,
-    `--primary trên nền trắng vi phạm WCAG AA: ${primOnWhite.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
-  );
-  const primPastelBg = blendOverWhite(primaryContainerRgb, 0.15);
-  const primOnPastel = getContrastRatio(primaryRgb, primPastelBg);
-  assert.equal(
-    primOnPastel >= 4.5,
-    true,
-    `--primary trên nền pastel bg-primary-container/15 vi phạm WCAG AA: ${primOnPastel.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
-  );
+    function parseRgb(varName) {
+      const regex = new RegExp(`${varName}:\\s*(\\d+)\\s+(\\d+)\\s+(\\d+)`);
+      const match = lightBlock.match(regex);
+      assert.equal(Boolean(match), true, `Không tìm thấy biến ${varName} trong ${selector}`);
+      return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10)];
+    }
 
-  // 3. Outline text (Slate) on surface-subtle (#f1f5f9)
-  const outlineOnSubtle = getContrastRatio(outlineRgb, surfaceSubtleRgb);
-  assert.equal(
-    outlineOnSubtle >= 4.5,
-    true,
-    `--outline trên nền bg-surface-subtle vi phạm WCAG AA: ${outlineOnSubtle.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
-  );
+    const secondaryRgb = parseRgb('--secondary-rgb');
+    const primaryRgb = parseRgb('--primary-rgb');
+    const outlineRgb = parseRgb('--outline-rgb');
+    const primaryContainerRgb = parseRgb('--primary-container-rgb');
+    // Mỗi skin có nền surface-subtle riêng, không hard-code theo Toolio.
+    const surfaceSubtleRgb = parseRgb('--surface-subtle-rgb');
 
-  // 4. White text on Primary Container button
-  const whiteOnContainer = getContrastRatio(whiteRgb, primaryContainerRgb);
-  assert.equal(
-    whiteOnContainer >= 4.5,
-    true,
-    `Chữ trắng trên --primary-container vi phạm WCAG AA: ${whiteOnContainer.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
-  );
+    // 1. Secondary text on pure white and on 15% pastel background
+    const secOnWhite = getContrastRatio(secondaryRgb, whiteRgb);
+    assert.equal(
+      secOnWhite >= 4.5,
+      true,
+      `[${skin}] --secondary trên nền trắng vi phạm WCAG AA: ${secOnWhite.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+    );
+    const secPastelBg = blendOverWhite(secondaryRgb, 0.15);
+    const secOnPastel = getContrastRatio(secondaryRgb, secPastelBg);
+    assert.equal(
+      secOnPastel >= 4.5,
+      true,
+      `[${skin}] --secondary trên nền pastel bg-secondary/15 vi phạm WCAG AA: ${secOnPastel.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+    );
+
+    // 2. Primary text on pure white and on 15% pastel container background
+    const primOnWhite = getContrastRatio(primaryRgb, whiteRgb);
+    assert.equal(
+      primOnWhite >= 4.5,
+      true,
+      `[${skin}] --primary trên nền trắng vi phạm WCAG AA: ${primOnWhite.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+    );
+    const primPastelBg = blendOverWhite(primaryContainerRgb, 0.15);
+    const primOnPastel = getContrastRatio(primaryRgb, primPastelBg);
+    assert.equal(
+      primOnPastel >= 4.5,
+      true,
+      `[${skin}] --primary trên nền pastel bg-primary-container/15 vi phạm WCAG AA: ${primOnPastel.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+    );
+
+    // 3. Outline text on the skin's own surface-subtle
+    const outlineOnSubtle = getContrastRatio(outlineRgb, surfaceSubtleRgb);
+    assert.equal(
+      outlineOnSubtle >= 4.5,
+      true,
+      `[${skin}] --outline trên nền bg-surface-subtle vi phạm WCAG AA: ${outlineOnSubtle.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+    );
+
+    // 4. White text on Primary Container button
+    const whiteOnContainer = getContrastRatio(whiteRgb, primaryContainerRgb);
+    assert.equal(
+      whiteOnContainer >= 4.5,
+      true,
+      `[${skin}] Chữ trắng trên --primary-container vi phạm WCAG AA: ${whiteOnContainer.toFixed(2)}:1 (yêu cầu >= 4.5:1)`,
+    );
+  }
+});
+
+test('MAIS Gate 2: Skin Chotto giữ nguyên 100% tên biến của Toolio, chỉ đổi giá trị', () => {
+  const cssPath = join(hubRoot, 'src/index.css');
+  const cssContent = readFileSync(cssPath, 'utf8');
+
+  // Neo selector vào đầu dòng để "[data-theme=\"light\"]" không khớp nhầm
+  // phần đuôi của "[data-skin=\"chotto\"][data-theme=\"light\"]".
+  function extractBlock(selector) {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const opening = new RegExp(`^${escaped}\\s*\\{`, 'm').exec(cssContent);
+    assert.notEqual(opening, null, `Không tìm thấy block ${selector} trong index.css`);
+    const bodyStart = opening.index + opening[0].length;
+    const closing = /^\}/m.exec(cssContent.slice(bodyStart));
+    assert.notEqual(closing, null, `Block ${selector} không được đóng trong index.css`);
+    return cssContent.slice(bodyStart, bodyStart + closing.index);
+  }
+
+  function parseTokens(selector) {
+    const map = new Map();
+    for (const m of extractBlock(selector).matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+      map.set(m[1], m[2].trim());
+    }
+    return map;
+  }
+
+  const pairs = [
+    ['tối', ':root,\n[data-theme="dark"]', '[data-skin="chotto"]:not([data-theme="light"])'],
+    ['sáng', '[data-theme="light"]', '[data-skin="chotto"][data-theme="light"]'],
+  ];
+
+  // Skin CHỈ đổi màu. Token hình học (--radius-*) là tài sản dùng chung, khai
+  // báo một lần ở :root theo design.md Rule 5 — mọi tool chia sẻ cùng bo góc.
+  const isGeometryToken = (name) => name.startsWith('--radius-');
+
+  for (const [mode, toolioSelector, chottoSelector] of pairs) {
+    const toolio = parseTokens(toolioSelector);
+    const chotto = parseTokens(chottoSelector);
+
+    assert.ok(toolio.size > 0, `Block Toolio ${mode} rỗng`);
+
+    // 0. Chotto không được nhân bản token hình học.
+    const geometry = [...chotto.keys()].filter(isGeometryToken);
+    assert.deepEqual(
+      geometry,
+      [],
+      `Skin Chotto (${mode}) không được khai báo lại token hình học (dùng chung ở :root): ${geometry.join(', ')}`,
+    );
+
+    for (const name of [...toolio.keys()].filter(isGeometryToken)) {
+      toolio.delete(name);
+    }
+
+    // 1. Không thiếu biến nào: Chotto phải phủ hết tên biến của Toolio.
+    const missing = [...toolio.keys()].filter((name) => !chotto.has(name));
+    assert.deepEqual(
+      missing,
+      [],
+      `Skin Chotto (${mode}) thiếu biến so với Toolio: ${missing.join(', ')}`,
+    );
+
+    // 2. Không phát sinh tên mới: Chotto chỉ được đổi giá trị, không thêm biến.
+    const extra = [...chotto.keys()].filter((name) => !toolio.has(name));
+    assert.deepEqual(
+      extra,
+      [],
+      `Skin Chotto (${mode}) khai báo biến không tồn tại trong Toolio: ${extra.join(', ')}`,
+    );
+
+    // 3. Phải thực sự là bảng màu khác, không phải bản sao.
+    const identical = [...toolio.keys()].filter((name) => toolio.get(name) === chotto.get(name));
+    assert.equal(
+      identical.length < toolio.size,
+      true,
+      `Skin Chotto (${mode}) trùng giá trị hoàn toàn với Toolio — không phải bảng màu thay thế`,
+    );
+  }
 });
 
 test('MAIS Gate 1: Tool names adhere to Naming Convention and do not contain forbidden marketing fluff', () => {

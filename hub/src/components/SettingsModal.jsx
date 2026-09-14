@@ -1,7 +1,26 @@
 import React, { useEffect } from 'react';
-import { Eye, EyeOff, RotateCcw, Settings2, Wrench, X, Sun, Moon, Monitor, Gamepad2, Swords } from 'lucide-react';
-import { useTheme } from '@ai-tools/core/theme/useTheme.js';
-import { THEMES } from '@ai-tools/core/theme/themeManager.js';
+import { Eye, EyeOff, RotateCcw, Settings2, Wrench, X, Sun, Moon, Monitor, Gamepad2, Swords, Palette } from 'lucide-react';
+import { useTheme, useSkin } from '@ai-tools/core/theme/useTheme.js';
+import { THEMES, SKINS } from '@ai-tools/core/theme/themeManager.js';
+
+/**
+ * Hai skin dùng chung bộ tên biến CSS, chỉ khác giá trị (xem hub/src/index.css).
+ * Swatch dưới đây chỉ để xem trước trong Cài đặt — nguồn chân lý vẫn là CSS.
+ */
+const SKIN_OPTIONS = [
+  {
+    id: SKINS.TOOLIO,
+    name: 'Toolio',
+    tagline: 'Điềm tĩnh, kỹ thuật',
+    swatch: { canvas: '#090D16', primary: '#89ceff', secondary: '#4edea3', tertiary: '#ffb86e' },
+  },
+  {
+    id: SKINS.CHOTTO,
+    name: 'Chotto',
+    tagline: 'Trẻ trung, gần gũi',
+    swatch: { canvas: '#151024', primary: '#cbb6ff', secondary: '#86efac', tertiary: '#ffd88a' },
+  },
+];
 
 export default function SettingsModal({
   isOpen,
@@ -18,6 +37,7 @@ export default function SettingsModal({
   onToggleToolioNinja,
 }) {
   const { themePreference, setTheme } = useTheme();
+  const { skin, setSkin } = useSkin();
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -152,6 +172,62 @@ export default function SettingsModal({
                 <span>Hệ thống</span>
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Skin (Phong cách giao diện) Selector */}
+        <div className="border-b border-border-subtle/80 bg-surface-subtle/40 px-5 py-3.5 sm:px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-container/15 text-primary">
+              <Palette size={18} />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-on-surface">Phong cách giao diện</div>
+              <div className="text-[11px] text-outline mt-0.5">
+                Đổi bảng màu toàn ứng dụng. Hoạt động độc lập với chế độ Sáng/Tối ở trên.
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {SKIN_OPTIONS.map((option) => {
+              const isActive = skin === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setSkin(option.id)}
+                  className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition-colors ${
+                    isActive
+                      ? 'border-primary bg-primary-container/10'
+                      : 'border-border-subtle bg-surface-container hover:border-outline-variant'
+                  }`}
+                  aria-pressed={isActive}
+                >
+                  <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-black/10"
+                    style={{ backgroundColor: option.swatch.canvas }}
+                    aria-hidden="true"
+                  >
+                    <span className="flex gap-0.5">
+                      {[option.swatch.primary, option.swatch.secondary, option.swatch.tertiary].map((color) => (
+                        <span
+                          key={color}
+                          className="h-3.5 w-1.5 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </span>
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className={`block truncate text-xs font-bold ${isActive ? 'text-primary' : 'text-on-surface'}`}>
+                      {option.name}
+                    </span>
+                    <span className="mt-0.5 block text-[11px] text-outline">{option.tagline}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
