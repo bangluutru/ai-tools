@@ -6,6 +6,11 @@ import {
   applyTheme,
   applyThemeToDom,
   subscribeTheme,
+  SKINS,
+  getStoredSkin,
+  applySkin,
+  applySkinToDom,
+  subscribeSkin,
 } from './themeManager.js';
 
 /**
@@ -69,3 +74,40 @@ export function useTheme() {
 }
 
 export default useTheme;
+
+/**
+ * React Hook for the skin (phong cách) axis — independent of light/dark.
+ * @returns {{
+ *   skin: 'toolio' | 'chotto',
+ *   setSkin: (skin: 'toolio' | 'chotto') => void,
+ *   toggleSkin: () => void,
+ *   isToolio: boolean,
+ *   isChotto: boolean
+ * }}
+ */
+export function useSkin() {
+  const [skin, setSkinState] = useState(() => getStoredSkin());
+
+  useEffect(() => {
+    applySkinToDom(skin);
+    return subscribeSkin((next) => setSkinState(next.skin));
+  }, [skin]);
+
+  const setSkin = useCallback((next) => {
+    setSkinState(applySkin(next).skin);
+  }, []);
+
+  const toggleSkin = useCallback(() => {
+    setSkinState((prev) =>
+      applySkin(prev === SKINS.CHOTTO ? SKINS.TOOLIO : SKINS.CHOTTO).skin,
+    );
+  }, []);
+
+  return {
+    skin,
+    setSkin,
+    toggleSkin,
+    isToolio: skin === SKINS.TOOLIO,
+    isChotto: skin === SKINS.CHOTTO,
+  };
+}

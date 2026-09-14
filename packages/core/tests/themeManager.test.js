@@ -11,6 +11,15 @@ import {
   applyTheme,
   initTheme,
   subscribeTheme,
+  SKIN_STORAGE_KEY,
+  SKINS,
+  DEFAULT_SKIN,
+  getStoredSkin,
+  setStoredSkin,
+  applySkinToDom,
+  applySkin,
+  initSkin,
+  subscribeSkin,
 } from '../src/theme/themeManager.js';
 
 function createMockStorage(initial = {}) {
@@ -166,4 +175,83 @@ test('subscribeTheme reacts to cross-tab storage changes', () => {
   assert.equal(doc.documentElement.getAttribute('data-theme'), 'light');
 
   unsubscribe();
+});
+
+/* ---------------------------------------------------------------------------
+   SKIN SYSTEM
+   --------------------------------------------------------------------------- */
+
+test('getStoredSkin trả về toolio khi chưa có lựa chọn hoặc giá trị rác', () => {
+  assert.equal(getStoredSkin(createMockStorage()), DEFAULT_SKIN);
+  assert.equal(getStoredSkin(createMockStorage()), SKINS.TOOLIO);
+  assert.equal(
+    getStoredSkin(createMockStorage({ [SKIN_STORAGE_KEY]: 'không-tồn-tại' })),
+    SKINS.TOOLIO,
+  );
+});
+
+test('getStoredSkin đọc lại đúng skin đã lưu', () => {
+  const storage = createMockStorage();
+  setStoredSkin(SKINS.CHOTTO, storage);
+  assert.equal(getStoredSkin(storage), SKINS.CHOTTO);
+});
+
+test('setStoredSkin quy giá trị không hợp lệ về mặc định', () => {
+  const storage = createMockStorage();
+  setStoredSkin('rực-rỡ', storage);
+  assert.equal(storage.getItem(SKIN_STORAGE_KEY), DEFAULT_SKIN);
+});
+
+test('applySkinToDom ghi data-skin và không đụng tới data-theme', () => {
+  const doc = createMockDocument();
+  applyThemeToDom(THEMES.LIGHT, doc);
+  applySkinToDom(SKINS.CHOTTO, doc);
+
+  assert.equal(doc.documentElement.getAttribute('data-skin'), 'chotto');
+  // Hai trục độc lập: đổi skin không được reset sáng/tối.
+  assert.equal(doc.documentElement.getAttribute('data-theme'), 'light');
+  assert.equal(doc._classes.has('light'), true);
+});
+
+test('applySkin lưu lựa chọn và áp lên DOM cùng lúc', () => {
+  const storage = createMockStorage();
+  const doc = createMockDocument();
+
+  const result = applySkin(SKINS.CHOTTO, { storage, doc });
+
+  assert.equal(result.skin, SKINS.CHOTTO);
+  assert.equal(storage.getItem(SKIN_STORAGE_KEY), 'chotto');
+  assert.equal(doc.documentElement.getAttribute('data-skin'), 'chotto');
+});
+
+test('initSkin khôi phục skin đã lưu khi khởi động', () => {
+  const storage = createMockStorage({ [SKIN_STORAGE_KEY]: 'chotto' });
+  const doc = createMockDocument();
+
+  assert.equal(initSkin({ storage, doc }).skin, SKINS.CHOTTO);
+  assert.equal(doc.documentElement.getAttribute('data-skin'), 'chotto');
+});
+
+test('subscribeSkin đồng bộ skin giữa các tab và huỷ đăng ký sạch', () => {
+  const storage = createMockStorage();
+  const doc = createMockDocument();
+  const win = createMockWindow();
+  const seen = [];
+
+  const unsubscribe = subscribeSkin((state) => seen.push(state.skin), { storage, doc, win });
+
+  setStoredSkin(SKINS.CHOTTO, storage);
+  win._triggerStorage({ key: SKIN_STORAGE_KEY });
+
+  assert.deepEqual(seen, [SKINS.CHOTTO]);
+  assert.equal(doc.documentElement.getAttribute('data-skin'), 'chotto');
+
+  // Sự kiện của khoá khác không được kích hoạt callback.
+  win._triggerStorage({ key: THEME_STORAGE_KEY });
+  assert.deepEqual(seen, [SKINS.CHOTTO]);
+
+  unsubscribe();
+  setStoredSkin(SKINS.TOOLIO, storage);
+  win._triggerStorage({ key: SKIN_STORAGE_KEY });
+  assert.deepEqual(seen, [SKINS.CHOTTO]);
 });

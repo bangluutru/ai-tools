@@ -62,8 +62,17 @@ export {
   applyTheme,
   initTheme,
   subscribeTheme,
+  SKIN_STORAGE_KEY,
+  SKINS,
+  DEFAULT_SKIN,
+  getStoredSkin,
+  setStoredSkin,
+  applySkinToDom,
+  applySkin,
+  initSkin,
+  subscribeSkin,
 } from './theme/themeManager.js';
-export { useTheme } from './theme/useTheme.js';
+export { useTheme, useSkin } from './theme/useTheme.js';
 
 // Regulatory Foundation (Shared across JP, VN, etc.)
 export * from './regulatory/index.js';

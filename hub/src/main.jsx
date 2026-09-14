@@ -3,10 +3,11 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
 import './print.css';
-import { initTheme } from '@ai-tools/core/theme/themeManager.js';
+import { initTheme, initSkin } from '@ai-tools/core/theme/themeManager.js';
 
-// Initialize theme from storage/system before mounting
+// Initialize theme + skin from storage/system before mounting
 initTheme();
+initSkin();
 
 // Tự động làm mới trang khi Vite phát hiện chunk module cũ bị 404 sau khi deploy
 window.addEventListener('vite:preloadError', (event) => {

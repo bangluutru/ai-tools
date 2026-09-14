@@ -168,6 +168,192 @@
   --on-error-container: #991b1b;
 }
 
+/* ==========================================================================
+   SKIN: Chotto — bảng màu thay thế (trẻ trung, gần gũi)
+   --------------------------------------------------------------------------
+   Skin là trục ĐỘC LẬP với sáng/tối:
+     data-skin="toolio" (mặc định) → bảng màu gốc phía trên
+     data-skin="chotto"            → bảng màu bên dưới
+   Toàn bộ TÊN BIẾN giữ nguyên 100% so với Toolio — chỉ thay GIÁ TRỊ.
+   Nhờ vậy mọi class Tailwind (bg-primary, text-secondary…) và mọi
+   var(--token) trong app tự đổi màu, không cần sửa một dòng component nào.
+
+   Định hướng thị giác:
+     Toolio  = navy lạnh + cyan/emerald → điềm tĩnh, kỹ thuật
+     Chotto  = mực tím ấm + violet/mint/vàng nắng → trẻ trung, gần gũi
+
+   Ngữ nghĩa vai trò được GIỮ NGUYÊN để không phá trạng thái hệ thống:
+     primary   = màu thương hiệu/CTA   (cyan → violet)
+     secondary = thành công            (emerald → xanh lá tươi)
+     tertiary  = cảnh báo              (amber → vàng nắng)
+     error     = lỗi                   (đỏ → hồng đỏ ấm)
+
+   Lưu ý: --brand-cyan-bright / --brand-emerald-deep là tên có tính LỊCH SỬ.
+   Vai trò thật của chúng là "điểm nhấn thương hiệu sáng" và "sắc thành công
+   đậm", nên ở Chotto chúng mang giá trị violet / xanh lá đậm. Tên biến không
+   đổi theo đúng yêu cầu tương thích ngược.
+   ========================================================================== */
+
+/* --- Chotto · Tối (mặc định khi chưa chọn sáng) --- */
+[data-skin="chotto"]:not([data-theme="light"]) {
+  /* RGB channels for Tailwind alpha opacity support */
+  --surface-canvas-rgb: 21 16 36;
+  --surface-dim-rgb: 26 20 48;
+  --surface-rgb: 26 20 48;
+  --surface-bright-rgb: 61 52 89;
+  --surface-subtle-rgb: 42 33 66;
+  --surface-container-lowest-rgb: 16 12 28;
+  --surface-container-low-rgb: 31 24 54;
+  --surface-container-rgb: 38 30 63;
+  --surface-container-high-rgb: 51 42 79;
+  --surface-container-highest-rgb: 64 54 94;
+  --surface-variant-rgb: 64 54 94;
+  --border-subtle-rgb: 74 63 107;
+  --border-card-rgb: 42 33 66;
+  --outline-rgb: 154 143 181;
+  --outline-variant-rgb: 77 68 104;
+  --on-surface-rgb: 236 228 255;
+  --on-surface-variant-rgb: 202 191 224;
+  --inverse-surface-rgb: 236 228 255;
+  --inverse-on-surface-rgb: 51 42 79;
+  --primary-rgb: 203 182 255;
+  --on-primary-rgb: 47 20 101;
+  --primary-container-rgb: 139 92 246;
+  --on-primary-container-rgb: 42 14 94;
+  --brand-cyan-bright-rgb: 167 139 250;
+  --secondary-rgb: 134 239 172;
+  --on-secondary-rgb: 0 56 28;
+  --secondary-container-rgb: 34 197 94;
+  --on-secondary-container-rgb: 0 49 24;
+  --brand-emerald-deep-rgb: 22 163 74;
+  --tertiary-rgb: 255 216 138;
+  --on-tertiary-rgb: 74 47 0;
+  --tertiary-container-rgb: 245 158 11;
+  --on-tertiary-container-rgb: 77 50 0;
+  --error-rgb: 255 177 184;
+  --on-error-rgb: 103 0 15;
+  --error-container-rgb: 164 22 44;
+  --on-error-container-rgb: 255 217 221;
+
+  /* Direct CSS values */
+  --bg-primary: #151024;
+  --surface-canvas: #151024;
+  --surface-dim: #1a1430;
+  --surface: #1a1430;
+  --surface-bright: #3d3459;
+  --surface-subtle: #2a2142;
+  --surface-container-lowest: #100c1c;
+  --surface-container-low: #1f1836;
+  --surface-container: #261e3f;
+  --surface-container-high: #332a4f;
+  --surface-container-highest: #40365e;
+  --surface-variant: #40365e;
+  --border-subtle: #4a3f6b;
+  --border-card: #2a2142;
+  --on-surface: #ece4ff;
+  --on-surface-variant: #cabfe0;
+  --outline: #9a8fb5;
+  --outline-variant: #4d4468;
+  --primary: #cbb6ff;
+  --on-primary: #2f1465;
+  --primary-container: #8b5cf6;
+  --on-primary-container: #2a0e5e;
+  --brand-cyan-bright: #a78bfa;
+  --secondary: #86efac;
+  --on-secondary: #00381c;
+  --secondary-container: #22c55e;
+  --on-secondary-container: #003118;
+  --brand-emerald-deep: #16a34a;
+  --tertiary: #ffd88a;
+  --on-tertiary: #4a2f00;
+  --tertiary-container: #f59e0b;
+  --on-tertiary-container: #4d3200;
+  --error: #ffb1b8;
+  --on-error: #67000f;
+  --error-container: #a4162c;
+  --on-error-container: #ffd9dd;
+}
+
+/* --- Chotto · Sáng --- */
+[data-skin="chotto"][data-theme="light"] {
+  /* RGB channels for Tailwind alpha opacity support in Light mode */
+  --surface-canvas-rgb: 252 248 255;       /* #fcf8ff lilac-white */
+  --surface-dim-rgb: 245 238 252;          /* #f5eefc */
+  --surface-rgb: 255 255 255;              /* #ffffff white */
+  --surface-bright-rgb: 255 255 255;
+  --surface-subtle-rgb: 245 238 252;       /* #f5eefc */
+  --surface-container-lowest-rgb: 255 255 255;
+  --surface-container-low-rgb: 252 248 255;
+  --surface-container-rgb: 255 255 255;     /* #ffffff */
+  --surface-container-high-rgb: 236 224 247; /* #ece0f7 */
+  --surface-container-highest-rgb: 221 205 238; /* #ddcdee */
+  --surface-variant-rgb: 245 238 252;
+  --border-subtle-rgb: 230 217 242;        /* #e6d9f2 */
+  --border-card-rgb: 230 217 242;
+  --outline-rgb: 93 81 117;               /* #5d5175 (contrast-safe >= 4.5:1) */
+  --outline-variant-rgb: 221 205 238;      /* #ddcdee */
+  --on-surface-rgb: 30 22 48;              /* #1e1630 (crisp high contrast) */
+  --on-surface-variant-rgb: 93 81 117;     /* #5d5175 */
+  --inverse-surface-rgb: 30 22 48;
+  --inverse-on-surface-rgb: 252 248 255;
+  --primary-rgb: 109 40 217;               /* #6d28d9 violet-700 (contrast-safe >= 4.5:1) */
+  --on-primary-rgb: 255 255 255;
+  --primary-container-rgb: 109 40 217;     /* #6d28d9 violet-700 (>= 4.5:1 with white text) */
+  --on-primary-container-rgb: 255 255 255;
+  --brand-cyan-bright-rgb: 109 40 217;     /* #6d28d9 */
+  --secondary-rgb: 22 101 52;              /* #166534 green-800 (>= 4.5:1 on pastel) */
+  --on-secondary-rgb: 255 255 255;
+  --secondary-container-rgb: 22 163 74;    /* #16a34a green-600 */
+  --on-secondary-container-rgb: 255 255 255;
+  --brand-emerald-deep-rgb: 21 128 61;     /* #15803d */
+  --tertiary-rgb: 138 90 6;                /* #8a5a06 (>= 4.5:1 on pastel & white) */
+  --on-tertiary-rgb: 255 255 255;
+  --tertiary-container-rgb: 251 191 36;    /* #fbbf24 amber-400 */
+  --on-tertiary-container-rgb: 255 255 255;
+  --error-rgb: 190 18 60;                  /* #be123c rose-700 (>= 4.5:1 on light surfaces) */
+  --on-error-rgb: 255 255 255;
+  --error-container-rgb: 255 228 230;      /* #ffe4e6 rose-100 */
+  --on-error-container-rgb: 159 18 57;     /* #9f1239 rose-800 */
+
+  /* Direct CSS values in Light mode */
+  --bg-primary: #fcf8ff;
+  --surface-canvas: #fcf8ff;
+  --surface-dim: #f5eefc;
+  --surface: #ffffff;
+  --surface-bright: #ffffff;
+  --surface-subtle: #f5eefc;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #fcf8ff;
+  --surface-container: #ffffff;
+  --surface-container-high: #ece0f7;
+  --surface-container-highest: #ddcdee;
+  --surface-variant: #f5eefc;
+  --border-subtle: #e6d9f2;
+  --border-card: #e6d9f2;
+  --on-surface: #1e1630;
+  --on-surface-variant: #5d5175;
+  --outline: #5d5175;
+  --outline-variant: #ddcdee;
+  --primary: #6d28d9;
+  --on-primary: #ffffff;
+  --primary-container: #6d28d9;
+  --on-primary-container: #ffffff;
+  --brand-cyan-bright: #6d28d9;
+  --secondary: #166534;
+  --on-secondary: #ffffff;
+  --secondary-container: #16a34a;
+  --on-secondary-container: #ffffff;
+  --brand-emerald-deep: #15803d;
+  --tertiary: #8a5a06;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #fbbf24;
+  --on-tertiary-container: #ffffff;
+  --error: #be123c;
+  --on-error: #ffffff;
+  --error-container: #ffe4e6;
+  --on-error-container: #9f1239;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--surface-canvas);

@@ -202,6 +202,55 @@ All colors are implemented via CSS variables mapped directly to Tailwind utility
 - **Safety Emerald (`#4edea3` / `#10B981`)**: Dedicated exclusively to privacy, client-side execution badges, Wasm safety, and success states.
 - **Amber / Gold (`#ffb86e`)**: Accounting checks, disclaimers (`outputPurpose: 'reference'`), and cautionary notices.
 
+### 5.2 Skins — Toolio & Chotto (Alternate Palette)
+
+The palette above is the **Toolio** skin. A second skin, **Chotto**, ships as an
+alternate set of *values* bound to the **exact same variable names**. No component,
+utility class, or `var(--token)` reference changes between skins.
+
+| | Toolio | Chotto |
+|---|---|---|
+| Personality | Điềm tĩnh, kỹ thuật | Trẻ trung, gần gũi |
+| Canvas (dark) | `#090D16` cold navy | `#151024` warm plum-ink |
+| Primary | Sky cyan `#0ea5e9` | Violet `#8b5cf6` |
+| Secondary (success) | Emerald `#4edea3` | Fresh green `#86efac` |
+| Tertiary (warning) | Amber `#ffb86e` | Sunny yellow `#ffd88a` |
+| Error | Red `#ffb4ab` | Warm rose `#ffb1b8` |
+
+**Two independent axes.** Skin is orthogonal to light/dark — all four combinations
+are valid and supported:
+
+```
+<html data-skin="toolio|chotto" data-theme="light|dark">
+```
+
+- `data-skin` is written by `initSkin()` / `applySkin()` in
+  `packages/core/src/theme/themeManager.js`, persisted under `ai_tools_skin`.
+- A missing or unrecognised `data-skin` falls back to **Toolio**, so existing
+  markup keeps its current appearance with no migration.
+- Selectors are `[data-skin="chotto"]:not([data-theme="light"])` and
+  `[data-skin="chotto"][data-theme="light"]` — both specificity `(0,2,0)`, so they
+  win over the base `(0,1,0)` blocks regardless of source order.
+
+**Binding rules for any future skin:**
+
+1. **Names are frozen.** A skin may only redefine values of existing tokens. Adding
+   or omitting a token name is a governance failure (`MAIS Gate 2: Skin Chotto giữ
+   nguyên 100% tên biến của Toolio`).
+2. **Role semantics are frozen.** `primary` = brand/CTA, `secondary` = success,
+   `tertiary` = warning, `error` = error. A skin re-hues within a role; it never
+   repurposes one. This is why Chotto keeps a green `secondary` and a warm
+   `tertiary` even though its brand colour moved to violet.
+3. **Geometry is shared, not skinned.** `--radius-*` stays declared once on `:root`
+   per Rule 5 — skins must not redeclare it.
+4. **Every skin passes WCAG AA on its own.** The contrast gate in
+   `hub/tests/miniapp-governance.test.js` runs per-skin against that skin's own
+   `--surface-subtle`, not a hard-coded Toolio background.
+
+> `--brand-cyan-bright` and `--brand-emerald-deep` are **historical names**. Their
+> real roles are "bright brand accent" and "deep success tone", so under Chotto they
+> hold violet and deep green. The names are kept for backwards compatibility.
+
 ---
 
 ## 6. Typography Scale & Hierarchy
@@ -389,10 +438,15 @@ export default function ExampleTool() {
 
 ## 15. Dark Mode & Theming
 
-- **Pure Dark Palette**: Standardized around `#090D16` canvas.
+- **Pure Dark Palette**: Standardized around `#090D16` canvas (Toolio) / `#151024` (Chotto).
+- **Two axes**: `data-theme` (light/dark/system) and `data-skin` (toolio/chotto) are
+  independent and combine freely — see §5.2.
 - **Contrast Ratios**:
-  - Primary text (`#dae2fd`) on canvas (`#090D16`): Contrast ratio > 12:1 (exceeds WCAG AAA standard).
-  - Secondary text (`#bec8d2`) on container (`#171f33`): Contrast ratio > 7:1.
+  - Toolio — primary text (`#dae2fd`) on canvas (`#090D16`): > 12:1 (exceeds WCAG AAA standard).
+  - Toolio — secondary text (`#bec8d2`) on container (`#171f33`): > 7:1.
+  - Chotto — primary text (`#ece4ff`) on canvas (`#151024`): > 15:1.
+  - Chotto — secondary text (`#cabfe0`) on container (`#261e3f`): > 8:1.
+  - Both skins' Light palettes are gated at >= 4.5:1 by `miniapp-governance.test.js`.
 
 ---
 
