@@ -50,8 +50,18 @@ import {
 
 import { TaxKnowledgeBase } from './knowledge/taxKnowledgeBase.js';
 import { TaxI18nStrings, getTaxI18n } from './knowledge/taxI18n.js';
-import { exportTaxSimulationCsv } from './export/csvExporter.js';
-import { generateTaxPdfReport } from './export/pdfReportGenerator.js';
+
+// CSV/PDF exporter KHÔNG được re-export tĩnh ở đây để jsPDF không bị kéo vào bundle ban đầu.
+// Dùng dynamic import tại thời điểm bấm nút: loadTaxExporters() hoặc import trực tiếp từ ./export/*.
+export function loadTaxExporters() {
+  return Promise.all([
+    import('./export/csvExporter.js'),
+    import('./export/pdfReportGenerator.js'),
+  ]).then(([csv, pdf]) => ({
+    exportTaxSimulationCsv: csv.exportTaxSimulationCsv,
+    generateTaxPdfReport: pdf.generateTaxPdfReport,
+  }));
+}
 
 /**
  * Hàm mô phỏng tài chính & thuế Nhật Bản toàn diện (Unified Deterministic Tax Simulator)
@@ -94,7 +104,19 @@ export function simulateJapanTaxes(formValues = {}) {
   const idecoMonthly = Math.max(0, Number(formValues.idecoMonthly) || 0);
   const dependentsCount = Math.max(0, Number(formValues.dependentsCount) || 0);
   const hasSpouse = Boolean(formValues.hasSpouse);
-  const age = Number(formValues.age) || 30;
+  const familyInputs = {
+    dependentsCount,
+    hasSpouse,
+    spouseIncome: Math.max(0, Number(formValues.spouseIncome) || 0),
+    spouseIsElderly: Boolean(formValues.spouseIsElderly),
+    specificDependentsCount: Math.max(0, Number(formValues.specificDependentsCount) || 0),
+    elderlyDependentsCount: Math.max(0, Number(formValues.elderlyDependentsCount) || 0),
+    cohabitingElderlyParentsCount: Math.max(0, Number(formValues.cohabitingElderlyParentsCount) || 0),
+  };
+  const parsedAge = Number(formValues.age);
+  const age = formValues.age === undefined || formValues.age === null || formValues.age === '' || !Number.isFinite(parsedAge)
+    ? 30
+    : Math.max(0, parsedAge);
 
   // 1. Tính bảo hiểm xã hội trước (vì khoản này được khấu trừ 100% khi tính thuế thu nhập và thuế cư trú)
   const netBizBeforeTax = Math.max(0, businessRevenue - businessExpenses);
@@ -106,6 +128,7 @@ export function simulateJapanTaxes(formValues = {}) {
     prefecture,
     age,
     isEnrolledCompanySocial: formValues.isEnrolledCompanySocial !== false,
+    industryCategory: formValues.industryCategory || 'general',
   });
 
   const socialInsurancePaid = socialInsurance.totalSocialInsurance;
@@ -121,8 +144,7 @@ export function simulateJapanTaxes(formValues = {}) {
     sideIncomeExpenses,
     socialInsurancePaid,
     idecoMonthly,
-    dependentsCount,
-    hasSpouse,
+    ...familyInputs,
   });
 
   // 3. Tính thuế cư trú cá nhân (住民税)
@@ -132,8 +154,7 @@ export function simulateJapanTaxes(formValues = {}) {
     totalGrossIncome: incomeTax.totalGrossIncome,
     socialInsurancePaid,
     idecoMonthly,
-    dependentsCount,
-    hasSpouse,
+    ...familyInputs,
   });
 
   // 4. Tính thuế kinh doanh cá nhân (個人事業税)
@@ -206,6 +227,10 @@ export function simulateJapanTaxes(formValues = {}) {
     annualSalary: salary,
     hasYearEndAdjustment: formValues.hasYearEndAdjustment !== false,
     employersCount: Number(formValues.employersCount) || 1,
+    secondarySalary: formValues.secondarySalary,
+    computedIncomeTax: incomeTax.totalIncomeTax,
+    basicDeduction: incomeTax.deductions.basic,
+    totalIncome: incomeTax.totalGrossIncome,
     sideIncomeProfit: Math.max(0, sideIncomeRevenue - sideIncomeExpenses),
     hasBusinessIncome: businessRevenue > 0,
     businessNetProfit: netBizBeforeTax,
@@ -263,6 +288,4 @@ export {
   TaxKnowledgeBase,
   TaxI18nStrings,
   getTaxI18n,
-  exportTaxSimulationCsv,
-  generateTaxPdfReport,
 };

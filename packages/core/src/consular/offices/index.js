@@ -1,7 +1,11 @@
 /**
  * @file offices/index.js
- * Danh bạ chính thức các Cơ quan đại diện ngoại giao và lãnh sự Việt Nam tại Nhật Bản.
- * Dữ liệu đã được kiểm chứng từ trang thông tin chính thức của ĐSQ và TLSQ.
+ * Danh bạ các Cơ quan đại diện Việt Nam tại Nhật Bản (Toolio — công cụ không chính thức).
+ * Nguồn (kiểm tra 2026-09-27):
+ *  - ĐSQ Tokyo: https://vnembassy-jp.org/vi/thong-tin-chung-ve-thu-tuc-lanh-su
+ *  - TLSQ Osaka: https://vnconsulate-osaka.org/en
+ *  - TLSQ Fukuoka: https://vnconsulate-fukuoka.org/en/
+ * Trường nào không tìm thấy trên trang chính thức được để null / ghi "cần xác nhận với cơ quan".
  */
 
 export const CONSULAR_OFFICES = {
@@ -28,16 +32,17 @@ export const CONSULAR_OFFICES = {
       citizen_protection_hotline: '+81-80-3590-9136',
       labor_hotline: '+81-80-7142-6688',
       education_hotline: '+81-80-7506-1987',
-      mofa_citizen_protection: '+84-98-184-8484',
+      mofa_citizen_protection: '+84-981-84-84-84',
     },
+    // Trang ĐSQ: nhận hồ sơ và trả kết quả 9:30-12:00 và 14:00-17:00, Thứ 2 - Thứ 6 (trừ ngày lễ VN & Nhật)
     working_hours: {
-      reception_morning: '09:00 - 12:00 (Thứ 2 - Thứ 6)',
-      return_afternoon: '14:00 - 17:00 (Thứ 2 - Thứ 6)',
-      closed: 'Thứ 7, Chủ Nhật và các ngày nghỉ lễ theo quy định của Việt Nam và Nhật Bản',
+      reception_morning: '09:30 - 12:00 & 14:00 - 17:00 (Thứ 2 - Thứ 6, nhận hồ sơ & trả kết quả)',
+      return_afternoon: '09:30 - 12:00 & 14:00 - 17:00 (Thứ 2 - Thứ 6)',
+      closed: 'Thứ 7, Chủ Nhật và các ngày nghỉ lễ của Việt Nam và Nhật Bản',
     },
     official_website: 'https://vnembassy-jp.org',
-    notes: 'Tiếp nhận hồ sơ trực tiếp hoặc qua bưu điện tùy loại thủ tục. Với thủ tục hộ tịch (khai sinh, kết hôn), đương sự phải có mặt trực tiếp ký sổ bộ.',
-    last_verified: '2026-09-12',
+    notes: 'Hình thức nộp tùy thủ tục (xem từng thủ tục). Hộ chiếu, khai sinh, kết hôn, chứng thực chữ ký: nộp trực tiếp.',
+    last_verified: '2026-09-27',
   },
   osaka: {
     id: 'osaka',
@@ -66,16 +71,17 @@ export const CONSULAR_OFFICES = {
       general_email: 'vnconsulate-info@vnconsulate-osaka.org',
       citizen_protection_email: 'baohocongdan.osaka@gmail.com',
       citizen_protection_hotline: '+81-90-4769-6789',
-      mofa_citizen_protection: '+84-98-184-8484',
+      mofa_citizen_protection: '+84-981-84-84-84',
     },
+    // Trang chính thức không nêu giờ tiếp nhận (kiểm tra 2026-09-27)
     working_hours: {
-      reception_morning: '09:00 - 12:00 (Thứ 2 - Thứ 6)',
-      return_afternoon: '15:30 - 17:00 (Thứ 2 - Thứ 6)',
-      closed: 'Thứ 7, Chủ Nhật và các ngày nghỉ lễ theo quy định',
+      reception_morning: 'Giờ tiếp nhận: cần xác nhận với cơ quan',
+      return_afternoon: 'Giờ trả kết quả: cần xác nhận với cơ quan',
+      closed: 'Thứ 7, Chủ Nhật và ngày lễ (cần xác nhận với cơ quan)',
     },
     official_website: 'https://vnconsulate-osaka.org',
-    notes: 'Phụ trách khu vực Kansai, Shikoku và Chugoku. Hỗ trợ nộp hồ sơ qua đường bưu điện đối với các thủ tục được phép (kèm bì thư khứ hồi LetterPack).',
-    last_verified: '2026-09-12',
+    notes: 'Thủ tục hộ chiếu làm trực tiếp tại TLSQ (trang node/100). Địa bàn lãnh sự chính xác chưa được công bố trên trang — cần xác nhận với cơ quan.',
+    last_verified: '2026-09-27',
   },
   fukuoka: {
     id: 'fukuoka',
@@ -96,17 +102,19 @@ export const CONSULAR_OFFICES = {
       fax: ['+81-92-263-7676'],
       consular_email: 'tlsq.fukuoka@gmail.com',
       general_email: 'vnconsulate.fukuoka@gmail.com',
-      citizen_protection_hotline: '+81-80-4279-7302',
-      mofa_citizen_protection: '+84-98-184-8484',
+      // Trang chủ TLSQ: bảo hộ công dân (cuối tuần/ngày lễ) 080 3984 6668 hoặc 080 4279 7302
+      citizen_protection_hotline: '+81-80-3984-6668',
+      citizen_protection_hotline_alt: '+81-80-4279-7302',
+      mofa_citizen_protection: '+84-981-84-84-84',
     },
     working_hours: {
-      reception_morning: '09:00 - 12:00 (Thứ 2 - Thứ 6)',
-      return_afternoon: '14:00 - 17:00 (Thứ 2 - Thứ 6)',
-      closed: 'Thứ 7, Chủ Nhật và các ngày nghỉ lễ',
+      reception_morning: 'Giờ tiếp nhận: cần xác nhận với cơ quan',
+      return_afternoon: 'Giờ trả kết quả: cần xác nhận với cơ quan',
+      closed: 'Thứ 7, Chủ Nhật và ngày lễ Việt Nam, Nhật Bản',
     },
     official_website: 'https://vnconsulate-fukuoka.org',
-    notes: 'Phụ trách chính thức khu vực 8 tỉnh thành Kyushu và Okinawa. Tiếp nhận hồ sơ trực tiếp và qua bưu điện cho các thủ tục được quy định.',
-    last_verified: '2026-09-12',
+    notes: 'Khu vực Kyushu - Okinawa. Hình thức nộp từng thủ tục: cần xác nhận với cơ quan.',
+    last_verified: '2026-09-27',
   },
   honorary_nagoya: {
     id: 'honorary_nagoya',
@@ -144,4 +152,4 @@ export const CONSULAR_OFFICES = {
   },
 };
 
-export const getOfficeById = (id) => CONSULAR_OFFICES[id] || CONSULAR_OFFICES.tokyo;
+export const getOfficeById = (id) => (id && CONSULAR_OFFICES[id]) || null;

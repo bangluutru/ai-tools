@@ -108,10 +108,11 @@ test('Boundary Test: Rounding rules under National Tax Collection Act Art. 118 &
   assert.equal(roundTaxableIncome(1000), 1000);
   assert.equal(roundTaxableIncome(1001), 1000);
 
-  // Final tax payable: less than 1,000 JPY -> 0 (Art. 119 Par. 1)
+  // Final tax payable: truncate below 100 JPY (Art. 119); amounts under 100 JPY become 0 — no 1,000 JPY zeroing
   assert.equal(roundFinalTaxAmount(0), 0);
-  assert.equal(roundFinalTaxAmount(500), 0);
-  assert.equal(roundFinalTaxAmount(999), 0);
+  assert.equal(roundFinalTaxAmount(99), 0);
+  assert.equal(roundFinalTaxAmount(500), 500);
+  assert.equal(roundFinalTaxAmount(999), 900);
   assert.equal(roundFinalTaxAmount(1000), 1000);
   assert.equal(roundFinalTaxAmount(1099), 1000);
   assert.equal(roundFinalTaxAmount(1100), 1100);

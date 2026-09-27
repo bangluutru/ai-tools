@@ -5,62 +5,54 @@
  * và khuyến nghị thủ tục khi chuyển việc / thay đổi đơn vị công tác (所属機関変更).
  */
 
-import { FILING_METHODS } from './affiliationRules.js';
+import { FILING_METHODS, NOTIFICATION_TYPE_BY_STATUS, NOTIFICATION_FORM_URLS } from './affiliationRules.js';
 import { getStatusDefinition } from '../status/statusCatalog.js';
+import { getOtherImmigrationFee } from '../shared/immigrationFeeTable.js';
+import {
+  parseLocalDate,
+  formatLocalDate,
+  addDaysLocal,
+  addMonthsClamped,
+  diffCalendarDays,
+  resolveCurrentDate,
+} from '../shared/localDate.js';
+
+const formatDateISO = formatLocalDate;
+const addDays = addDaysLocal;
+const addMonths = addMonthsClamped;
+
+const SPOUSE_EVENTS = ['divorce', 'spouse-death'];
 
 /**
- * Format ngày dạng YYYY-MM-DD
- * @param {Date} date 
- * @returns {string}
+ * Loại nghĩa vụ thông báo theo Điều 19-16 cho một tư cách lưu trú.
+ * @param {string} residenceStatus
+ * @returns {'activity-institution'|'contract-institution'|'spouse'|'none'}
  */
-function formatDateISO(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
-/**
- * Thêm số ngày vào Date
- * @param {Date} date 
- * @param {number} days 
- * @returns {Date}
- */
-function addDays(date, days) {
-  const d = new Date(date.getTime());
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-/**
- * Thêm số tháng vào Date
- * @param {Date} date 
- * @param {number} months 
- * @returns {Date}
- */
-function addMonths(date, months) {
-  const d = new Date(date.getTime());
-  const expectedMonth = (d.getMonth() + months) % 12;
-  d.setMonth(d.getMonth() + months);
-  if (d.getMonth() !== (expectedMonth < 0 ? expectedMonth + 12 : expectedMonth)) {
-    d.setDate(0);
-  }
-  return d;
+export function getAffiliationNotificationType(residenceStatus) {
+  return NOTIFICATION_TYPE_BY_STATUS[residenceStatus] || 'none';
 }
 
 /**
  * Kiểm tra toàn diện tình trạng chuyển việc và thay đổi cơ quan trực thuộc
- * 
+ *
+ * Nghĩa vụ thông báo 14 ngày (Điều 19-16) CHỈ áp dụng cho:
+ * - Nhóm 活動機関 (số 1): 教授, 高度専門職1号ハ, 経営・管理, 法律・会計業務, 医療, 教育, 企業内転勤, 技能実習, 留学, 研修
+ * - Nhóm 契約機関 (số 2): 高度専門職1号イ・ロ, 研究, 技術・人文知識・国際業務, 介護, 興行, 技能, 特定技能
+ * - Nhóm 配偶者 (số 3): 家族滞在, 特定活動(配偶者), 日本人の配偶者等, 永住者の配偶者等 — CHỈ khi ly hôn / vợ chồng qua đời
+ * Các tư cách khác (永住者, 定住者, 文化活動, 短期滞在, phần lớn 特定活動...) không có nghĩa vụ này.
+ *
+ * Mọi so sánh ngày theo ngày lịch địa phương: ngày hạn chót vẫn còn trong hạn.
+ *
  * @param {Object} params
- * @param {string} params.residenceStatus - Mã tư cách lưu trú (vd: 'engineer-humanities-international', 'permanent-resident')
- * @param {'left-company'|'joined-company'|'transferred'|'contract-change'} [params.eventType='transferred'] - Loại sự kiện
- * @param {string|Date} params.eventDate - Ngày diễn ra sự kiện (ngày nghỉ việc hoặc ngày nhận việc mới)
+ * @param {string} params.residenceStatus - Mã tư cách lưu trú
+ * @param {'left-company'|'joined-company'|'transferred'|'contract-change'|'divorce'|'spouse-death'} [params.eventType='transferred']
+ * @param {string|Date} params.eventDate - Ngày diễn ra sự kiện
  * @param {string|Date} [params.currentDate] - Ngày đối chiếu (mặc định là hôm nay)
- * @param {boolean} [params.isSameJobScope=true] - Công việc mới có cùng nhóm chuyên môn với visa hiện tại không?
- * @param {boolean} [params.isJobHunting=true] - Có đang tích cực tìm kiếm việc làm mới không?
- * @param {boolean} [params.isHelloWorkRegistered=false] - Đã đăng ký tìm việc tại Trung tâm giới thiệu việc làm Hello Work chưa?
- * @param {boolean} [params.hasFiled14DayNotice=false] - Đã nộp thông báo cơ quan trực thuộc chưa?
- * @param {'ja'|'en'|'vi'} [params.language='vi'] - Ngôn ngữ hiển thị
+ * @param {boolean} [params.isSameJobScope=true]
+ * @param {boolean} [params.isJobHunting=true]
+ * @param {boolean} [params.isHelloWorkRegistered=false]
+ * @param {boolean} [params.hasFiled14DayNotice=false]
+ * @param {'ja'|'en'|'vi'} [params.language='vi']
  */
 export function checkAffiliationChange({
   residenceStatus = 'engineer-humanities-international',
@@ -77,24 +69,46 @@ export function checkAffiliationChange({
     throw new Error('eventDate is required for affiliation change check');
   }
 
-  const evDate = new Date(eventDate);
-  if (isNaN(evDate.getTime())) {
+  const evDate = parseLocalDate(eventDate);
+  if (!evDate) {
     throw new Error(`Invalid eventDate: ${eventDate}`);
   }
 
-  const now = currentDate ? new Date(currentDate) : new Date();
-  const msPerDay = 24 * 60 * 60 * 1000;
+  const now = resolveCurrentDate(currentDate);
+  const pick = (ja, en, vi) => (language === 'ja' ? ja : language === 'en' ? en : vi);
 
-  // 1. Kiểm tra tư cách lưu trú thuộc Biểu 2 (Thân phận) hay Biểu 1 (Hoạt động)
   const statusDef = getStatusDefinition(residenceStatus);
-  const isTable2Status = statusDef?.category === 'table-2-status';
+  const notificationType = getAffiliationNotificationType(residenceStatus);
+  const isSpouseEvent = SPOUSE_EVENTS.includes(eventType);
 
-  // Tư cách Biểu 2 (Vĩnh trú, Vợ chồng người Nhật, Định trú) không bị ràng buộc bởi Điều 19-16
-  if (isTable2Status) {
+  // 1. Không thuộc diện thông báo (hoặc tư cách diện "vợ/chồng" nhưng sự kiện là chuyển việc)
+  const exempt = notificationType === 'none' || (notificationType === 'spouse' && !isSpouseEvent);
+  if (exempt) {
+    let guidanceMessage;
+    if (notificationType === 'spouse') {
+      guidanceMessage = pick(
+        'この在留資格では、転職・退職による所属機関の届出義務はありません。第19条の16に基づく「配偶者に関する届出」は、配偶者と離婚又は死別した場合に限り14日以内に必要です。',
+        'This status has no employer-change notification duty. A "notification regarding spouse" under Art. 19-16 is required within 14 days only upon divorce from or death of the spouse.',
+        'Với tư cách này, KHÔNG có nghĩa vụ thông báo khi chuyển việc/nghỉ việc. Chỉ khi LY HÔN hoặc VỢ/CHỒNG QUA ĐỜI mới phải nộp "Thông báo liên quan đến vợ/chồng" (配偶者に関する届出) trong vòng 14 ngày (Điều 19-16).'
+      );
+    } else if (statusDef?.category === 'table-2-status') {
+      guidanceMessage = pick(
+        '身分系在留資格（永住者、定住者等）は所属機関の届出義務（第19条の16）の対象外です。転職・退職時に入管への届出は不要です。',
+        'Status-based residents (Permanent Resident, Long-Term Resident, etc.) are exempt from the Art. 19-16 notification. No immigration notification is required upon changing jobs.',
+        'Tư cách thân phận (Vĩnh trú, Định trú...) KHÔNG thuộc đối tượng phải thông báo cơ quan trực thuộc theo Điều 19-16. Chuyển việc không cần báo Cục XNC.'
+      );
+    } else {
+      guidanceMessage = pick(
+        'この在留資格は第19条の16の所属機関等に関する届出の対象として定められていません（文化活動、短期滞在、多くの特定活動等）。ただし、活動内容の変更が在留資格の範囲を超える場合は、在留資格変更許可等が必要となる場合があります。',
+        'This status is not covered by the Art. 19-16 affiliation notification (e.g. Cultural Activities, Temporary Visitor, most Designated Activities). However, a change of activities outside your status may require a change of status.',
+        'Tư cách này không thuộc diện phải thông báo cơ quan trực thuộc theo Điều 19-16 (ví dụ: 文化活動, 短期滞在, phần lớn 特定活動). Tuy nhiên nếu hoạt động mới vượt phạm vi tư cách thì có thể phải xin đổi tư cách lưu trú.'
+      );
+    }
     return {
       isExemptFromNotification: true,
+      notificationType,
       residenceStatus,
-      statusCategory: 'table-2-status',
+      statusCategory: statusDef?.category || null,
       notificationDeadline: null,
       daysRemainingForNotification: null,
       isNotificationOverdue: false,
@@ -104,34 +118,30 @@ export function checkAffiliationChange({
       certificateOfAuthorizedEmployment: null,
       filingMethods: [],
       warnings: [],
-      guidanceMessage: language === 'ja'
-        ? '身分系在留資格（永住者、日本人の配偶者等、定住者等）は所属機関の届出義務（第19条の16）の対象外です。転職・退職時に入管への届出は原則不要です。'
-        : language === 'en'
-          ? 'Table 2 statuses (Permanent Resident, Spouse of Japanese, etc.) are exempt from Article 19-16 affiliation notification. No immigration notification required upon changing jobs.'
-          : 'Tư cách lưu trú theo thân phận (Vĩnh trú, Vợ/chồng người Nhật, Định trú...) KHÔNG thuộc đối tượng phải nộp thông báo cơ quan trực thuộc theo Điều 19-16. Bạn được tự do chuyển việc mà không cần báo Cục XNC.',
+      guidanceMessage,
       regulatoryNotice: {
         nature: 'deterministic',
-        legalBasis: '出入国管理及び難民認定法第19条の16本文（別表第二該当者は対象外）',
+        legalBasis: '出入国管理及び難民認定法第19条の16（対象在留資格の限定列挙）',
       },
     };
   }
 
-  // 2. Hạn chót thông báo 14 ngày theo luật (Điều 19-16)
+  // 2. Hạn chót thông báo 14 ngày theo luật (Điều 19-16): ngày hạn chót vẫn còn trong hạn
   const notificationDeadline = addDays(evDate, 14);
-  const daysRemainingForNotification = Math.ceil((notificationDeadline.getTime() - now.getTime()) / msPerDay);
-  const isNotificationOverdue = now > notificationDeadline && !hasFiled14DayNotice;
+  const daysRemainingForNotification = diffCalendarDays(now, notificationDeadline);
+  const isNotificationOverdue = daysRemainingForNotification < 0 && !hasFiled14DayNotice;
 
   // 3. Nguy cơ thu hồi tư cách sau 3 tháng không hoạt động (Điều 22-4 khoản 1 mục 6)
-  const isUnemployedTrack = eventType === 'left-company';
+  const isUnemployedTrack = eventType === 'left-company' && notificationType !== 'spouse';
   let threeMonthRevocationLimit = null;
   let daysUntilThreeMonthLimit = null;
   let revocationRisk = 'none';
 
   if (isUnemployedTrack) {
     threeMonthRevocationLimit = addMonths(evDate, 3);
-    daysUntilThreeMonthLimit = Math.ceil((threeMonthRevocationLimit.getTime() - now.getTime()) / msPerDay);
+    daysUntilThreeMonthLimit = diffCalendarDays(now, threeMonthRevocationLimit);
 
-    if (now > threeMonthRevocationLimit) {
+    if (daysUntilThreeMonthLimit < 0) {
       if (isHelloWorkRegistered || isJobHunting) {
         revocationRisk = 'mitigated'; // Đã quá 3 tháng nhưng có lý do chính đáng (đang tìm việc tích cực)
       } else {
@@ -148,16 +158,20 @@ export function checkAffiliationChange({
   }
 
   // 4. Kiểm tra sự phù hợp của ngành nghề (Scope Mismatch)
-  const requiresStatusChange = !isSameJobScope;
+  const requiresStatusChange = !isSameJobScope && notificationType !== 'spouse';
 
   // 5. Khuyến nghị Giấy chứng nhận tư cách làm việc (就労資格証明書)
-  const certificateOfAuthorizedEmployment = {
+  const certFee = getOtherImmigrationFee('authorizedEmploymentCertificate', { method: 'counter', acceptanceDate: now });
+  const certificateOfAuthorizedEmployment = notificationType === 'spouse' ? null : {
     recommended: isSameJobScope && (eventType === 'joined-company' || eventType === 'transferred'),
     fee: {
-      amount: 1200,
+      amount: certFee.counterAmount,
+      onlineAmount: certFee.onlineAmount,
+      onlinePaymentFee: getOtherImmigrationFee('authorizedEmploymentCertificate', { method: 'online', acceptanceDate: now }).onlinePaymentFee,
       currency: 'JPY',
       payableWith: 'revenue-stamp',
-      legalBasis: '出入国管理及び難民認定法第19条の2（就労資格証明書）',
+      legalBasis: '出入国管理及び難民認定法第19条の2（就労資格証明書）・窓口2,000円／オンライン1,600円',
+      officialUrl: certFee.officialUrl,
     },
     purpose_vi: 'Xác nhận trước với Cục Xuất nhập cảnh rằng công ty và công việc mới hoàn toàn hợp pháp với visa hiện tại, giúp kỳ gia hạn sau này diễn ra trơn tru không bị từ chối đột ngột.',
     purpose_ja: '新しい勤務先での業務が現在の在留資格の範囲内であることを入管が事前に公証する証明書。次回の在留期間更新許可申請がスムーズになります。',
@@ -172,20 +186,20 @@ export function checkAffiliationChange({
       type: 'critical',
       code: 'NOTIFICATION_14_DAYS_OVERDUE',
       message: language === 'ja'
-        ? `所属機関の変更届出の期限（${formatDateISO(notificationDeadline)}：事由発生から14日以内）を過ぎています。20万円以下の罰金（第71条の3）または次回更新・永住審査に重大な悪影響を及ぼす恐れがあります。至急電子届出または郵送で提出してください。`
+        ? `所属機関の変更届出の期限（${formatDateISO(notificationDeadline)}：事由発生から14日以内）を過ぎています。20万円以下の罰金の対象となるほか、次回更新・永住審査に重大な悪影響を及ぼす恐れがあります。至急電子届出または郵送で提出してください。`
         : language === 'en'
-          ? `The 14-day statutory deadline (${formatDateISO(notificationDeadline)}) has passed. Failure to notify carries fines up to 200,000 JPY (Art. 71-3) and adversely affects renewals and Permanent Residence applications. Submit immediately via online portal or post.`
-          : `Đã quá hạn thông báo 14 ngày theo luật (${formatDateISO(notificationDeadline)}). Việc chậm thông báo có thể bị phạt tiền đến 200.000 JPY (Điều 71-3) và tạo vết đen trong hồ sơ gia hạn visa / xin vĩnh trú sau này. Bạn cần nộp thông báo ngay lập tức qua mạng hoặc đường bưu điện.`,
+          ? `The 14-day statutory deadline (${formatDateISO(notificationDeadline)}) has passed. Failure to notify can be fined up to 200,000 JPY and adversely affects renewals and Permanent Residence applications. Submit immediately via online portal or post.`
+          : `Đã quá hạn thông báo 14 ngày theo luật (${formatDateISO(notificationDeadline)}). Việc không/chậm thông báo có thể bị phạt tiền đến 200.000 JPY và tạo vết đen trong hồ sơ gia hạn visa / xin vĩnh trú sau này. Bạn cần nộp thông báo ngay lập tức qua mạng hoặc đường bưu điện.`,
     });
   } else if (!hasFiled14DayNotice) {
     warnings.push({
       type: 'warning',
       code: 'NOTIFICATION_14_DAYS_PENDING',
       message: language === 'ja'
-        ? `退職・転職後14日以内（期限：${formatDateISO(notificationDeadline)}、残り${daysRemainingForNotification}日）に入管への届出が法律上義務付けられています。`
+        ? `事由発生から14日以内（期限：${formatDateISO(notificationDeadline)}、残り${daysRemainingForNotification}日${daysRemainingForNotification === 0 ? '・本日が期限' : ''}）に入管への届出が法律上義務付けられています。`
         : language === 'en'
-          ? `Statutory notification to ISA is mandatory within 14 days (${formatDateISO(notificationDeadline)}, ${daysRemainingForNotification} day(s) remaining).`
-          : `Bạn bắt buộc phải hoàn thành thông báo trong vòng 14 ngày kể từ ngày chuyển việc/nghỉ việc (Hạn chót: ${formatDateISO(notificationDeadline)}, còn ${daysRemainingForNotification} ngày).`,
+          ? `Statutory notification to ISA is mandatory within 14 days (${formatDateISO(notificationDeadline)}, ${daysRemainingForNotification} day(s) remaining${daysRemainingForNotification === 0 ? ' — today is the last day' : ''}).`
+          : `Bạn bắt buộc phải hoàn thành thông báo trong vòng 14 ngày kể từ ngày phát sinh sự việc (Hạn chót: ${formatDateISO(notificationDeadline)}, còn ${daysRemainingForNotification} ngày${daysRemainingForNotification === 0 ? ' — HÔM NAY là ngày cuối' : ''}).`,
     });
   }
 
@@ -198,6 +212,18 @@ export function checkAffiliationChange({
         : language === 'en'
           ? 'The new job duties appear outside the scope of your current residence status. You MUST file for a Change of Status of Residence (在留資格変更許可) and obtain approval BEFORE starting work. Working prior to approval constitutes illegal labor.'
           : 'Công việc mới khác chuyên môn visa hiện tại. Bạn BẮT BUỘC phải nộp đơn xin Chuyển đổi tư cách lưu trú (在留資格変更許可) và PHẢI ĐƯỢC PHÊ DUYỆT TRƯỚC KHI BẮT ĐẦU ĐI LÀM. Làm việc trước khi có kết quả sẽ bị coi là lao động bất hợp pháp.',
+    });
+  }
+
+  if (notificationType === 'spouse' && isSpouseEvent) {
+    warnings.push({
+      type: 'warning',
+      code: 'SPOUSE_STATUS_BASIS_LOST',
+      message: language === 'ja'
+        ? '配偶者としての在留資格（日本人の配偶者等・永住者の配偶者等・家族滞在等）は、離婚・死別により活動の基礎を失います。配偶者の身分を有する者としての活動を継続して6か月以上行わない場合は在留資格取消の対象となり得るため（正当な理由がある場合を除く）、早めに「定住者」や就労資格等への在留資格変更を検討してください。'
+        : language === 'en'
+          ? 'Spouse-based statuses lose their basis upon divorce or death of the spouse. Not engaging in activities as a spouse for 6+ months may lead to revocation (unless there is a justifiable reason). Consider changing to Long-Term Resident or a work status early.'
+          : 'Tư cách lưu trú theo diện vợ/chồng (日本人の配偶者等, 永住者の配偶者等, 家族滞在...) mất cơ sở khi ly hôn hoặc vợ/chồng qua đời. Nếu không còn hoạt động với tư cách vợ/chồng liên tục từ 6 tháng trở lên (không có lý do chính đáng) có thể bị thu hồi tư cách. Hãy sớm cân nhắc đổi sang 定住者 hoặc visa lao động.',
     });
   }
 
@@ -234,6 +260,8 @@ export function checkAffiliationChange({
 
   return {
     isExemptFromNotification: false,
+    notificationType,
+    notificationFormUrl: NOTIFICATION_FORM_URLS[notificationType] || null,
     residenceStatus,
     eventType,
     eventDate: formatDateISO(evDate),
@@ -245,7 +273,7 @@ export function checkAffiliationChange({
     revocationRisk,
     requiresStatusChange,
     certificateOfAuthorizedEmployment,
-    filingMethods: FILING_METHODS,
+    filingMethods: FILING_METHODS.map((m) => (m.id === 'postal-mail' && NOTIFICATION_FORM_URLS[notificationType] ? { ...m, url: NOTIFICATION_FORM_URLS[notificationType] } : m)),
     warnings,
     regulatoryNotice,
   };

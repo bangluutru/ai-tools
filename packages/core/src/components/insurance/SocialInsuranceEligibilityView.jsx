@@ -37,6 +37,7 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
   const [studentType, setStudentType] = useState('daytime');
   const [age, setAge] = useState(28);
   const [hasLaborAgreement, setHasLaborAgreement] = useState(false);
+  const [applicableDate, setApplicableDate] = useState(() => new Date().toISOString().slice(0, 10));
 
   const result = useMemo(() => {
     return evaluateSocialInsuranceEligibility({
@@ -47,8 +48,9 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
       contractDurationMonths: Number(contractDurationMonths) || 0,
       isStudent,
       studentType,
-      age: Number(age) || 30,
+      age: age === '' || age === null || age === undefined ? undefined : Number(age),
       hasLaborAgreement,
+      applicableDate,
     });
   }, [
     employmentType,
@@ -60,6 +62,7 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
     studentType,
     age,
     hasLaborAgreement,
+    applicableDate,
   ]);
 
   const labels = {
@@ -77,6 +80,11 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
       wageHint: '※残業代・交通費・賞与・休日手当を除く所定内賃金',
       companySize: '勤務先の社会保険被保険者数',
       companySmall: '50人以下（中小企業）',
+      company36: '36人〜50人',
+      company21: '21人〜35人',
+      company11: '11人〜20人',
+      company1: '10人以下',
+      applicableDateLabel: '判定日',
       companyMedium: '51人〜100人（特定適用事業所）',
       companyLarge: '101人以上（特定適用事業所）',
       duration: '雇用の見込み期間',
@@ -97,9 +105,9 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
       confidenceBadge: '令和8年度 厚労省基準準拠',
       covered: '加入対象',
       notCovered: '対象外',
-      whyTitle: '社会保険適用拡大（106万円の壁）の解説',
-      why1: 'なぜ週20時間・月額8.8万円で加入義務が発生するのか？',
-      why1Desc: '2024年10月より、従業員数51人以上の企業で働く短時間労働者（パート・アルバイト）に対する社会保険の適用拡大が全面施行されています。',
+      whyTitle: '社会保険適用拡大（いわゆる「106万円の壁」）の解説',
+      why1: '週20時間・月額8.8万円の要件と今後のスケジュール',
+      why1Desc: '2024年10月から企業規模要件は「51人以上」の段階です。月額8.8万円の賃金要件は令和8年10月に撤廃予定（政令で定める日）で、企業規模要件も2027年10月に36人以上、2029年10月に21人以上、2032年10月に11人以上へ引き下げられ、2035年10月に撤廃されます。',
       why2: '学生特例の注意点',
       why2Desc: '大学等の昼間学生は原則適用除外ですが、夜間学部・通信制課程の学生、または休学中の方は一般労働者と同様に加入対象となります。',
     },
@@ -117,6 +125,11 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
       wageHint: '※ Không bao gồm tiền làm thêm giờ (tăng ca), phụ cấp đi lại, tiền thưởng',
       companySize: 'Quy mô số người tham gia BHXH của công ty',
       companySmall: 'Dưới hoặc bằng 50 người',
+      company36: '36〜50 người',
+      company21: '21〜35 người',
+      company11: '11〜20 người',
+      company1: 'Từ 10 người trở xuống',
+      applicableDateLabel: 'Ngày xét',
       companyMedium: 'Từ 51 đến 100 người (Thuộc diện mở rộng)',
       companyLarge: 'Trên 100 người (Thuộc diện mở rộng)',
       duration: 'Thời hạn hợp đồng dự kiến',
@@ -137,9 +150,9 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
       confidenceBadge: 'Chuẩn quy định MHLW 2026',
       covered: 'Bắt buộc tham gia',
       notCovered: 'Chưa bắt buộc',
-      whyTitle: 'Tìm hiểu về quy định mở rộng BHXH (Bức tường 106 vạn)',
-      why1: 'Tại sao làm 20 giờ/tuần và lương 8.8 vạn Yên lại phải đóng BHXH?',
-      why1Desc: 'Từ tháng 10/2024, Nhật Bản chính thức áp dụng quy chuẩn mở rộng bắt buộc BHXH cho doanh nghiệp từ 51 người trở lên đối với lao động ngắn hạn.',
+      whyTitle: 'Tìm hiểu về quy định mở rộng BHXH (thường gọi "bức tường 106 vạn")',
+      why1: 'Điều kiện 20 giờ/tuần, lương 8.8 vạn Yên và lộ trình sắp tới',
+      why1Desc: 'Từ 10/2024 ngưỡng quy mô là doanh nghiệp từ 51 người. Điều kiện lương 8.8 vạn Yên/tháng dự kiến bãi bỏ từ 10/2026 (ngày cụ thể theo 政令); ngưỡng quy mô giảm còn 36 người (10/2027), 21 người (10/2029), 11 người (10/2032) và bãi bỏ từ 10/2035.',
       why2: 'Quy định đối với du học sinh / sinh viên',
       why2Desc: 'Sinh viên chính quy học ban ngày được miễn trừ. Tuy nhiên sinh viên học ca đêm, từ xa hoặc đang bảo lưu kết quả học tập vẫn phải tham gia nếu đủ điều kiện.',
     },
@@ -157,6 +170,11 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
       wageHint: '※ Excluding overtime pay, commutation allowances, and bonuses',
       companySize: 'Company Insured Employee Count',
       companySmall: '50 or fewer employees',
+      company36: '36-50 employees',
+      company21: '21-35 employees',
+      company11: '11-20 employees',
+      company1: '10 or fewer employees',
+      applicableDateLabel: 'Assessment date',
       companyMedium: '51 to 100 employees (Expanded Coverage)',
       companyLarge: 'Over 100 employees (Expanded Coverage)',
       duration: 'Expected Employment Tenure',
@@ -179,7 +197,7 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
       notCovered: 'Exempt / Not Required',
       whyTitle: 'Understanding Expanded Coverage (The 1.06M Barrier)',
       why1: 'Why 20 hours and 88,000 JPY triggers mandatory coverage?',
-      why1Desc: 'Since October 2024, enterprises with 51+ insured employees must cover short-time workers meeting the statutory criteria.',
+      why1Desc: 'Since October 2024 the company-size threshold is 51+. The 88,000 JPY wage requirement is scheduled to be abolished from October 2026 (date set by cabinet order); the size threshold drops to 36 (Oct 2027), 21 (Oct 2029), 11 (Oct 2032) and is abolished in Oct 2035.',
       why2: 'Student Exemption Nuances',
       why2Desc: 'While regular daytime students are exempt, night course, distance learning, and students on official leave are subject to mandatory coverage.',
     },
@@ -327,6 +345,20 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
               </div>
             )}
 
+            {/* Assessment date (thresholds change over time) */}
+            <div className="space-y-1.5">
+              <label htmlFor="eligibility-date" className="block text-xs font-bold text-on-surface">
+                {t.applicableDateLabel || '判定日'}
+              </label>
+              <input
+                id="eligibility-date"
+                type="date"
+                value={applicableDate}
+                onChange={(e) => setApplicableDate(e.target.value || new Date().toISOString().slice(0, 10))}
+                className="w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-surface-container-low text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+
             {/* Company Size */}
             {employmentType !== 'regular' && (
               <div className="space-y-1.5">
@@ -342,7 +374,10 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
                 >
                   <option value="51_to_100">{t.companyMedium}</option>
                   <option value="over_100">{t.companyLarge}</option>
-                  <option value="under_51">{t.companySmall}</option>
+                  <option value="36_to_50">{t.company36 || t.companySmall}</option>
+                  <option value="21_to_35">{t.company21 || t.companySmall}</option>
+                  <option value="11_to_20">{t.company11 || t.companySmall}</option>
+                  <option value="1_to_10">{t.company1 || t.companySmall}</option>
                 </select>
               </div>
             )}
@@ -394,7 +429,7 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
             )}
 
             {/* Small enterprise voluntary agreement */}
-            {employmentType !== 'regular' && companySize === 'under_51' && (
+            {employmentType !== 'regular' && ['36_to_50', '21_to_35', '11_to_20', '1_to_10', 'under_51'].includes(companySize) && (
               <div className="p-3 rounded-xl bg-surface-container-low border border-border-subtle space-y-1.5">
                 <label className="flex items-start gap-2 cursor-pointer text-xs">
                   <input
@@ -455,12 +490,12 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
             </p>
 
             {/* Special notices if any */}
-            {result.specialNotes && result.specialNotes.length > 0 && (
+            {(result.specialNotesLocalized || result.specialNotes || []).length > 0 && (
               <div className="p-3 rounded-xl bg-surface/70 border border-border-subtle/50 text-xs space-y-1 text-on-surface">
-                {result.specialNotes.map((note, idx) => (
+                {(result.specialNotesLocalized || result.specialNotes).map((note, idx) => (
                   <div key={idx} className="flex items-start gap-1.5 leading-relaxed">
                     <Info className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                    <span>{note}</span>
+                    <span>{typeof note === 'string' ? note : note[lang] || note.ja}</span>
                   </div>
                 ))}
               </div>
@@ -553,10 +588,10 @@ export default function SocialInsuranceEligibilityView({ lang = 'ja' }) {
                   >
                     <div className="space-y-0.5">
                       <div className="font-bold text-on-surface">
-                        {lang === 'vi' ? c.nameVi : c.nameJa}
+                        {lang === 'vi' ? c.nameVi : lang === 'en' ? c.nameEn || c.nameJa : c.nameJa}
                       </div>
                       <div className="text-[11px] text-on-surface-variant">
-                        {lang === 'vi' ? c.explanationVi : c.explanationJa}
+                        {lang === 'vi' ? c.explanationVi : lang === 'en' ? c.explanationEn || c.explanationJa : c.explanationJa}
                       </div>
                     </div>
 

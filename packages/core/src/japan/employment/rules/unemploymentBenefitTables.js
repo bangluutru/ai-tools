@@ -16,7 +16,12 @@ export const UNEMPLOYMENT_BENEFIT_SOURCES = [
 ];
 
 /**
- * Các giai đoạn hiệu lực luật định của MHLW về trần/sàn tiền lương ngày và mức trợ cấp
+ * Các giai đoạn hiệu lực luật định của MHLW về trần/sàn tiền lương ngày và mức trợ cấp.
+ * Số liệu lấy nguyên văn từ tờ rơi chính thức của MHLW:
+ * - 令和7年8月1日〜: 「基本手当日額の計算式及び金額（令和７年８月１日～）」
+ * - 令和8年8月1日〜: 「基本手当日額の計算式及び金額（令和８年８月１日～）」
+ * Mỗi nhóm tuổi có ngưỡng B (thresholdB) riêng: nhóm 60–64 tuổi dùng ngưỡng thấp hơn và hệ số 0.35.
+ * Ghi chú: mức mới áp dụng cho phần 基本手当 của các ngày từ 01/08 trở đi (kể cả người đang nhận).
  */
 export const EFFECTIVE_PERIODS = {
   PERIOD_2025_08: {
@@ -26,26 +31,30 @@ export const EFFECTIVE_PERIODS = {
     nameEn: 'MHLW Rates 2025-08 to 2026-07',
     startDate: '2025-08-01',
     endDate: '2026-07-31',
-    minDailyWage: 2869,
-    minDailyBenefit: 2295,
-    thresholdA: 5280,
-    thresholdB: 12980,
+    minDailyWage: 3014,
+    minDailyBenefit: 2411,
+    thresholdA: 5340,
+    thresholdB: 13140,
     ageBrackets: {
       under_30: {
-        maxDailyWage: 14240,
-        maxDailyBenefit: 7120
+        thresholdB: 13140,
+        maxDailyWage: 14510,
+        maxDailyBenefit: 7255
       },
       age_30_44: {
-        maxDailyWage: 15820,
-        maxDailyBenefit: 7910
+        thresholdB: 13140,
+        maxDailyWage: 16110,
+        maxDailyBenefit: 8055
       },
       age_45_59: {
-        maxDailyWage: 17410,
-        maxDailyBenefit: 8705
+        thresholdB: 13140,
+        maxDailyWage: 17740,
+        maxDailyBenefit: 8870
       },
       age_60_64: {
-        maxDailyWage: 16620,
-        maxDailyBenefit: 7479
+        thresholdB: 11800,
+        maxDailyWage: 16940,
+        maxDailyBenefit: 7623
       }
     }
   },
@@ -56,29 +65,46 @@ export const EFFECTIVE_PERIODS = {
     nameEn: 'MHLW Rates 2026-08 onwards',
     startDate: '2026-08-01',
     endDate: '2027-07-31',
-    minDailyWage: 2869,
-    minDailyBenefit: 2295,
-    thresholdA: 5280,
-    thresholdB: 12980,
+    minDailyWage: 3203,
+    minDailyBenefit: 2562,
+    thresholdA: 5480,
+    thresholdB: 13490,
     ageBrackets: {
       under_30: {
-        maxDailyWage: 14350,
-        maxDailyBenefit: 7175
+        thresholdB: 13490,
+        maxDailyWage: 14900,
+        maxDailyBenefit: 7450
       },
       age_30_44: {
-        maxDailyWage: 15940,
-        maxDailyBenefit: 7970
+        thresholdB: 13490,
+        maxDailyWage: 16540,
+        maxDailyBenefit: 8270
       },
       age_45_59: {
-        maxDailyWage: 17530,
-        maxDailyBenefit: 8765
+        thresholdB: 13490,
+        maxDailyWage: 18220,
+        maxDailyBenefit: 9110
       },
       age_60_64: {
-        maxDailyWage: 16730,
-        maxDailyBenefit: 7528
+        thresholdB: 12120,
+        maxDailyWage: 17400,
+        maxDailyBenefit: 7830
       }
     }
   }
+};
+
+/**
+ * 高年齢求職者給付金 (người 65 tuổi trở lên khi nghỉ việc): nhận một lần thay cho 基本手当.
+ * Số ngày tính tiền: 30 ngày nếu thời gian tham gia < 1 năm, 50 ngày nếu >= 1 năm (雇用保険法第37条の4).
+ * Trần 賃金日額/基本手当日額 áp dụng như nhóm dưới 30 tuổi (第37条の4 loại trừ 第17条第4項第2号 → dùng mức gốc),
+ * công thức tỷ lệ 80%〜50% như nhóm dưới 60 tuổi.
+ */
+export const SENIOR_JOB_SEEKER_BENEFIT = {
+  minAge: 65,
+  daysUnder1Year: 30,
+  days1YearOrMore: 50,
+  capBracketKey: 'under_30'
 };
 
 /**

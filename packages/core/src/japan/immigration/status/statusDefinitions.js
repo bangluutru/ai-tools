@@ -130,9 +130,9 @@ export const RESIDENCE_STATUS_DEFINITIONS = Object.freeze({
     requiresExtraPermissionForWork: false,
     statutoryBasis: '入管法別表第一の二（特定技能1号）',
     sourceId: 'isa-ica-annexed-table-1',
-    standardScopeSummaryJa: '特定産業分野（介護、外食、宿泊、建設等）に属する相当程度の知識又は経験を必要とする技能を要する業務に従事する活動。最長5年、家族帯同不可。',
-    standardScopeSummaryVi: 'Làm việc trong các ngành công nghiệp chỉ định (điều dưỡng, nhà hàng, khách sạn, xây dựng...) yêu cầu kỹ năng và kinh nghiệm nhất định. Tối đa 5 năm, không được bảo lãnh gia đình.',
-    standardScopeSummaryEn: 'Work in specified industrial fields requiring reasonable skills. Max 5 years total; family sponsorship not permitted.'
+    standardScopeSummaryJa: '特定産業分野（介護、外食、宿泊、建設等）に属する相当程度の知識又は経験を必要とする技能を要する業務に従事する活動。通算在留期間は原則5年以内（2号評価試験で合格基準点の8割以上を得た等の要件を満たす場合は最長6年まで）、家族帯同不可。',
+    standardScopeSummaryVi: 'Làm việc trong các ngành công nghiệp chỉ định (điều dưỡng, nhà hàng, khách sạn, xây dựng...) yêu cầu kỹ năng và kinh nghiệm nhất định. Tổng thời gian lưu trú nguyên tắc tối đa 5 năm (có thể đến 6 năm nếu thi kỳ thi số 2 đạt từ 80% điểm chuẩn và đáp ứng điều kiện khác), không được bảo lãnh gia đình.',
+    standardScopeSummaryEn: 'Work in specified industrial fields requiring reasonable skills. Total stay in principle max 5 years (up to 6 years if e.g. scoring 80%+ of the pass mark on the SSW (ii) exam); family sponsorship not permitted.'
   },
   'specified-skilled-worker-2': {
     id: 'specified-skilled-worker-2',

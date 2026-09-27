@@ -2,17 +2,18 @@
  * @file packages/core/src/components/consular/StructuredFormEditor.jsx
  * @description Trình soạn thảo và xuất bản biểu mẫu lãnh sự chuẩn hóa (Refined Document Workspace):
  *  - Tách bạch rõ rệt giữa Data Schema và Official Document Template
- *  - Tích hợp pipeline SSOT PDF Generator (pdf-lib) cho cả Preview, Tải file và In ấn
- *  - Xem trước A4 chuẩn hình học 210mm x 297mm (mặc định Fit Page) với A4PreviewViewport
- *  - In ấn qua iframe cô lập, không dùng window.print() trực tiếp trên DOM của Toolio
+ *  - Xem trước A4 210mm x 297mm (mặc định Fit Page) với A4PreviewViewport
+ *  - In / "Lưu thành PDF" bằng cách in chính bản xem trước HTML trong iframe cô lập (@page A4):
+ *    giữ đúng dấu tiếng Việt và chữ Nhật. KHÔNG dùng pdf-lib ở đây (font chuẩn của pdf-lib làm mất dấu,
+ *    và repo không có @pdf-lib/fontkit) → chunk lãnh sự không kéo theo pdf-lib (~438KB).
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import FormOutputToolbar from './FormOutputToolbar.jsx';
 import EasyFillForm from './EasyFillForm.jsx';
 import A4PreviewViewport from './A4PreviewViewport.jsx';
 import OfficialFormPreview from './OfficialFormPreview.jsx';
-import { generateOfficialFormPdf } from '../../consular/pdf/generateOfficialFormPdf.js';
+import { sanitizeFilenamePart } from '../../consular/pdf/formValueFormat.js';
 import { getConsularI18n } from '../../consular/i18n/consularI18n.js';
 
 export default function StructuredFormEditor({
@@ -21,8 +22,10 @@ export default function StructuredFormEditor({
   isExpanded = false,
   onToggleExpand,
   displayLang = 'vi',
+  officeCity = null,
 }) {
   const t = getConsularI18n(displayLang);
+  const printRootRef = useRef(null);
   const [activeTab, setActiveTab] = useState('easy_fill'); // 'easy_fill' | 'preview'
   const [formData, setFormData] = useState({});
   const [zoomMode, setZoomMode] = useState('fit_page'); // 'fit_page' | 'fit_width' | '100%'
@@ -86,76 +89,47 @@ export default function StructuredFormEditor({
     setManualScaleDelta(0);
   };
 
-  // Tải file PDF chính thức đã điền
-  const handleDownloadPdf = async () => {
+  // In bản xem trước HTML (Unicode đầy đủ) qua iframe cô lập — người dùng chọn "Lưu thành PDF" để tải file.
+  const handlePrint = () => {
+    const root = printRootRef.current;
+    if (!root) return;
+    setIsGeneratingPdf(true);
     try {
-      setIsGeneratingPdf(true);
-      const result = await generateOfficialFormPdf({
-        formId: formConfig.id,
-        formData,
-        lang: displayLang,
-      });
+      const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+        .map((node) => node.outerHTML)
+        .join('\n');
+      const nameSource = formData.applicantName || formData.mandatorName || formData.father_name || formData.maleFullName || 'BAN_NHAP';
+      const docTitle = `${sanitizeFilenamePart(formConfig?.code || 'FORM').toUpperCase()}_${sanitizeFilenamePart(nameSource).toUpperCase().slice(0, 40) || 'BAN_NHAP'}`;
 
-      if (result?.blob) {
-        const url = URL.createObjectURL(result.blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = result.filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      let printFrame = document.getElementById('consular-print-frame');
+      if (!printFrame) {
+        printFrame = document.createElement('iframe');
+        printFrame.id = 'consular-print-frame';
+        printFrame.setAttribute('aria-hidden', 'true');
+        Object.assign(printFrame.style, { position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: '0' });
+        document.body.appendChild(printFrame);
       }
-    } catch (err) {
-      console.error('Lỗi khi sinh file PDF lãnh sự', err);
-      alert('Không thể tạo file PDF. Vui lòng kiểm tra lại thông tin nhập.');
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
-
-  // In ấn biểu mẫu cô lập qua iframe ẩn từ PDF byte stream
-  const handlePrint = async () => {
-    try {
-      setIsGeneratingPdf(true);
-      const result = await generateOfficialFormPdf({
-        formId: formConfig.id,
-        formData,
-        lang: displayLang,
-      });
-
-      if (result?.blob) {
-        const url = URL.createObjectURL(result.blob);
-        let printFrame = document.getElementById('consular-print-frame');
-        if (!printFrame) {
-          printFrame = document.createElement('iframe');
-          printFrame.id = 'consular-print-frame';
-          printFrame.style.position = 'fixed';
-          printFrame.style.right = '0';
-          printFrame.style.bottom = '0';
-          printFrame.style.width = '0';
-          printFrame.style.height = '0';
-          printFrame.style.border = '0';
-          document.body.appendChild(printFrame);
+      const doc = printFrame.contentDocument;
+      doc.open();
+      doc.write(`<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>${docTitle}</title>${styles}<style>
+@page { size: A4; margin: 0; }
+html, body { margin: 0; padding: 0; background: #fff !important; }
+.consular-print-page { width: 210mm; height: 297mm; overflow: hidden; background: #fff; color: #000; page-break-after: always; break-after: page; }
+.consular-print-page:last-child { page-break-after: auto; break-after: auto; }
+</style></head><body>${root.innerHTML}</body></html>`);
+      doc.close();
+      setTimeout(() => {
+        try {
+          printFrame.contentWindow.focus();
+          printFrame.contentWindow.print();
+        } catch (err) {
+          console.error('Lỗi khi in bản nháp', err);
+        } finally {
+          setIsGeneratingPdf(false);
         }
-
-        printFrame.src = url;
-        printFrame.onload = () => {
-          try {
-            printFrame.contentWindow.focus();
-            printFrame.contentWindow.print();
-          } catch {
-            // Fallback mở cửa sổ riêng
-            const win = window.open(url, '_blank');
-            if (win) win.print();
-          }
-          setTimeout(() => URL.revokeObjectURL(url), 10000);
-        };
-      }
+      }, 400);
     } catch (err) {
       console.error('Lỗi khi chuẩn bị in ấn biểu mẫu', err);
-      window.print();
-    } finally {
       setIsGeneratingPdf(false);
     }
   };
@@ -165,7 +139,7 @@ export default function StructuredFormEditor({
   const fields = formConfig.fields || (formConfig.sections?.flatMap((s) => s.fields)) || [];
 
   return (
-    <div className="bg-surface-container-low border border-border-subtle rounded-2xl overflow-hidden shadow-xs flex flex-col h-full min-h-[600px]">
+    <div className="relative bg-surface-container-low border border-border-subtle rounded-2xl overflow-hidden shadow-xs flex flex-col h-full min-h-[600px]">
       {/* Header thanh công cụ Form */}
       <FormOutputToolbar
         formConfig={formConfig}
@@ -184,7 +158,6 @@ export default function StructuredFormEditor({
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={setCurrentPage}
-        onDownloadPdf={handleDownloadPdf}
         onPrint={handlePrint}
         isGeneratingPdf={isGeneratingPdf}
         isExpanded={isExpanded}
@@ -218,9 +191,29 @@ export default function StructuredFormEditor({
               formData={formData}
               currentPage={currentPage}
               displayLang={displayLang}
+              officeCity={officeCity}
             />
           </A4PreviewViewport>
         )}
+      </div>
+
+      {/* Bản dựng ẩn toàn bộ các trang để in (không hiển thị trên màn hình) */}
+      <div
+        ref={printRootRef}
+        aria-hidden="true"
+        style={{ position: 'absolute', left: '-10000px', top: 0, width: '210mm', pointerEvents: 'none' }}
+      >
+        {Array.from({ length: totalPages }, (_, i) => (
+          <div key={i} className="consular-print-page bg-white text-black" style={{ width: '210mm', height: '297mm' }}>
+            <OfficialFormPreview
+              formConfig={formConfig}
+              formData={formData}
+              currentPage={i + 1}
+              displayLang={displayLang}
+              officeCity={officeCity}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );

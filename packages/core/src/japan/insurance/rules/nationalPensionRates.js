@@ -4,56 +4,62 @@
  * - jps-national-pension-2026 (日本年金機構: 国民年金保険料)
  */
 
+/**
+ * Biểu phí theo năm tài chính (4月〜翌3月).
+ * advanceDiscounts: 割引額 so với nộp hàng tháng (毎月納付). null = chưa xác minh với nguồn chính thức.
+ * two_years: so với (phí năm nay ×12 + phí năm sau ×12) — twoYearGrossAmount.
+ * reducedMonthly: số tiền 一部免除 đã làm tròn 10円 theo công bố chính thức.
+ */
 export const NATIONAL_PENSION_SCHEDULES = [
   {
+    fiscalYear: 2027,
+    effectiveFrom: '2027-04-01',
+    effectiveTo: '2028-03-31',
+    monthlyPremium: 18290, // 令和9年度 (công bố trong trang 前納 của 日本年金機構)
+    nextFiscalYearMonthlyPremium: null, // 令和10年度 chưa công bố
+    additionalPensionMonthly: 400,
+    advanceDiscounts: null, // 前納割引額 令和9年度 chưa công bố
+    additionalAdvanceDiscounts: null,
+    discountsVerified: false,
+    sourceId: 'jps-national-pension-2026',
+    notes: '令和9年度（2027年4月〜2028年3月）国民年金保険料: 月額 18,290円（前納割引額は未公表・未検証）'
+  },
+  {
+    fiscalYear: 2026,
     effectiveFrom: '2026-04-01',
     effectiveTo: '2027-03-31',
     monthlyPremium: 17920,
-    additionalPensionMonthly: 400, // 付加年金
+    nextFiscalYearMonthlyPremium: 18290, // 令和9年度 (dùng cho 2年前納)
+    additionalPensionMonthly: 400, // 付加保険料
+    // https://www.nenkin.go.jp/service/kokunen/hokenryo/zenno.html (更新日 2026-09-04)
     advanceDiscounts: {
-      account_transfer: {
-        six_months: 1130,
-        one_year: 4160,
-        two_years: 16590
-      },
-      credit_card: {
-        six_months: 800,
-        one_year: 3520,
-        two_years: 15290
-      },
-      cash: {
-        six_months: 800,
-        one_year: 3520,
-        two_years: 15290
-      }
+      account_transfer: { six_months: 1220, one_year: 4510, two_years: 17370 },
+      credit_card: { six_months: 870, one_year: 3820, two_years: 16010 },
+      cash: { six_months: 870, one_year: 3820, two_years: 16010 },
     },
+    additionalAdvanceDiscounts: {
+      account_transfer: { six_months: 30, one_year: 100, two_years: 380 },
+      credit_card: { six_months: 20, one_year: 90, two_years: 350 },
+      cash: { six_months: 20, one_year: 90, two_years: 350 },
+    },
+    discountsVerified: true,
     sourceId: 'jps-national-pension-2026',
     notes: '令和8年度（2026年4月〜2027年3月）国民年金保険料: 月額 17,920円'
   },
   {
+    fiscalYear: 2025,
     effectiveFrom: '2025-04-01',
     effectiveTo: '2026-03-31',
     monthlyPremium: 17510,
+    nextFiscalYearMonthlyPremium: 17920,
     additionalPensionMonthly: 400,
-    advanceDiscounts: {
-      account_transfer: {
-        six_months: 1130,
-        one_year: 4160,
-        two_years: 16590
-      },
-      credit_card: {
-        six_months: 800,
-        one_year: 3520,
-        two_years: 15290
-      },
-      cash: {
-        six_months: 800,
-        one_year: 3520,
-        two_years: 15290
-      }
-    },
+    // 一部免除の月額（公表額、10円単位）
+    reducedMonthly: { quarter_exempt: 13130, half_exempt: 8760, three_quarters_exempt: 4380 },
+    advanceDiscounts: null, // 令和7年度の前納割引額は公式アーカイブで未検証
+    additionalAdvanceDiscounts: null,
+    discountsVerified: false,
     sourceId: 'jps-national-pension-2026',
-    notes: '令和7年度（2025年4月〜2026年3月）国民年金保険料: 月額 17,510円'
+    notes: '令和7年度（2025年4月〜2026年3月）国民年金保険料: 月額 17,510円（前納割引額は未検証）'
   }
 ];
 

@@ -173,7 +173,25 @@ export class NinjaSoundPlayer {
   toggle() {
     this.saveStoredState(!this.enabled);
     if (this.enabled) this.prime();
+    else this.stopKeepAlive();
     return this.enabled;
+  }
+
+  /** Stop the silent looping keep-alive element so nothing keeps playing while muted. */
+  stopKeepAlive() {
+    if (this.keepAlive) {
+      try {
+        this.keepAlive.pause();
+        this.keepAlive.loop = false;
+        this.keepAlive.removeAttribute('src');
+        this.keepAlive.load();
+      } catch {}
+      this.keepAlive = null;
+    }
+    this.primed = false;
+    if (this.ctx && this.ctx.state === 'running') {
+      this.ctx.suspend().catch(() => {});
+    }
   }
 
   ensureContext() {

@@ -73,11 +73,13 @@ export function generateAddressChangeChecklist(profile = {}, checkedMap = {}) {
   const hasVehicle = Boolean(profile.hasVehicle);
   const hasBicycle = Boolean(profile.hasBicycle !== false);
   const hasFiberInternet = Boolean(profile.hasFiberInternet !== false);
+  const isForeignResident = Boolean(profile.isForeignResident !== false);
 
   // Parse move date
   let moveDateObj = new Date();
   if (profile.moveDate) {
-    const parsed = new Date(profile.moveDate);
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(profile.moveDate));
+    const parsed = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(profile.moveDate);
     if (!isNaN(parsed.getTime())) {
       moveDateObj = parsed;
     }
@@ -91,6 +93,7 @@ export function generateAddressChangeChecklist(profile = {}, checkedMap = {}) {
     if (item.condition === 'has_vehicle' && !hasVehicle) return false;
     if (item.condition === 'has_bicycle' && !hasBicycle) return false;
     if (item.condition === 'has_fiber_internet' && !hasFiberInternet) return false;
+    if (item.condition === 'is_foreign_resident' && !isForeignResident) return false;
     return true;
   });
 

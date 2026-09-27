@@ -31,8 +31,11 @@ export function calculateBaseHourlyWage(params = {}) {
     dailyScheduledHours,
   } = params;
 
-  // Tiền lương tính căn cứ = Lương cơ bản và các phụ cấp hợp lệ - Phụ cấp loại trừ luật định
-  const eligibleWage = Math.max(0, Number(baseWage) - Math.max(0, Number(excludedAllowances)));
+  // Tiền lương tính căn cứ = Lương cơ bản và các phụ cấp hợp lệ - Phụ cấp loại trừ luật định.
+  // Phụ cấp loại trừ (除外賃金) là số tiền THEO THÁNG → chỉ trừ ở chế độ lương tháng.
+  // (Trước đây trừ cả lương giờ: 1,500円/giờ − 20,000円 = 0 → tiền tăng ca bằng 0.)
+  const allowanceDeduction = wageType === 'monthly' ? Math.max(0, Number(excludedAllowances) || 0) : 0;
+  const eligibleWage = Math.max(0, (Number(baseWage) || 0) - allowanceDeduction);
 
   if (wageType === 'hourly') {
     return {
@@ -84,8 +87,8 @@ export function calculateBaseHourlyWage(params = {}) {
  * @param {number} [input.averageMonthlyHours] - Số giờ làm việc quy định/tháng
  * @param {number} [input.annualScheduledDays] - Số ngày làm việc quy định/năm
  * @param {number} [input.dailyScheduledHours] - Số giờ làm việc quy định/ngày
- * @param {number} [input.normalOvertimeHours=0] - Giờ làm thêm ngoài giờ bình thường (<= 60h)
- * @param {number} [input.overtimeAbove60h=0] - Giờ làm thêm ngoài giờ vượt 60h/tháng
+ * @param {number} [input.normalOvertimeHours=0] - Giờ làm thêm ngoài giờ (engine tự tách tại mốc 60h/tháng)
+ * @param {number} [input.overtimeAbove60h=0] - Giờ làm thêm vượt 60h/tháng (được cộng vào tổng rồi tách lại tại 60h)
  * @param {number} [input.lateNightHours=0] - Giờ làm việc ban đêm (22h - 5h)
  * @param {number} [input.statutoryHolidayHours=0] - Giờ làm việc vào ngày nghỉ luật định
  * @param {number} [input.holidayLateNightHours=0] - Giờ làm việc vào ngày nghỉ luật định + đêm
@@ -106,8 +109,12 @@ export function calculateOvertimePay(input = {}) {
     isEstimatedHours,
   } = calculateBaseHourlyWage(input);
 
-  const nHours = Math.max(0, Number(normalOvertimeHours));
-  const above60Hours = Math.max(0, Number(overtimeAbove60h));
+  // Tổng giờ làm thêm ngoài giờ (時間外労働) trong tháng → tự tách tại mốc 60h (労基法第37条第1項但書):
+  // 60h đầu ×1.25, phần vượt ×1.50. Giờ làm ngày nghỉ luật định KHÔNG tính vào 60h.
+  const totalTimeOutside = Math.max(0, Number(normalOvertimeHours) || 0) + Math.max(0, Number(overtimeAbove60h) || 0);
+  const OVERTIME_60H_THRESHOLD = 60;
+  const nHours = Math.min(OVERTIME_60H_THRESHOLD, totalTimeOutside);
+  const above60Hours = Math.max(0, totalTimeOutside - OVERTIME_60H_THRESHOLD);
   const nightHours = Math.max(0, Number(lateNightHours));
   const holHours = Math.max(0, Number(statutoryHolidayHours));
   const holNightHours = Math.max(0, Number(holidayLateNightHours));

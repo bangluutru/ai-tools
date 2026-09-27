@@ -11,6 +11,7 @@ export default function DocumentWorkspacePane({
   isExpanded = false,
   onToggleExpand,
   displayLang = 'vi',
+  officeCity = null,
 }) {
   const t = getConsularI18n(displayLang);
   const formConfig = activeFormId ? getFormById(activeFormId) : null;
@@ -24,6 +25,7 @@ export default function DocumentWorkspacePane({
           isExpanded={isExpanded}
           onToggleExpand={onToggleExpand}
           displayLang={displayLang}
+          officeCity={officeCity}
         />
       </div>
     );

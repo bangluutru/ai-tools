@@ -15,8 +15,10 @@ import {
   evaluateFamilyImmigration,
   SPONSOR_STATUS_ELIGIBILITY,
   RELATIONSHIP_SCOPES,
-  DEPENDENT_WORK_PERMIT_RULES
+  DEPENDENT_WORK_PERMIT_RULES,
+  todayLocalISO
 } from '../../japan/immigration/index.js';
+import { ResidencePermitFeePanel } from './ResidencePermitFeePanel.jsx';
 import {
   Users,
   Heart,
@@ -51,7 +53,9 @@ export default function FamilyImmigrationGuideView({ lang = 'vi' }) {
   const [sponsorAnnualIncomeMan, setSponsorAnnualIncomeMan] = useState(380); // 万 (man) JPY
   const [currentLocation, setCurrentLocation] = useState('overseas');
   const [childBirthDate, setChildBirthDate] = useState('');
-  const [applicationDate] = useState(new Date().toISOString().slice(0, 10));
+  const [applicationDate] = useState(todayLocalISO());
+  const [filingMethod, setFilingMethod] = useState('counter');
+  const [expectedPeriod, setExpectedPeriod] = useState('1y');
   const [sponsorTaxCompliant, setSponsorTaxCompliant] = useState(true);
   const [intendsToWorkPartTime, setIntendsToWorkPartTime] = useState(true);
 
@@ -65,7 +69,9 @@ export default function FamilyImmigrationGuideView({ lang = 'vi' }) {
       sponsorTaxCompliant,
       sponsorPensionCompliant: true,
       currentLocation,
-      applicationDate: applicationDate || new Date().toISOString().slice(0, 10),
+      applicationDate: applicationDate || todayLocalISO(),
+      filingMethod,
+      expectedPeriod,
       childBirthDate: childBirthDate || null,
       intendsToWorkPartTime
     });
@@ -78,6 +84,8 @@ export default function FamilyImmigrationGuideView({ lang = 'vi' }) {
     currentLocation,
     applicationDate,
     childBirthDate,
+    filingMethod,
+    expectedPeriod,
     intendsToWorkPartTime
   ]);
 
@@ -232,6 +240,8 @@ export default function FamilyImmigrationGuideView({ lang = 'vi' }) {
                 <option value="specified_skilled_2">Kỹ năng đặc định số 2 (特定技能2号 - Được bảo lãnh)</option>
                 <option value="specified_skilled_1">Kỹ năng đặc định số 1 (特定技能1号 - BỊ CẤM BẢO LÃNH)</option>
                 <option value="technical_intern">Thực tập sinh kỹ năng (技能実習 - BỊ CẤM BẢO LÃNH)</option>
+                <option value="permanent_resident">Người Vĩnh trú (永住者 - gia đình xin 永住者の配偶者等 / 定住者)</option>
+                <option value="japanese_national">Công dân Nhật Bản (日本国籍 - gia đình xin 日本人の配偶者等)</option>
               </select>
             </div>
 
@@ -507,14 +517,25 @@ export default function FamilyImmigrationGuideView({ lang = 'vi' }) {
             {/* Lệ phí */}
             <div className="bg-surface-container border border-outline-variant rounded-2xl p-5 space-y-2">
               <span className="text-xs font-bold text-primary block">{t.feeTitle}</span>
-              <div className="p-3.5 bg-surface rounded-xl border border-outline-variant text-center">
-                <div className="text-2xl font-extrabold text-primary font-mono">
-                  {assessment.feeSchedule.amount.toLocaleString()} <span className="text-sm font-normal">JPY</span>
+              {assessment.feeSchedule.procedure ? (
+                <ResidencePermitFeePanel
+                  fee={assessment.feeSchedule}
+                  lang={lang}
+                  method={filingMethod}
+                  onMethodChange={setFilingMethod}
+                  expectedPeriod={expectedPeriod}
+                  onExpectedPeriodChange={setExpectedPeriod}
+                />
+              ) : (
+                <div className="p-3.5 bg-surface rounded-xl border border-outline-variant text-center">
+                  <div className="text-2xl font-extrabold text-primary font-mono">
+                    {assessment.feeSchedule.amount.toLocaleString()} <span className="text-sm font-normal">JPY</span>
+                  </div>
+                  <span className="text-xs text-on-surface-variant block mt-1">
+                    {assessment.feeSchedule.paymentMethod}
+                  </span>
                 </div>
-                <span className="text-xs text-on-surface-variant block mt-1">
-                  {assessment.feeSchedule.paymentMethod}
-                </span>
-              </div>
+              )}
             </div>
 
             {/* Hồ sơ yêu cầu */}

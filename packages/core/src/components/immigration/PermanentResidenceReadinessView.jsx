@@ -129,7 +129,7 @@ export default function PermanentResidenceReadinessView({ lang = 'vi' }) {
       passedDimensionText: (p, tot) => `Đạt ${p} / ${tot} chiều kích pháp định cốt lõi`,
       dimensionsTitle: 'Bảng Đối Soát 6 Chiều Kích Pháp Lý Cốt Lõi',
       financialTitle: 'Độc Lập Kinh Tế & Thu Nhập Ổn Định',
-      incomeBenchmark: 'Mức thu nhập khuyến nghị:',
+      incomeBenchmark: 'Mốc ước tính thực tế (không phải tiêu chuẩn ISA):',
       actualIncome: 'Thu nhập khai báo:',
       incomeSufficient: 'Đạt ngưỡng thu nhập an toàn',
       incomeInsufficient: 'Dưới ngưỡng thu nhập an toàn của ISA',
@@ -173,7 +173,7 @@ export default function PermanentResidenceReadinessView({ lang = 'vi' }) {
       passedDimensionText: (p, tot) => `6大法定要件のうち ${p} / ${tot} 項目を満たしています`,
       dimensionsTitle: '永住許可ガイドライン 6大審査基準チェック',
       financialTitle: '独立生計要件・安定収入判定',
-      incomeBenchmark: '生活維持推奨目安年収：',
+      incomeBenchmark: '実務上の目安年収（公表基準ではありません）：',
       actualIncome: '申告年収：',
       incomeSufficient: '安全基準を満たしています',
       incomeInsufficient: '推奨目安年収を下回っています',
@@ -217,7 +217,7 @@ export default function PermanentResidenceReadinessView({ lang = 'vi' }) {
       passedDimensionText: (p, tot) => `Satisfied ${p} of ${tot} core statutory dimensions`,
       dimensionsTitle: 'Inspection across 6 Core Statutory Dimensions',
       financialTitle: 'Economic Self-Sufficiency & Income Stability',
-      incomeBenchmark: 'Recommended Income Benchmark:',
+      incomeBenchmark: 'Practitioner estimate (not an ISA standard):',
       actualIncome: 'Reported Income:',
       incomeSufficient: 'Meets safe income benchmark',
       incomeInsufficient: 'Below benchmark (Supplementary savings needed)',
@@ -553,6 +553,24 @@ export default function PermanentResidenceReadinessView({ lang = 'vi' }) {
                 {lang === 'ja' ? assessment.reform2026Notice.content_ja : lang === 'en' ? assessment.reform2026Notice.content_en : assessment.reform2026Notice.content_vn}
               </p>
             </div>
+
+            {/* Hướng dẫn Vĩnh trú sửa đổi 24/02/2026 & dự thảo 08/2026 */}
+            {[assessment.guidelineNotice, assessment.draftGuidelineNotice].filter(Boolean).map((notice) => (
+              <div
+                key={notice.title_ja}
+                className={`p-4 rounded-xl border space-y-2 ${notice.status === 'draft' ? 'border-amber-500/40 bg-amber-500/10' : 'border-blue-500/30 bg-blue-950/10'} text-on-surface`}
+              >
+                <div className="font-bold text-sm text-primary">
+                  {lang === 'ja' ? notice.title_ja : lang === 'en' ? notice.title_en : notice.title_vn}
+                </div>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  {lang === 'ja' ? notice.content_ja : lang === 'en' ? notice.content_en : notice.content_vn}
+                </p>
+                <a href={notice.officialUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary font-semibold hover:underline">
+                  {lang === 'ja' ? '公式情報' : lang === 'en' ? 'Official source' : 'Nguồn chính thức'}
+                </a>
+              </div>
+            ))}
           </div>
 
           {/* Cột phải: Kinh tế, Lệ phí & Hồ sơ */}
@@ -598,7 +616,10 @@ export default function PermanentResidenceReadinessView({ lang = 'vi' }) {
                 </span>
               </div>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                {assessment.feeSchedule.note}
+                {lang === 'vi' ? assessment.feeSchedule.note_vn : assessment.feeSchedule.note}
+              </p>
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                {lang === 'ja' ? assessment.feeSchedule.reductionNote_ja : lang === 'en' ? assessment.feeSchedule.reductionNote_en : assessment.feeSchedule.reductionNote_vi}
               </p>
             </div>
 

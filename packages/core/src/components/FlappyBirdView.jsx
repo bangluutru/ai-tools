@@ -79,6 +79,15 @@ const i18n = {
   },
 };
 
+// Game hotkeys must not hijack typing in form fields or browser/OS shortcuts.
+const shouldIgnoreGameKey = (e) => {
+  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return true;
+  const el = e.target;
+  if (!el || typeof el !== 'object') return false;
+  const tag = String(el.tagName || '').toUpperCase();
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || Boolean(el.isContentEditable);
+};
+
 export default function FlappyBirdView({ displayLang = 'vi' }) {
   const t = i18n[displayLang] || i18n.vi;
   const canvasRef = useRef(null);
@@ -125,6 +134,7 @@ export default function FlappyBirdView({ displayLang = 'vi' }) {
   // Keyboard controls
   useEffect(() => {
     const onKey = (e) => {
+      if (shouldIgnoreGameKey(e)) return;
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
         engineRef.current?.unlockAudio();
@@ -146,9 +156,8 @@ export default function FlappyBirdView({ displayLang = 'vi' }) {
     const engine = engineRef.current;
     if (!engine) return;
     const nextState = !isSoundOn;
-    engine.isSoundOn = nextState;
+    engine.setSoundEnabled(nextState);
     setIsSoundOn(nextState);
-    if (nextState) engine.unlockAudio();
   };
 
   const handleRestart = () => {
@@ -225,8 +234,8 @@ export default function FlappyBirdView({ displayLang = 'vi' }) {
 
             {/* Canvas Viewport */}
             <div
-              className="relative w-full aspect-[360/540] rounded-2xl overflow-hidden border border-border-subtle shadow-inner cursor-pointer select-none"
-              style={{ background: '#DED895' }}
+              className="relative w-full aspect-[360/540] rounded-2xl overflow-hidden border border-border-subtle shadow-inner cursor-pointer select-none touch-manipulation"
+              style={{ background: '#DED895', touchAction: 'manipulation' }}
               onPointerDown={handleInteract}
               onTouchEnd={() => engineRef.current?.unlockAudio()}
             >

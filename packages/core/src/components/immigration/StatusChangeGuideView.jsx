@@ -13,8 +13,10 @@ import StandardToolLayout from '../shared/StandardToolLayout.jsx';
 import RegulatorySourceView from '../regulatory/RegulatorySourceView.jsx';
 import {
   evaluateStatusChange,
-  STATUS_CHANGE_DOCUMENT_CATEGORIES
+  STATUS_CHANGE_DOCUMENT_CATEGORIES,
+  todayLocalISO
 } from '../../japan/immigration/index.js';
+import { ResidencePermitFeePanel } from './ResidencePermitFeePanel.jsx';
 import {
   ArrowRightLeft,
   CheckCircle2,
@@ -48,7 +50,7 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
   const sswLangCheckboxInput = useId();
   const sswTitpCheckboxInput = useId();
   const officeCheckboxInput = useId();
-  const capitalCheckboxInput = useId();
+  const bmBaseId = useId();
   const planCheckboxInput = useId();
   const marriageCheckboxInput = useId();
   const cohabitCheckboxInput = useId();
@@ -58,7 +60,9 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
   const [currentStatusId, setCurrentStatusId] = useState('student');
   const [targetStatusId, setTargetStatusId] = useState('engineer_specialist');
   const [currentExpirationDate, setCurrentExpirationDate] = useState('');
-  const [applicationDate, setApplicationDate] = useState(new Date().toISOString().slice(0, 10));
+  const [applicationDate, setApplicationDate] = useState(todayLocalISO());
+  const [filingMethod, setFilingMethod] = useState('counter');
+  const [expectedPeriod, setExpectedPeriod] = useState('1y');
 
   // Profile State
   const [educationLevel, setEducationLevel] = useState('university_degree');
@@ -71,7 +75,13 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
   const [hasPassedLanguageTest, setHasPassedLanguageTest] = useState(false);
   const [completedInternTraining2, setCompletedInternTraining2] = useState(false);
   const [hasPhysicalOffice, setHasPhysicalOffice] = useState(false);
-  const [capitalAtLeast5M, setCapitalAtLeast5M] = useState(false);
+  const [bmFlags, setBmFlags] = useState({
+    capitalAtLeast30M: false,
+    hasFullTimeEmployee: false,
+    hasJapaneseB2: false,
+    hasManagementExperienceOrDegree: false,
+    planCheckedByExpert: false,
+  });
   const [hasFeasibleBusinessPlan, setHasFeasibleBusinessPlan] = useState(false);
   const [hasLegalMarriage, setHasLegalMarriage] = useState(false);
   const [livingTogether, setLivingTogether] = useState(false);
@@ -83,7 +93,9 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
       currentStatusId,
       targetStatusId,
       currentExpirationDate: currentExpirationDate || null,
-      applicationDate: applicationDate || new Date().toISOString().slice(0, 10),
+      applicationDate: applicationDate || todayLocalISO(),
+      filingMethod,
+      expectedPeriod,
       applicantProfile: {
         educationLevel,
         employerCategory: Number(employerCategory),
@@ -95,7 +107,7 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
         hasPassedLanguageTest,
         completedInternTraining2,
         hasPhysicalOffice,
-        capitalAtLeast5M,
+        ...bmFlags,
         hasFeasibleBusinessPlan,
         hasLegalMarriage,
         livingTogether,
@@ -117,7 +129,9 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
     hasPassedLanguageTest,
     completedInternTraining2,
     hasPhysicalOffice,
-    capitalAtLeast5M,
+    bmFlags,
+    filingMethod,
+    expectedPeriod,
     hasFeasibleBusinessPlan,
     hasLegalMarriage,
     livingTogether,
@@ -151,7 +165,11 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
       sswLang: 'Chứng chỉ tiếng Nhật JLPT N4 trở lên hoặc JFT-Basic A2',
       sswTitp: 'Đã hoàn thành tốt Thực tập sinh số 2 cùng ngành (Miễn thi)',
       office: 'Đã thuê văn phòng kinh doanh thực tế, độc lập (không phải văn phòng ảo)',
-      capital: 'Vốn điều lệ từ 5.000.000 JPY trở lên (hoặc thuê 2 nhân viên toàn thời gian)',
+      bmCapital: 'Vốn điều lệ / vốn góp từ 30.000.000 JPY trở lên (tiêu chuẩn từ 16/10/2025)',
+      bmEmployee: 'Thuê ít nhất 1 nhân viên toàn thời gian là người Nhật / Vĩnh trú / diện vợ chồng / Định trú',
+      bmJapanese: 'Bạn hoặc nhân viên chính thức có tiếng Nhật B2 (JLPT N2 trở lên…)',
+      bmExperience: 'Có 3 năm kinh nghiệm quản lý kinh doanh hoặc bằng thạc sĩ trở lên ngành liên quan',
+      bmPlanExpert: 'Kế hoạch kinh doanh đã được 中小企業診断士 / 公認会計士 / 税理士 thẩm định',
       plan: 'Có bản kế hoạch kinh doanh chi tiết và phương án thu chi khả thi',
       marriage: 'Hôn nhân hợp pháp đã đăng ký tại cả Nhật Bản và nước sở tại',
       cohabit: 'Đang cùng chung sống thực tế (có tên chung trong Juminhyo, ảnh chụp)',
@@ -164,7 +182,7 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
       tokureiDesc: 'Nếu nộp đơn trước khi thẻ hết hạn, bạn được ở lại hợp pháp tối đa thêm 2 tháng trong lúc chờ Cục xét duyệt:',
       maxTokureiDate: 'Hạn chót ở lại theo diện đặc lệ:',
       feeTitle: 'Lệ phí hành chính cấp thẻ mới',
-      feeNote: 'Chỉ nộp khi ĐƯỢC CHẤP THUẬN CẤP THẺ (bằng tem doanh thu 収入印紙). Từ chối không mất phí.',
+      feeNote: 'Chỉ nộp khi ĐƯỢC CHẤP THUẬN. Mức phí theo ngày Cục XNC tiếp nhận hồ sơ; từ 01/10/2026 tùy thời hạn lưu trú được cấp. Từ chối không mất phí.',
       docTitle: 'Hồ sơ tài liệu cần chuẩn bị',
       statutoryPrerequisites: 'Tiêu chuẩn pháp định đối soát',
       met: 'Đạt',
@@ -196,7 +214,11 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
       sswLang: '日本語能力試験N4以上またはJFT-Basic A2に合格',
       sswTitp: '技能実習2号を同一職種で良好に修了（試験免除）',
       office: '独立した実態のある事業所（事務所）を確保済（バーチャル不可）',
-      capital: '資本金500万円以上の出資または常勤職員2名以上の雇用',
+      bmCapital: '資本金の額又は出資の総額が3,000万円以上（2025年10月16日施行基準）',
+      bmEmployee: '常勤職員（日本人・永住者・日本人の配偶者等・定住者等）1名以上を雇用',
+      bmJapanese: '申請人又は常勤職員が日本語B2相当（JLPT N2以上等）',
+      bmExperience: '経営・管理の実務経験3年以上又は関連分野の修士以上',
+      bmPlanExpert: '事業計画書を中小企業診断士・公認会計士・税理士が確認済み',
       plan: '継続性・実現可能性を立証する事業計画書および収支試算あり',
       marriage: '日本及び本国双方で法的に有効に婚姻が成立している',
       cohabit: '同居および共同生活の実態がある（住民票同居・写真等）',
@@ -208,8 +230,8 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
       tokureiTitle: '特例期間の適用（入管法第20条第6項）',
       tokureiDesc: '在留期間の満了日までに申請を受理させれば、結果が出るか満了日から最長2か月適法に在留可能：',
       maxTokureiDate: '特例期間満了予定日：',
-      feeTitle: '申請手数料（収入印紙）',
-      feeNote: '許可時のみ納付（不許可の場合は不要）。2026年10月1日以降の手数料改定に留意。',
+      feeTitle: '申請手数料',
+      feeNote: '許可時のみ納付（不許可の場合は不要）。申請受付日で判定し、2026年10月1日以降の受付分は許可される在留期間で決まります。',
       docTitle: '提出必要書類リスト',
       statutoryPrerequisites: '法定要件チェック',
       met: '適合',
@@ -241,7 +263,11 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
       sswLang: 'Passed JLPT N4+ or JFT-Basic A2',
       sswTitp: 'Completed Technical Intern Training (ii) in same field (Exempt)',
       office: 'Secured dedicated physical office premises (virtual office not allowed)',
-      capital: 'Capital of 5,000,000+ JPY or hiring 2+ full-time residents',
+      bmCapital: 'Capital / total contributions of 30,000,000+ JPY (standard since 16 Oct 2025)',
+      bmEmployee: 'At least 1 full-time employee who is Japanese / PR / spouse status / Long-Term Resident',
+      bmJapanese: 'You or a full-time employee have Japanese at B2 (JLPT N2+ etc.)',
+      bmExperience: '3+ years of management experience or a relevant master\'s degree',
+      bmPlanExpert: 'Business plan reviewed by an SME consultant, CPA or tax accountant',
       plan: 'Detailed business plan with viable financial projections',
       marriage: 'Legally registered marriage in both Japan and home country',
       cohabit: 'Genuine cohabitation and shared marital household',
@@ -253,8 +279,8 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
       tokureiTitle: 'Special Period (Tokurei - Art. 20 Para. 6)',
       tokureiDesc: 'If filed before current expiry, legal stay is extended up to 2 months while awaiting the decision:',
       maxTokureiDate: 'Maximum special period expiration:',
-      feeTitle: 'Official Fee Schedule (Revenue Stamp)',
-      feeNote: 'Payable only upon approval (no fee if denied). Note Oct 2026 fee revision.',
+      feeTitle: 'Official Fee Schedule',
+      feeNote: 'Payable only upon approval (no fee if denied). Based on the acceptance date; from 1 Oct 2026 it depends on the period granted.',
       docTitle: 'Required Documents Checklist',
       statutoryPrerequisites: 'Statutory Criteria Inspection',
       met: 'Met',
@@ -507,17 +533,25 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
                   <span>{t.office}</span>
                 </label>
 
-                <label htmlFor={capitalCheckboxInput} className="flex items-center gap-2 p-3 bg-surface border border-outline-variant rounded-xl cursor-pointer text-sm font-medium text-on-surface">
-                  <input
-                    id={capitalCheckboxInput}
-                    type="checkbox"
-                    aria-label={t.capital}
-                    checked={capitalAtLeast5M}
-                    onChange={(e) => setCapitalAtLeast5M(e.target.checked)}
-                    className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary"
-                  />
-                  <span>{t.capital}</span>
-                </label>
+                {[
+                  ['capitalAtLeast30M', t.bmCapital],
+                  ['hasFullTimeEmployee', t.bmEmployee],
+                  ['hasJapaneseB2', t.bmJapanese],
+                  ['hasManagementExperienceOrDegree', t.bmExperience],
+                  ['planCheckedByExpert', t.bmPlanExpert],
+                ].map(([key, label]) => (
+                  <label key={key} htmlFor={`${bmBaseId}-${key}`} className="flex items-center gap-2 p-3 bg-surface border border-outline-variant rounded-xl cursor-pointer text-sm font-medium text-on-surface">
+                    <input
+                      id={`${bmBaseId}-${key}`}
+                      type="checkbox"
+                      aria-label={label}
+                      checked={bmFlags[key]}
+                      onChange={(e) => setBmFlags((prev) => ({ ...prev, [key]: e.target.checked }))}
+                      className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary"
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
 
                 <label htmlFor={planCheckboxInput} className="flex items-center gap-2 p-3 bg-surface border border-outline-variant rounded-xl cursor-pointer text-sm font-medium text-on-surface">
                   <input
@@ -676,20 +710,20 @@ export default function StatusChangeGuideView({ lang = 'vi' }) {
 
           {/* Cột phải: Lệ phí & Hồ sơ */}
           <div className="space-y-6">
-            {/* Thẻ Lệ Phí */}
-            <div className="bg-surface-container border border-outline-variant rounded-2xl p-5 space-y-3">
+            {/* Thẻ Lệ Phí: đọc từ bảng phí dùng chung */}
+            <div className="space-y-2">
               <div className="flex items-center gap-2 text-primary font-bold text-sm">
                 <Coins className="w-4 h-4" />
                 <span>{t.feeTitle}</span>
               </div>
-              <div className="p-4 bg-surface rounded-xl border border-outline-variant text-center space-y-1">
-                <div className="text-3xl font-extrabold text-primary font-mono">
-                  {assessment.feeSchedule.amount.toLocaleString()} <span className="text-base font-normal">JPY</span>
-                </div>
-                <p className="text-xs text-on-surface-variant font-medium">
-                  {lang === 'ja' ? assessment.feeSchedule.condition_ja : lang === 'en' ? assessment.feeSchedule.condition_en : assessment.feeSchedule.condition_vn}
-                </p>
-              </div>
+              <ResidencePermitFeePanel
+                fee={assessment.feeSchedule}
+                lang={lang}
+                method={filingMethod}
+                onMethodChange={setFilingMethod}
+                expectedPeriod={expectedPeriod}
+                onExpectedPeriodChange={setExpectedPeriod}
+              />
               <p className="text-xs text-on-surface-variant leading-relaxed">
                 {t.feeNote}
               </p>

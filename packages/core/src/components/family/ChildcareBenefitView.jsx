@@ -30,6 +30,7 @@ import {
   CHILDCARE_BENEFIT_CONSTANTS,
   CHILDCARE_BENEFIT_SOURCES,
 } from '../../japan/family/index.js';
+import { todayLocalISO } from '../../japan/employment/localDate.js';
 
 const TRANSLATIONS = {
   ja: {
@@ -53,8 +54,11 @@ const TRANSLATIONS = {
     bonusNo: '適用しない（通常給付のみ）',
     salaryPaidDuringLeaveLabel: '休業期間中に会社から支払われる月給（有給・手当等）',
     salaryPaidDuringLeaveHint: '※ 原則0円（無給）。賃金が80％以上支払われると給付金は0円となります。',
-    shortTimeWorkLabel: '復職後に2歳未満の子を育てるための時短就業給付金（約10％）も試算する',
-    shortTimeWorkHint: '※ 2025年4月新設。復職後に短時間勤務を行い賃金が低下した場合の補償。',
+    shortTimeWorkLabel: '復職後に2歳未満の子を育てるための育児時短就業給付金（時短中の賃金の10％）も試算する',
+    shortTimeWorkHint: '※ 2025年4月新設。時短勤務中に実際に支払われた賃金の10％（賃金が休業前の90％超なら逓減、賃金＋給付が支給限度額を超える場合は調整）。',
+    shortTimeWageLabel: '時短勤務中に実際に受け取る月給（額面）',
+    shortTimeWageAssumed: '※ 未入力のため「休業前月給の80％」と仮定して試算しています。',
+    leaveStartLabel: '育児休業の開始日（上限額・下限額の適用年度の判定）',
     shortTimeMonthsLabel: '短時間勤務の予定月数',
     monthsUnit: 'ヶ月',
     daysUnit: '日',
@@ -64,8 +68,8 @@ const TRANSLATIONS = {
     tier1Monthly: '当初180日間の月額目安（67％）',
     tier2Monthly: '181日目以降の月額目安（50％）',
     wageDailyBasisLabel: '算定された休業開始時賃金日額',
-    cappedNotice: '（※ 厚生労働省告示の上限額 16,210円 が適用されています）',
-    flooredNotice: '（※ 厚生労働省告示の下限額 2,978円 が適用されています）',
+    cappedNotice: '（※ 厚生労働省告示の上限額 {amount}円 が適用されています）',
+    flooredNotice: '（※ 厚生労働省告示の下限額 {amount}円 が適用されています）',
     takeHomeBannerTitle: '【実質手取り約8割〜10割】非課税＆社会保険料免除のメリット',
     takeHomeBannerDesc: '育児休業給付金は「所得税・住民税が全額非課税」であり、休業期間中は「健康保険料・厚生年金保険料が全額免除」されます。そのため、額面67％支給時の手取りは約80％相当、加算適用時（80％）は休業前とほぼ同等の手取り10割（100％）が確保されます。',
     sectionTimeline: '3. 支給スケジュールとタイムライン内訳',
@@ -100,8 +104,11 @@ const TRANSLATIONS = {
     bonusNo: 'Không áp dụng (Chỉ nhận mức thông thường)',
     salaryPaidDuringLeaveLabel: 'Tiền lương công ty vẫn trả hàng tháng trong kỳ nghỉ (nếu có)',
     salaryPaidDuringLeaveHint: '※ Mặc định 0 yên (nghỉ không lương). Nếu công ty vẫn trả lương từ 80% trở lên thì trợ cấp sẽ bằng 0 yên.',
-    shortTimeWorkLabel: 'Tính thêm Trợ cấp làm việc rút ngắn giờ (10% lương khi đi làm lại nuôi con dưới 2 tuổi)',
-    shortTimeWorkHint: '※ Áp dụng từ tháng 04/2025: Hỗ trợ bù đắp thu nhập khi đi làm lại nhưng phải giảm giờ làm.',
+    shortTimeWorkLabel: 'Tính thêm Trợ cấp làm việc rút ngắn giờ (10% lương thực nhận khi làm giờ ngắn, nuôi con dưới 2 tuổi)',
+    shortTimeWorkHint: '※ Từ 04/2025: 10% tiền lương THỰC NHẬN trong tháng làm giờ ngắn (nếu lương > 90% lương trước nghỉ thì tỷ lệ giảm dần; lương + trợ cấp vượt hạn mức chi trả thì bị điều chỉnh).',
+    shortTimeWageLabel: 'Lương thực nhận mỗi tháng khi làm giờ ngắn (gross)',
+    shortTimeWageAssumed: '※ Chưa nhập: đang GIẢ ĐỊNH bằng 80% lương trước khi nghỉ.',
+    leaveStartLabel: 'Ngày bắt đầu nghỉ chăm con (để chọn mức trần/sàn theo năm)',
     shortTimeMonthsLabel: 'Số tháng dự kiến làm việc rút ngắn giờ',
     monthsUnit: 'tháng',
     daysUnit: 'ngày',
@@ -111,8 +118,8 @@ const TRANSLATIONS = {
     tier1Monthly: 'Mức trợ cấp hàng tháng giai đoạn 180 ngày đầu (67%)',
     tier2Monthly: 'Mức trợ cấp hàng tháng từ ngày 181 trở đi (50%)',
     wageDailyBasisLabel: 'Mức tiền lương ngày bắt đầu nghỉ (休業開始時賃金日額)',
-    cappedNotice: '（※ Bị khống chế bởi mức trần của Bộ Y tế Lao động MHLW 16.210 yên/ngày）',
-    flooredNotice: '（※ Được bảo đảm bởi mức sàn của Bộ Y tế Lao động MHLW 2.978 yên/ngày）',
+    cappedNotice: '（※ Bị khống chế bởi mức trần của Bộ Y tế Lao động MHLW {amount} yên/ngày）',
+    flooredNotice: '（※ Được bảo đảm bởi mức sàn của Bộ Y tế Lao động MHLW {amount} yên/ngày）',
     takeHomeBannerTitle: '【THU NHẬP THỰC NHẬN ~80% ĐẾN 100%】Đặc quyền Miễn Thuế & Miễn Đóng BHXH',
     takeHomeBannerDesc: 'Tiền trợ cấp BHTN được MIỄN HOÀN TOÀN thuế thu nhập cá nhân và thuế cư trú. Đồng thời trong suốt thời gian nghỉ chăm con, người lao động được MIỄN 100% tiền đóng BHXH (BHYT & Lương hưu Kosei Nenkin) mà vẫn được tính đầy đủ thời gian hưu trí sau này. Do đó, mức 67% lương gross tương đương khoảng 80% lương thực nhận, và mức 80% (kèm thưởng 13%) tương đương trọn vẹn 100% lương thực nhận trước khi nghỉ!',
     sectionTimeline: '3. Lịch trình chi trả và Phân bổ theo giai đoạn',
@@ -147,8 +154,11 @@ const TRANSLATIONS = {
     bonusNo: 'Standard benefit only',
     salaryPaidDuringLeaveLabel: 'Monthly wage paid by employer during leave (if any)',
     salaryPaidDuringLeaveHint: '※ Default 0 JPY. If wage exceeds 80% of standard salary, benefit is reduced to 0 JPY.',
-    shortTimeWorkLabel: 'Include Childcare Short-Time Work Benefit (~10% wage replacement for child under 2)',
-    shortTimeWorkHint: '※ Newly introduced from April 2025: compensates wages when returning on reduced hours.',
+    shortTimeWorkLabel: 'Include Childcare Short-Time Work Benefit (10% of the reduced wage actually paid, child under 2)',
+    shortTimeWorkHint: '※ From April 2025: 10% of wages actually paid during short-time work (tapers if wage exceeds 90% of pre-leave wage; adjusted if wage + benefit exceeds the payment limit).',
+    shortTimeWageLabel: 'Monthly wage actually paid during short-time work (gross)',
+    shortTimeWageAssumed: '※ Not entered: ASSUMED to be 80% of the pre-leave monthly wage.',
+    leaveStartLabel: 'Leave start date (selects the MHLW cap/floor year)',
     shortTimeMonthsLabel: 'Planned Short-time Work Months',
     monthsUnit: 'months',
     daysUnit: 'days',
@@ -158,8 +168,8 @@ const TRANSLATIONS = {
     tier1Monthly: 'Monthly Estimate for First 180 Days (67%)',
     tier2Monthly: 'Monthly Estimate from Day 181 Onwards (50%)',
     wageDailyBasisLabel: 'Statutory Wage Daily Basis (休業開始時賃金日額)',
-    cappedNotice: '(* Capped by MHLW statutory ceiling of 16,210 JPY/day)',
-    flooredNotice: '(* Protected by MHLW statutory floor of 2,978 JPY/day)',
+    cappedNotice: '(* Capped by MHLW statutory ceiling of {amount} JPY/day)',
+    flooredNotice: '(* Protected by MHLW statutory floor of {amount} JPY/day)',
     takeHomeBannerTitle: '【~80% to 100% Take-Home Equivalent】Tax-Free & Social Insurance Exemption',
     takeHomeBannerDesc: 'Childcare leave benefits are completely exempt from income and resident taxes, and social insurance premiums are 100% waived during leave. Thus, a 67% gross benefit equals ~80% take-home pay, and an 80% rate (with bonus) matches ~100% of pre-leave net take-home pay!',
     sectionTimeline: '3. Disbursement Timeline & Stage Breakdown',
@@ -186,6 +196,8 @@ export default function ChildcareBenefitView({ lang = 'ja' }) {
   const [monthlySalaryDuringLeave, setMonthlySalaryDuringLeave] = useState(0);
   const [isShortTimeWork, setIsShortTimeWork] = useState(false);
   const [shortTimeMonths, setShortTimeMonths] = useState(6);
+  const [shortTimeMonthlyWage, setShortTimeMonthlyWage] = useState('');
+  const [leaveStartDate, setLeaveStartDate] = useState(() => todayLocalISO());
 
   const plannedDays = useMemo(() => {
     if (durationPreset === 'custom') return customDays;
@@ -202,8 +214,12 @@ export default function ChildcareBenefitView({ lang = 'ja' }) {
       monthlySalaryDuringLeave,
       isShortTimeWork,
       shortTimeMonths,
+      shortTimeMonthlyWage: shortTimeMonthlyWage === '' ? undefined : Number(shortTimeMonthlyWage),
+      leaveStartDate,
     });
   }, [
+    shortTimeMonthlyWage,
+    leaveStartDate,
     monthlySalary,
     plannedDays,
     qualifiesForPostBirthBonus,
@@ -351,6 +367,25 @@ export default function ChildcareBenefitView({ lang = 'ja' }) {
               </p>
             </div>
 
+            {/* Leave start date (chọn kỳ mức trần/sàn MHLW) */}
+            <div className="space-y-2">
+              <label htmlFor="leave-start-date-input" className="block text-xs sm:text-sm font-semibold text-foreground">
+                {t.leaveStartLabel}
+              </label>
+              <input
+                id="leave-start-date-input"
+                type="date"
+                value={leaveStartDate}
+                onChange={(e) => setLeaveStartDate(e.target.value)}
+                className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-foreground text-sm"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {lang === 'ja' ? result.effectivePeriod.nameJa : result.effectivePeriod.nameVi}
+                {' · '}
+                {result.effectivePeriod.MIN_DAILY_WAGE.toLocaleString()}〜{result.effectivePeriod.MAX_DAILY_WAGE.toLocaleString()} {t.yenUnit}/日
+              </p>
+            </div>
+
             {/* Salary Paid during leave */}
             <div className="space-y-2">
               <label htmlFor="salary-during-leave-input" className="block text-xs sm:text-sm font-semibold text-foreground">
@@ -413,6 +448,27 @@ export default function ChildcareBenefitView({ lang = 'ja' }) {
                     className="w-24 px-3 py-1.5 bg-background border border-border rounded-lg text-foreground text-xs"
                   />
                   <span className="text-xs text-muted-foreground">{t.monthsUnit}</span>
+                </div>
+              )}
+
+              {isShortTimeWork && (
+                <div className="space-y-1 pt-2">
+                  <label htmlFor="short-time-wage-input" className="text-xs font-medium text-foreground block">
+                    {t.shortTimeWageLabel}
+                  </label>
+                  <input
+                    id="short-time-wage-input"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={shortTimeMonthlyWage}
+                    placeholder={String(result.benefitBreakdown.shortTimeWork.paidWage)}
+                    onChange={(e) => setShortTimeMonthlyWage(e.target.value === '' ? '' : String(Math.max(0, parseInt(e.target.value, 10) || 0)))}
+                    className="w-40 px-3 py-1.5 bg-background border border-border rounded-lg text-foreground text-xs"
+                  />
+                  {result.benefitBreakdown.shortTimeWork.isPaidWageAssumed && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400">{t.shortTimeWageAssumed}</p>
+                  )}
                 </div>
               )}
             </div>
@@ -483,8 +539,8 @@ export default function ChildcareBenefitView({ lang = 'ja' }) {
                   {result.wageDailyBasis.statutoryDailyWage.toLocaleString()} {t.yenUnit}/日
                 </span>
                 <span className="text-[10px] text-muted-foreground block">
-                  {result.wageDailyBasis.isCappedByMaxLimit && t.cappedNotice}
-                  {result.wageDailyBasis.isFlooredByMinLimit && t.flooredNotice}
+                  {result.wageDailyBasis.isCappedByMaxLimit && t.cappedNotice.replace('{amount}', result.effectivePeriod.MAX_DAILY_WAGE.toLocaleString())}
+                  {result.wageDailyBasis.isFlooredByMinLimit && t.flooredNotice.replace('{amount}', result.effectivePeriod.MIN_DAILY_WAGE.toLocaleString())}
                   {!result.wageDailyBasis.isCappedByMaxLimit && !result.wageDailyBasis.isFlooredByMinLimit && '標準基準'}
                 </span>
               </div>

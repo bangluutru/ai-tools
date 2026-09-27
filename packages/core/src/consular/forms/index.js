@@ -42,37 +42,21 @@ export const getFormById = (formId) => {
 };
 
 /**
- * Bảng kiểm định tính toàn vẹn và SHA-256 của các biểu mẫu
+ * Bảng tra cứu nguồn của các BẢN NHÁP hỗ trợ điền.
+ * Toolio KHÔNG lưu mã băm (SHA-256) của mẫu gốc nào — không hiển thị "đã xác thực".
  */
+const registryEntry = (form, basis, sourceUrl) => ({
+  sha256: null,
+  status: form.status,
+  isDraftHelper: true,
+  basis,
+  sourceUrl,
+});
+
 export const FORM_INTEGRITY_REGISTRY = {
-  [passportTK02Form.id]: {
-    sha256: passportTK02Form.sha256Fingerprint,
-    status: passportTK02Form.status,
-    basis: passportTK02Form.standardBasis,
-    sourceUrl: passportTK02Form.sourceUrl,
-  },
-  [birthRegistrationForm.id]: {
-    sha256: birthRegistrationForm.fingerprint || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-    status: birthRegistrationForm.status,
-    basis: birthRegistrationForm.legal_basis,
-    sourceUrl: birthRegistrationForm.official_source_url,
-  },
-  [nationalityAgreementForm.id]: {
-    sha256: nationalityAgreementForm.fingerprint || 'a4b8e23f9901d8c1192ef941bc4811a7f05282a567e9124a91f5820468f7aa11',
-    status: nationalityAgreementForm.status,
-    basis: nationalityAgreementForm.legal_basis,
-    sourceUrl: nationalityAgreementForm.official_source_url,
-  },
-  [marriageRegistrationForm.id]: {
-    sha256: marriageRegistrationForm.sha256Fingerprint,
-    status: marriageRegistrationForm.status,
-    basis: marriageRegistrationForm.standardBasis,
-    sourceUrl: marriageRegistrationForm.sourceUrl,
-  },
-  [powerOfAttorneyForm.id]: {
-    sha256: powerOfAttorneyForm.sha256Fingerprint,
-    status: powerOfAttorneyForm.status,
-    basis: powerOfAttorneyForm.standardBasis,
-    sourceUrl: powerOfAttorneyForm.sourceUrl,
-  },
+  [passportTK02Form.id]: registryEntry(passportTK02Form, passportTK02Form.standardBasis, passportTK02Form.sourceUrl),
+  [birthRegistrationForm.id]: registryEntry(birthRegistrationForm, birthRegistrationForm.legal_basis, birthRegistrationForm.official_source_url),
+  [nationalityAgreementForm.id]: registryEntry(nationalityAgreementForm, nationalityAgreementForm.legal_basis, nationalityAgreementForm.official_source_url),
+  [marriageRegistrationForm.id]: registryEntry(marriageRegistrationForm, marriageRegistrationForm.standardBasis, marriageRegistrationForm.sourceUrl),
+  [powerOfAttorneyForm.id]: registryEntry(powerOfAttorneyForm, powerOfAttorneyForm.standardBasis, powerOfAttorneyForm.sourceUrl),
 };

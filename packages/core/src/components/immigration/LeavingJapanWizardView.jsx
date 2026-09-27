@@ -17,7 +17,8 @@ import RegulatorySourceView from '../regulatory/RegulatorySourceView.jsx';
 import {
   generateDeparturePlan,
   DEPARTURE_STAGES,
-  DEPARTURE_SOURCES
+  DEPARTURE_SOURCES,
+  todayLocalISO
 } from '../../japan/immigration/index.js';
 import {
   PlaneTakeoff,
@@ -47,7 +48,7 @@ export default function LeavingJapanWizardView({ lang = 'vi' }) {
 
   // State
   const [departureDate, setDepartureDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
+    return todayLocalISO();
   });
   const [departureType, setDepartureType] = useState('permanent'); // 'permanent' | 'temporary'
   const [tripDurationMonths, setTripDurationMonths] = useState(6);
@@ -138,7 +139,7 @@ export default function LeavingJapanWizardView({ lang = 'vi' }) {
       tripDurationHintShort: 'Dưới 1 năm: Áp dụng Miễn thủ tục tại Cục (Minashi Re-entry tại sân bay)',
       tripDurationHintLong: 'Trên 1 năm: Bắt buộc xin Giấy phép tái nhập cảnh trước tại Cục ISA',
       pensionMonthsLabel: 'Tổng số tháng đã đóng Nenkin tại Nhật',
-      pensionMonthsHint: 'Tối thiểu 6 tháng để được rút. Mức trần chi trả tối đa là 60 tháng (5 năm).',
+      pensionMonthsHint: 'Tối thiểu 6 tháng để được rút. Mức trần hiện hành là 60 tháng (5 năm); luật cải cách 2025 dự kiến nâng lên 8 năm từ ngày do chính lệnh quy định (chưa áp dụng).',
       koseiNenkinLabel: 'Từng tham gia Nenkin Phúc lợi (Kosei Nenkin của công ty) để xin hoàn 20.42% thuế',
       progressTitle: 'Tiến độ hoàn tất thủ tục rời Nhật',
       completedCount: 'Đã hoàn thành',
@@ -177,7 +178,7 @@ export default function LeavingJapanWizardView({ lang = 'vi' }) {
       tripDurationHintShort: '1年以内：空港での「みなし再入国許可」利用可能（手数料無料）',
       tripDurationHintLong: '1年超：出国前に地方入管で通常の再入国許可を取得必須',
       pensionMonthsLabel: '年金（厚生年金・国民年金）の通算納付月数',
-      pensionMonthsHint: '6ヶ月以上で請求可。法改正により最大支給上限は60ヶ月（5年分）。',
+      pensionMonthsHint: '6ヶ月以上で請求可。現行の支給上限は60月（5年）。2025年改正法で8年に引上げ予定（施行日は政令で定める・未施行）。',
       koseiNenkinLabel: '厚生年金加入期間あり（20.42%の源泉所得税還付対象）',
       progressTitle: '出国手続きの完了進捗',
       completedCount: '完了済み',

@@ -11,6 +11,7 @@
 
 import { defineRuleMetadata } from '../../../regulatory/ruleMetadata.js';
 import { JAPAN_JURISDICTION } from '../../../regulatory/jurisdiction.js';
+import { getResidencePermitFee } from '../shared/immigrationFeeTable.js';
 
 export const PERMANENT_RESIDENCE_RULE = defineRuleMetadata({
   id: 'jp-imm-permanent-residence-2026',
@@ -95,53 +96,104 @@ export const PR_APPLICATION_ROUTES = {
 };
 
 /**
- * Tiêu chuẩn thu nhập hàng năm theo quy chuẩn thực tế của ISA
+ * Mốc thu nhập hàng năm — ƯỚC TÍNH THỰC TẾ của giới hành nghề (gyoseishoshi),
+ * KHÔNG phải tiêu chuẩn do ISA công bố. Ghi nhãn rõ ràng trên UI.
  */
 export const PR_INCOME_BENCHMARKS = {
-  SINGLE_APPLICANT_MINIMUM: 3000000, // Tối thiểu 3.000.000 JPY/năm cho đương đơn độc thân
-  ADDITIONAL_PER_DEPENDENT: 700000, // Thêm 700.000 - 800.000 JPY cho mỗi người phụ thuộc
+  isOfficialStandard: false,
+  SINGLE_APPLICANT_MINIMUM: 3000000, // ~3.000.000 JPY/năm (ước tính thực tế)
+  ADDITIONAL_PER_DEPENDENT: 700000, // ~700.000 JPY cho mỗi người phụ thuộc (ước tính thực tế)
 };
 
 /**
- * Ngưỡng thời gian rời khỏi Nhật Bản (Absence thresholds)
+ * Ngưỡng thời gian rời khỏi Nhật Bản — ƯỚC TÍNH THỰC TẾ, không phải tiêu chuẩn ISA công bố.
+ * Chỉ dùng để CẢNH BÁO, không kết luận "không đạt".
  */
 export const PR_ABSENCE_LIMITS = {
-  MAX_CONSECUTIVE_DAYS_ABROAD: 90, // Xuất cảnh liên tục trên 90 ngày sẽ bị đứt đoạn thời gian cư trú
-  MAX_TOTAL_DAYS_PER_YEAR: 100, // Tổng số ngày rời Nhật quá 100 - 150 ngày/năm sẽ bị xem xét nghiêm ngặt
+  isOfficialStandard: false,
+  MAX_CONSECUTIVE_DAYS_ABROAD: 90, // Một chuyến đi dài (thường được nhắc ~3 tháng) có thể bị xem là gián đoạn cư trú
+  MAX_TOTAL_DAYS_PER_YEAR: 100, // Tổng ~100 ngày/năm trở lên thường bị xem xét kỹ
 };
 
 /**
- * Quy định về lệ phí cấp thẻ Vĩnh trú
+ * Hướng dẫn cấp phép Vĩnh trú (永住許可に関するガイドライン) — bản sửa đổi ngày 24/02/2026.
+ * Nguồn: https://www.moj.go.jp/isa/applications/resources/nyukan_nyukan50.html
+ * - Đến hết 31/03/2027: thời hạn "3 năm" được coi là "thời hạn dài nhất" (最長の在留期間).
+ * - Sau đó: cần thời hạn dài nhất thực tế của tư cách (thường là 5 năm); người đang giữ 3 năm
+ *   vào ngày đó được ưu đãi một lần ở lần xét đầu tiên.
+ * - Phải tiếp tục phù hợp tiêu chuẩn cấp phép nhập cảnh (上陸許可基準) của tư cách hiện tại.
  */
-export function getPermanentResidenceFeeSchedule(applicationDate = new Date().toISOString().slice(0, 10)) {
-  const cutoff = '2026-10-01';
-  const isPostOct2026 = applicationDate >= cutoff;
-  const amount = isPostOct2026 ? 10000 : 8000;
+export const PR_GUIDELINE_2026 = Object.freeze({
+  revisedOn: '2026-02-24',
+  threeYearTreatedAsLongestUntil: '2027-03-31',
+  officialUrl: 'https://www.moj.go.jp/isa/applications/resources/nyukan_nyukan50.html',
+  title_ja: '永住許可に関するガイドライン（令和8年2月24日改訂）',
+  title_vn: 'Hướng dẫn cấp phép Vĩnh trú (sửa đổi ngày 24/02/2026)',
+  title_en: 'Guidelines for Permission for Permanent Residence (revised 24 Feb 2026)',
+  content_ja: '令和9年3月31日までの間は、在留期間「3年」を「最長の在留期間」として取り扱います。それ以降は、現に有する在留資格の実際の最長の在留期間（多くは5年）が必要となります（同日時点で3年を有する方は、その後最初の処分に限り従前どおり扱われます）。また、現に有する在留資格について上陸許可基準等に適合していることが求められます。',
+  content_vn: 'Đến hết ngày 31/03/2027, visa thời hạn "3 năm" vẫn được coi là "thời hạn dài nhất". Từ sau mốc đó, cần giữ thời hạn dài nhất thực tế của tư cách hiện tại (thường là 5 năm) — người đang có visa 3 năm vào ngày đó được xét theo cách cũ một lần ở lần xét đầu tiên. Ngoài ra, bạn phải tiếp tục đáp ứng tiêu chuẩn cấp phép nhập cảnh (上陸許可基準) của tư cách đang có.',
+  content_en: 'Until 31 Mar 2027 a 3-year period of stay is treated as the "longest period". After that, the actual longest period for your status (usually 5 years) is required (holders of 3 years on that date get the old treatment once, at their first decision). Applicants must also continue to meet the landing standards of their current status.',
+});
 
+/**
+ * DỰ THẢO sửa đổi Hướng dẫn Vĩnh trú (công bố 04/08/2026, lấy ý kiến công chúng đến 04/09/2026).
+ * CHƯA CHÍNH THỨC — nội dung và ngày áp dụng có thể thay đổi.
+ * Nguồn: e-Gov パブリック・コメント (永住許可に関するガイドライン改定案、令和8年8月4日 出入国在留管理庁)
+ */
+export const PR_GUIDELINE_DRAFT_2026_08 = Object.freeze({
+  status: 'draft',
+  publishedOn: '2026-08-04',
+  publicCommentClosedOn: '2026-09-04',
+  proposedIncomeApplicationFrom: '2026-10',
+  proposedOtherApplicationFrom: '2027-04',
+  officialUrl: 'https://public-comment.e-gov.go.jp/pcm/detail?CLASSNAME=PCMMSTDETAIL&id=315000140&Mode=0',
+  title_ja: '【案・未確定】永住許可に関するガイドライン改定案（2026年8月公表）',
+  title_vn: '【DỰ THẢO – CHƯA CHÍNH THỨC】Đề xuất sửa đổi Hướng dẫn Vĩnh trú (công bố 08/2026)',
+  title_en: '【DRAFT – NOT FINAL】Proposed revision of the PR Guidelines (published Aug 2026)',
+  content_ja: '改定案（2026年8月4日公表、意見募集は9月4日締切）では、①世帯人数に応じた日本人世帯の平均収入を上回る年収（収入要素は2026年10月から適用予定）、②厚生年金に30年加入した水準に相当する年金見込額（不足分は金融資産で補填可）、③日本語能力CEFR B1相当、④日本人・永住者の配偶者等の特例を婚姻5年・在留3年に延長（収入以外は2027年4月から適用予定）等が示されています。最終決定ではありません。',
+  content_vn: 'Theo dự thảo (công bố 04/08/2026, hết hạn lấy ý kiến 04/09/2026): (1) thu nhập hộ gia đình phải CAO HƠN mức trung bình của hộ người Nhật cùng số người (dự kiến áp dụng yếu tố thu nhập từ 10/2026); (2) lương hưu dự kiến nhận tương đương mức tham gia 厚生年金 30 năm (thiếu có thể bù bằng tài sản tài chính); (3) tiếng Nhật tương đương CEFR B1; (4) diện vợ/chồng người Nhật/Vĩnh trú nâng lên 5 năm hôn nhân + 3 năm ở Nhật (các nội dung ngoài thu nhập dự kiến từ 04/2027). ĐÂY LÀ DỰ THẢO, CHƯA PHẢI QUY ĐỊNH CHÍNH THỨC.',
+  content_en: 'The draft (published 4 Aug 2026; public comment closed 4 Sep 2026) proposes: (1) household income above the average Japanese household income for the household size (income element planned from Oct 2026); (2) expected pension equivalent to 30 years of Employees\' Pension (shortfall may be covered by financial assets); (3) Japanese at CEFR B1; (4) spouse route extended to 5 years of marriage + 3 years in Japan (non-income items planned from Apr 2027). This is a draft, not final.',
+});
+
+/**
+ * Lệ phí cấp phép Vĩnh trú (永住許可) — đọc từ bảng phí dùng chung.
+ * - Hồ sơ TIẾP NHẬN đến 30/09/2026: 10.000 JPY (kể cả khi được cấp phép sau 01/10/2026).
+ * - Hồ sơ tiếp nhận từ 01/10/2026: 200.000 JPY (có thể giảm còn 20.000 JPY nếu thuộc diện khó khăn, chỉ tại quầy).
+ * Vĩnh trú chỉ nộp tại quầy (窓口). Nộp phí bằng tem 収入印紙 khi được cấp phép.
+ * @param {string|Date} [applicationDate]
+ */
+export function getPermanentResidenceFeeSchedule(applicationDate) {
+  const fee = getResidencePermitFee({ procedure: 'permanent', acceptanceDate: applicationDate, method: 'counter' });
+  const isPost = fee.regime === 'post-2026-10';
   return {
+    ...fee,
     applicationFee: 0, // Nộp hồ sơ miễn phí
-    grantFee: amount, // Lệ phí khi được cấp thẻ
-    currency: 'JPY',
+    grantFee: fee.amount, // Lệ phí khi được cấp phép
     paymentMethod: '収入印紙 (Revenue Stamp)',
     condition_ja: '永住許可の決定を受け、新しい在留カードを受領する際のみ納付（不許可の場合は0円）。',
-    condition_vn: 'Chỉ nộp khi nhận thẻ Vĩnh trú chính thức (Từ chối nộp 0 JPY).',
-    condition_en: 'Payable exclusively upon receiving the Permanent Resident card (0 JPY if denied).',
-    statutoryBasis: '出入国管理及び難民認定法関係手数料令第2条',
-    note: isPostOct2026
-      ? '2026年10月1日以降の手数料改定（10,000円）が適用されます。'
-      : '2026年9月30日までの現行手数料（8,000円）が適用されます。'
+    condition_vn: 'Chỉ nộp khi được cấp phép Vĩnh trú và nhận thẻ mới (bị từ chối: 0 JPY).',
+    condition_en: 'Payable only upon grant of permanent residence (0 JPY if denied).',
+    statutoryBasis: fee.legalBasis,
+    note: isPost
+      ? '2026年10月1日以降に受付された申請：永住許可手数料は200,000円です（減額対象者は20,000円、窓口申請のみ）。'
+      : '2026年9月30日までに受付された申請：許可が10月1日以降でも手数料は10,000円です（10月1日以降の受付分は200,000円）。',
+    note_vn: isPost
+      ? 'Hồ sơ tiếp nhận từ 01/10/2026: lệ phí Vĩnh trú là 200.000 yên (diện khó khăn được giảm còn 20.000 yên, chỉ khi nộp tại quầy).'
+      : 'Hồ sơ được tiếp nhận đến hết 30/09/2026: lệ phí 10.000 yên kể cả khi có kết quả sau 01/10/2026. Hồ sơ tiếp nhận từ 01/10/2026: 200.000 yên.',
   };
 }
 
 /**
- * Cảnh báo pháp lý về Cải cách Luật Nhập cảnh 2024/2026
- * (Quy định thu hồi vĩnh trú nếu cố tình trốn thuế / an sinh xã hội)
+ * Cơ chế hủy tư cách Vĩnh trú (改正入管法 2024) — có hiệu lực từ 01/04/2027.
+ * Trên thực tế ISA cho biết thường sẽ chuyển sang tư cách khác (thường là 定住者) theo thẩm quyền,
+ * không phải trục xuất; sơ suất nhỏ, vô ý không phải là đối tượng.
  */
 export const PR_2026_REFORM_CONTEXT = {
-  title_ja: '【法改正情報】永住許可後の在留資格取消制度（2024年成立・2026〜2027年施行見込み）',
-  title_vn: '【Thông tin cải cách pháp luật】Cơ chế thu hồi tư cách Vĩnh trú nếu trốn thuế / an sinh xã hội',
-  title_en: '【Legal Reform】Revocation of Permanent Residence for Intentional Tax/Social Insurance Evasion',
-  content_ja: '2024年に入管法が改正され、永住者であっても故意に公租公課（税金や国民健康保険・年金）を納付しない場合や、特定の重大な法令違反があった場合に、永住許可を取り消して別の在留資格へ変更できる規定が導入されました。永住権取得後も納税義務の適正な履行が継続して求められます。',
-  content_vn: 'Quốc hội Nhật Bản đã thông qua Luật Nhập cảnh sửa đổi (dự kiến có hiệu lực khoảng 2026-2027), bổ sung chế tài: Ngay cả khi đã có Vĩnh trú, nếu cố tình trốn nộp thuế hoặc trốn đóng BHYT/Nenkin kéo dài, Cục Nhập cảnh có quyền THU HỒI TƯ CÁCH VĨNH TRÚ và hạ cấp xuống visa lao động thông thường.',
-  content_en: 'The 2024 revised Immigration Act introduces powers to revoke Permanent Resident status if an individual intentionally and repeatedly fails to pay taxes or social security contributions.'
+  effectiveFrom: '2027-04-01',
+  title_ja: '【法改正情報】永住許可の取消し制度（2024年改正入管法・2027年4月1日施行）',
+  title_vn: '【Thông tin cải cách pháp luật】Cơ chế hủy tư cách Vĩnh trú (Luật sửa đổi 2024, hiệu lực từ 01/04/2027)',
+  title_en: '【Legal Reform】Revocation of Permanent Residence (2024 amendment, effective 1 Apr 2027)',
+  content_ja: '2024年改正入管法により、2027年4月1日から、永住者が故意に公租公課（税金・社会保険料等）の支払をしない場合や一定の刑罰法令違反等の場合に、永住許可を取り消すことができるようになります。取り消す場合でも、原則として職権で他の在留資格（多くは「定住者」）への変更が行われ、直ちに退去強制となるものではありません。うっかりした一時的な遅れなど軽微なものは対象とされていません。永住許可後も納税等の義務を継続して履行してください。',
+  content_vn: 'Theo Luật Nhập cảnh sửa đổi năm 2024, từ ngày 01/04/2027, nếu người Vĩnh trú CỐ Ý không nộp thuế / phí bảo hiểm xã hội, hoặc vi phạm một số tội hình sự nhất định, tư cách Vĩnh trú có thể bị hủy. Ngay cả khi bị hủy, về nguyên tắc Cục XNC sẽ chuyển sang một tư cách lưu trú khác theo thẩm quyền (thường là 定住者 – Định trú), không phải trục xuất ngay. Sơ suất nhỏ, chậm nộp tạm thời do vô ý không phải là đối tượng. Sau khi có Vĩnh trú vẫn cần tiếp tục nộp thuế, bảo hiểm đầy đủ.',
+  content_en: 'Under the 2024 amendment, from 1 Apr 2027 permanent residence may be revoked if the holder intentionally fails to pay taxes or social insurance, or commits certain crimes. Even then, the status is in principle changed ex officio to another status (usually Long-Term Resident) rather than deportation; minor, inadvertent slips are not targeted. Keep meeting tax and insurance obligations after obtaining PR.',
 };

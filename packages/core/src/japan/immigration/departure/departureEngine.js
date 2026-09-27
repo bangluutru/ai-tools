@@ -8,6 +8,8 @@
 
 import { DEPARTURE_STAGES, DEPARTURE_TASKS_CATALOG, DEPARTURE_SOURCES } from './departureRules.js';
 import { addDays, calculateDaysRemaining } from '../arrival/arrivalEngine.js';
+import { parseLocalDate, formatLocalDate, addMonthsClamped, todayLocalISO } from '../shared/localDate.js';
+import { getOtherImmigrationFee } from '../shared/immigrationFeeTable.js';
 
 /**
  * Đánh giá checklist phẳng theo ngữ cảnh xuất cảnh
@@ -17,7 +19,7 @@ import { addDays, calculateDaysRemaining } from '../arrival/arrivalEngine.js';
  */
 export function evaluateDepartureChecklist(context = {}, options = {}) {
   const {
-    departureDate = new Date().toISOString().split('T')[0],
+    departureDate = todayLocalISO(),
     departureType = 'permanent', // 'permanent' | 'temporary'
     tripDurationMonths = 6,      // áp dụng khi 'temporary'
     hasPensionContributions = true,
@@ -62,11 +64,14 @@ export function evaluateDepartureChecklist(context = {}, options = {}) {
         item.earliestStartDate = addDays(departureDate, -item.deadlineRule.offsetDays);
       } else if (item.deadlineRule.direction === 'after') {
         // Ví dụ nộp Nenkin 1 lần: trong vòng 730 ngày sau ngày xuất cảnh
-        item.calculatedDeadlineDate = addDays(departureDate, item.deadlineRule.offsetDays);
+        const dep = parseLocalDate(departureDate);
+        item.calculatedDeadlineDate = item.deadlineRule.offsetMonths && dep
+          ? formatLocalDate(addMonthsClamped(dep, item.deadlineRule.offsetMonths))
+          : addDays(departureDate, item.deadlineRule.offsetDays);
       }
 
       if (item.calculatedDeadlineDate) {
-        item.daysRemaining = calculateDaysRemaining(item.calculatedDeadlineDate);
+        item.daysRemaining = calculateDaysRemaining(item.calculatedDeadlineDate, context.currentDate);
         item.isUrgent = item.daysRemaining !== null && item.daysRemaining <= 7 && item.daysRemaining >= 0;
         item.isOverdue = item.daysRemaining !== null && item.daysRemaining < 0;
       }
@@ -116,6 +121,9 @@ export function generateDeparturePlan(context = {}, options = {}) {
 
   const warnings = [];
 
+  const reentrySingle = getOtherImmigrationFee('reentrySingle');
+  const reentryMultiple = getOtherImmigrationFee('reentryMultiple');
+
   // 1. Cảnh báo nhánh xuất cảnh tạm thời
   if (context.departureType === 'temporary') {
     const months = Number(context.tripDurationMonths) || 0;
@@ -126,8 +134,8 @@ export function generateDeparturePlan(context = {}, options = {}) {
         titleJa: '【要注意】1年を超える出国には「通常の再入国許可」の事前取得が必要です',
         titleVi: '【Lưu ý quan trọng】Chuyến đi trên 1 năm bắt buộc phải xin phép tái nhập cảnh trước tại Cục ISA',
         titleEn: '【Notice】Departure over 1 year requires applying for a formal Re-entry Permit at ISA',
-        messageJa: 'みなし再入国許可（空港EDカード）は最長1年です。出国前に地方入管窓口で再入国許可（一次3,000円/数次6,000円）を取得しないと在留資格が失効します。',
-        messageVi: 'Giấy phép đặc lệ Minashi Re-entry chỉ có hiệu lực tối đa 1 năm. Nếu không xin Giấy phép tái nhập cảnh tại Cục trước khi xuất cảnh, tư cách lưu trú sẽ bị hủy khi đi quá 1 năm.',
+        messageJa: `みなし再入国許可（空港EDカード）は最長1年です。出国前に地方入管で再入国許可（窓口：1回限り${reentrySingle.counterAmount.toLocaleString()}円／数次${reentryMultiple.counterAmount.toLocaleString()}円、オンライン：${reentrySingle.onlineAmount.toLocaleString()}円／${reentryMultiple.onlineAmount.toLocaleString()}円）を取得しないと在留資格が失効します。`,
+        messageVi: `Giấy phép đặc lệ Minashi Re-entry chỉ có hiệu lực tối đa 1 năm. Nếu không xin Giấy phép tái nhập cảnh tại Cục trước khi xuất cảnh (lệ phí tại quầy: ${reentrySingle.counterAmount.toLocaleString('de-DE')} yên 1 lần / ${reentryMultiple.counterAmount.toLocaleString('de-DE')} yên nhiều lần; online: ${reentrySingle.onlineAmount.toLocaleString('de-DE')} / ${reentryMultiple.onlineAmount.toLocaleString('de-DE')} yên), tư cách lưu trú sẽ mất hiệu lực khi đi quá 1 năm.`,
         messageEn: 'Special Minashi re-entry is valid for 1 year maximum. You must obtain a formal permit at ISA before departing Japan to prevent visa forfeiture.'
       });
     } else {
@@ -170,7 +178,7 @@ export function generateDeparturePlan(context = {}, options = {}) {
             titleJa: '【期限切れ】出国から2年を超過しているため脱退一時金の請求権が消滅している可能性があります',
             titleVi: '【Hết hạn】Đã quá 2 năm kể từ ngày rời Nhật, quyền yêu cầu nhận Nenkin 1 lần có thể đã hết hiệu lực',
             titleEn: '【Expired】More than 2 years have elapsed since departure; claim rights may have expired',
-            messageJa: '国民年金法・厚生年金保険法の規定により、日本国内に住所を有しなくなった日から2年を経過すると請求権が時効消滅します。',
+            messageJa: '脱退一時金は、日本に住所を有しなくなった日から2年を経過すると請求できなくなります。',
             messageVi: 'Theo Luật Hưu trí, quyền yêu cầu thanh toán tiền rút một lần sẽ hết hiệu lực nếu quá 2 năm kể từ ngày không còn cư trú tại Nhật.',
             messageEn: 'Under Pension Law, rights to claim lump-sum withdrawal extinguish after 2 years from unregistering residence in Japan.'
           });

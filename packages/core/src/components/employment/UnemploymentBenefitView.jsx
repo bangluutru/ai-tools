@@ -29,6 +29,7 @@ import {
   calculateUnemploymentBenefit,
   EFFECTIVE_PERIODS
 } from '../../japan/employment/index.js';
+import { todayLocalISO } from '../../japan/employment/localDate.js';
 
 const TRANSLATIONS = {
   ja: {
@@ -39,7 +40,9 @@ const TRANSLATIONS = {
     monthlyWageHint: '※ 退職前6ヶ月間に支払われた総賃金（基本給＋残業代＋役職・通勤手当等）の1ヶ月平均を入力してください。',
     yenUnit: '円',
     ageLabel: '退職時の年齢',
-    ageHint: '※ 30歳未満、30〜44歳、45〜59歳、60〜64歳で賃金日額および給付日数の上限が異なります。',
+    ageHint: '※ 30歳未満、30〜44歳、45〜59歳、60〜64歳で賃金日額および給付日数の上限が異なります。65歳以上は高年齢求職者給付金（一時金）になります。',
+    seniorNoticeTitle: '65歳以上の方は「高年齢求職者給付金」（一時金）の対象です',
+    seniorNoticeBody: '65歳以上で離職した場合は基本手当ではなく、被保険者期間1年未満なら基本手当日額の30日分、1年以上なら50日分が一時金で支給されます（離職前1年間に被保険者期間6ヶ月以上が必要）。上限額は30歳未満の区分と同じです。',
     ageUnit: '歳',
     insuredYearsLabel: '雇用保険の通算加入年数（被保険者期間）',
     insuredYearsHint: '※ 過去の会社での加入期間も、離職票をもとに通算されている場合は合算できます。',
@@ -85,7 +88,9 @@ const TRANSLATIONS = {
     monthlyWageHint: '※ Tính tổng thu nhập chịu bảo hiểm trong 6 tháng chia cho 6 (đã bao gồm tiền làm thêm giờ, phụ cấp chức vụ, đi lại; không tính tiền thưởng bonus hay trợ cấp thôi việc).',
     yenUnit: 'yên',
     ageLabel: 'Tuổi tại thời điểm thôi việc',
-    ageHint: '※ Luật phân chia trần tiền lương và trợ cấp theo các nhóm tuổi: <30, 30-44, 45-59 và 60-64 tuổi.',
+    ageHint: '※ Luật phân chia trần tiền lương và trợ cấp theo các nhóm tuổi: <30, 30-44, 45-59 và 60-64 tuổi. Từ 65 tuổi trở lên chuyển sang trợ cấp một lần (高年齢求職者給付金).',
+    seniorNoticeTitle: 'Từ 65 tuổi: nhận 高年齢求職者給付金 (trợ cấp một lần)',
+    seniorNoticeBody: 'Người nghỉ việc khi đã 65 tuổi trở lên không nhận 基本手当 theo đợt mà nhận MỘT LẦN: 30 ngày trợ cấp nếu tham gia bảo hiểm dưới 1 năm, 50 ngày nếu từ 1 năm trở lên (cần ít nhất 6 tháng tham gia trong 1 năm trước khi nghỉ). Trần áp dụng như nhóm dưới 30 tuổi.',
     ageUnit: 'tuổi',
     insuredYearsLabel: 'Tổng số năm đã đóng bảo hiểm việc làm (通算被保険者期間)',
     insuredYearsHint: '※ Có thể cộng dồn các công ty trước đây nếu thời gian nghỉ giữa các công ty dưới 1 năm.',
@@ -131,7 +136,9 @@ const TRANSLATIONS = {
     monthlyWageHint: '※ Total gross salary in the 6 months before separation divided by 6 (base wage + overtime + transport allowance; exclude biannual bonuses).',
     yenUnit: 'JPY',
     ageLabel: 'Age at Separation',
-    ageHint: '※ Daily wage and benefit maximum caps vary by age groups: <30, 30-44, 45-59, and 60-64.',
+    ageHint: '※ Daily wage and benefit maximum caps vary by age groups: <30, 30-44, 45-59, and 60-64. Age 65+ receives the lump-sum 高年齢求職者給付金.',
+    seniorNoticeTitle: 'Age 65+: Lump-sum Senior Job Seeker Benefit (高年齢求職者給付金)',
+    seniorNoticeBody: 'If you leave at 65 or older you receive a one-time payment instead of the basic allowance: 30 days of the daily amount if insured under 1 year, 50 days if insured 1 year or more (at least 6 insured months in the year before separation required). Caps follow the under-30 bracket.',
     ageUnit: 'yrs',
     insuredYearsLabel: 'Total Insured Years in Employment Insurance',
     insuredYearsHint: '※ Years can be combined across prior employers if the employment gap was under 1 year.',
@@ -181,20 +188,30 @@ export default function UnemploymentBenefitView({ lang = 'ja' }) {
   const [separationCategory, setSeparationCategory] = useState('COMPANY_CAUSE');
   const [isFavorableDuration, setIsFavorableDuration] = useState(false);
   const [isDifficultToEmploy, setIsDifficultToEmploy] = useState(false);
-  const [targetDate, setTargetDate] = useState('2026-09-01');
+  const [targetDate, setTargetDate] = useState(() => todayLocalISO());
 
   // Calculation via Statutory Engine
   const result = useMemo(() => {
     return calculateUnemploymentBenefit({
       monthlyWage: Number(monthlyWage) || 0,
       age: Number(age) || 30,
-      insuredYears: Number(insuredYears) || 1,
+      insuredYears: Number.isFinite(Number(insuredYears)) ? Math.max(0, Number(insuredYears)) : 0,
       separationCategory,
       isFavorableDuration: separationCategory === 'SPECIFIC_REASONS' ? isFavorableDuration : false,
       isDifficultToEmploy,
       targetDate
     });
   }, [monthlyWage, age, insuredYears, separationCategory, isFavorableDuration, isDifficultToEmploy, targetDate]);
+
+  // Ngưỡng A/B của kỳ hiệu lực & nhóm tuổi đang áp dụng (không hard-code)
+  const fmtYen = (n) => Number(n).toLocaleString();
+  const tierA = result.thresholdA;
+  const tierB = result.thresholdB;
+  const is60to64 = result.ageBracketKey === 'age_60_64';
+  const tierBBenefit = is60to64 ? Math.floor((tierB * 9) / 20) : Math.floor(tierB / 2);
+  const isTierLow = result.dailyWage < tierA;
+  const isTierMid = result.dailyWage >= tierA && result.dailyWage <= tierB;
+  const isTierHigh = result.dailyWage > tierB;
 
   return (
     <StandardToolLayout
@@ -215,12 +232,12 @@ export default function UnemploymentBenefitView({ lang = 'ja' }) {
               <select
                 id="period-select"
                 aria-label={t.periodSelectLabel}
-                value={targetDate >= '2026-08-01' ? '2026-09-01' : '2026-05-01'}
+                value={result.effectivePeriod.startDate}
                 onChange={(e) => setTargetDate(e.target.value)}
                 className="w-full sm:w-auto px-3 py-1.5 rounded-lg border border-outline-variant/50 bg-surface text-on-surface text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
               >
-                <option value="2026-09-01">{EFFECTIVE_PERIODS.PERIOD_2026_08.nameJa}</option>
-                <option value="2026-05-01">{EFFECTIVE_PERIODS.PERIOD_2025_08.nameJa}</option>
+                <option value={EFFECTIVE_PERIODS.PERIOD_2026_08.startDate}>{EFFECTIVE_PERIODS.PERIOD_2026_08.nameJa}</option>
+                <option value={EFFECTIVE_PERIODS.PERIOD_2025_08.startDate}>{EFFECTIVE_PERIODS.PERIOD_2025_08.nameJa}</option>
               </select>
             </div>
           </div>
@@ -269,9 +286,9 @@ export default function UnemploymentBenefitView({ lang = 'ja' }) {
                   aria-label={t.ageLabel}
                   type="number"
                   min="15"
-                  max="64"
+                  max="99"
                   value={age}
-                  onChange={(e) => setAge(Math.max(15, Math.min(64, parseInt(e.target.value, 10) || 30)))}
+                  onChange={(e) => setAge(Math.max(15, Math.min(99, parseInt(e.target.value, 10) || 30)))}
                   className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/50 bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-bold text-sm pr-16"
                 />
                 <span className="absolute right-4 top-2.5 text-sm text-on-surface-variant font-medium">
@@ -281,6 +298,15 @@ export default function UnemploymentBenefitView({ lang = 'ja' }) {
               <p className="text-xs text-on-surface-variant leading-relaxed">
                 {t.ageHint}
               </p>
+              {result.isSeniorJobSeeker && (
+                <div role="status" className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-1">
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    {t.seniorNoticeTitle}
+                  </p>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">{t.seniorNoticeBody}</p>
+                </div>
+              )}
             </div>
 
             {/* Total Insured Years */}
@@ -300,7 +326,10 @@ export default function UnemploymentBenefitView({ lang = 'ja' }) {
                   min="0"
                   max="45"
                   value={insuredYears}
-                  onChange={(e) => setInsuredYears(Math.max(0, parseFloat(e.target.value) || 0))}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    setInsuredYears(Number.isFinite(v) ? Math.max(0, v) : 0);
+                  }}
                   className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/50 bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-bold text-sm pr-16"
                 />
                 <span className="absolute right-4 top-2.5 text-sm text-on-surface-variant font-medium">
@@ -420,7 +449,8 @@ export default function UnemploymentBenefitView({ lang = 'ja' }) {
               </p>
             </div>
 
-            {/* 4-Week Payment Sub-card */}
+            {/* 4-Week Payment Sub-card (65+ nhận một lần nên không hiển thị) */}
+            {!result.isSeniorJobSeeker && (
             <div className="p-4 rounded-xl bg-surface border border-outline-variant/30 space-y-1 md:min-w-[240px]">
               <span className="text-xs text-on-surface-variant font-medium block">
                 {t.card4WeeksPayment}
@@ -432,6 +462,7 @@ export default function UnemploymentBenefitView({ lang = 'ja' }) {
                 ≈ {result.approxMonthlyEquivalent.toLocaleString()} {t.yenUnit} / tháng
               </span>
             </div>
+            )}
           </div>
 
           {/* Metric Cards Grid */}
@@ -471,7 +502,7 @@ export default function UnemploymentBenefitView({ lang = 'ja' }) {
                 {result.effectiveBenefitRatePercent}%
               </p>
               <span className="text-[11px] text-on-surface-variant block">
-                法定基準: 50%〜80%
+                法定基準: {is60to64 ? '45%〜80%' : '50%〜80%'}
               </span>
             </div>
 
@@ -511,30 +542,30 @@ export default function UnemploymentBenefitView({ lang = 'ja' }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/20">
-                <tr className={result.dailyWage <= 5280 ? 'bg-surface-container-high font-bold' : ''}>
-                  <td className="py-2.5 px-3">5,280円 以下 (低賃金層)</td>
+                <tr className={isTierLow ? 'bg-surface-container-high font-bold' : ''}>
+                  <td className="py-2.5 px-3">{fmtYen(result.dailyWageMin)}円 〜 {fmtYen(tierA - 1)}円 (低賃金層)</td>
                   <td className="py-2.5 px-3 text-emerald-700 dark:text-emerald-400 font-bold">80%</td>
-                  <td className="py-2.5 px-3">2,295円 〜 4,224円</td>
+                  <td className="py-2.5 px-3">{fmtYen(result.dailyBenefitMin)}円 〜 {fmtYen(Math.floor(((tierA - 1) * 8) / 10))}円</td>
                   <td className="py-2.5 px-3">
-                    {result.dailyWage <= 5280 && <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary text-on-primary">該当</span>}
+                    {isTierLow && <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary text-on-primary">該当</span>}
                   </td>
                 </tr>
-                <tr className={result.dailyWage > 5280 && result.dailyWage <= 12980 ? 'bg-surface-container-high font-bold' : ''}>
-                  <td className="py-2.5 px-3">5,281円 〜 12,980円 (中間層)</td>
-                  <td className="py-2.5 px-3 text-primary font-bold">80% 〜 50% スライド逓減</td>
-                  <td className="py-2.5 px-3">4,225円 〜 6,490円</td>
+                <tr className={isTierMid ? 'bg-surface-container-high font-bold' : ''}>
+                  <td className="py-2.5 px-3">{fmtYen(tierA)}円 〜 {fmtYen(tierB)}円 (中間層)</td>
+                  <td className="py-2.5 px-3 text-primary font-bold">{is60to64 ? '80% 〜 45% スライド逓減' : '80% 〜 50% スライド逓減'}</td>
+                  <td className="py-2.5 px-3">{fmtYen(Math.floor((tierA * 8) / 10))}円 〜 {fmtYen(tierBBenefit)}円</td>
                   <td className="py-2.5 px-3">
-                    {result.dailyWage > 5280 && result.dailyWage <= 12980 && (
+                    {isTierMid && (
                       <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary text-on-primary">該当 ({result.effectiveBenefitRatePercent}%)</span>
                     )}
                   </td>
                 </tr>
-                <tr className={result.dailyWage > 12980 ? 'bg-surface-container-high font-bold' : ''}>
-                  <td className="py-2.5 px-3">12,981円 以上 (高賃金層)</td>
-                  <td className="py-2.5 px-3 text-blue-700 dark:text-blue-400 font-bold">50%（60〜64歳は45%）※上限あり</td>
-                  <td className="py-2.5 px-3">6,491円 〜 上限 {result.dailyBenefitMax.toLocaleString()}円</td>
+                <tr className={isTierHigh ? 'bg-surface-container-high font-bold' : ''}>
+                  <td className="py-2.5 px-3">{fmtYen(tierB + 1)}円 以上 (高賃金層)</td>
+                  <td className="py-2.5 px-3 text-blue-700 dark:text-blue-400 font-bold">{is60to64 ? '45%' : '50%'} ※上限あり</td>
+                  <td className="py-2.5 px-3">{fmtYen(tierBBenefit)}円 〜 上限 {fmtYen(result.dailyBenefitMax)}円</td>
                   <td className="py-2.5 px-3">
-                    {result.dailyWage > 12980 && <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary text-on-primary">該当</span>}
+                    {isTierHigh && <span className="px-2 py-0.5 rounded-full text-[10px] bg-primary text-on-primary">該当</span>}
                   </td>
                 </tr>
               </tbody>

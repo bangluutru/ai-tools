@@ -174,9 +174,17 @@ export default function ProcedureGuidePane({
       {/* Tiêu đề & Thông tin thẩm tra */}
       <div className="space-y-1.5 border-b border-border-subtle pb-3">
         <div className="flex flex-wrap items-center justify-between gap-1.5">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-            <ShieldCheck size={11} />
-            <span>{procedure.last_verified}</span>
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold border ${
+              procedure.status === 'VERIFIED'
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20'
+                : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
+            }`}
+          >
+            {procedure.status === 'VERIFIED' ? <ShieldCheck size={11} /> : <AlertCircle size={11} />}
+            <span>
+              {t.guide.statusLabels?.[procedure.status] || t.guide.statusLabels?.NEEDS_REVIEW} · {t.guide.checkedOn} {procedure.last_verified}
+            </span>
           </span>
           <span className="text-[10px] text-outline font-mono">
             {procedure.id}
@@ -198,11 +206,22 @@ export default function ProcedureGuidePane({
             <Building2 size={14} />
             <span>{t.guide.competentOffice}</span>
           </div>
-          <span className="text-[10px] px-1.5 py-0.2 rounded bg-primary/10 text-primary font-medium">
-            {t.guide.submissionMethods}
+          <span
+            className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${
+              procedure.submission_mode === 'unconfirmed'
+                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                : 'bg-primary/10 text-primary'
+            }`}
+          >
+            {t.guide.submissionModes?.[procedure.submission_mode] || t.guide.submissionModes?.unconfirmed}
           </span>
         </div>
 
+        {!activeOffice ? (
+          <div className="text-[11px] text-amber-700 dark:text-amber-300 font-semibold">
+            {t.header.selectPrefectureFirst}
+          </div>
+        ) : (
         <div className="text-xs text-on-surface space-y-1">
           <div className="font-bold text-xs text-on-surface">
             {officeName}
@@ -214,15 +233,44 @@ export default function ProcedureGuidePane({
           <div className="text-[11px] text-on-surface-variant flex items-center gap-3 pt-0.5">
             <span className="flex items-center gap-1 font-mono">
               <Phone size={10} />
-              {activeOffice.hotline}
+              {activeOffice.procedurePhone || '—'}
             </span>
             <span className="flex items-center gap-1">
               <Clock size={10} />
               {activeOffice.workingHours.submission}
             </span>
           </div>
+          {activeOffice.citizenProtectionHotline && (
+            <div className="text-[11px] text-on-surface-variant">
+              {t.header.citizenProtectionHotline}{' '}
+              <span className="font-mono">{activeOffice.citizenProtectionHotline}</span>
+            </div>
+          )}
+          {activeOffice.jurisdictionNote && (
+            <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 flex items-start gap-1">
+              <AlertCircle size={11} className="shrink-0 mt-0.5" />
+              <span>{activeOffice.jurisdictionNote}</span>
+            </div>
+          )}
         </div>
+        )}
       </div>
+
+      {/* Lưu ý quan trọng theo trang chính thức */}
+      {(procedure.important_notes?.length > 0 || procedure.fee_note) && (
+        <div className="bg-amber-500/5 border border-amber-500/20 p-3 rounded-xl space-y-1 text-[11px] text-on-surface-variant">
+          <div className="font-bold text-on-surface flex items-center gap-1">
+            <AlertCircle size={12} className="text-amber-600" />
+            <span>{t.guide.importantNotice}</span>
+          </div>
+          <ul className="list-disc pl-4 space-y-0.5">
+            {procedure.important_notes?.map((note, i) => (
+              <li key={i}>{note}</li>
+            ))}
+            {procedure.fee_note && <li>{procedure.fee_note}</li>}
+          </ul>
+        </div>
+      )}
 
       {/* Checklist hồ sơ cần chuẩn bị */}
       <div className="space-y-2">
@@ -324,6 +372,8 @@ export default function ProcedureGuidePane({
           ))}
         </div>
       </div>
+
+      <p className="text-[10.5px] text-outline leading-relaxed">{t.header.disclaimer}</p>
 
       {/* Nguồn pháp lý & Website chính thức */}
       <div className="pt-2 border-t border-border-subtle flex flex-wrap items-center justify-between gap-2 text-xs">

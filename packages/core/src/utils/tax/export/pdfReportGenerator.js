@@ -120,6 +120,9 @@ export async function generateTaxPdfReport(arg1, arg2) {
   const taxRows = [
     ['National Income Tax (Base)', `JPY ${calcResult.incomeTax.baseIncomeTax.toLocaleString()}`],
     ['Reconstruction Surtax (2.1%)', `JPY ${calcResult.incomeTax.reconstructionTax.toLocaleString()}`],
+    ...(calcResult.incomeTax.roundingAdjustment
+      ? [['Rounding (income tax total truncated to 100 JPY)', `JPY ${calcResult.incomeTax.roundingAdjustment.toLocaleString()}`]]
+      : []),
     ['Resident Tax (Income Levy)', `JPY ${calcResult.residentTax.incomeLevy.toLocaleString()}`],
     ['Resident Tax (Per Capita Levy)', `JPY ${calcResult.residentTax.perCapitaFlat.toLocaleString()}`],
     ['National Forest Environment Tax', `JPY ${calcResult.residentTax.forestryTax.toLocaleString()}`],
@@ -161,11 +164,14 @@ export async function generateTaxPdfReport(arg1, arg2) {
   const socialRows = [];
   if (calcResult.socialInsurance.isCompanyEmployee) {
     socialRows.push(['Health Insurance (Kyōkai Kenpo Employee Share)', `JPY ${calcResult.socialInsurance.healthInsurance.toLocaleString()}`]);
-    if (calcResult.socialInsurance.careInsurance > 0) {
-      socialRows.push(['Long-Term Care Insurance (Kaigo Hoken - Age 40+)', `JPY ${calcResult.socialInsurance.careInsurance.toLocaleString()}`]);
+    if (calcResult.socialInsurance.childSupportContribution > 0) {
+      socialRows.push(['Child & Family Support Levy (Kodomo Kosodate Shienkin)', `JPY ${calcResult.socialInsurance.childSupportContribution.toLocaleString()}`]);
     }
-    socialRows.push(['Employees Welfare Pension (Kōsei Nenkin - Employee 9.15%)', `JPY ${calcResult.socialInsurance.welfarePension.toLocaleString()}`]);
-    socialRows.push(['Employment Insurance (Koyō Hoken - Employee 0.6%)', `JPY ${calcResult.socialInsurance.employmentInsurance.toLocaleString()}`]);
+    if (calcResult.socialInsurance.careInsurance > 0) {
+      socialRows.push(['Long-Term Care Insurance (Kaigo Hoken - Age 40-64)', `JPY ${calcResult.socialInsurance.careInsurance.toLocaleString()}`]);
+    }
+    socialRows.push([`Employees Welfare Pension (Kōsei Nenkin - Employee ${((calcResult.socialInsurance.rates?.pensionEmployee || 0) * 100).toFixed(2)}%)`, `JPY ${calcResult.socialInsurance.welfarePension.toLocaleString()}`]);
+    socialRows.push(['Employment Insurance (Koyō Hoken - Employee share)', `JPY ${calcResult.socialInsurance.employmentInsurance.toLocaleString()}`]);
   } else {
     socialRows.push(['National Health Insurance (Kokumin Kenkō Hoken)', `JPY ${calcResult.socialInsurance.nationalHealthInsurance.toLocaleString()}`]);
     socialRows.push(['National Pension (Kokumin Nenkin)', `JPY ${calcResult.socialInsurance.nationalPension.toLocaleString()}`]);

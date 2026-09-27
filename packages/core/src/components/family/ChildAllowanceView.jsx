@@ -49,6 +49,8 @@ const TRANSLATIONS = {
     addChildBtn: 'お子様を追加する',
     childNameLabel: 'お名前（または続柄）',
     childAgeLabel: '年齢',
+    childBirthDateLabel: '生年月日（推奨：18歳・22歳到達後の3月31日を正確に判定）',
+    ageEstimateNote: '※ 生年月日が未入力の子は年齢から概算しています（18歳・22歳の年度末判定は生年月日の入力で正確になります）。',
     hasSupportLabel: '親が生活費・学費等の経済的負担を負っている',
     hasSupportHint: '※ 19〜22歳のお子様は、監護相当・経済的負担がある場合に第3子加算のカウント対象となります。',
     sectionIncome: '2. 世帯年収（制度改正前との比較用）',
@@ -99,6 +101,8 @@ const TRANSLATIONS = {
     addChildBtn: 'Thêm con',
     childNameLabel: 'Tên con (hoặc thứ tự)',
     childAgeLabel: 'Tuổi',
+    childBirthDateLabel: 'Ngày sinh (khuyến nghị: xét chính xác mốc 31/3 sau khi đủ 18 / 22 tuổi)',
+    ageEstimateNote: '※ Con chưa nhập ngày sinh được ước tính theo tuổi (mốc hết năm tài chính 31/3 sau 18 và 22 tuổi chỉ chính xác khi nhập ngày sinh).',
     hasSupportLabel: 'Cha mẹ đang chu cấp học phí hoặc sinh hoạt phí',
     hasSupportHint: '※ Con từ 19-22 tuổi nếu vẫn phụ thuộc kinh tế sẽ được tính làm anh/chị để đẩy con út vào diện con thứ 3 hưởng mức 30,000円/tháng.',
     sectionIncome: '2. Thu nhập hộ gia đình (để so sánh với luật cũ)',
@@ -149,6 +153,8 @@ const TRANSLATIONS = {
     addChildBtn: 'Add Child',
     childNameLabel: 'Child Name / Label',
     childAgeLabel: 'Age',
+    childBirthDateLabel: 'Date of birth (recommended: exact 31 March cut-off after age 18 / 22)',
+    ageEstimateNote: '※ Children without a birth date are estimated from age (the 31 March cut-off after age 18 / 22 is exact only with a birth date).',
     hasSupportLabel: 'Parent provides living / tuition economic support',
     hasSupportHint: '※ Dependents aged 19-22 count as older siblings if supported, qualifying the 3rd child for 30,000 JPY.',
     sectionIncome: '2. Household Income (For Pre-Reform Comparison)',
@@ -275,10 +281,15 @@ export default function ChildAllowanceView({ lang = 'ja' }) {
           <p className="text-xs text-muted-foreground">
             {t.sectionChildrenHint}
           </p>
+          {result.childrenDetails?.some((d) => d.isAgeBasedEstimate) && (
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">{t.ageEstimateNote}</p>
+          )}
 
           <div className="space-y-4">
             {children.map((child) => {
-              const isSupportRelevant = child.age >= 19 && child.age <= 22;
+              const detail = result.childrenDetails?.find((d) => d.id === child.id);
+              const effectiveAge = child.birthDate && detail ? detail.age : child.age;
+              const isSupportRelevant = effectiveAge >= 18 && effectiveAge <= 22;
               return (
                 <div
                   key={child.id}
@@ -318,7 +329,8 @@ export default function ChildAllowanceView({ lang = 'ja' }) {
                           type="number"
                           min="0"
                           max="25"
-                          value={child.age}
+                          value={effectiveAge}
+                          disabled={Boolean(child.birthDate)}
                           onChange={(e) => handleUpdateChild(child.id, 'age', Math.max(0, parseInt(e.target.value, 10) || 0))}
                           className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-foreground font-medium text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none pr-8"
                         />
@@ -326,6 +338,23 @@ export default function ChildAllowanceView({ lang = 'ja' }) {
                           {t.ageUnit}
                         </span>
                       </div>
+                    </div>
+
+                    {/* Child Birth Date (optional, preferred) */}
+                    <div className="w-full sm:w-48 space-y-1">
+                      <label
+                        htmlFor={`child-birth-${child.id}`}
+                        className="block text-[11px] font-semibold text-muted-foreground"
+                      >
+                        {t.childBirthDateLabel}
+                      </label>
+                      <input
+                        id={`child-birth-${child.id}`}
+                        type="date"
+                        value={child.birthDate || ''}
+                        onChange={(e) => handleUpdateChild(child.id, 'birthDate', e.target.value)}
+                        className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-foreground font-medium text-xs sm:text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                      />
                     </div>
 
                     {/* Remove button */}

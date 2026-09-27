@@ -86,9 +86,9 @@ export const DEPARTURE_TASKS_CATALOG = Object.freeze([
     titleJa: '通常の再入国許可の事前申請（1年超〜最長5年）',
     titleVi: 'Xin Giấy Phép Tái Nhập Cảnh Thông Thường (Trên 1 Năm Đến 5 Năm)',
     titleEn: 'Formal Re-entry Permit Application (Over 1 Year Up to 5 Years)',
-    descJa: '1年を超えて出国する場合は、日本出国前に地方出入国在留管理局にて「再入国許可」を取得する必要があります。手数料は1回有効（一次）が3,000円、数次有効が6,000円（収入印紙）。許可を得ず1年を超えると在留資格が失効します。',
-    descVi: 'Nếu dự định rời Nhật trên 1 năm, bắt buộc phải đến Cục Xuất nhập cảnh nộp đơn xin Giấy phép tái nhập cảnh TRƯỚC KHI bay. Lệ phí tem doanh thu: 3.000 JPY (1 lần) hoặc 6.000 JPY (nhiều lần). Nếu đi quá 1 năm mà không xin phép, visa sẽ tự động bị hủy.',
-    descEn: 'If departing for longer than 1 year, apply for a formal Re-entry Permit at ISA prior to leaving Japan. Fee: 3,000 JPY (single) or 6,000 JPY (multiple). Leaving over 1 year without it causes status forfeiture.',
+    descJa: '1年を超えて出国する場合は、日本出国前に地方出入国在留管理局にて「再入国許可」を取得する必要があります。手数料は窓口申請で1回限り4,000円・数次7,000円（収入印紙）、オンライン申請で3,500円・6,500円（2026年10月1日以降のオンライン申請は別途決済手数料220円）。許可を得ず1年を超えると在留資格が失効します。',
+    descVi: 'Nếu dự định rời Nhật trên 1 năm, bắt buộc phải đến Cục Xuất nhập cảnh nộp đơn xin Giấy phép tái nhập cảnh TRƯỚC KHI bay. Lệ phí tại quầy: 4.000 JPY (1 lần) hoặc 7.000 JPY (nhiều lần) bằng tem 収入印紙; online: 3.500 / 6.500 JPY (từ 01/10/2026 online cộng 220 JPY phí thanh toán). Nếu đi quá 1 năm mà không xin phép, visa sẽ tự động bị hủy.',
+    descEn: 'If departing for longer than 1 year, apply for a formal Re-entry Permit at ISA prior to leaving Japan. Fee at the counter: 4,000 JPY (single) or 7,000 JPY (multiple) in revenue stamps; online: 3,500 / 6,500 JPY (+220 JPY payment fee for online applications from 1 Oct 2026). Leaving over 1 year without it causes status forfeiture.',
     authorityJa: '地方出入国在留管理局窓口',
     authorityVi: 'Cục Quản Lý Xuất Nhập Cảnh Địa Phương',
     authorityEn: 'Regional Immigration Services Bureau',
@@ -250,9 +250,9 @@ export const DEPARTURE_TASKS_CATALOG = Object.freeze([
     titleJa: '在留カードの返納・穴あけ失効処理（空港審査場）',
     titleVi: 'Xuất Trình Thẻ Cư Trú Để Đục Lỗ Hủy Tại Sân Bay',
     titleEn: 'Residence Card Surrender & Invalidation Punch (Airport)',
-    descJa: '出国審査場で審査官に「今後は日本に再入国せず完全出国する」旨を伝えます。審査官がカードの中央または角にパンチで穴を開け（失効処理）、記念として手元に返却してくれます。',
-    descVi: 'Tại quầy làm thủ tục xuất cảnh sân bay, thông báo với nhân viên hải quan bạn về nước hẳn (không tái nhập cảnh). Nhân viên sẽ đục lỗ tròn lên thẻ cư trú để vô hiệu hóa và trả lại thẻ cho bạn giữ làm kỷ niệm.',
-    descEn: 'Inform the immigration officer at airport exit that you are departing permanently. The officer will punch a hole through your residence card and return it to you as a souvenir.',
+    descJa: '出国審査場で審査官に「今後は日本に再入国せず完全出国する」旨を伝えます。審査官がカードの中央または角にパンチで穴を開け（失効処理）、記念として手元に返却してくれます。2026年6月14日以降に「特定在留カード」（マイナンバーカード機能付き在留カード）の交付を受けている方は、転出届の手続とあわせて取扱いを市区町村・入管で確認してください。',
+    descVi: 'Tại quầy làm thủ tục xuất cảnh sân bay, thông báo với nhân viên hải quan bạn về nước hẳn (không tái nhập cảnh). Nhân viên sẽ đục lỗ tròn lên thẻ cư trú để vô hiệu hóa và trả lại thẻ cho bạn giữ làm kỷ niệm. Nếu bạn dùng "特定在留カード" (thẻ cư trú tích hợp chức năng thẻ My Number, cấp từ 14/06/2026), hãy hỏi Tòa thị chính/Cục XNC về cách xử lý thẻ khi làm thủ tục chuyển đi.',
+    descEn: 'Inform the immigration officer at airport exit that you are departing permanently. The officer will punch a hole through your residence card and return it to you as a souvenir. If you hold a Specified Residence Card (residence card with My Number card functions, issued from 14 Jun 2026), confirm its handling with your municipality/ISA when filing the moving-out notice.',
     authorityJa: '出入国在留管理庁（空港出国審査場）',
     authorityVi: 'Cục Quản Lý Xuất Nhập Cảnh (Quầy xuất cảnh sân bay)',
     authorityEn: 'Immigration Services Agency (Airport Departure Desk)',
@@ -280,20 +280,21 @@ export const DEPARTURE_TASKS_CATALOG = Object.freeze([
     titleJa: '脱退一時金の請求（日本年金機構・出国後2年以内）',
     titleVi: 'Nộp Đơn Xin Tiền Rút Một Lần Hưu Trí (脱退一時金 - Hạn 2 Năm)',
     titleEn: 'Lump-Sum Pension Withdrawal Claim (JPS, Within 2 Years)',
-    descJa: '厚生年金または国民年金に6ヶ月以上加入した外国人は、日本国内に住所を有しなくなった日から2年以内に請求書・パスポート写し・銀行口座証明等を日本年金機構に郵送して受給可能。支給上限は最長60ヶ月（5年分）。',
-    descVi: 'Người nước ngoài đã đóng Nenkin từ 6 tháng trở lên có quyền nộp đơn xin nhận tiền rút một lần trong vòng 2 năm kể từ ngày hủy địa chỉ tại Nhật. Mức trần chi trả tối đa là 60 tháng (5 năm). Nộp qua đường bưu điện về Nhật Bản.',
-    descEn: 'Foreigners who paid pension for >= 6 months can claim a lump-sum refund by mailing form and documents to Japan Pension Service within 2 years of departure. Payment capped at 60 months (5 years).',
+    descJa: '厚生年金または国民年金に6ヶ月以上加入した外国人は、日本に住所を有しなくなった日から2年以内に請求書・パスポート写し・銀行口座証明等を日本年金機構に提出して受給可能。支給額計算の月数上限は現在60月（5年）。2025年の年金制度改正法により上限は8年に引き上げられる予定ですが、施行日は政令で定められます（未施行）。',
+    descVi: 'Người nước ngoài đã đóng Nenkin từ 6 tháng trở lên có quyền nộp đơn xin nhận tiền rút một lần trong vòng 2 năm kể từ ngày không còn địa chỉ tại Nhật (thường là ngày chuyển đi ghi trên 転出届). Mức trần tính tiền hiện là 60 tháng (5 năm); Luật cải cách lương hưu 2025 dự kiến nâng trần lên 8 năm nhưng ngày áp dụng do chính lệnh (政令) quy định — CHƯA áp dụng. Có thể nộp qua bưu điện hoặc online.',
+    descEn: 'Foreigners who paid pension for >= 6 months can claim a lump-sum refund by mailing form and documents to Japan Pension Service within 2 years of the day they ceased to have an address in Japan. The calculation cap is currently 60 months (5 years); the 2025 pension reform is set to raise it to 8 years from a date to be fixed by cabinet order (not yet in force).',
     authorityJa: '日本年金機構（外国業務部）',
     authorityVi: 'Cơ Quan Hưu Trí Nhật Bản (Ban Nghiệp vụ Nước ngoài)',
     authorityEn: 'Japan Pension Service (Foreign Operations Division)',
     sourceId: 'jps-lump-sum-withdrawal',
     deadlineRule: {
       anchorKey: 'departureDate',
-      offsetDays: 730, // 2 years
+      offsetDays: 730, // giữ để tương thích; engine dùng offsetMonths (2 năm theo lịch)
+      offsetMonths: 24,
       direction: 'after',
       description: {
-        ja: '住民票除票・出国日から2年以内厳守',
-        vi: 'Nghiêm ngặt trong vòng 2 năm kể từ ngày rời Nhật',
+        ja: '日本に住所を有しなくなった日（転出日）から2年以内',
+        vi: 'Trong vòng 2 năm kể từ ngày không còn địa chỉ tại Nhật (ngày chuyển đi) — nên gửi sớm',
         en: 'Strictly within 2 years of departure / unregistration'
       }
     },
@@ -314,7 +315,7 @@ export const DEPARTURE_TASKS_CATALOG = Object.freeze([
       lastVerifiedAt: '2026-09-11',
       status: 'verified',
       ruleNature: 'deterministic',
-      notes: 'Tiền rút một lần hưu trí (脱退一時金): Tối đa 60 tháng, thời hạn nộp 2 năm.'
+      notes: 'Tiền rút một lần hưu trí (脱退一時金): trần hiện 60 tháng; thời hạn 2 năm kể từ ngày không còn địa chỉ tại Nhật. Nguồn: https://www.nenkin.go.jp/service/jukyu/seido/sonota-kyufu/dattai-ichiji/20150406.html'
     })
   },
   {

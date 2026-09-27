@@ -374,3 +374,13 @@ test('M1 Work Scope: Special Statuses (Designated Activities & Temporary Visitor
     assertNoForbiddenCertainty(res);
   });
 });
+
+test('M1: 28h comprehensive permission is not offered to Trainee / Cultural Activities', () => {
+  const trainee = evaluateWorkScope({ residenceStatus: 'trainee', activityCategory: 'part_time_general', hasExtraActivityPermission: true, weeklyHours: 10 });
+  assert.equal(trainee.evaluationTier, 'potentially-outside-scope');
+  const cultural = evaluateWorkScope({ residenceStatus: 'cultural-activities', activityCategory: 'part_time_general', hasExtraActivityPermission: true, weeklyHours: 10 });
+  assert.equal(cultural.evaluationTier, 'needs-confirmation');
+  assert.ok(cultural.summaryJa.includes('個別許可'));
+  const student = evaluateWorkScope({ residenceStatus: 'student', activityCategory: 'part_time_general', hasExtraActivityPermission: true, weeklyHours: 20 });
+  assert.equal(student.evaluationTier, 'generally-within-scope');
+});

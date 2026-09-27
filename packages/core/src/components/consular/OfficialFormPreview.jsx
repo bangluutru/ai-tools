@@ -1,30 +1,39 @@
 /**
  * @file packages/core/src/components/consular/OfficialFormPreview.jsx
- * @description Trình kết xuất trực quan bản in A4 chính thức (Canonical A4 Document).
- * Tuân thủ tuyệt đối quy định của từng thông tư chuyên ngành:
- *  - TK02: Thông tư 31/2023/TT-BCA của Bộ Công an (2 trang độc lập)
- *  - Khai sinh / Kết hôn: Thông tư 04/2020/TT-BTP của Bộ Tư pháp
- *  - Giấy ủy quyền: Nghị định 30/2020/NĐ-CP & Bộ luật Dân sự 2015
- * Có cơ chế xử lý văn bản dài (font downscaling, overflow safe).
+ * @description Bản xem trước A4 của BẢN NHÁP hỗ trợ điền (không phải biểu mẫu chính thức).
+ *  - TK02: bố cục tham khảo theo TT 31/2023/TT-BCA (sửa đổi bởi TT 69/2026/TT-BCA); tờ khai nộp phải khai
+ *    trực tuyến tại passport.mofa.gov.vn.
+ *  - Giấy ủy quyền: Bộ luật Dân sự 2015 & NĐ 23/2015/NĐ-CP (chứng thực).
+ * Giá trị enum hiển thị bằng nhãn, ngày theo dd/mm/yyyy.
  */
 
 import React from 'react';
 import { getConsularI18n } from '../../consular/i18n/consularI18n.js';
+import { buildFieldIndex, formatFormFieldValue } from '../../consular/pdf/formValueFormat.js';
 
 export default function OfficialFormPreview({
   formConfig,
   formData = {},
   currentPage = 1,
   displayLang = 'vi',
+  officeCity = null,
 }) {
   const t = getConsularI18n(displayLang);
   const code = formConfig?.code || 'FORM';
+  const fieldIndex = buildFieldIndex(formConfig);
+  // Dữ liệu hiển thị: enum → nhãn, ngày → dd/mm/yyyy
+  const display = Object.fromEntries(
+    Object.entries(formData || {}).map(([k, v]) => [k, formatFormFieldValue(fieldIndex.get(k), v)])
+  );
+  const place = officeCity || '..........';
 
   if (code === 'TK02') {
     return (
       <TK02OfficialLayout
-        formData={formData}
+        formData={display}
+        rawData={formData}
         currentPage={currentPage}
+        place={place}
         t={t}
       />
     );
@@ -34,23 +43,24 @@ export default function OfficialFormPreview({
   return (
     <StandardOfficialLayout
       formConfig={formConfig}
-      formData={formData}
+      formData={display}
+      place={place}
       t={t}
     />
   );
 }
 
 /**
- * BỐ CỤC CHÍNH THỨC TK02 — THÔNG TƯ 31/2023/TT-BCA (BỘ CÔNG AN)
+ * BỐ CỤC THAM KHẢO TK02 — TT 31/2023/TT-BCA (sửa đổi bởi TT 69/2026/TT-BCA)
  */
-function TK02OfficialLayout({ formData, currentPage = 1 }) {
+function TK02OfficialLayout({ formData, rawData = {}, currentPage = 1, place = '..........' }) {
   if (currentPage === 2) {
     return (
       <div className="w-full h-full p-[18mm_15mm_15mm_15mm] flex flex-col justify-between box-border text-[11px] leading-relaxed text-black font-serif relative">
         <div className="space-y-4">
           {/* Header trang 2 */}
           <div className="text-center font-bold text-xs uppercase tracking-wide border-b border-gray-300 pb-2">
-            MẪU TK02 — TRANG 2 (Ý KIẾN VÀ XÁC NHẬN CHÍNH THỨC)
+            BẢN NHÁP TK02 — TRANG 2 (Ý KIẾN VÀ CAM ĐOAN)
           </div>
 
           {/* Mục 15: Ý kiến của cha, mẹ hoặc người giám hộ */}
@@ -95,7 +105,7 @@ function TK02OfficialLayout({ formData, currentPage = 1 }) {
           <div className="grid grid-cols-2 gap-4 text-center pt-2">
             <div />
             <div>
-              <div className="italic text-[10.5px]">Tokyo/Osaka, ngày ..... tháng ..... năm 202...</div>
+              <div className="italic text-[10.5px]">{place}, ngày ..... tháng ..... năm 20...</div>
               <div className="font-bold uppercase text-xs mt-1 mb-14">
                 NGƯỜI ĐỀ NGHỊ
               </div>
@@ -128,14 +138,14 @@ function TK02OfficialLayout({ formData, currentPage = 1 }) {
 
         {/* Chân trang 2 */}
         <div className="border-t border-gray-300 pt-2 flex justify-between text-[9.5px] text-gray-500 font-sans">
-          <span>Thông tư 31/2023/TT-BCA</span>
+          <span>Bản nháp Toolio — không phải tờ khai nộp</span>
           <span>Trang 2 / 2</span>
         </div>
       </div>
     );
   }
 
-  // TRANG 1 — MẪU TK02 CHUẨN THÔNG TƯ 31/2023/TT-BCA
+  // TRANG 1 — BẢN NHÁP BỐ CỤC TK02
   return (
     <div className="w-full h-full p-[14mm_15mm_12mm_15mm] flex flex-col justify-between box-border text-[11px] leading-relaxed text-black font-serif relative">
       <div>
@@ -152,14 +162,14 @@ function TK02OfficialLayout({ formData, currentPage = 1 }) {
 
             {/* Mã số mẫu hiệu */}
             <div className="mt-4 text-left">
-              <div className="font-bold text-[11px] font-sans text-gray-900">Mẫu TK02</div>
+              <div className="font-bold text-[11px] font-sans text-gray-900">BẢN NHÁP — bố cục Mẫu TK02</div>
               <div className="text-[9.5px] italic text-gray-600 font-sans">
-                (Ban hành kèm theo Thông tư số 31/2023/TT-BCA ngày 20/07/2023 của Bộ Công an)
+                (Tham khảo TT 31/2023/TT-BCA, sửa đổi bởi TT 69/2026/TT-BCA. Tờ khai nộp: khai trực tuyến tại passport.mofa.gov.vn)
               </div>
             </div>
           </div>
 
-          {/* Khung dán ảnh 4x6 cm chuẩn Thông tư 31 */}
+          {/* Khung dán ảnh 4x6 cm */}
           <div className="w-[32mm] h-[45mm] border border-dashed border-gray-500 flex flex-col items-center justify-center text-center p-1 bg-gray-50/60 shrink-0 text-gray-600">
             <span className="font-bold text-[10px]">ẢNH 4x6 cm</span>
             <span className="text-[8px] leading-tight text-gray-500 mt-1">
@@ -217,10 +227,10 @@ function TK02OfficialLayout({ formData, currentPage = 1 }) {
             </div>
           </div>
 
-          {/* 5. CCCD / CMND / Mã định danh */}
+          {/* 5. CCCD / Mã định danh */}
           <div className="flex items-baseline justify-between border-b border-gray-100 py-0.5 text-[10.5px]">
             <div className="flex items-baseline gap-1">
-              <span className="font-bold text-gray-900">5. Số CCCD/CMND:</span>
+              <span className="font-bold text-gray-900">5. Số CCCD / định danh:</span>
               <span className="font-sans font-semibold text-gray-950">
                 {formData.idCardNumber || '................................'}
               </span>
@@ -323,21 +333,15 @@ function TK02OfficialLayout({ formData, currentPage = 1 }) {
             <div className="flex items-baseline gap-1">
               <span className="font-bold text-gray-900">14. Nội dung đề nghị:</span>
               <span className="font-sans font-semibold text-gray-950">
-                {formData.requestType === 'cap_lai_do_mat'
-                  ? 'Cấp lại do bị mất hộ chiếu'
-                  : formData.requestType === 'cap_lai_do_hong'
-                  ? 'Cấp lại do hộ chiếu bị hỏng'
-                  : formData.requestType === 'cap_lan_dau'
-                  ? 'Cấp hộ chiếu lần đầu'
-                  : 'Cấp lại do hộ chiếu sắp hết hạn / đã hết hạn'}
+                {formData.requestType || '..........................................'}
               </span>
             </div>
             <div className="text-[10px] text-gray-700 pl-2">
               Loại hộ chiếu:{' '}
               <span className="font-bold text-gray-950">
-                {formData.passportChipOption === 'khong_gan_chip'
+                {rawData.passportChipOption === 'khong_gan_chip'
                   ? 'Hộ chiếu không gắn chíp điện tử'
-                  : 'Hộ chiếu có gắn chíp điện tử (Khuyến nghị)'}
+                  : formData.passportChipOption || 'Hộ chiếu có gắn chíp điện tử'}
               </span>
             </div>
           </div>
@@ -356,7 +360,7 @@ function TK02OfficialLayout({ formData, currentPage = 1 }) {
 /**
  * BỐ CỤC CHUẨN CÁC BIỂU MẪU ĐƠN TRANG KHÁC (KHAI SINH, QUỐC TỊCH, KẾT HÔN, ỦY QUYỀN)
  */
-function StandardOfficialLayout({ formConfig, formData, t }) {
+function StandardOfficialLayout({ formConfig, formData, place = '..........', t }) {
   const fields = formConfig?.fields || (formConfig?.sections?.flatMap((s) => s.fields)) || [];
   const formTitle = formConfig?.title?.vi || formConfig?.title || 'TỜ KHAI HÀNH CHÍNH';
 
@@ -379,7 +383,7 @@ function StandardOfficialLayout({ formConfig, formData, t }) {
             {formTitle}
           </h2>
           <div className="font-sans text-[10.5px] text-gray-600 font-medium">
-            Căn cứ: {formConfig.standardBasis || formConfig.legal_basis || 'Quy chuẩn hành chính lãnh sự'}
+            {formConfig.standardBasis || formConfig.legal_basis || 'Bản nháp tham khảo'}
           </div>
         </div>
 
@@ -418,7 +422,7 @@ function StandardOfficialLayout({ formConfig, formData, t }) {
           </div>
 
           <div>
-            <div className="italic text-gray-600">{t.editor.previewDatePlace}</div>
+            <div className="italic text-gray-600">{place}, {t.editor.previewDateOnly}</div>
             <div className="font-bold uppercase mt-1 mb-14">{t.editor.previewApplicantTitle}</div>
             <div className="font-sans font-semibold text-gray-900">
               {formData.applicantName || formData.mandatorName || formData.fatherName || t.editor.previewApplicantSign}
@@ -430,7 +434,6 @@ function StandardOfficialLayout({ formConfig, formData, t }) {
       {/* Footer */}
       <div className="border-t border-gray-200 pt-2 text-[9.5px] text-gray-400 font-sans flex justify-between">
         <span>{t.editor.previewFooterEngine}</span>
-        <span>SHA-256: {formConfig.sha256Fingerprint?.slice(0, 16) || 'VERIFIED'}...</span>
       </div>
     </div>
   );

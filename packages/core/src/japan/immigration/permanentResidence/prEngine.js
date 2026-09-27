@@ -12,8 +12,11 @@ import {
   PR_INCOME_BENCHMARKS,
   PR_ABSENCE_LIMITS,
   getPermanentResidenceFeeSchedule,
-  PR_2026_REFORM_CONTEXT
+  PR_2026_REFORM_CONTEXT,
+  PR_GUIDELINE_2026,
+  PR_GUIDELINE_DRAFT_2026_08,
 } from './prRules.js';
+import { parseLocalDate, formatLocalDate, todayLocalISO } from '../shared/localDate.js';
 
 /**
  * Đánh giá mức độ sẵn sàng nộp hồ sơ xin Vĩnh trú
@@ -50,8 +53,11 @@ export function evaluatePermanentResidenceReadiness(input = {}) {
     pensionPaidOnTimeAllYears = true,
     hasGuarantor = true,
     hasCleanCriminalRecord = true,
-    applicationDate = new Date().toISOString().slice(0, 10)
+    applicationDate = todayLocalISO(),
+    longestPeriodForStatusYears = 5
   } = input;
+  const appISO = formatLocalDate(parseLocalDate(applicationDate) || parseLocalDate(todayLocalISO()));
+  const threeYearStillLongest = appISO <= PR_GUIDELINE_2026.threeYearTreatedAsLongestUntil;
 
   const route = PR_APPLICATION_ROUTES[routeId.toUpperCase()] || PR_APPLICATION_ROUTES.STANDARD_10_YEAR;
   const warnings = [];
@@ -96,23 +102,23 @@ export function evaluatePermanentResidenceReadiness(input = {}) {
     totalDaysAbroadPerYear > PR_ABSENCE_LIMITS.MAX_TOTAL_DAYS_PER_YEAR;
 
   if (isAbsenceExceeded) {
-    residenceMet = false;
+    // Ngưỡng ngày vắng mặt là ƯỚC TÍNH THỰC TẾ (không phải tiêu chuẩn ISA) → chỉ cảnh báo, không kết luận không đạt
     warnings.push({
       code: 'PROLONGED_ABSENCE_FROM_JAPAN',
-      severity: 'danger',
+      severity: 'warning',
       title_ja: '出国期間の長期化による在留継続性の分断リスク',
       title_vn: 'Rủi ro đứt đoạn thời gian cư trú do xuất cảnh khỏi Nhật quá dài',
       title_en: 'Risk of broken residence continuity due to prolonged departure from Japan',
-      message_ja: `1回の出国が90日を超える場合、または年間の合計出国日数が100日〜150日を超える場合、日本の生活本拠を喪失したとみなされ、在留期間の計算がリセットされるリスクが極めて高くなります。`,
-      message_vn: `Nếu bạn rời khỏi Nhật liên tục trên 90 ngày trong 1 chuyến đi, hoặc tổng số ngày rời Nhật quá 100-150 ngày/năm, Cục Nhập cảnh sẽ xem là bạn đã chuyển nơi cư trú ra ngoài Nhật Bản và có thể bị tính lại thời gian từ đầu.`,
-      message_en: `Departing Japan for over 90 consecutive days or exceeding 100-150 days abroad in a year generally breaks residence continuity, resetting the countdown.`
+      message_ja: `（実務上の目安であり、出入国在留管理庁の公表基準ではありません）1回の出国が約3か月を超える場合や、年間の出国日数が100日程度を超える場合は、在留の継続性が否定され、在留期間の計算がリセットされるリスクがあります。個別事情（出張・出産等）で判断されます。`,
+      message_vn: `(Đây là ƯỚC TÍNH THỰC TẾ của giới hành nghề, KHÔNG phải tiêu chuẩn công bố của Cục XNC.) Nếu một chuyến đi kéo dài khoảng trên 3 tháng, hoặc tổng số ngày ở ngoài Nhật khoảng trên 100 ngày/năm, có rủi ro bị xem là gián đoạn cư trú liên tục và phải tính lại thời gian. Cục xét theo hoàn cảnh cụ thể (công tác, sinh con…).`,
+      message_en: `(Practitioner rule of thumb, not a published ISA standard.) A single absence of roughly 3+ months or ~100+ days abroad per year risks breaking residence continuity; ISA assesses individual circumstances.`
     });
   }
 
   if (residenceMet) passedCount++;
   dimensions.push({
     id: 'residence_period',
-    title_ja: '居住要件（継続在留年数および出国日数）',
+    title_ja: '居住要件（継続在留年数）',
     title_vn: 'Tiêu chuẩn thời gian cư trú liên tục và ngày ở ngoài Nhật',
     title_en: 'Residence Continuity & Absence Limits',
     met: residenceMet,
@@ -121,31 +127,52 @@ export function evaluatePermanentResidenceReadiness(input = {}) {
     guidance_en: residenceGuidance_en
   });
 
-  // 2. Chiều kích 2: Thời hạn visa hiện tại (Current Visa Period >= 3 years)
-  const isVisaPeriodQualified = currentVisaPeriodYears >= 3;
+  // 2. Chiều kích 2: Thời hạn visa hiện tại (最長の在留期間) — theo Hướng dẫn sửa đổi 24/02/2026
+  // Đến 31/03/2027: 3 năm được coi là dài nhất. Sau đó: cần thời hạn dài nhất thực tế (thường 5 năm).
+  const requiredPeriodYears = threeYearStillLongest ? 3 : Math.max(3, Number(longestPeriodForStatusYears) || 5);
+  const isVisaPeriodQualified = currentVisaPeriodYears >= requiredPeriodYears;
   if (isVisaPeriodQualified) passedCount++;
   else {
     warnings.push({
-      code: 'ONE_YEAR_VISA_DISQUALIFIER',
+      code: 'VISA_PERIOD_NOT_LONGEST',
       severity: 'danger',
-      title_ja: '在留期間「1年」は永住申請の受理基準を満たしません',
-      title_vn: 'Thời hạn visa 1 năm KHÔNG ĐỦ ĐIỀU KIỆN nộp đơn xin Vĩnh trú',
-      title_en: '1-Year Residence Period does not satisfy ISA submission guidelines',
-      message_ja: '永住許可ガイドライン上、「現に有している在留資格について、最長の在留期間（当面は3年または5年）をもって在留していること」が要件です。在留期間1年の場合はまず次回更新で3年を取得する必要があります。',
-      message_vn: 'Theo Tiêu chuẩn Cấp phép Vĩnh trú của ISA, người nộp đơn bắt buộc phải đang giữ thời hạn visa dài nhất được cấp cho tư cách đó (hiện tại chấp nhận 3 năm hoặc 5 năm). Nếu đang giữ visa 1 năm, bạn phải đợi lần gia hạn tới để lên visa 3 năm mới đủ điều kiện nộp.',
-      message_en: 'Under ISA guidelines, applicants must hold the longest available residence period (currently 3 or 5 years). A 1-year status is not accepted for PR submission.'
+      title_ja: `現在の在留期間（${currentVisaPeriodYears}年）は「最長の在留期間」の要件を満たしません`,
+      title_vn: `Thời hạn visa hiện tại (${currentVisaPeriodYears} năm) chưa đáp ứng yêu cầu "thời hạn dài nhất"`,
+      title_en: `Current period of stay (${currentVisaPeriodYears} yr) does not meet the "longest period" requirement`,
+      message_ja: threeYearStillLongest
+        ? '永住許可ガイドライン上、現に有する在留資格について最長の在留期間をもって在留していることが要件です（2027年3月31日までは「3年」を最長として取り扱い）。'
+        : '2027年4月1日以降は、「3年」を最長とみなす取扱いが終了し、現に有する在留資格の実際の最長の在留期間（多くは5年）が必要です。',
+      message_vn: threeYearStillLongest
+        ? 'Theo Hướng dẫn cấp Vĩnh trú, bạn phải đang giữ thời hạn dài nhất của tư cách hiện tại (đến hết 31/03/2027, visa 3 năm được coi là dài nhất). Visa 1 năm chưa đủ điều kiện.'
+        : 'Từ 01/04/2027, visa 3 năm KHÔNG còn được coi là "dài nhất"; cần thời hạn dài nhất thực tế của tư cách hiện tại (thường là 5 năm).',
+      message_en: threeYearStillLongest
+        ? 'The PR guidelines require the longest period available for your status (until 31 Mar 2027, 3 years is treated as the longest).'
+        : 'From 1 Apr 2027 the 3-year treatment ends; the actual longest period for your status (usually 5 years) is required.'
+    });
+  }
+
+  if (threeYearStillLongest && currentVisaPeriodYears >= 3 && currentVisaPeriodYears < 5) {
+    warnings.push({
+      code: 'THREE_YEAR_TREATMENT_ENDS_2027_03_31',
+      severity: 'warning',
+      title_ja: '「3年」を最長とみなす取扱いは2027年3月31日まで',
+      title_vn: 'Visa 3 năm chỉ được coi là "dài nhất" đến hết 31/03/2027',
+      title_en: '3-year "longest period" treatment ends on 31 Mar 2027',
+      message_ja: PR_GUIDELINE_2026.content_ja,
+      message_vn: PR_GUIDELINE_2026.content_vn,
+      message_en: PR_GUIDELINE_2026.content_en,
     });
   }
 
   dimensions.push({
     id: 'visa_duration',
-    title_ja: '在留期間要件（最長期間：3年または5年の所持）',
-    title_vn: 'Thời hạn visa hiện tại (Bắt buộc giữ visa 3 năm hoặc 5 năm)',
-    title_en: 'Current Visa Period (Must hold 3 or 5 years)',
+    title_ja: `在留期間要件（最長の在留期間：${threeYearStillLongest ? '2027年3月31日までは3年以上' : '実際の最長期間'}）`,
+    title_vn: `Thời hạn visa hiện tại (thời hạn dài nhất: ${threeYearStillLongest ? 'đến 31/03/2027 chấp nhận 3 năm' : 'thời hạn dài nhất thực tế, thường 5 năm'})`,
+    title_en: `Current Visa Period (longest period: ${threeYearStillLongest ? '3 years accepted until 31 Mar 2027' : 'actual longest, usually 5 years'})`,
     met: isVisaPeriodQualified,
-    guidance_ja: `現在の在留期間: ${currentVisaPeriodYears}年（3年または5年が必要。1年は不可）。`,
-    guidance_vn: `Thời hạn visa hiện tại: ${currentVisaPeriodYears} năm (Cần 3 năm hoặc 5 năm. 1 năm không đủ chuẩn).`,
-    guidance_en: `Current period: ${currentVisaPeriodYears} year(s) (Requires 3 or 5 years. 1 year is ineligible).`
+    guidance_ja: `現在の在留期間: ${currentVisaPeriodYears}年（必要: ${requiredPeriodYears}年以上）。上陸許可基準への適合も求められます。`,
+    guidance_vn: `Thời hạn visa hiện tại: ${currentVisaPeriodYears} năm (cần từ ${requiredPeriodYears} năm). Ngoài ra phải tiếp tục đáp ứng tiêu chuẩn cấp phép nhập cảnh (上陸許可基準) của tư cách hiện tại.`,
+    guidance_en: `Current period: ${currentVisaPeriodYears} year(s) (required: ${requiredPeriodYears}+). Landing standards of your current status must also be met.`
   });
 
   // 3. Chiều kích 3: Tuân thủ Nghĩa vụ Thuế (Tax Compliance)
@@ -214,8 +241,8 @@ export function evaluatePermanentResidenceReadiness(input = {}) {
       code: 'INCOME_BELOW_BENCHMARK',
       severity: 'warning',
       title_ja: '独立生計要件（年収目安を下回っています）',
-      title_vn: 'Mức thu nhập chưa đạt ngưỡng tiêu chuẩn kinh tế độc lập của ISA',
-      title_en: 'Annual income is below the ISA economic self-sufficiency benchmark',
+      title_vn: 'Mức thu nhập thấp hơn mốc ước tính thực tế (không phải tiêu chuẩn chính thức của ISA)',
+      title_en: 'Annual income is below the practitioner estimate (not an official ISA standard)',
       message_ja: `扶養対象者${count}名の場合、安定的な生活維持能力の目安年収は約${benchmarkIncome.toLocaleString()}円以上（申告: ${annualIncome.toLocaleString()}円）です。過去${route.incomeCheckYears}年間継続してこの水準を維持していることが審査されます。`,
       message_vn: `Với ${count} người phụ thuộc, ngưỡng thu nhập ước tính cần thiết là từ ${benchmarkIncome.toLocaleString()} JPY/năm (hiện tại: ${annualIncome.toLocaleString()} JPY). Yêu cầu duy trì liên tục trong suốt ${route.incomeCheckYears} năm gần nhất.`,
       message_en: `For ${count} dependents, the benchmark income is approx. ${benchmarkIncome.toLocaleString()} JPY/year (reported: ${annualIncome.toLocaleString()} JPY). Must be continuously maintained for ${route.incomeCheckYears} years.`
@@ -224,9 +251,9 @@ export function evaluatePermanentResidenceReadiness(input = {}) {
 
   dimensions.push({
     id: 'economic_sufficiency',
-    title_ja: `独立の生計を営むに足りる資産・技能（目安年収: ${benchmarkIncome.toLocaleString()}円以上）`,
-    title_vn: `Độc lập kinh tế và thu nhập ổn định liên tục (Khuyến nghị từ ${benchmarkIncome.toLocaleString()} JPY/năm)`,
-    title_en: `Economic Self-Sufficiency (Benchmark: ${benchmarkIncome.toLocaleString()} JPY/yr)`,
+    title_ja: `独立の生計を営むに足りる資産・技能（実務上の目安年収: ${benchmarkIncome.toLocaleString()}円・公表基準ではありません）`,
+    title_vn: `Độc lập kinh tế và thu nhập ổn định (mốc ước tính thực tế: ${benchmarkIncome.toLocaleString()} JPY/năm — không phải tiêu chuẩn chính thức)`,
+    title_en: `Economic Self-Sufficiency (practitioner estimate: ${benchmarkIncome.toLocaleString()} JPY/yr, not an official standard)`,
     met: isIncomeQualified,
     guidance_ja: `本人年収: ${annualIncome.toLocaleString()}円（目安: ${benchmarkIncome.toLocaleString()}円）。直近${route.incomeCheckYears}年間の課税証明書で審査されます。`,
     guidance_vn: `Thu nhập hiện tại: ${annualIncome.toLocaleString()} JPY (Ngưỡng chuẩn: ${benchmarkIncome.toLocaleString()} JPY). Cục xét duyệt trên thuế ${route.incomeCheckYears} năm liên tục.`,
@@ -335,6 +362,9 @@ export function evaluatePermanentResidenceReadiness(input = {}) {
       isSufficient: isIncomeQualified
     },
     reform2026Notice: PR_2026_REFORM_CONTEXT,
+    guidelineNotice: PR_GUIDELINE_2026,
+    draftGuidelineNotice: PR_GUIDELINE_DRAFT_2026_08,
+    requiredPeriodYears,
     documents
   };
 }

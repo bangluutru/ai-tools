@@ -69,6 +69,13 @@ const TRANSLATIONS = {
     spouseExceptionSingle: 'ひとり親家庭である',
     spouseExceptionUnemployed: '配偶者が専業主婦・主夫または無業者である',
     spouseExceptionIncapacitated: '配偶者が重度の心身障害・疾病により養育が困難である',
+    spouseExceptionAuto: '自動判定（父親で子の出生後8週間以内の場合は「配偶者が産後休業中」とみなす）',
+    spouseExceptionPostnatal: '配偶者が産後休業中である',
+    spouseExceptionSelfEmployed: '配偶者が自営業者・フリーランス等（雇用される労働者でない）',
+    spouseExceptionNoLegalRelation: '配偶者が子と法律上の親子関係がない',
+    spouseExceptionDv: '配偶者から暴力を受け別居中である',
+    spouseExceptionCannotTake: 'その他の理由で配偶者が育児休業できない（雇用保険に未加入等）',
+    childAgeDaysLabel: 'お子様の生後日数（出生日＝0日、8週間＝56日以内の判定に使用・任意）',
     sectionWorkReturn: '4. 復職と短時間勤務（育児時短就業給付金）',
     shortTimeWorkLabel: '復職後に2歳未満の子を育てるため短時間勤務（時短勤務）を行いますか？',
     shortTimeWorkYes: 'はい（時短勤務で賃金が低下する予定）',
@@ -129,6 +136,13 @@ const TRANSLATIONS = {
     spouseExceptionSingle: 'Gia đình bố/mẹ đơn thân (ひとり親)',
     spouseExceptionUnemployed: 'Vợ/chồng làm nội trợ toàn thời gian hoặc không đi làm',
     spouseExceptionIncapacitated: 'Vợ/chồng bị bệnh nặng / khuyết tật không thể chăm sóc con',
+    spouseExceptionAuto: 'Tự động (nếu bạn là bố và con trong 8 tuần sau sinh: coi như vợ đang nghỉ sau sinh 産後休業)',
+    spouseExceptionPostnatal: 'Vợ đang nghỉ sau sinh (産後休業中)',
+    spouseExceptionSelfEmployed: 'Vợ/chồng tự kinh doanh / freelance (không phải người làm công)',
+    spouseExceptionNoLegalRelation: 'Vợ/chồng không có quan hệ cha/mẹ pháp lý với con',
+    spouseExceptionDv: 'Bị vợ/chồng bạo lực và đang sống ly thân',
+    spouseExceptionCannotTake: 'Lý do khác khiến vợ/chồng không thể nghỉ chăm con (không tham gia BHTN...)',
+    childAgeDaysLabel: 'Số ngày tuổi của con (ngày sinh = 0; dùng để xét mốc 8 tuần = 56 ngày, không bắt buộc)',
     sectionWorkReturn: '4. Kế hoạch đi làm lại & Rút ngắn giờ làm',
     shortTimeWorkLabel: 'Sau khi đi làm lại, bạn có rút ngắn thời gian làm việc (時短勤務) để nuôi con dưới 2 tuổi không?',
     shortTimeWorkYes: 'Có (Rút ngắn giờ làm và lương bị giảm tương ứng)',
@@ -189,6 +203,13 @@ const TRANSLATIONS = {
     spouseExceptionSingle: 'Single parent household',
     spouseExceptionUnemployed: 'Spouse is a full-time homemaker or unemployed',
     spouseExceptionIncapacitated: 'Spouse incapacitated due to severe illness/disability',
+    spouseExceptionAuto: 'Automatic (father within 8 weeks of birth: spouse treated as on postnatal leave)',
+    spouseExceptionPostnatal: 'Spouse is on postnatal leave (産後休業中)',
+    spouseExceptionSelfEmployed: 'Spouse is self-employed / freelance (not an employee)',
+    spouseExceptionNoLegalRelation: 'Spouse has no legal parent-child relationship with the child',
+    spouseExceptionDv: 'Separated due to domestic violence by spouse',
+    spouseExceptionCannotTake: 'Spouse cannot take childcare leave for other reasons (not insured, etc.)',
+    childAgeDaysLabel: 'Child age in days (birth day = 0; used for the 8-week / 56-day check, optional)',
     sectionWorkReturn: '4. Return to Work & Short-time Work Scheme',
     shortTimeWorkLabel: 'Will you return to work under reduced hours (時短勤務) caring for a child under 2 years old?',
     shortTimeWorkYes: 'Yes (Returning on reduced hours with lower wages)',
@@ -224,7 +245,8 @@ export default function ChildcareLeaveEligibilityView({ lang = 'ja' }) {
   const [isDaycareRejected, setIsDaycareRejected] = useState(false);
   const [postBirthLeaveDays, setPostBirthLeaveDays] = useState(14);
   const [spouseTakesLeave, setSpouseTakesLeave] = useState(false);
-  const [spouseExceptionType, setSpouseExceptionType] = useState('none');
+  const [spouseExceptionType, setSpouseExceptionType] = useState('auto');
+  const [childAgeDays, setChildAgeDays] = useState('');
   const [isShortTimeWork, setIsShortTimeWork] = useState(false);
 
   // Engine evaluation
@@ -237,12 +259,14 @@ export default function ChildcareLeaveEligibilityView({ lang = 'ja' }) {
       employmentInsuranceMonthsInPast2Years: insuredTenureMode === '12_plus' ? 18 : 6,
       childAgeMonths,
       isDaycareRejected,
-      isRequestingPostBirthPapaIkukyu: userRole === 'father' && childAgeMonths <= 2,
+      childAgeDays: childAgeDays === '' ? undefined : Number(childAgeDays),
+      isRequestingPostBirthPapaIkukyu: userRole === 'father'
+        && (childAgeDays === '' ? childAgeMonths <= 1 : Number(childAgeDays) <= 56),
       postBirthLeaveDays,
       spouseStatus: {
         takesQualifyingLeave: spouseTakesLeave,
-        isException: spouseExceptionType !== 'none',
-        exceptionType: spouseExceptionType,
+        isException: spouseExceptionType !== 'none' && spouseExceptionType !== 'auto',
+        exceptionType: spouseExceptionType === 'auto' ? undefined : spouseExceptionType,
       },
       isShortTimeWork,
       isReturningToWork: isShortTimeWork,
@@ -254,6 +278,7 @@ export default function ChildcareLeaveEligibilityView({ lang = 'ja' }) {
     isEnrolledInsurance,
     insuredTenureMode,
     childAgeMonths,
+    childAgeDays,
     isDaycareRejected,
     postBirthLeaveDays,
     spouseTakesLeave,
@@ -567,6 +592,22 @@ export default function ChildcareLeaveEligibilityView({ lang = 'ja' }) {
               {/* Post-birth leave days (for <= 2 months) */}
               {childAgeMonths <= 2 && (
                 <div className="space-y-2">
+                  <label htmlFor="child-age-days-input" className="block text-xs sm:text-sm font-semibold text-foreground">
+                    {t.childAgeDaysLabel}
+                  </label>
+                  <input
+                    id="child-age-days-input"
+                    type="number"
+                    min="0"
+                    max="120"
+                    value={childAgeDays}
+                    onChange={(e) => setChildAgeDays(e.target.value === '' ? '' : String(Math.max(0, parseInt(e.target.value, 10) || 0)))}
+                    className="w-32 py-2 px-3 rounded-xl border border-border bg-background text-foreground text-xs sm:text-sm focus:ring-2 focus:ring-pink-500 focus:outline-none"
+                  />
+                </div>
+              )}
+              {childAgeMonths <= 2 && (
+                <div className="space-y-2">
                   <label htmlFor="post-birth-leave-input" className="block text-xs sm:text-sm font-semibold text-foreground">
                     {t.postBirthDaysLabel}
                   </label>
@@ -645,9 +686,15 @@ export default function ChildcareLeaveEligibilityView({ lang = 'ja' }) {
                     onChange={(e) => setSpouseExceptionType(e.target.value)}
                     className="w-full py-2.5 px-3 rounded-xl border border-border bg-background text-foreground text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   >
+                    <option value="auto">{t.spouseExceptionAuto}</option>
                     <option value="none">{t.spouseExceptionNone}</option>
+                    <option value="spouse_on_postnatal_leave">{t.spouseExceptionPostnatal}</option>
                     <option value="single_parent">{t.spouseExceptionSingle}</option>
                     <option value="spouse_unemployed">{t.spouseExceptionUnemployed}</option>
+                    <option value="spouse_self_employed">{t.spouseExceptionSelfEmployed}</option>
+                    <option value="no_legal_parent_relation">{t.spouseExceptionNoLegalRelation}</option>
+                    <option value="domestic_violence_separation">{t.spouseExceptionDv}</option>
+                    <option value="spouse_cannot_take_leave">{t.spouseExceptionCannotTake}</option>
                     <option value="spouse_incapacitated">{t.spouseExceptionIncapacitated}</option>
                   </select>
                 </div>

@@ -52,7 +52,7 @@ export const TK02_PAGE_MAPPING = {
         { id: 'gender', label: '2. Giới tính', policy: FIELD_OVERFLOW_POLICIES.SHORT_TEXT },
         { id: 'dob', label: '3. Ngày, tháng, năm sinh', policy: FIELD_OVERFLOW_POLICIES.SHORT_TEXT },
         { id: 'birthPlace', label: '4. Nơi sinh (tỉnh/thành phố hoặc quốc gia)', policy: FIELD_OVERFLOW_POLICIES.SHORT_TEXT },
-        { id: 'idCardNumber', label: '5. Số CCCD/CMND/Định danh cá nhân', policy: FIELD_OVERFLOW_POLICIES.SHORT_TEXT },
+        { id: 'idCardNumber', label: '5. Số CCCD / định danh cá nhân', policy: FIELD_OVERFLOW_POLICIES.SHORT_TEXT },
         { id: 'idCardIssueDate', label: 'Ngày cấp CCCD', policy: FIELD_OVERFLOW_POLICIES.SHORT_TEXT },
         { id: 'idCardIssuePlace', label: 'Nơi cấp CCCD', policy: FIELD_OVERFLOW_POLICIES.SHORT_TEXT },
         { id: 'ethnic', label: '6. Dân tộc', policy: FIELD_OVERFLOW_POLICIES.SHORT_TEXT },

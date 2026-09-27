@@ -3,7 +3,8 @@
  * ============================================================================
  * Ultra-lightweight Screen Recording Engine for in-browser client-side capture.
  * Designed for low-end hardware: minimal CPU/GPU overhead, no canvas redraw loop,
- * native Direct-to-Disk streaming (0 MB RAM overhead), and multi-source audio mixing.
+ * optional Direct-to-Disk streaming (Chromium File System Access API; otherwise
+ * chunks are buffered in memory until download), and multi-source audio mixing.
  * ============================================================================
  */
 
@@ -82,6 +83,28 @@ export function getOptimalMimeType() {
   return '';
 }
 
+const MOBILE_UA = /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle/i;
+
+/**
+ * Feature detection for screen recording.
+ * Returns { supported, reason } where reason is one of
+ * 'insecure-context' | 'mobile' | 'no-display-media' | 'no-media-recorder' | null.
+ * Accepts an optional environment for testing.
+ */
+export function getRecorderSupport(env = typeof window !== 'undefined' ? window : undefined) {
+  const nav = env?.navigator;
+  const hasDisplayMedia = typeof nav?.mediaDevices?.getDisplayMedia === 'function';
+  const hasMediaRecorder = typeof env?.MediaRecorder === 'function';
+  const ua = String(nav?.userAgent || '');
+  const touchMac = /Macintosh/.test(ua) && Number(nav?.maxTouchPoints) > 1; // iPadOS
+  const isMobile = MOBILE_UA.test(ua) || touchMac || nav?.userAgentData?.mobile === true;
+
+  if (env && env.isSecureContext === false) return { supported: false, reason: 'insecure-context', isMobile };
+  if (!hasDisplayMedia) return { supported: false, reason: isMobile ? 'mobile' : 'no-display-media', isMobile };
+  if (!hasMediaRecorder) return { supported: false, reason: 'no-media-recorder', isMobile };
+  return { supported: true, reason: null, isMobile };
+}
+
 /**
  * Checks if the browser supports Direct-to-Disk streaming via File System Access API.
  */
@@ -100,6 +123,12 @@ export class ScreenRecorderSession {
     this.onStateChange = options.onStateChange || (() => {});
     this.onProgress = options.onProgress || (() => {});
     this.onError = options.onError || (() => {});
+    // Called exactly once with the final result, whether the recording was stopped
+    // from the UI or by the browser's native "Stop sharing" button.
+    this.onFinalized = options.onFinalized || (() => {});
+    this.stopPromise = null;
+    this.stoppedBy = null; // 'user' | 'browser'
+    this.writeQueue = Promise.resolve();
 
     this.mediaRecorder = null;
     this.displayStream = null;
@@ -169,7 +198,8 @@ export class ScreenRecorderSession {
       if (videoTrack) {
         videoTrack.addEventListener('ended', () => {
           if (this.status === 'recording' || this.status === 'paused') {
-            this.stop();
+            // Same finalize path as the Stop button (result delivered via onFinalized)
+            this.stop({ reason: 'browser' });
           }
         });
       }
@@ -244,12 +274,14 @@ export class ScreenRecorderSession {
         if (e.data && e.data.size > 0) {
           this.recordedBytes += e.data.size;
           if (this.fileWritable) {
-            // Direct-to-Disk Stream: 0 MB RAM accumulation!
-            try {
-              await this.fileWritable.write(e.data);
-            } catch (writeErr) {
-              console.error('[ScreenRecorder] Error writing to disk stream:', writeErr);
-            }
+            // Direct-to-Disk: writes are serialized so the file is closed only after the last chunk
+            const writable = this.fileWritable;
+            const chunk = e.data;
+            this.writeQueue = this.writeQueue
+              .then(() => writable.write(chunk))
+              .catch((writeErr) => {
+                console.error('[ScreenRecorder] Error writing to disk stream:', writeErr);
+              });
           } else {
             // Safe In-Memory Chunker
             this.chunks.push(e.data);
@@ -329,12 +361,27 @@ export class ScreenRecorderSession {
 
   /**
    * Stops recording and finalizes the output video.
-   * Returns a promise resolving to { blob, url, durationMs, sizeBytes, directSaved, fileName }
+   * Returns a promise resolving to { blob, url, durationMs, sizeBytes, directSaved, fileName, stoppedBy }.
+   * Calling it again returns the same promise. The result is also passed to onFinalized once.
    */
-  async stop() {
+  stop({ reason = 'user' } = {}) {
+    if (this.stopPromise) return this.stopPromise;
     if (!this.mediaRecorder || this.status === 'stopped' || this.status === 'idle') {
-      return null;
+      return Promise.resolve(null);
     }
+    this.stoppedBy = reason;
+    this.stopPromise = this._finalize().then((result) => {
+      try {
+        this.onFinalized(result);
+      } catch (cbErr) {
+        console.error('[ScreenRecorder] onFinalized handler failed:', cbErr);
+      }
+      return result;
+    });
+    return this.stopPromise;
+  }
+
+  async _finalize() {
 
     this.stopTimer();
     if (this.status === 'recording') {
@@ -354,6 +401,7 @@ export class ScreenRecorderSession {
 
         if (this.fileWritable) {
           try {
+            await this.writeQueue;
             await this.fileWritable.close();
             this.fileWritable = null;
           } catch (closeErr) {
@@ -375,6 +423,7 @@ export class ScreenRecorderSession {
           directSaved: isDirect,
           fileName,
           mimeType: this.mediaRecorder.mimeType || 'video/webm',
+          stoppedBy: this.stoppedBy,
         };
 
         this.cleanupStreams();

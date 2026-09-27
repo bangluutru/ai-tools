@@ -28,18 +28,21 @@ export const MUNICIPAL_FAMILY_REGISTRY = Object.freeze({
       notesJa: '母子健康手帳交付時に妊婦健康診査受診票（14回分）および超音波・追加検査票を交付。',
       notesVi: 'Cấp sổ mẹ con kèm 14 phiếu hỗ trợ khám thai tiêu chuẩn và phiếu siêu âm, xét nghiệm bổ sung.',
     },
+    // Nguồn: https://www.city.fukuoka.lg.jp/hofuku/hokennenkin/hp/01.html (mở rộng đến 18 tuổi từ 01/2024)
     childMedicalSubsidy: {
-      targetAgeJa: '中学校卒業まで（15歳に達する年度末まで。一部通院自己負担あり）',
-      targetAgeVi: 'Đến khi tốt nghiệp THCS (hết ngày 31/3 năm tròn 15 tuổi, có đồng chi trả nhỏ khi khám ngoại trú)',
-      copaySummaryJa: '通院：月額500円〜800円上限 / 入院：無料（食事療養費除く）',
-      copaySummaryVi: 'Khám ngoại trú: tối đa 500 - 800 yên/tháng; Nhập viện: Miễn phí 100% (chưa gồm tiền ăn)',
+      targetAgeJa: '高校生世代まで（18歳の誕生日の前日以後最初の3月31日まで）',
+      targetAgeVi: 'Đến hết cấp 3 (hết ngày 31/3 đầu tiên sau khi tròn 18 tuổi)',
+      targetAgeEn: 'Up to high-school age (until the first 31 March after turning 18)',
+      copaySummaryJa: '3歳未満：通院無料 / 3歳以上：通院は1医療機関あたり月500円まで / 入院・調剤：無料（所得制限なし）',
+      copaySummaryVi: 'Dưới 3 tuổi: khám ngoại trú miễn phí; từ 3 tuổi: ngoại trú tối đa 500 yên/tháng cho mỗi cơ sở y tế; nằm viện & tiền thuốc: miễn phí (không giới hạn thu nhập)',
       hasIncomeLimit: false,
     },
+    // 妊婦のための支援給付 (chế độ luật định từ 01/04/2025): 5万円 sau 妊娠届出 + 5万円 × số thai sau 胎児数の届出
     birthGiftGrant: {
       hasGift: true,
-      amountYen: 100000, // 妊娠・出産応援ギフト (5万円+5万円)
-      titleJa: '福岡市出産・子育て応援給付金（計10万円相当）',
-      titleVi: 'Trợ cấp hỗ trợ mang thai & sinh con TP Fukuoka (tổng 100.000 yên)',
+      amountYen: 100000, // 5万円 + 5万円 × 1 (thai đơn)
+      titleJa: '妊婦のための支援給付（妊婦給付認定後5万円＋胎児数の届出後5万円×胎児数）',
+      titleVi: 'Trợ cấp hỗ trợ thai phụ 妊婦のための支援給付 (5 vạn yên sau khi đăng ký mang thai + 5 vạn yên × số thai sau khi báo số thai; thai đơn tổng 100.000 yên)',
     }
   },
 
@@ -72,8 +75,8 @@ export const MUNICIPAL_FAMILY_REGISTRY = Object.freeze({
     birthGiftGrant: {
       hasGift: true,
       amountYen: 100000,
-      titleJa: '千代田区出産・子育て応援事業（ゆりかご・ちよだ）',
-      titleVi: 'Chương trình quà tặng hỗ trợ mang thai & sinh con Quận Chiyoda',
+      titleJa: '妊婦のための支援給付（妊婦給付認定後5万円＋胎児数の届出後5万円×胎児数）',
+      titleVi: 'Trợ cấp hỗ trợ thai phụ 妊婦のための支援給付 (5 vạn yên sau khi đăng ký mang thai + 5 vạn yên × số thai sau khi báo số thai; thai đơn tổng 100.000 yên)',
     }
   }
 });

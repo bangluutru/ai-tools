@@ -4,7 +4,7 @@ import { uiTranslations } from '@ai-tools/core/utils/translations.js';
 import { FileSpreadsheet, ShieldCheck, Layers, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export default function ExcelMappingTool({ displayLang }) {
-  const langKey = displayLang === 'vi' ? 'vn' : displayLang;
+  const langKey = displayLang === 'vi' ? 'vn' : displayLang === 'ja' ? 'jp' : displayLang;
   const t = uiTranslations[langKey] || uiTranslations.vn;
 
   return (
@@ -43,7 +43,7 @@ export default function ExcelMappingTool({ displayLang }) {
         </div>
 
         <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl">
-          Tự động ánh xạ cột từ tệp đơn hàng khách hàng sang biểu mẫu đặt hàng của nhà cung cấp. Bảo toàn nguyên vẹn 100% định dạng, công thức tính toán và phần thông tin đầu trang (Header) lẫn chân trang (Footer).
+          Ghép cột từ tệp đơn hàng của khách sang biểu mẫu đặt hàng (.xlsx) của nhà cung cấp. Công cụ cố gắng giữ định dạng, ô gộp và công thức ở phần đầu/chân mẫu, tự nới vùng sản phẩm và cập nhật các vùng SUM; các dòng sản phẩm được ghi lại theo dữ liệu nguồn (công thức riêng trong dòng sản phẩm của mẫu không được giữ). Hãy mở tệp kết quả kiểm tra trước khi gửi.
         </p>
         <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
           <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />

@@ -459,12 +459,25 @@ export function CertificateAcquisitionGuideView({ lang = 'vi' }) {
 
                       <div className="mt-2 text-xs text-on-surface-variant flex items-center gap-1">
                         <Coins className="w-3.5 h-3.5 text-primary" />
-                        <span>Lệ phí: {channel.feeJpy}円</span>
+                        <span>
+                          Lệ phí:{' '}
+                          {channel.feeJpy === null || channel.feeJpy === undefined
+                            ? 'cần xác nhận với cơ quan'
+                            : `${channel.feeJpy}円`}
+                        </span>
                       </div>
+
+                      {isKonbini && channel.konbiniSupportStatus && channel.konbiniSupportStatus !== 'verified' && channel.konbiniSupportStatus !== 'assumed' && (
+                        <div className="mt-1 text-[11px] font-semibold text-error">
+                          {channel.konbiniSupportStatus === 'not_started' && 'Địa phương này chưa bắt đầu dịch vụ in tại combini.'}
+                          {channel.konbiniSupportStatus === 'not_supported' && 'Địa phương này KHÔNG cấp giấy này tại combini.'}
+                          {channel.konbiniSupportStatus === 'unconfirmed' && 'Chưa xác nhận combini có cấp giấy này — cần xác nhận với cơ quan.'}
+                        </div>
+                      )}
 
                       <div className="mt-1 text-xs text-on-surface-variant flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5" />
-                        <span className="truncate">{channel.operatingHoursJa}</span>
+                        <span className="truncate">{channel.localityHoursJa || channel.operatingHoursJa}</span>
                       </div>
                     </button>
                   );

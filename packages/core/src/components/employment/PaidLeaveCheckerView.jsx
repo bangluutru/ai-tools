@@ -28,6 +28,7 @@ import {
   FULL_TIME_PAID_LEAVE_TABLE,
   PART_TIME_PROPORTIONAL_TABLE
 } from '../../japan/employment/index.js';
+import { todayLocalISO } from '../../japan/employment/localDate.js';
 
 const TRANSLATIONS = {
   ja: {
@@ -167,13 +168,24 @@ const TRANSLATIONS = {
   }
 };
 
+/**
+ * Chuyển chuỗi nhập thành số; chỉ dùng giá trị mặc định khi ô trống/không hợp lệ (0 vẫn giữ là 0).
+ * @param {string|number} value
+ * @param {number} fallback
+ * @returns {number}
+ */
+function toFiniteOr(value, fallback) {
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 export default function PaidLeaveCheckerView({ lang = 'ja' }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.ja;
 
   // Form states
   const [employmentType, setEmploymentType] = useState('full_time');
   const [hireDate, setHireDate] = useState('2024-04-01');
-  const [asOfDate, setAsOfDate] = useState('2026-09-10');
+  const [asOfDate, setAsOfDate] = useState(() => todayLocalISO());
   const [weeklyDays, setWeeklyDays] = useState('5');
   const [weeklyHours, setWeeklyHours] = useState('40');
   const [attendancePercent, setAttendancePercent] = useState('100');
@@ -198,9 +210,10 @@ export default function PaidLeaveCheckerView({ lang = 'ja' }) {
       hireDate,
       asOfDate,
       employmentType,
-      weeklyHours: parseFloat(weeklyHours) || 40,
-      weeklyDays: parseFloat(weeklyDays) || 5,
-      attendanceRate: (parseFloat(attendancePercent) || 100) / 100,
+      weeklyHours: toFiniteOr(weeklyHours, 40),
+      weeklyDays: toFiniteOr(weeklyDays, 5),
+      // 0% là giá trị hợp lệ (không được biến thành 100%)
+      attendanceRate: toFiniteOr(attendancePercent, 100) / 100,
       usedDaysCurrent: parseFloat(usedDaysCurrent) || 0,
       carriedOverDays: parseFloat(carriedOverDays) || 0
     });

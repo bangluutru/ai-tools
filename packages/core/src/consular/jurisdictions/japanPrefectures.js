@@ -1,8 +1,12 @@
 /**
  * @file jurisdictions/japanPrefectures.js
  * Danh bạ 47 tỉnh thành Nhật Bản chuẩn JIS X 0401 và Thẩm quyền Lãnh sự chính thức.
- * Không suy đoán theo khoảng cách địa lý mà tuân thủ phân vùng lãnh sự chính thức.
+ * Không suy đoán theo khoảng cách địa lý. Các trang chính thức (kiểm tra 2026-09-27) KHÔNG công bố danh sách tỉnh
+ * của từng TLSQ; với Mie, Chugoku, Shikoku phân vùng dưới đây là giả định → jurisdiction_confirmed: false,
+ * UI phải hiển thị "vui lòng xác nhận với Tổng lãnh sự quán".
  */
+
+const UNCONFIRMED_JURISDICTION = new Set(['24', '31', '32', '33', '34', '35', '36', '37', '38', '39']);
 
 const PREFECTURE_DATA = [
   // 1. Hokkaido
@@ -71,6 +75,7 @@ const PREFECTURE_DATA = [
 
 export const JAPAN_PREFECTURES = PREFECTURE_DATA.map((p) => ({
   ...p,
+  jurisdiction_confirmed: !UNCONFIRMED_JURISDICTION.has(p.code),
   nameVi: p.name_vi,
   nameJa: p.name_ja,
   nameEn: p.name_en,
@@ -89,7 +94,10 @@ export const REGIONS_ORDER = [
 ];
 
 export const getPrefectureById = (id) => {
-  const found = JAPAN_PREFECTURES.find((p) => p.id === id || p.code === id) || JAPAN_PREFECTURES[12]; // Default Tokyo
+  if (id === null || id === undefined || id === '') return null;
+  const key = String(id).trim().toLowerCase();
+  const found = JAPAN_PREFECTURES.find((p) => p.id === key || p.code === key || p.code === key.padStart(2, '0'));
+  if (!found) return null; // không tự đoán Tokyo — UI phải hỏi người dùng chọn tỉnh
   return {
     ...found,
     nameVi: found.name_vi,
@@ -98,11 +106,17 @@ export const getPrefectureById = (id) => {
   };
 };
 
-import { CONSULAR_OFFICES, getOfficeById } from '../offices/index.js';
+import { getOfficeById } from '../offices/index.js';
 
+/**
+ * Cơ quan đại diện cho tỉnh. Trả về null nếu tỉnh không hợp lệ/chưa chọn.
+ */
 export const getOfficeForPrefecture = (prefectureIdOrCode) => {
   const pref = getPrefectureById(prefectureIdOrCode);
-  const office = getOfficeById(pref?.office_id || 'tokyo');
+  if (!pref) return null;
+  const office = getOfficeById(pref.office_id);
+  if (!office) return null;
+  const switchboard = office.contact?.switchboard?.[0] || null;
   return {
     ...office,
     id: office.id,
@@ -115,13 +129,21 @@ export const getOfficeForPrefecture = (prefectureIdOrCode) => {
       vi: office.address?.line || office.address?.vi,
       ja: office.address?.line_ja || office.address?.ja,
     },
-    postalCode: office.address?.postal_code || office.address?.postalCode || '151-0062',
-    hotline: office.contact?.citizen_protection_hotline || office.contact?.switchboard?.[0] || '+81-3-3466-3311',
-    city: office.address?.prefecture || 'Tokyo',
+    postalCode: office.address?.postal_code || office.address?.postalCode || null,
+    // Số điện thoại hỏi thủ tục (tổng đài). KHÁC đường dây nóng bảo hộ công dân (chỉ cho trường hợp khẩn cấp).
+    hotline: switchboard,
+    procedurePhone: switchboard,
+    citizenProtectionHotline: office.contact?.citizen_protection_hotline || null,
+    city: office.address?.prefecture || null,
     workingHours: {
-      submission: office.working_hours?.reception_morning || '09:00 - 12:00',
-      pickup: office.working_hours?.return_afternoon || '14:00 - 17:00',
+      submission: office.working_hours?.reception_morning || 'cần xác nhận với cơ quan',
+      pickup: office.working_hours?.return_afternoon || 'cần xác nhận với cơ quan',
     },
     note: office.notes || '',
+    jurisdictionConfirmed: pref.jurisdiction_confirmed !== false,
+    jurisdictionNote:
+      pref.jurisdiction_confirmed === false
+        ? `Trang chính thức chưa công bố tỉnh ${pref.name_vi} thuộc cơ quan nào — vui lòng xác nhận với Tổng lãnh sự quán (hoặc ĐSQ) trước khi nộp.`
+        : null,
   };
 };

@@ -23,8 +23,9 @@ test('roundTaxableIncome cuts off numbers under 1,000 JPY according to National 
 
 test('roundFinalTaxAmount cuts off numbers under 100 JPY according to National Tax Collection Act Art. 119', () => {
   assert.equal(roundFinalTaxAmount(1050), 1000);
-  assert.equal(roundFinalTaxAmount(999), 0); // Thuế dưới 1,000 yên thì miễn nộp (Điều 119 khoản 1)
-  assert.equal(roundFinalTaxAmount(100), 0); // Dưới 1,000円
+  assert.equal(roundFinalTaxAmount(999), 900); // Chỉ bỏ phần dưới 100 yên (Điều 119)
+  assert.equal(roundFinalTaxAmount(100), 100);
+  assert.equal(roundFinalTaxAmount(99), 0);
   assert.equal(roundFinalTaxAmount(1000), 1000);
   assert.equal(roundFinalTaxAmount(123456), 123400);
 });
@@ -44,21 +45,22 @@ test('calculateIncomeTax accurately computes brackets for standard 5,000,000 JPY
   assert.equal(result.employmentDeduction, 1440000);
   assert.equal(result.employmentIncome, 3560000);
 
-  // 基礎控除 480,000 + 社保 750,000 = 1,230,000 JPY
-  assert.equal(result.deductions.basic, 480000);
+  // 基礎控除 (令和7年分, 合計所得 356万円 ≤ 489万円) 680,000 + 社保 750,000 = 1,430,000 JPY
+  assert.equal(result.deductions.basic, 680000);
   assert.equal(result.deductions.socialInsurance, 750000);
 
-  // 課税所得 = 3,560,000 - 1,230,000 = 2,330,000 JPY
-  assert.equal(result.taxableIncome, 2330000);
+  // 課税所得 = 3,560,000 - 1,430,000 = 2,130,000 JPY
+  assert.equal(result.taxableIncome, 2130000);
 
-  // Thuế cơ sở = 2,330,000 * 10% - 97,500 = 135,500 JPY -> làm tròn xuống 100: 135,500 JPY
-  assert.equal(result.baseIncomeTax, 135500);
+  // 基準所得税額 = 2,130,000 * 10% - 97,500 = 115,500 JPY
+  assert.equal(result.baseIncomeTax, 115500);
 
-  // Thuế tái thiết 2.1%: 135,500 * 0.021 = 2,845.5 -> floor = 2,845 JPY
-  assert.equal(result.reconstructionTax, 2845);
+  // 復興特別所得税 2.1%: 115,500 * 0.021 = 2,425.5 -> floor = 2,425 JPY
+  assert.equal(result.reconstructionTax, 2425);
 
-  // Tổng thuế: 135,500 + 2,845 = 138,345 JPY
-  assert.equal(result.totalIncomeTax, 138345);
+  // 合計 117,925 -> 100円未満切捨て = 117,900 JPY
+  assert.equal(result.totalIncomeTax, 117900);
+  assert.equal(result.roundingAdjustment, -25);
 });
 
 test('calculateIncomeTax calculates sole proprietor with blue return 650,000 JPY', () => {

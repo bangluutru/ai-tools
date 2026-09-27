@@ -137,7 +137,7 @@ test('Family Immigration Guide: Family member in Japan changing status to 家族
     applicationDate: '2026-09-01'
   });
   assert.equal(preOctResult.procedureInfo.id, 'status_change');
-  assert.equal(preOctResult.feeSchedule.amount, 4000);
+  assert.equal(preOctResult.feeSchedule.amount, 6000);
 
   const postOctResult = evaluateFamilyImmigration({
     sponsorStatusId: 'engineer_specialist',
@@ -145,7 +145,8 @@ test('Family Immigration Guide: Family member in Japan changing status to 家族
     currentLocation: 'in_japan',
     applicationDate: '2026-10-05'
   });
-  assert.equal(postOctResult.feeSchedule.amount, 6000);
+  assert.equal(postOctResult.feeSchedule.amount, 33000, 'Tiếp nhận từ 01/10/2026, dự kiến 1 năm, tại quầy');
+  assert.equal(postOctResult.feeSchedule.dependsOnGrantedPeriod, true);
 });
 
 test('Family Immigration Guide: Part-time work rules and McLean doctrine disclaimer', () => {
@@ -161,4 +162,26 @@ test('Family Immigration Guide: Part-time work rules and McLean doctrine disclai
 
   const discWarn = result.warnings.find(w => w.code === 'MINISTERIAL_DISCRETION');
   assert.ok(discWarn, 'Phải có lưu ý về thẩm quyền của Bộ trưởng Tư pháp theo án lệ McLean');
+});
+
+test('Family Immigration Guide: newborn past 30-day filing deadline is warned (M3)', () => {
+  const result = evaluateFamilyImmigration({
+    sponsorStatusId: 'engineer_specialist',
+    relationshipType: 'child',
+    currentLocation: 'newborn_in_japan',
+    childBirthDate: '2026-08-20',
+    currentDate: '2026-09-27',
+  });
+  assert.equal(result.newbornDeadlines.filingDeadline30Days, '2026-09-19');
+  assert.ok(result.warnings.some((w) => w.code === 'NEWBORN_FILING_DEADLINE_PASSED'));
+  assert.ok(!result.warnings.some((w) => w.code === 'NEWBORN_OVER_60_DAYS'));
+});
+
+test('Family Immigration Guide: sponsor who is Japanese/PR is routed to status-based visa, not 家族滞在 (M4)', () => {
+  const pr = evaluateFamilyImmigration({ sponsorStatusId: 'permanent_resident', relationshipType: 'spouse' });
+  assert.equal(pr.readinessStatus, 'missing_requirements');
+  assert.ok(pr.warnings.some((w) => w.code === 'USE_STATUS_BASED_VISA_NOT_DEPENDENT'));
+
+  const unknown = evaluateFamilyImmigration({ sponsorStatusId: 'unknown_status', relationshipType: 'spouse' });
+  assert.equal(unknown.readinessStatus, 'missing_requirements');
 });

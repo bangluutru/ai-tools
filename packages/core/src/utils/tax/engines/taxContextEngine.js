@@ -197,9 +197,17 @@ export function assessFilingNecessity({
   hasMedicalExpensesOver100k = false, // Chi phí y tế > 10 vạn yên
   hasFurusatoNozeiOver5Cities = false, // Furusato > 5 địa phương hoặc không dùng One-stop
   isFirstYearHousingLoan = false, // Vay mua nhà năm đầu
+  secondarySalary, // 従たる給与 (年末調整されなかった給与) — undefined = chưa rõ
+  computedIncomeTax, // 所得税及び復興特別所得税 ước tính (undefined = không có)
+  basicDeduction = 580000, // 基礎控除 áp dụng (fallback khi không có computedIncomeTax)
+  totalIncome, // 合計所得金額
 }) {
   const salary = Number(annualSalary) || 0;
   const sideProfit = Number(sideIncomeProfit) || 0;
+  const hasComputedTax = computedIncomeTax !== undefined && computedIncomeTax !== null && Number.isFinite(Number(computedIncomeTax));
+  const taxDue = hasComputedTax ? Number(computedIncomeTax) : null;
+  const hasSecondarySalary = secondarySalary !== undefined && secondarySalary !== null && secondarySalary !== '' && Number.isFinite(Number(secondarySalary));
+  const secondary = hasSecondarySalary ? Math.max(0, Number(secondarySalary)) : null;
   const reasons_ja = [];
   const reasons_vi = [];
   const reasons_en = [];
@@ -220,17 +228,39 @@ export function assessFilingNecessity({
       };
     }
 
-    if (businessNetProfit > 480000) {
+    const exceedsBasic = hasComputedTax ? taxDue > 0 : (Number(totalIncome ?? businessNetProfit) || 0) > basicDeduction;
+    if (exceedsBasic) {
       return {
         status: 'REQUIRED',
         statusLabel_ja: '原則として必要',
         statusLabel_vi: 'Nguyên tắc: BẮT BUỘC PHẢI KHAI',
         statusLabel_en: 'REQUIRED IN PRINCIPLE',
         badgeColor: '#ef4444',
-        reasons_ja: ['事業所得が基礎控除額を上回っているため、確定申告を行う義務があります。'],
-        reasons_vi: ['Thu nhập kinh doanh ròng vượt quá mức giảm trừ cơ bản, bạn có nghĩa vụ phải nộp tờ khai thuế thu nhập.'],
-        reasons_en: ['Net business income exceeds basic deductions, making tax filing mandatory.'],
+        reasons_ja: ['所得金額の合計が所得控除の合計を上回り、所得税額が発生する見込みのため、確定申告を行う義務があります。'],
+        reasons_vi: ['Tổng thu nhập vượt tổng các khoản giảm trừ và phát sinh thuế thu nhập phải nộp, bạn có nghĩa vụ nộp tờ khai quyết toán thuế (確定申告).'],
+        reasons_en: ['Total income exceeds total deductions and income tax is payable, so filing a return is mandatory.'],
         residentTaxNote: null,
+      };
+    }
+
+    if (profile === 'sole_proprietor' || profile === 'freelance') {
+      return {
+        status: 'CONDITIONAL',
+        statusLabel_ja: '所得税の申告義務はない見込み（還付・住民税申告は要確認）',
+        statusLabel_vi: 'Có thể không bắt buộc khai thuế thu nhập (cần xem hoàn thuế & khai thuế cư trú)',
+        statusLabel_en: 'LIKELY NOT REQUIRED FOR INCOME TAX (check refund / resident tax filing)',
+        badgeColor: '#3b82f6',
+        reasons_ja: ['所得控除後の所得税額が0円の見込みです。報酬から源泉徴収された税額がある場合は、確定申告（還付申告）で取り戻せます。'],
+        reasons_vi: ['Thuế thu nhập sau giảm trừ dự kiến bằng 0. Nếu thù lao đã bị khấu trừ thuế tại nguồn (源泉徴収), bạn có thể khai để được hoàn thuế.'],
+        reasons_en: ['Income tax after deductions is expected to be zero. If tax was withheld from fees, file a refund return.'],
+        residentTaxNote: {
+          title_ja: '【重要】住民税・国民健康保険のため所得の申告が必要です',
+          title_vi: '【QUAN TRỌNG】Vẫn cần khai thu nhập cho thuế cư trú & BHYT quốc dân',
+          title_en: '【IMPORTANT】Declare income for resident tax / National Health Insurance',
+          desc_ja: '確定申告をしない場合でも、市区町村へ住民税の申告を行ってください（国保料の軽減判定にも使われます）。',
+          desc_vi: 'Nếu không nộp 確定申告, hãy khai thuế cư trú tại Tòa thị chính (dùng cả để xét giảm phí BHYT quốc dân).',
+          desc_en: 'If you do not file a national return, submit a resident tax declaration to your municipality (also used for NHI reductions).',
+        },
       };
     }
   }
@@ -252,12 +282,43 @@ export function assessFilingNecessity({
       };
     }
 
-    // Trường hợp nhận lương từ 2 công ty trở lên
+    // Trường hợp nhận lương từ 2 công ty trở lên (所得税法121条: 従たる給与 + 給与所得・退職所得以外の所得 > 20万円 → 申告必要)
     if (employersCount > 1) {
-      reasons_ja.push('2箇所以上から給与を受け取っており、年末調整されなかった従たる給与の精算が必要です。');
-      reasons_vi.push('Bạn nhận lương từ 2 công ty trở lên, cần khai thuế để tổng hợp các nguồn thu nhập chưa được quyết toán.');
-      reasons_en.push('Salaries received from multiple employers require tax return filing to reconcile untaxed income.');
+      if (secondary === null) {
+        reasons_ja.push('2箇所以上から給与を受け取っています。年末調整されなかった「従たる給与」の収入金額と、給与以外の所得の合計が20万円を超える場合は確定申告が必要です。従たる給与の金額を入力してください。');
+        reasons_vi.push('Bạn nhận lương từ 2 nơi trở lên. Nếu lương phụ (従たる給与, không được quyết toán) cộng thu nhập khác vượt 20 vạn yên thì phải khai 確定申告. Hãy nhập số lương phụ.');
+        reasons_en.push('You receive salary from 2+ employers. Filing is required if the secondary (non-adjusted) salary plus other income exceeds 200,000 JPY. Enter the secondary salary amount.');
+      } else if (secondary + sideProfit > 200000) {
+        return {
+          status: 'REQUIRED',
+          statusLabel_ja: '原則として必要',
+          statusLabel_vi: 'Nguyên tắc: BẮT BUỘC PHẢI KHAI',
+          statusLabel_en: 'REQUIRED IN PRINCIPLE',
+          badgeColor: '#ef4444',
+          reasons_ja: [`従たる給与（${secondary.toLocaleString()}円）と給与以外の所得（${sideProfit.toLocaleString()}円）の合計が20万円を超えるため、確定申告が必要です。`],
+          reasons_vi: [`Lương phụ (${secondary.toLocaleString()} yên) cộng thu nhập ngoài lương (${sideProfit.toLocaleString()} yên) vượt 20 vạn yên, bắt buộc khai 確定申告.`],
+          reasons_en: [`Secondary salary (${secondary.toLocaleString()} JPY) plus non-salary income (${sideProfit.toLocaleString()} JPY) exceeds 200,000 JPY; filing is required.`],
+          residentTaxNote: null,
+        };
+      }
     }
+
+    // Không được 年末調整 và có thuế phải nộp
+    if (!hasYearEndAdjustment && hasComputedTax && taxDue > 0) {
+      return {
+        status: 'REQUIRED',
+        statusLabel_ja: '原則として必要',
+        statusLabel_vi: 'Nguyên tắc: BẮT BUỘC PHẢI KHAI',
+        statusLabel_en: 'REQUIRED IN PRINCIPLE',
+        badgeColor: '#ef4444',
+        reasons_ja: ['年末調整を受けておらず、年間の所得税額が発生する見込みのため、確定申告で精算する必要があります。'],
+        reasons_vi: ['Bạn không được quyết toán cuối năm (年末調整) và có thuế thu nhập phải nộp, cần tự khai 確定申告 để quyết toán.'],
+        reasons_en: ['No year-end adjustment and income tax is payable; settle it with a tax return.'],
+        residentTaxNote: null,
+      };
+    }
+
+    const secondaryOk = employersCount === 1 || (secondary !== null && secondary + sideProfit <= 200000);
 
     // Quy tắc 20 vạn yên việc phụ (副業20万円ルール)
     if (sideProfit > 200000) {
@@ -311,7 +372,7 @@ export function assessFilingNecessity({
     }
 
     // Trường hợp việc phụ <= 20万円 nhưng đã làm 年末調整
-    if (sideProfit > 0 && sideProfit <= 200000 && hasYearEndAdjustment) {
+    if (sideProfit > 0 && sideProfit <= 200000 && hasYearEndAdjustment && secondaryOk) {
       return {
         status: 'NOT_REQUIRED',
         statusLabel_ja: '所得税は原則不要（※住民税申告は別途必要）',
@@ -339,7 +400,7 @@ export function assessFilingNecessity({
     }
 
     // Trường hợp chuẩn: 1 công ty, đã 年末調整, không có việc phụ
-    if (hasYearEndAdjustment && sideProfit === 0 && employersCount === 1) {
+    if (hasYearEndAdjustment && sideProfit === 0 && secondaryOk) {
       return {
         status: 'NOT_REQUIRED',
         statusLabel_ja: '原則として不要',

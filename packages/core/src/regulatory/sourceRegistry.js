@@ -48,9 +48,9 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     url: 'https://www.nta.go.jp/taxes/shiraberu/taxanswer/shotoku/1199.htm',
     sourceType: 'official-table',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-primary',
-    notes: 'Biểu khấu trừ cơ bản 令和8・9年分: 104万円 cho thu nhập <= 132万円; giảm trừ lũy tiến theo các ngưỡng 3.36M, 4.89M, 6.55M, 23.5M, 24M, 24.5M, 25M.'
+    notes: 'Biểu khấu trừ cơ bản 令和8・9年分: khấu trừ 令和8年分 (施行 2026-12-01, áp dụng khi 年末調整): 104万円 (tổng thu nhập ≤489万), 67万 (≤655万), 62万 (≤2,350万), 48万/32万/16万 (≤2,400/2,450/2,500万), 0 trên 2,500万. 令和7年分: 95/88/68/63/58万.'
   },
   'nta-no2260-brackets': {
     id: 'nta-no2260-brackets',
@@ -84,9 +84,9 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     url: 'https://www.soumu.go.jp/main_sosiki/jichi_zeisei/czaisei/czaisei_seido/ichiran08/ichiran08_01.html',
     sourceType: 'law',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-primary',
-    notes: 'Chuẩn thuế cư trú: 所得割 10% (tỉnh 4% + xã/phường 6%), 均等割 chuẩn 5,000円/năm, 森林環境税 1,000円/năm.'
+    notes: 'Chuẩn thuế cư trú: 所得割 10% (tỉnh 4% + xã/phường 6%), 均等割 chuẩn 4,000円/năm (道府県1,000 + 市町村3,000), 森林環境税 1,000円/năm; 調整控除 5% (2%+3%).'
   },
 
   // =========================================================================
@@ -100,9 +100,9 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     url: 'https://www.nenkin.go.jp/service/kokunen/hokenryo/default.html',
     sourceType: 'official-table',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-primary',
-    notes: 'Phí bảo hiểm hưu trí quốc dân 令和8年度 (áp dụng từ 01/04/2026 đến 31/03/2027): 17,920円/tháng.'
+    notes: 'Phí bảo hiểm hưu trí quốc dân 令和8年度 (áp dụng từ 01/04/2026 đến 31/03/2027): 17,920円/tháng. 前納 (令和8年度): 口座振替 6ヶ月 1,220 / 1年 4,510 / 2年 17,370円; 現金・クレジット 870 / 3,820 / 16,010円; 2年前納 so với 17,920×12 + 18,290×12 = 434,520円 (https://www.nenkin.go.jp/service/kokunen/hokenryo/zenno.html). 令和9年度 18,290円/tháng.'
   },
   'jps-national-pension-exemption-2026': {
     id: 'jps-national-pension-exemption-2026',
@@ -128,17 +128,29 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     status: 'official-primary',
     notes: 'Tỷ lệ bảo hiểm thất nghiệp 令和8年度: ngành thông thường người lao động 5/1000 (0.5%), chủ sử dụng 8.5/1000, tổng 13.5/1000.'
   },
+  'mhlw-employment-rate-2025': {
+    id: 'mhlw-employment-rate-2025',
+    country: 'JP',
+    authority: '厚生労働省 (Ministry of Health, Labour and Welfare)',
+    title: '令和7年度 雇用保険料率のご案内',
+    url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000160564_00043.html',
+    sourceType: 'official-guidance',
+    language: 'ja',
+    lastVerifiedAt: '2026-09-28',
+    status: 'official-primary',
+    notes: 'Tỷ lệ bảo hiểm thất nghiệp 令和7年度 (01/04/2025–31/03/2026, trên 1000, người lao động/chủ): thông thường 5.5/9.0, 農林水産・清酒 6.5/10.0, 建設 6.5/11.0.'
+  },
   'kyoukaikenpo-rates-2026': {
     id: 'kyoukaikenpo-rates-2026',
     country: 'JP',
     authority: '全国健康保険協会 (協会けんぽ - Japan Health Insurance Association)',
     title: '令和8年度 都道府県支部別保険料率額表',
-    url: 'https://www.kyoukaikenpo.or.jp/g7/cat330/sb3150/',
+    url: 'https://www.kyoukaikenpo.or.jp/about/business/insurance_rate/rate_prefectures/r08/index.html',
     sourceType: 'official-table',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-primary',
-    notes: 'Tỷ lệ BHYT 47 tỉnh thành 令和8年度 (Fukuoka 10.11%, Tokyo 9.98%, v.v.), chia đôi 50/50 người lao động và chủ sử dụng.'
+    notes: 'Tỷ lệ BHYT 47 tỉnh thành 令和8年度 (áp dụng từ phí tháng 3/2026; Tokyo 9.85%, Fukuoka 10.11%, Osaka 10.13%; 令和7年度 Tokyo 9.91%), chia đôi 50/50 người lao động và chủ sử dụng.'
   },
   'cfa-child-support-2026': {
     id: 'cfa-child-support-2026',
@@ -160,9 +172,9 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     url: 'https://www.kyoukaikenpo.or.jp/g7/cat330/sb3130/',
     sourceType: 'official-table',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-primary',
-    notes: 'Bảo hiểm chăm sóc người già 介護保険 (đối tượng 40-64 tuổi): tỷ lệ toàn quốc 1.62% (chia đôi 50/50: người lao động 0.81%).'
+    notes: 'Bảo hiểm chăm sóc người già 介護保険 (đối tượng 40-64 tuổi): tỷ lệ toàn quốc 1.62% (chia đôi 50/50: người lao động 0.81%), áp dụng từ phí tháng 3/2026; 令和7年度 1.59%.'
   },
   'jps-welfare-pension-table-2026': {
     id: 'jps-welfare-pension-table-2026',
@@ -192,25 +204,25 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     id: 'kyoukaikenpo-dependent-2026',
     country: 'JP',
     authority: '全国健康保険協会 (協会けんぽ - Japan Health Insurance Association)',
-    title: '健康保険 被扶養者認定基準（国内居住・年収130万円/180万円・主たる生計維持要件）',
+    title: '健康保険 被扶養者認定基準（国内居住・年収130万円/150万円（19〜22歳）/180万円・主たる生計維持要件）',
     url: 'https://www.kyoukaikenpo.or.jp/g3/sb3200/r142/',
     sourceType: 'official-guidance',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-primary',
-    notes: 'Tiêu chuẩn xác định người phụ thuộc tham gia BHYT: quan hệ thân nhân 3 đời, điều kiện cư trú tại Nhật, trần thu nhập tương lai < 130 vạn (dưới 60t) hoặc < 180 vạn (trên 60t/khuyết tật), điều kiện sống chung (thu nhập < 1/2 người bảo hiểm) và sống riêng (thu nhập < tiền gửi chu cấp).'
+    notes: 'Tiêu chuẩn xác định người phụ thuộc tham gia BHYT: quan hệ thân nhân 3 đời, điều kiện cư trú tại Nhật, trần thu nhập tương lai < 130 vạn (dưới 60t); < 150 vạn cho người phụ thuộc 19〜22 tuổi không phải vợ/chồng (認定日 từ 2025-10-01, tuổi tại 31/12); từ 2026-04-01 thu nhập lương xét theo hợp đồng lao động; hoặc < 180 vạn (trên 60t/khuyết tật), điều kiện sống chung (thu nhập < 1/2 người bảo hiểm) và sống riêng (thu nhập < tiền gửi chu cấp).'
   },
   'mhlw-shakai-hoken-tekio-2026': {
     id: 'mhlw-shakai-hoken-tekio-2026',
     country: 'JP',
     authority: '厚生労働省 / 日本年金機構 (MHLW / JPS)',
-    title: '短時間労働者に対する社会保険適用拡大基準（週20時間・月額8.8万円・51人以上企業）',
+    title: '短時間労働者に対する社会保険適用拡大基準（週20時間・月額8.8万円〔令和8年10月撤廃予定〕・企業規模51人→36人(2027-10)→21人(2029-10)→11人(2032-10)→撤廃(2035-10)）',
     url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyoukintou/shakaihoken_tekiyoukakudai/',
     sourceType: 'official-guidance',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-primary',
-    notes: 'Quy chuẩn bắt buộc tham gia BHXH cho nhân viên part-time/short-time (20h/tuần, 88,000円/tháng, công ty >= 51 người).'
+    notes: 'Quy chuẩn bắt buộc tham gia BHXH cho nhân viên part-time/short-time (20h/tuần; 88,000円/tháng đến khi bãi bỏ dự kiến 10/2026; ngưỡng quy mô 51 → 36 → 21 → 11 → bãi bỏ).'
   },
   'jps-dependent-eligibility-2026': {
     id: 'jps-dependent-eligibility-2026',
@@ -256,10 +268,10 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     country: 'JP',
     authority: '厚生労働省 (Ministry of Health, Labour and Welfare)',
     title: '年次有給休暇の付与要件・日数算定・比例付与・年5日取得義務化ガイドライン',
-    url: 'https://www.mhlw.go.jp/seisakunitsuite/bunya/koyoukintou/seisaku04/',
+    url: 'https://www.check-roudou.mhlw.go.jp/study/roudousya_yukyu.html',
     sourceType: 'official-guidance',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-27',
     status: 'official-primary',
     notes: 'Tiêu chuẩn cấp phép năm: nhân viên chính thức (10-20 ngày), part-time (tỷ lệ theo ngày làm), điều kiện chuyên cần 80%, thời hiệu 2 năm và nghĩa vụ nghỉ 5 ngày/năm đối với người được cấp từ 10 ngày.'
   },
@@ -283,9 +295,9 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     url: 'https://www.hellowork.mhlw.go.jp/insurance/insurance_basicbenefit.html',
     sourceType: 'official-guidance',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-27',
     status: 'official-primary',
-    notes: 'Tiêu chuẩn thụ hưởng trợ cấp thất nghiệp: điều kiện đóng bảo hiểm (6 tháng hoặc 12 tháng), phân loại thôi việc (công ty, lý do chính đáng, tự ý), thời gian chờ 7 ngày, thời gian hạn chế chi trả (給付制限 2 tháng) và gia hạn nhận trợ cấp tối đa 4 năm.'
+    notes: 'Tiêu chuẩn thụ hưởng trợ cấp thất nghiệp: điều kiện đóng bảo hiểm (6 tháng hoặc 12 tháng), phân loại thôi việc (công ty, lý do chính đáng, tự ý), thời gian chờ 7 ngày, thời gian hạn chế chi trả (給付制限 1 tháng nếu nghỉ từ 01/04/2025; 3 tháng nếu ≥2 lần tự ý nghỉ trong 5 năm hoặc 重責解雇; được giải trừ nếu học 教育訓練) và gia hạn nhận trợ cấp tối đa 4 năm.'
   },
   'egov-employment-insurance-act': {
     id: 'egov-employment-insurance-act',
@@ -304,24 +316,24 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     country: 'JP',
     authority: '厚生労働省 (Ministry of Health, Labour and Welfare)',
     title: '雇用保険の基本手当日額の変更・賃金日額の上限・下限額算定基準（毎年8月1日改定）',
-    url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000160564_00030.html',
+    url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000160564_00050.html',
     sourceType: 'official-table',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-27',
     status: 'official-primary',
-    notes: 'Quy chuẩn mức trợ cấp cơ bản hàng ngày (基本手当日額), trần và sàn tiền lương ngày (賃金日額) theo độ tuổi, đường cong tỷ lệ hưởng trợ cấp 50%〜80% và bảng số ngày hưởng trợ cấp tối đa (90〜330 ngày) áp dụng từ ngày 1/8 hàng năm.'
+    notes: 'Quy chuẩn mức trợ cấp cơ bản hàng ngày (基本手当日額), trần và sàn tiền lương ngày (賃金日額) theo độ tuổi, đường cong 80%〜50% (60–64 tuổi: 80%〜45%) và bảng số ngày hưởng (90〜330 ngày), điều chỉnh ngày 1/8 hàng năm. R8 từ 01/08/2026: sàn 3,203/2,562, A=5,480, B=13,490 (60–64: 12,120), trần <30 14,900/7,450; 30–44 16,540/8,270; 45–59 18,220/9,110; 60–64 17,400/7,830.'
   },
   'mhlw-resignation-procedures-guide': {
     id: 'mhlw-resignation-procedures-guide',
     country: 'JP',
     authority: '厚生労働省 / 日本年金機構 / 全国健康保険協会 (MHLW / JPS / Kyokai Kenpo)',
     title: '会社を退職したときの手続きガイド（健康保険の切り替え・国民年金・住民税・雇用保険離職票）',
-    url: 'https://www.nenkin.go.jp/service/kounen/tekiyo-kanyu/hihokensha-1/20141202.html',
+    url: 'https://www.nenkin.go.jp/service/kokunen/kanyu/20140710-03.html',
     sourceType: 'official-guidance',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-27',
     status: 'official-primary',
-    notes: 'Hướng dẫn tổng thể quy trình thủ tục pháp lý khi người lao động nghỉ việc tại Nhật: thời hạn thông báo 2 tuần (Dân luật Điều 627), 3 lựa chọn BHYT (tiếp tục tự nguyện 20 ngày, BHYT quốc dân 14 ngày, theo người phụ thuộc), chuyển đổi lương hưu quốc dân, khấu trừ thuế cư trú (tháng 1-5 trừ một cục vs tháng 6-12 tự nộp) và nộp đơn Hello Work.'
+    notes: 'Hướng dẫn tổng thể quy trình thủ tục pháp lý khi người lao động nghỉ việc tại Nhật: thời hạn thông báo 2 tuần (Dân luật Điều 627), 3 lựa chọn BHYT (tiếp tục tự nguyện 20 ngày, BHYT quốc dân 14 ngày, theo người phụ thuộc), chuyển đổi lương hưu quốc dân, khấu trừ thuế cư trú (tháng 1-5 trừ một cục vs tháng 6-12 tự nộp), nộp Hello Work ngay khi nhận 離職票 (受給期間 1 năm kể từ ngày hôm sau ngày nghỉ); dùng マイナ保険証 hoặc trả 資格確認書 nếu được cấp.'
   },
 
   // =========================================================================
@@ -372,12 +384,12 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     country: 'JP',
     authority: '全国健康保険協会 (協会けんぽ)',
     title: '出産手当金について（支給期間・支給額の計算方法）',
-    url: 'https://www.kyoukaikenpo.or.jp/g3/sb3290/r148/',
+    url: 'https://www.kyoukaikenpo.or.jp/benefit/childbirth/001/index.html',
     sourceType: 'official-guidance',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-27',
     status: 'official-primary',
-    notes: 'Hướng dẫn chi trả trợ cấp thai sản: 42 ngày trước sinh (98 ngày đa thai), 56 ngày sau sinh; quy tắc tham gia dưới 12 tháng so với mức trần bình quân toàn hiệp hội 300,000円; quy tắc khấu trừ lương khi nghỉ.'
+    notes: 'Hướng dẫn chi trả trợ cấp thai sản: 42 ngày trước sinh (98 ngày đa thai), 56 ngày sau sinh; quy tắc tham gia dưới 12 tháng so với mức bình quân toàn hiệp hội 320,000円 (支給開始日 từ 01/04/2025; trước đó 300,000円); ÷30 làm tròn 10円, ×2/3 làm tròn 1円; quy tắc khấu trừ lương khi nghỉ.'
   },
   'mhlw-childbirth-lump-sum-grant': {
     id: 'mhlw-childbirth-lump-sum-grant',
@@ -411,19 +423,19 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000158500.html',
     sourceType: 'official-guidance',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-27',
     status: 'official-primary',
-    notes: 'Quy chế 4 loại trợ cấp: 67% (180 ngày đầu), 50% (sau 180 ngày), trợ cấp hỗ trợ sau sinh (+13% ngày lương lên 80% lương ngày), và trợ cấp làm việc rút ngắn giờ từ 04/2025.'
+    notes: 'Quy chế 4 loại trợ cấp: 67% (180 ngày đầu), 50% (sau 180 ngày), trợ cấp hỗ trợ sau sinh (+13% ngày lương lên 80% lương ngày), và trợ cấp làm việc rút ngắn giờ từ 04/2025 (10% lương thực trả khi làm giờ ngắn). Trần/sàn theo kỳ: R8 (từ 01/08/2026) 賃金月額 496,200/96,090 (日額 16,540/3,203), trần 67% 332,454, 50% 248,100, 出生時 310,290, 出生後 13% 60,205, 時短 限度額 484,121; R7 483,300/90,420, 323,811, 241,650, 302,223, 58,640, 471,393.'
   },
   'cfa-child-allowance-reform-2024': {
     id: 'cfa-child-allowance-reform-2024',
     country: 'JP',
     authority: 'こども家庭庁 (Children and Families Agency)',
     title: '児童手当制度の改正（令和6年10月分から制度拡充）',
-    url: 'https://www.cfa.go.jp/policies/kokosei/jidouteate',
+    url: 'https://www.cfa.go.jp/policies/kokoseido/jidouteate/',
     sourceType: 'official-guidance',
     language: 'ja',
-    lastVerifiedAt: '2026-09-10',
+    lastVerifiedAt: '2026-09-27',
     status: 'official-primary',
     notes: 'Cải cách Trợ cấp Trẻ em từ tháng 10/2024: Bỏ hoàn toàn trần thu nhập; mở rộng đến hết cấp 3 (18 tuổi); mức 15,000円 (<3 tuổi), 10,000円 (3 tuổi - cấp 3), 30,000円 (con thứ 3 trở đi); đếm thứ bậc con có tính con phụ thuộc đến 22 tuổi.'
   },
@@ -456,10 +468,10 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     country: 'JP',
     authority: '総務省 (Ministry of Internal Affairs and Communications)',
     title: '住民基本台帳法（転出届・転入届・転居届の法定届出義務・14日ルール）',
-    url: 'https://www.soumu.go.jp/main_sosiki/jichi_gyousei/c-gyousei/juumin_kihon_daityou.html',
+    url: 'https://laws.e-gov.go.jp/law/342AC0000000081',
     sourceType: 'law',
     language: 'ja',
-    lastVerifiedAt: '2026-09-11',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-primary',
     notes: 'Luật Sổ bộ cư trú cơ bản Nhật Bản: Nghĩa vụ nộp giấy chuyển đi (転出届) trước khi chuyển, nộp giấy chuyển vào (転入届) hoặc chuyển chỗ ở (転居届) trong vòng 14 ngày. Phạt tiền vi phạm quy định cư trú.'
   },
@@ -566,10 +578,10 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     country: 'JP',
     authority: '出入国在留管理庁 (ISA)',
     title: '出入国管理及び難民認定法施行規則改正（提出写真の規格及び1歳未満免除：令和8年6月14日施行）',
-    url: 'https://www.moj.go.jp/isa/applications/procedures/photo_info.html',
+    url: 'https://www.moj.go.jp/isa/applications/procedures/16-3.html',
     sourceType: 'regulation',
     language: 'ja',
-    lastVerifiedAt: '2026-09-11',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-current',
     notes: 'Quy định ảnh thẻ ngoại kiều cấp từ 14/06/2026: Miễn nộp ảnh cho trẻ dưới 1 tuổi (trước đó là dưới 16 tuổi). Trẻ từ 1 tuổi trở lên bắt buộc nộp ảnh cỡ 40x30mm trong vòng 3 tháng.'
   },
@@ -577,13 +589,13 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     id: 'isa-fee-schedule-2026',
     country: 'JP',
     authority: '法務省 / 出入国在留管理庁',
-    title: '出入国管理及び難民認定法関係手数料令改正（令和8年10月1日施行・申請日基準）',
-    url: 'https://www.moj.go.jp/isa/applications/resources/fee_revision.html',
+    title: '在留許可手数料の額の改定（改正入管法施行令第25条・令和8年10月1日以降の受付分・許可される在留期間に応じた額）',
+    url: 'https://www.moj.go.jp/isa/01_00644.html',
     sourceType: 'regulation',
     language: 'ja',
-    lastVerifiedAt: '2026-09-11',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-current',
-    notes: 'Lệ phí nhập quản sửa đổi có hiệu lực từ 01/10/2026: Gia hạn/Đổi tư cách 4,000円 -> 6,000円. Áp dụng theo ngày nộp đơn (applicationDate), đơn nộp đến 30/09/2026 vẫn áp dụng 4,000円.'
+    notes: 'Hồ sơ TIẾP NHẬN đến 30/09/2026: đổi tư cách/gia hạn 6.000円 (quầy) / 5.500円 (online), Vĩnh trú 10.000円 — kể cả khi cấp phép sau 01/10/2026. Tiếp nhận từ 01/10/2026: theo thời hạn được cấp (quầy/online): ≤3 tháng 10.000/10.000; >3–6 tháng 18.000/15.000; >6 tháng–<1 năm 25.000/21.000; 1 năm 33.000/27.000; >1–<3 năm 48.000/42.000; 3–<5 năm 64.000/56.000; ≥5 năm 75.000/65.000; Vĩnh trú 200.000 (chỉ quầy). Online: combini/ngân hàng + phí thanh toán 330/550円. Giảm phí: https://www.moj.go.jp/isa/10_00273.html'
   },
   'isa-ica-art19-16-notification': {
     id: 'isa-ica-art19-16-notification',
@@ -637,25 +649,25 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     id: 'isa-pr-guidelines-current',
     country: 'JP',
     authority: '出入国在留管理庁 (ISA)',
-    title: '永住許可に関するガイドライン（令和元年改正・現行適用版）',
-    url: 'https://www.moj.go.jp/isa/publications/materials/nyukan_nyukan50.html',
+    title: '永住許可に関するガイドライン（令和8年2月24日改訂）',
+    url: 'https://www.moj.go.jp/isa/applications/resources/nyukan_nyukan50.html',
     sourceType: 'official-guidance',
     language: 'ja',
-    lastVerifiedAt: '2026-09-11',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-current',
-    notes: 'Hướng dẫn xin vĩnh trú hiện hành: Cư trú 10 năm (5 năm đi làm); vợ/chồng công dân Nhật/vĩnh trú 3 năm kết hôn + 1 năm cư trú; nộp thuế và bảo hiểm/nenkin đầy đủ, đúng hạn trong 5 năm gần nhất.'
+    notes: 'Hướng dẫn xin vĩnh trú hiện hành: Cư trú 10 năm (5 năm đi làm); vợ/chồng công dân Nhật/vĩnh trú 3 năm kết hôn + 1 năm cư trú; nộp thuế và bảo hiểm/nenkin đầy đủ, đúng hạn trong 5 năm gần nhất. Visa 3 năm được coi là dài nhất đến 31/03/2027; phải phù hợp 上陸許可基準.'
   },
   'isa-pr-proposal-2026-draft': {
     id: 'isa-pr-proposal-2026-draft',
     country: 'JP',
     authority: '出入国在留管理庁 (ISA)',
-    title: '永住許可制度の見直しに係る意見公募案（パブリックコメント・未発効検討案）',
-    url: 'https://public-comment.e-gov.go.jp/servlet/Public?CLASSNAME=PCMMSTDETAIL&id=020026001',
+    title: '永住許可に関するガイドライン改定案（令和8年8月4日公表・意見募集9月4日締切・未確定）',
+    url: 'https://public-comment.e-gov.go.jp/pcm/detail?CLASSNAME=PCMMSTDETAIL&id=315000140&Mode=0',
     sourceType: 'official-guidance',
     language: 'ja',
-    lastVerifiedAt: '2026-09-11',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-proposed',
-    notes: 'Dự thảo lấy ý kiến công chúng năm 2026 về sửa đổi cơ chế vĩnh trú (thu hồi vĩnh trú khi cố tình trốn thuế/nenkin). LƯU Ý: Đây là bản dự thảo, KHÔNG áp dụng như luật hiện hành.'
+    notes: 'DỰ THẢO chưa chính thức: thu nhập hộ > bình quân hộ người Nhật cùng số người (dự kiến từ 10/2026); lương hưu tương đương 30 năm 厚生年金; tiếng Nhật CEFR B1; diện vợ/chồng 5 năm hôn nhân + 3 năm ở Nhật (dự kiến từ 04/2027). Hủy vĩnh trú khi cố ý không nộp thuế/BHXH là quy định luật riêng, hiệu lực 01/04/2027.'
   },
   'isa-online-system': {
     id: 'isa-online-system',
@@ -686,10 +698,10 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     country: 'JP',
     authority: '日本年金機構 (Japan Pension Service)',
     title: '短期在留外国人の脱退一時金制度（国民年金・厚生年金保険）',
-    url: 'https://www.nenkin.go.jp/service/jukyu/sonota-kyufu/dattai-ichiji/20150406.html',
+    url: 'https://www.nenkin.go.jp/service/jukyu/seido/sonota-kyufu/dattai-ichiji/20150406.html',
     sourceType: 'official-guidance',
     language: 'ja',
-    lastVerifiedAt: '2026-09-11',
+    lastVerifiedAt: '2026-09-28',
     status: 'official-current',
     notes: 'Tiền rút một lần hưu trí (脱退一時金): Dành cho người nước ngoài không có quốc tịch Nhật, đã đóng Nenkin từ 6 tháng trở lên, nộp đơn trong vòng 2 năm sau khi rời Nhật.'
   },

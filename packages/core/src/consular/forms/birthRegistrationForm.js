@@ -1,7 +1,7 @@
 /**
  * @file forms/birthRegistrationForm.js
  * Canonical Form: Tờ khai đăng ký khai sinh
- * Cơ quan ban hành: Bộ Tư pháp (Thông tư số 04/2020/TT-BTP ngày 28/05/2020)
+ * BẢN NHÁP tham khảo (bố cục theo mẫu hộ tịch của Bộ Tư pháp — phiên bản hiện hành cần xác nhận với cơ quan).
  * Áp dụng thống nhất cho các Cơ quan đại diện Việt Nam ở nước ngoài.
  */
 
@@ -9,11 +9,11 @@ export const BIRTH_REGISTRATION_FORM = {
   id: 'birth_registration',
   code: 'TP/HT-2020-TKKS.1',
   title: 'Tờ khai đăng ký khai sinh',
-  legal_basis: 'Thông tư số 04/2020/TT-BTP ngày 28/05/2020 của Bộ Tư pháp',
+  legal_basis: 'Bản nháp tham khảo (bố cục theo mẫu tờ khai hộ tịch của Bộ Tư pháp — phiên bản hiện hành cần xác nhận với cơ quan); dùng tờ khai theo hướng dẫn của ĐSQ',
   authority: 'Bộ Tư pháp Việt Nam',
   version: '2020.1',
-  status: 'VERIFIED',
-  fingerprint: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+  isDraftHelper: true,
+  status: 'DRAFT_HELPER',
   verified_at: '2026-09-12',
   official_source_url: 'https://vnembassy-jp.org/vi/thu-tuc-cap-giay-khai-sinh',
   page_size: 'A4',
@@ -72,7 +72,7 @@ export const BIRTH_REGISTRATION_FORM = {
           type: 'text',
           required: true,
           placeholder: 'NGUYỄN VĂN B (hoặc Watanabe Linh)',
-          help: 'Tên và chữ đệm phải bằng tiếng Việt hoặc tiếng dân tộc Việt Nam. Họ theo cha hoặc mẹ.',
+          help: 'Họ của con theo họ của cha hoặc mẹ (có thể là họ người nước ngoài theo thỏa thuận của cha mẹ); tên đệm và tên bắt buộc bằng tiếng Việt (theo https://vnembassy-jp.org/vi/thu-tuc-cap-giay-khai-sinh).',
           dossier_key: 'child_name',
         },
         {
@@ -123,7 +123,7 @@ export const BIRTH_REGISTRATION_FORM = {
           label: 'Quê quán (theo quê cha hoặc mẹ)',
           type: 'text',
           required: true,
-          placeholder: 'Xã..., Huyện..., Tỉnh...',
+          placeholder: 'Xã/Phường..., Tỉnh/Thành phố... (sau sắp xếp 2 cấp từ 01/7/2025)',
         },
       ],
     },

@@ -58,7 +58,8 @@ export function evaluateMovingAdminProcedures(inputs = {}) {
   // Parse move date
   let moveDateObj = new Date();
   if (inputs.moveDate) {
-    const parsed = new Date(inputs.moveDate);
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(inputs.moveDate));
+    const parsed = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(inputs.moveDate);
     if (!isNaN(parsed.getTime())) {
       moveDateObj = parsed;
     }

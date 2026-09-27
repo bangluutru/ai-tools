@@ -112,15 +112,27 @@ const i18n = {
 };
 
 const TOOL_NAMES = {
-  'pdf-toolkit': { vn: 'Công Cụ PDF Đa Năng', en: 'PDF Multi-Tool', ja: '万能PDFツール' },
-  'id-photo-studio': { vn: 'Tạo Ảnh Thẻ & Hộ Chiếu', en: 'ID & Passport Photo', ja: '証明写真スタジオ' },
-  'business-card-studio': { vn: 'Tạo Danh Thiếp', en: 'Business Card Maker', ja: '名刺作成' },
-  'invoice-studio': { vn: 'Tạo Đề Nghị Thanh Toán', en: 'Payment Request Maker', ja: '支払依頼書作成' },
-  'image-convert': { vn: 'Nén Ảnh Đa Năng', en: 'Image Compressor', ja: '画像圧縮・変換' },
-  'barcode-qr': { vn: 'Tạo Mã QR & Barcode', en: 'QR & Barcode Generator', ja: 'QRコード生成' },
-  'watermark-studio': { vn: 'Đóng Dấu Tài Liệu', en: 'Document Watermark', ja: '文書透かし・押印' },
-  'excel-mapping': { vn: 'Mapping Excel', en: 'Excel Data Mapping', ja: 'Excelマッピング' },
-  'tax-calculator': { vn: 'Tính Thuế TNCN', en: 'Tax Calculator', ja: '個人所得税計算' },
+  'pdf-toolkit': { vi: 'Công Cụ PDF Đa Năng', en: 'PDF Multi-Tool', ja: '万能PDFツール' },
+  'id-photo-studio': { vi: 'Tạo Ảnh Thẻ & Hộ Chiếu', en: 'ID & Passport Photo', ja: '証明写真スタジオ' },
+  'business-card-studio': { vi: 'Tạo Danh Thiếp', en: 'Business Card Maker', ja: '名刺作成' },
+  'invoice-studio': { vi: 'Tạo Đề Nghị Thanh Toán', en: 'Payment Request Maker', ja: '支払依頼書作成' },
+  'image-convert': { vi: 'Nén Ảnh Đa Năng', en: 'Image Compressor', ja: '画像圧縮・変換' },
+  'barcode-qr': { vi: 'Tạo Mã QR & Barcode', en: 'QR & Barcode Generator', ja: 'QRコード生成' },
+  'watermark-studio': { vi: 'Đóng Dấu Tài Liệu', en: 'Document Watermark', ja: '文書透かし・押印' },
+  'excel-mapping': { vi: 'Mapping Excel', en: 'Excel Data Mapping', ja: 'Excelマッピング' },
+  'tax-calculator': { vi: 'Tính Thuế TNCN', en: 'Tax Calculator', ja: '個人所得税計算' },
+};
+
+const getToolName = (toolId, lang) =>
+  TOOL_NAMES[toolId]?.[lang] || TOOL_NAMES[toolId]?.vi || toolId;
+
+// Game hotkeys must not hijack typing in form fields or browser/OS shortcuts.
+const shouldIgnoreGameKey = (e) => {
+  if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return true;
+  const el = e.target;
+  if (!el || typeof el !== 'object') return false;
+  const tag = String(el.tagName || '').toUpperCase();
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || Boolean(el.isContentEditable);
 };
 
 export default function ToolioNinjaView({ displayLang = 'vi' }) {
@@ -186,6 +198,7 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
   // Keyboard controls listener
   useEffect(() => {
     const onKey = (e) => {
+      if (shouldIgnoreGameKey(e)) return;
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
         engineRef.current?.handleJump();
@@ -227,7 +240,7 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
   };
 
   const handleNavigateTool = (toolId) => {
-    window.location.assign(`#${toolId}`);
+    window.location.assign(`#/tools/${toolId}`);
   };
 
   return (
@@ -306,18 +319,20 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
                 ref={canvasRef}
                 width={GAME_WIDTH}
                 height={GAME_HEIGHT}
-                className="w-full h-full block object-contain"
+                className="w-full h-full block object-contain touch-manipulation"
+                style={{ touchAction: 'manipulation' }}
               />
 
               {/* Game Over Popup Overlay */}
               {gameState === GAME_STATE.GAME_OVER && gameOverData && (
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center z-10 animate-fade-in">
-                  <div className="max-w-md w-full p-5 rounded-2xl bg-surface-container border border-border-subtle shadow-2xl space-y-4">
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col p-2 sm:p-4 text-center z-10 animate-fade-in overflow-y-auto overscroll-contain">
+                  {/* m-auto centres the card when it fits and lets the overlay scroll when it does not (phones) */}
+                  <div className="m-auto max-w-md w-full p-3 sm:p-5 rounded-2xl bg-surface-container border border-border-subtle shadow-2xl space-y-2 sm:space-y-4">
                     <div>
-                      <div className="inline-flex p-2.5 rounded-2xl bg-primary/20 text-primary mb-2">
+                      <div className="hidden sm:inline-flex p-2.5 rounded-2xl bg-primary/20 text-primary mb-2">
                         <Swords size={28} />
                       </div>
-                      <h3 className="text-lg font-bold text-on-surface">{t.gameOverTitle}</h3>
+                      <h3 className="text-base sm:text-lg font-bold text-on-surface">{t.gameOverTitle}</h3>
                       <p className="text-xs text-on-surface-variant mt-1">
                         {t.solvedPraise}{' '}
                         <span className="text-primary font-bold text-sm">
@@ -325,16 +340,16 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
                         </span>{' '}
                         {t.problemsUnit}
                       </p>
-                      <p className="text-[11px] text-outline mt-0.5 italic">{t.toolioTagline}</p>
+                      <p className="hidden sm:block text-[11px] text-outline mt-0.5 italic">{t.toolioTagline}</p>
                     </div>
 
                     {/* Solved Problems Breakdown Links */}
-                    <div className="max-h-36 overflow-y-auto space-y-1.5 p-2 rounded-xl bg-surface-subtle border border-border-subtle text-left text-xs">
+                    <div className="max-h-20 sm:max-h-36 overflow-y-auto space-y-1 sm:space-y-1.5 p-1.5 sm:p-2 rounded-xl bg-surface-subtle border border-border-subtle text-left text-xs">
                       {Object.entries(gameOverData.solvedStats)
                         .filter(([_, count]) => count > 0)
                         .map(([toolId, count]) => {
                           const toolName =
-                            TOOL_NAMES[toolId]?.[displayLang] || TOOL_NAMES[toolId]?.vn || toolId;
+                            getToolName(toolId, displayLang);
                           return (
                             <button
                               key={toolId}
@@ -361,7 +376,7 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
                       <button
                         type="button"
                         onClick={handleRestart}
-                        className="flex-1 py-2.5 px-4 rounded-xl bg-primary text-on-primary font-bold text-xs shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
+                        className="flex-1 py-2 sm:py-2.5 px-4 rounded-xl bg-primary text-on-primary font-bold text-xs shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5"
                       >
                         <RotateCcw size={14} />
                         <span>{t.playAgain}</span>
@@ -371,7 +386,7 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
                         onClick={() => {
                           window.location.assign('#');
                         }}
-                        className="py-2.5 px-4 rounded-xl bg-surface-subtle border border-border-subtle text-on-surface hover:text-primary font-semibold text-xs transition-colors"
+                        className="py-2 sm:py-2.5 px-4 rounded-xl bg-surface-subtle border border-border-subtle text-on-surface hover:text-primary font-semibold text-xs transition-colors"
                       >
                         {t.exploreToolio}
                       </button>
@@ -387,6 +402,7 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
               <button
                 type="button"
                 onPointerDown={handleJump}
+                style={{ touchAction: 'manipulation' }}
                 className="py-3 px-4 rounded-2xl bg-secondary/15 hover:bg-secondary/25 border-2 border-secondary/40 active:scale-95 transition-all flex items-center justify-center gap-2 select-none"
                 aria-label={ninjaStrings.controls.jump}
               >
@@ -403,6 +419,7 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
               <button
                 type="button"
                 onPointerDown={handleSlash}
+                style={{ touchAction: 'manipulation' }}
                 className="py-3 px-4 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border-2 border-rose-500/40 active:scale-95 transition-all flex items-center justify-center gap-2 select-none"
                 aria-label={ninjaStrings.controls.slash}
               >
@@ -525,7 +542,7 @@ export default function ToolioNinjaView({ displayLang = 'vi' }) {
                       style={{ backgroundColor: item.color }}
                     />
                     <span className="text-xs font-semibold text-on-surface truncate group-hover:text-primary">
-                      {TOOL_NAMES[item.toolId]?.[displayLang] || item.toolId}
+                      {getToolName(item.toolId, displayLang)}
                     </span>
                   </div>
                   <ExternalLink size={12} className="text-outline shrink-0 group-hover:text-primary" />

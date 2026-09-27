@@ -86,6 +86,9 @@ export function exportTaxSimulationCsv(arg1, arg2) {
   ]);
   rows.push(['所得税（国税・基準額）', calcResult.incomeTax.baseIncomeTax, '税務署']);
   rows.push(['復興特別所得税（基準額の2.1%）', calcResult.incomeTax.reconstructionTax, '税務署']);
+  if (calcResult.incomeTax.roundingAdjustment) {
+    rows.push(['端数処理（100円未満切捨て）', calcResult.incomeTax.roundingAdjustment, '税務署']);
+  }
   rows.push(['住民税 所得割（地方税）', calcResult.residentTax.incomeLevy, '市区町村・都道府県']);
   rows.push(['住民税 均等割（地方税）', calcResult.residentTax.perCapitaFlat, '市区町村・都道府県']);
   rows.push(['森林環境税（国税）', calcResult.residentTax.forestryTax, '自治体代行徴収']);
@@ -113,12 +116,18 @@ export function exportTaxSimulationCsv(arg1, arg2) {
   ]);
 
   if (calcResult.socialInsurance.isCompanyEmployee) {
-    rows.push(['健康保険（協会けんぽ）', calcResult.socialInsurance.healthInsurance, calcResult.socialInsurance.healthInsurance]);
-    if (calcResult.socialInsurance.careInsurance > 0) {
-      rows.push(['介護保険（40歳以上）', calcResult.socialInsurance.careInsurance, calcResult.socialInsurance.careInsurance]);
+    // Phần công ty: 健保・支援金・介護・厚生年金 bằng phần NLĐ (労使折半); 雇用保険 và 拠出金 chỉ có trong tổng
+    const si = calcResult.socialInsurance;
+    rows.push(['健康保険（協会けんぽ）', si.healthInsurance, si.healthInsurance]);
+    if (si.childSupportContribution > 0) {
+      rows.push(['子ども・子育て支援金', si.childSupportContribution, si.childSupportContribution]);
     }
-    rows.push(['厚生年金保険', calcResult.socialInsurance.welfarePension, calcResult.socialInsurance.welfarePension]);
-    rows.push(['雇用保険（労働者負担分）', calcResult.socialInsurance.employmentInsurance, Math.floor(calcResult.socialInsurance.employmentInsurance * 1.58)]);
+    if (si.careInsurance > 0) {
+      rows.push(['介護保険（40〜64歳）', si.careInsurance, si.careInsurance]);
+    }
+    rows.push(['厚生年金保険', si.welfarePension, si.welfarePension]);
+    rows.push(['雇用保険（労働者負担分）', si.employmentInsurance, '']);
+    rows.push(['事業主負担合計（雇用保険・子ども・子育て拠出金を含む）', '', si.employerContribution]);
   } else {
     rows.push(['国民健康保険', calcResult.socialInsurance.nationalHealthInsurance, 0]);
     rows.push(['国民年金', calcResult.socialInsurance.nationalPension, 0]);

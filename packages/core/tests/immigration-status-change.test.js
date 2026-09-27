@@ -50,8 +50,8 @@ test('Status Change Guide: Student to Engineer/Specialist in Humanities (技人�
   assert.ok(result.tokureiInfo);
   assert.equal(result.tokureiInfo.tokureiExpirationDate, '2026-12-15');
 
-  // Fee pre Oct 2026
-  assert.equal(result.feeSchedule.amount, 4000);
+  // Hồ sơ tiếp nhận trước 01/10/2026: 6.000 JPY tại quầy
+  assert.equal(result.feeSchedule.amount, 6000);
 });
 
 test('Status Change Guide: Student to Gijinkoku with missing degree or mismatched major', () => {
@@ -108,13 +108,26 @@ test('Status Change Guide: Temporary Visitor to Mid/Long-Term with issued COE is
   assert.equal(coeReq.met, true);
 });
 
-test('Status Change Guide: Transition to Business Manager (経営・管理)', () => {
+test('Status Change Guide: Transition to Business Manager (経営・管理) — 2025-10-16 standards', () => {
+  // Tiêu chuẩn cũ (vốn 5 triệu yên) không còn đủ
+  const oldStandard = evaluateStatusChange({
+    currentStatusId: 'engineer_specialist',
+    targetStatusId: 'business_manager',
+    applicantProfile: { hasPhysicalOffice: true, capitalAtLeast5M: true, hasFeasibleBusinessPlan: true }
+  });
+  assert.equal(oldStandard.readinessStatus, 'missing_requirements');
+  assert.ok(oldStandard.warnings.some((w) => w.code === 'BUSINESS_MANAGER_2025_STANDARDS'));
+
   const result = evaluateStatusChange({
     currentStatusId: 'engineer_specialist',
     targetStatusId: 'business_manager',
     applicantProfile: {
       hasPhysicalOffice: true,
-      capitalAtLeast5M: true,
+      capitalAtLeast30M: true,
+      hasFullTimeEmployee: true,
+      hasJapaneseB2: true,
+      hasManagementExperienceOrDegree: true,
+      planCheckedByExpert: true,
       hasFeasibleBusinessPlan: true
     }
   });
@@ -142,12 +155,16 @@ test('Status Change Guide: Transition to Spouse of Japanese National (日本人�
   assert.equal(result.routeId, 'any_to_spouse_japanese');
 });
 
-test('Status Change Guide: Fee schedule transition on 2026-10-01 (4,000 to 6,000 JPY)', () => {
+test('Status Change Guide: Fee schedule transition on 2026-10-01 (6,000 flat → period-based)', () => {
   const preChange = getStatusChangeFeeSchedule('2026-09-30');
-  assert.equal(preChange.amount, 4000);
+  assert.equal(preChange.amount, 6000);
+  assert.equal(getStatusChangeFeeSchedule('2026-09-30', { method: 'online' }).amount, 5500);
 
   const postChange = getStatusChangeFeeSchedule('2026-10-01');
-  assert.equal(postChange.amount, 6000);
+  assert.equal(postChange.amount, 33000, 'Mặc định dự kiến 1 năm, nộp tại quầy');
+  assert.deepEqual(postChange.range, { min: 10000, max: 75000 });
+  assert.equal(getStatusChangeFeeSchedule('2026-10-01', { expectedPeriod: '5yPlus', method: 'online' }).amount, 65000);
+  assert.equal(getStatusChangeFeeSchedule('2026-10-01', { expectedPeriod: '3yUnder5y' }).amount, 64000);
 });
 
 test('Status Change Guide: Activity prohibition & McLean doctrine warnings are always present', () => {
@@ -161,4 +178,27 @@ test('Status Change Guide: Activity prohibition & McLean doctrine warnings are a
 
   const discWarn = result.warnings.find(w => w.code === 'MINISTERIAL_DISCRETION');
   assert.ok(discWarn, 'Phải có lưu ý về thẩm quyền của Bộ trưởng Tư pháp theo án lệ McLean');
+});
+
+test('Status Change Guide: Tokurei end clamps to month end and the expiry day is not "expired"', () => {
+  const lastDay = evaluateStatusChange({
+    currentStatusId: 'student',
+    targetStatusId: 'engineer_specialist',
+    currentExpirationDate: '2026-12-31',
+    currentDate: '2026-12-31',
+    applicationDate: '2026-12-31',
+  });
+  assert.equal(lastDay.tokureiInfo.tokureiExpirationDate, '2027-02-28');
+  assert.equal(lastDay.tokureiInfo.daysRemaining, 0);
+  assert.ok(!lastDay.warnings.some((w) => w.code === 'ALREADY_EXPIRED'), 'Ngày hết hạn vẫn còn hợp lệ');
+  assert.ok(lastDay.warnings.some((w) => w.code === 'EXPIRATION_TODAY'));
+
+  const dayAfter = evaluateStatusChange({
+    currentStatusId: 'student',
+    targetStatusId: 'engineer_specialist',
+    currentExpirationDate: '2026-12-31',
+    currentDate: '2027-01-01',
+  });
+  assert.ok(dayAfter.warnings.some((w) => w.code === 'ALREADY_EXPIRED'));
+  assert.equal(dayAfter.readinessStatus, 'restricted');
 });

@@ -25,10 +25,10 @@ export const CHILD_SUPPORT_METADATA_2026 = defineRuleMetadata({
  * @param {string} [applicableDate='2026-04-01'] - YYYY-MM-DD
  */
 export function resolveChildSupportRate(applicableDate = '2026-04-01') {
-  const dateStr = applicableDate ? String(applicableDate).substring(0, 10) : '2026-04-01';
+  const month = applicableDate ? String(applicableDate).substring(0, 7) : '2026-04';
 
-  // 1. 子ども・子育て支援金 (Áp dụng từ 01/04/2026)
-  const isIntroduced = dateStr >= '2026-04-01';
+  // 1. 子ども・子育て支援金 (Áp dụng từ phí tháng 4/2026 — 令和8年4月分)
+  const isIntroduced = month >= '2026-04';
   const totalRate = isIntroduced ? 0.0023 : 0; // 0.23%
   const employeeRate = isIntroduced ? 0.00115 : 0;
   const employerRate = isIntroduced ? 0.00115 : 0;

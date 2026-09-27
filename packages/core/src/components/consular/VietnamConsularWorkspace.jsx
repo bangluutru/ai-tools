@@ -19,9 +19,10 @@ export default function VietnamConsularWorkspace({
   const t = getConsularI18n(displayLang);
   const [selectedPrefectureId, setSelectedPrefectureId] = useState(() => {
     try {
-      return localStorage.getItem('consular_user_prefecture') || '13'; // Mặc định Tokyo (13)
+      // Không mặc định Tokyo: người dùng phải chọn tỉnh để tránh chỉ sai cơ quan
+      return localStorage.getItem('consular_user_prefecture') || '';
     } catch {
-      return '13';
+      return '';
     }
   });
 
@@ -191,6 +192,7 @@ export default function VietnamConsularWorkspace({
             isExpanded={isExpandedEditor}
             onToggleExpand={() => setIsExpandedEditor(!isExpandedEditor)}
             displayLang={displayLang}
+            officeCity={currentOffice?.city || null}
           />
         </div>
       </main>

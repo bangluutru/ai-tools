@@ -9,6 +9,7 @@
  */
 
 import { findDocumentsByQuery } from '../resolvers/documentResolver.js';
+import { foldText, minSubstringLength } from './textFold.js';
 import { findProceduresByQuery } from '../resolvers/procedureRequirementResolver.js';
 
 export const DISAMBIGUATION_CARDS = {
@@ -148,7 +149,7 @@ export function searchAdministrativeDomain(query) {
     };
   }
 
-  const normalized = query.trim().toLowerCase();
+  const normalized = foldText(query);
   if (!normalized) {
     return {
       matchedDocuments: [],
@@ -157,10 +158,14 @@ export function searchAdministrativeDomain(query) {
     };
   }
 
-  // 1. Check for disambiguation trigger
+  // 1. Check for disambiguation trigger (bỏ dấu; không để 1 ký tự Latin khớp mọi thẻ)
   let disambiguationCard = null;
+  const canReverseMatch = normalized.length >= minSubstringLength(normalized);
   for (const card of Object.values(DISAMBIGUATION_CARDS)) {
-    if (card.triggerKeywords.some((kw) => normalized.includes(kw) || kw.includes(normalized))) {
+    if (card.triggerKeywords.some((kw) => {
+      const k = foldText(kw);
+      return normalized.includes(k) || (canReverseMatch && k.includes(normalized));
+    })) {
       disambiguationCard = card;
       break;
     }

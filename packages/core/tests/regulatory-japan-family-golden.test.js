@@ -126,11 +126,11 @@ test('Milestone 1: 出産手当金シミュレーター (Maternity Allowance Gol
   });
 
   // Case 6: Tham gia dưới 12 tháng với trần bình quân Hiệp hội 300,000円 (協会けんぽ上限)
-  await t.test('M1-06: Đóng dưới 12 tháng có lương cao bị khống chế trần bình quân toàn hiệp hội (300,000円)', () => {
+  await t.test('M1-06: Đóng dưới 12 tháng có lương cao bị khống chế trần bình quân toàn hiệp hội (320,000円 từ 2025-04-01)', () => {
     const result = calculateMaternityAllowance({
       expectedBirthDate: '2026-10-10',
       actualBirthDate: '2026-10-10',
-      monthlySalary: 450000, // Cấp 29: 440,000円 > 300,000円
+      monthlySalary: 450000, // Cấp 29: 440,000円 > 320,000円
       insuranceMonths: 6,
       insurerType: 'kyokai_kenpo',
     });
@@ -138,8 +138,19 @@ test('Milestone 1: 出産手当金シミュレーター (Maternity Allowance Gol
     assert.equal(result.isEligible, true);
     assert.equal(result.financials.isCappedByAssociationLimit, true);
     assert.equal(result.financials.calculationBasisType, 'kyokai_kenpo_capped');
-    assert.equal(result.financials.standardMonthlyRemuneration, 300000);
-    assert.equal(result.financials.standardDailyBenefit, 6667);
+    assert.equal(result.financials.standardMonthlyRemuneration, 320000);
+    // 320,000 ÷ 30 = 10,666.7 → 10,670 (10円未満四捨五入) × 2/3 = 7,113.3 → 7,113円
+    assert.equal(result.financials.standardDailyBenefit, 7113);
+
+    // 支給開始日 trước 01/04/2025 → trần cũ 300,000円
+    const old = calculateMaternityAllowance({
+      expectedBirthDate: '2025-04-20',
+      monthlySalary: 450000,
+      insuranceMonths: 6,
+      insurerType: 'kyokai_kenpo',
+    });
+    assert.equal(old.financials.standardMonthlyRemuneration, 300000);
+    assert.equal(old.financials.standardDailyBenefit, 6667);
   });
 
   // Case 7: Lương dưới trần khi đóng dưới 12 tháng
@@ -155,8 +166,8 @@ test('Milestone 1: 出産手当金シミュレーター (Maternity Allowance Gol
     assert.equal(result.isEligible, true);
     assert.equal(result.financials.isCappedByAssociationLimit, false);
     assert.equal(result.financials.standardMonthlyRemuneration, 200000);
-    // 200,000 / 30 * 2/3 = 4,444.444... -> 4,444円
-    assert.equal(result.financials.standardDailyBenefit, 4444);
+    // 200,000 / 30 = 6,666.7 → 6,670 (10円未満四捨五入) × 2/3 = 4,446.7 → 4,447円 (協会けんぽ端数処理)
+    assert.equal(result.financials.standardDailyBenefit, 4447);
   });
 
   // Case 8: Công ty trả lương một phần trong thời gian nghỉ (Partial salary offset)
@@ -488,31 +499,41 @@ test('Milestone 3: 育児休業給付シミュレーター (Childcare Benefit Si
   });
 
   // Case 2: Lương cao bị khống chế trần MHLW 16,210円/ngày
-  await t.test('M3-02: Lương cao (600,000円/tháng) bị khống chế trần mức lương ngày MHLW (16,210円)', () => {
+  await t.test('M3-02: Lương cao (600,000円/tháng) bị khống chế trần mức lương ngày MHLW (16,540円, R8)', () => {
     const result = calculateChildcareBenefit({
       monthlySalary: 600000,
       plannedLeaveDays: 180,
+      leaveStartDate: '2026-09-01',
     });
 
     assert.equal(result.wageDailyBasis.isCappedByMaxLimit, true);
-    assert.equal(result.wageDailyBasis.statutoryDailyWage, 16210);
-    // 16,210 * 67% = 10,860.7 -> 10,860円/ngày
-    assert.equal(result.benefitBreakdown.tier1.dailyAmount, 10860);
-    assert.equal(result.benefitBreakdown.tier1.totalAmount, 10860 * 180);
+    assert.equal(result.wageDailyBasis.statutoryDailyWage, 16540);
+    // 16,540 × 67% = 11,081.8 → 11,081円/ngày (tham khảo)
+    assert.equal(result.benefitBreakdown.tier1.dailyAmount, 11081);
+    // Mỗi 30 ngày = trần công bố 332,454円 → 6 kỳ = 1,994,724円 (không vượt trần)
+    assert.equal(result.benefitBreakdown.tier1.monthlyAmount, 332454);
+    assert.equal(result.benefitBreakdown.tier1.totalAmount, 332454 * 6);
+
+    // R7 (01/08/2025 – 31/07/2026): trần 16,110円/ngày → 323,811円/30 ngày
+    const r7 = calculateChildcareBenefit({ monthlySalary: 600000, plannedLeaveDays: 300, leaveStartDate: '2026-05-01' });
+    assert.equal(r7.wageDailyBasis.statutoryDailyWage, 16110);
+    assert.equal(r7.benefitBreakdown.tier1.monthlyAmount, 323811);
+    assert.equal(r7.benefitBreakdown.tier2.monthlyAmount, 241650);
   });
 
   // Case 3: Lương thấp được áp mức sàn MHLW 2,978円/ngày
-  await t.test('M3-03: Lương thấp (80,000円/tháng) được áp mức sàn bảo đảm MHLW (2,978円)', () => {
+  await t.test('M3-03: Lương thấp (80,000円/tháng) được áp mức sàn bảo đảm MHLW (3,203円, R8)', () => {
     const result = calculateChildcareBenefit({
       monthlySalary: 80000,
       plannedLeaveDays: 180,
+      leaveStartDate: '2026-09-01',
     });
 
     assert.equal(result.wageDailyBasis.isFlooredByMinLimit, true);
-    assert.equal(result.wageDailyBasis.statutoryDailyWage, 2978);
-    // 2,978 * 67% = 1,995.26 -> 1,995円/ngày
-    assert.equal(result.benefitBreakdown.tier1.dailyAmount, 1995);
-    assert.equal(result.benefitBreakdown.tier1.totalAmount, 1995 * 180);
+    assert.equal(result.wageDailyBasis.statutoryDailyWage, 3203);
+    // 3,203 × 67% = 2,146.01 → 2,146円/ngày; 30 ngày = floor(3,203 × 30 × 0.67) = 64,380円
+    assert.equal(result.benefitBreakdown.tier1.dailyAmount, 2146);
+    assert.equal(result.benefitBreakdown.tier1.totalAmount, 64380 * 6);
   });
 
   // Case 4: Thưởng hỗ trợ sau sinh 13% trong 28 ngày đầu (出生後休業支援給付金)
@@ -534,18 +555,65 @@ test('Milestone 3: 育児休業給付シミュレーター (Childcare Benefit Si
   });
 
   // Case 5: Trợ cấp làm việc rút ngắn giờ nuôi con dưới 2 tuổi (育児時短就業給付金 - 10%)
-  await t.test('M3-05: Đi làm lại và rút ngắn giờ nuôi con dưới 2 tuổi: nhận thêm trợ cấp 10% lương mỗi tháng', () => {
+  await t.test('M3-05: Đi làm lại và rút ngắn giờ nuôi con dưới 2 tuổi: 10% lương THỰC NHẬN khi làm giờ ngắn', () => {
+    // Không nhập lương giờ ngắn → giả định 80% lương cũ = 240,000円 → 10% = 24,000円/tháng
     const result = calculateChildcareBenefit({
       monthlySalary: 300000,
       plannedLeaveDays: 300,
       isShortTimeWork: true,
       shortTimeMonths: 6,
+      leaveStartDate: '2026-09-01',
     });
 
     assert.equal(result.benefitBreakdown.shortTimeWork.isApplied, true);
-    assert.equal(result.benefitBreakdown.shortTimeWork.monthlyAmount, 30000);
-    assert.equal(result.benefitBreakdown.shortTimeWork.totalAmount, 180000);
-    assert.equal(result.financialTotals.grandTotalBenefit, 1806000 + 180000);
+    assert.equal(result.benefitBreakdown.shortTimeWork.isPaidWageAssumed, true);
+    assert.equal(result.benefitBreakdown.shortTimeWork.paidWage, 240000);
+    assert.equal(result.benefitBreakdown.shortTimeWork.monthlyAmount, 24000);
+    assert.equal(result.benefitBreakdown.shortTimeWork.totalAmount, 144000);
+    assert.equal(result.financialTotals.grandTotalBenefit, 1806000 + 144000);
+
+    // Lương 280,000円 (> 90% của 300,000円) → tỷ lệ giảm dần: 0.9 × (300,000 − 280,000) = 18,000円
+    const taper = calculateChildcareBenefit({
+      monthlySalary: 300000, plannedLeaveDays: 180, isShortTimeWork: true, shortTimeMonths: 1,
+      shortTimeMonthlyWage: 280000, leaveStartDate: '2026-09-01',
+    });
+    assert.equal(taper.benefitBreakdown.shortTimeWork.monthlyAmount, 18000);
+
+    // Lương ≥ lương trước → 0
+    const none = calculateChildcareBenefit({
+      monthlySalary: 300000, plannedLeaveDays: 180, isShortTimeWork: true, shortTimeMonths: 1,
+      shortTimeMonthlyWage: 300000, leaveStartDate: '2026-09-01',
+    });
+    assert.equal(none.benefitBreakdown.shortTimeWork.monthlyAmount, 0);
+
+    // Lương + trợ cấp vượt 支給限度額 484,121円 → trợ cấp = 484,121 − lương
+    const capped = calculateChildcareBenefit({
+      monthlySalary: 600000, plannedLeaveDays: 180, isShortTimeWork: true, shortTimeMonths: 1,
+      shortTimeMonthlyWage: 480000, leaveStartDate: '2026-09-01',
+    });
+    assert.equal(capped.benefitBreakdown.shortTimeWork.preShortTimeMonthlyWage, 496200);
+    assert.equal(capped.benefitBreakdown.shortTimeWork.monthlyAmount, 4121);
+  });
+
+  await t.test('M3-10: 出生後休業支援給付金 13% bị khống chế trần 28 ngày (R8 60,205円 / R7 58,640円)', () => {
+    const r8 = calculateChildcareBenefit({
+      monthlySalary: 800000, plannedLeaveDays: 180, qualifiesForPostBirthBonus: true, leaveStartDate: '2026-09-01',
+    });
+    assert.equal(r8.benefitBreakdown.postBirthBonus.totalAmount, 60205);
+    const r7 = calculateChildcareBenefit({
+      monthlySalary: 800000, plannedLeaveDays: 180, qualifiesForPostBirthBonus: true, leaveStartDate: '2026-03-01',
+    });
+    assert.equal(r7.benefitBreakdown.postBirthBonus.totalAmount, 58640);
+  });
+
+  await t.test('M3-11: Lương công ty trả trong kỳ 50%: không giảm nếu ≤ 30% (không phải 13%)', () => {
+    const result = calculateChildcareBenefit({
+      monthlySalary: 300000, plannedLeaveDays: 210, monthlySalaryDuringLeave: 60000, leaveStartDate: '2026-09-01',
+    });
+    // Kỳ 67%: 60,000 > 13% × 300,000 → 240,000 − 60,000 = 180,000 < 201,000
+    assert.equal(result.benefitBreakdown.tier1.monthlyAmount, 180000);
+    // Kỳ 50%: 60,000 ≤ 30% × 300,000 → giữ nguyên 150,000
+    assert.equal(result.benefitBreakdown.tier2.monthlyAmount, 150000);
   });
 
   // Case 6: Công ty trả lương trong thời gian nghỉ <= 13% không bị giảm trừ
@@ -877,7 +945,15 @@ test('Milestone 5: 妊娠・出産・育児ガイド (Birth Wizard & Life-Event 
 
     const s4 = stages.find((s) => s.stageId === 'stage4_immediate_post_birth');
     const medicalSubsidyTask = s4.tasks.find((t) => t.id === 'task_child_medical_subsidy');
-    assert.match(medicalSubsidyTask.localNotesVi, /tốt nghiệp THCS/);
+    // Fukuoka City: từ 01/2024 hỗ trợ đến 31/3 đầu tiên sau 18 tuổi; dưới 3 tuổi miễn phí; từ 3 tuổi ngoại trú tối đa 500円/tháng/cơ sở
+    assert.match(medicalSubsidyTask.localNotesVi, /hết cấp 3/);
+    assert.match(medicalSubsidyTask.localNotesVi, /500 yên/);
+
+    // 妊婦のための支援給付: lần 2 (báo số thai) nằm ở giai đoạn mang thai, không phải sau sinh
+    const s2 = stages.find((s) => s.stageId === 'stage2_late_pregnancy');
+    assert.ok(s2.tasks.find((task) => task.id === 'task_pregnancy_support_second_payment'));
+    assert.equal(s4.tasks.some((task) => task.id === 'task_post_birth_support_grant'), false);
+    assert.match(pregnancyGiftTask.titleJa, /妊婦のための支援給付/);
   });
 
   // Case 8: Tính toán thống kê tiến độ Checklist chính xác
@@ -888,7 +964,7 @@ test('Milestone 5: 妊娠・出産・育児ガイド (Birth Wizard & Life-Event 
     const stats = calculateChecklistStats(completedTaskIds, stages);
 
     assert.equal(stats.totalCompleted, 2);
-    assert.equal(stats.totalTasks, 17); // 3 + 2 + 2 + 5 + 3 + 2 = 17 tasks
+    assert.equal(stats.totalTasks, 17); // 3 + 3 + 2 + 4 + 3 + 2 = 17 tasks
     assert.equal(stats.isAllCompleted, false);
     assert.equal(stats.stageStats[0].completed, 2);
     assert.equal(stats.stageStats[0].total, 3);
@@ -899,3 +975,68 @@ test('Milestone 5: 妊娠・出産・育児ガイド (Birth Wizard & Life-Event 
 
 
 
+
+// ===== Bổ sung: các lỗi đã sửa (review 2026-09) =====
+
+test('Fix M1/L6: 出生後休業支援給付金 spouse exceptions & 8-week (56-day) window for 出生時育児休業', () => {
+  const base = {
+    userRole: 'father',
+    employmentStatus: 'regular',
+    isEnrolledEmploymentInsurance: true,
+    employmentInsuranceMonthsInPast2Years: 24,
+    postBirthLeaveDays: 14,
+  };
+  // Bố, con 20 ngày, không khai ngoại lệ → mặc định vợ đang 産後休業 → đủ điều kiện 13%
+  const autoRes = checkChildcareLeaveEligibility({ ...base, childAgeDays: 20, spouseStatus: {} });
+  assert.equal(autoRes.schemes.postBirthSupportBonus.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+  // Vợ/chồng tự kinh doanh
+  const selfEmp = checkChildcareLeaveEligibility({
+    ...base, userRole: 'mother', childAgeDays: 20, spouseStatus: { exceptionType: 'spouse_self_employed' },
+  });
+  assert.equal(selfEmp.schemes.postBirthSupportBonus.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+  // 56 ngày: còn trong 8 tuần; 57 ngày: hết
+  assert.equal(checkChildcareLeaveEligibility({ ...base, childAgeDays: 56 }).schemes.postBirthPapaBenefit.status, ELIGIBILITY_STATUS.LIKELY_ELIGIBLE);
+  assert.equal(checkChildcareLeaveEligibility({ ...base, childAgeDays: 57 }).schemes.postBirthPapaBenefit.status, ELIGIBILITY_STATUS.NOT_APPLICABLE);
+  // Chỉ có tháng: 2 tháng (~61 ngày) đã quá 8 tuần
+  assert.equal(checkChildcareLeaveEligibility({ ...base, childAgeMonths: 2 }).schemes.postBirthPapaBenefit.status, ELIGIBILITY_STATUS.NOT_APPLICABLE);
+});
+
+test('Fix M2: continued maternity allowance after leaving requires retirement date inside the allowance period', () => {
+  const common = {
+    expectedBirthDate: '2026-12-01',
+    isLeavingJob: true,
+    continuousInsuredYearsBeforeLeaving: 2,
+    monthlySalary: 300000,
+  };
+  // Kỳ bắt đầu = 2026-10-21 (42 ngày tính cả ngày dự sinh)
+  assert.equal(calculateMaternityAllowance({ ...common, retirementDate: '2026-10-20' }).ineligibleReasonCode, 'RETIREMENT_BEFORE_MATERNITY_PERIOD');
+  const ok = calculateMaternityAllowance({ ...common, retirementDate: '2026-10-21' });
+  assert.equal(ok.isEligible, true);
+  assert.equal(ok.isRetirementContinuation, true);
+  // Đa thai: kỳ bắt đầu sớm hơn (98 ngày) → 2026-10-20 hợp lệ
+  assert.equal(calculateMaternityAllowance({ ...common, isMultiplePregnancy: true, retirementDate: '2026-10-20' }).isEligible, true);
+});
+
+test('Fix M3: child allowance eligibility by fiscal year (first 31 March after reaching 18 / 22)', () => {
+  const res = calculateChildAllowance({
+    asOfDate: '2026-09-28',
+    children: [
+      { id: 'a', birthDate: '2004-06-01' }, // đạt 22 tuổi 31/05/2026 → còn được đếm đến 31/03/2027
+      { id: 'b', birthDate: '2008-04-01' }, // đạt 18 tuổi 31/03/2026 → hết hạn 31/03/2026
+      { id: 'c', birthDate: '2008-04-02' }, // đạt 18 tuổi 01/04/2026 → đến 31/03/2027
+      { id: 'd', birthDate: '2024-01-10' },
+    ],
+  });
+  const byId = Object.fromEntries(res.childrenDetails.map((c) => [c.id, c]));
+  assert.equal(byId.a.countsForSiblingOrder, true);
+  assert.equal(byId.a.isReceivingAllowance, false);
+  assert.equal(byId.b.isReceivingAllowance, false);
+  assert.equal(byId.b.allowanceEndDate, '2026-03-31');
+  assert.equal(byId.c.isReceivingAllowance, true);
+  assert.equal(byId.c.allowanceEndDate, '2027-03-31');
+  assert.equal(byId.c.monthlyAllowance, 30000); // con thứ 3 (a, b, c đều được đếm)
+  assert.equal(byId.d.monthlyAllowance, 30000);
+  // Tương thích ngược: chỉ có tuổi
+  const legacy = calculateChildAllowance({ children: [{ age: 4 }, { age: 1 }] });
+  assert.equal(legacy.totalMonthlyAllowance, 25000);
+});

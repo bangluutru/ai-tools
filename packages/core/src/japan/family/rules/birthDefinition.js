@@ -62,13 +62,16 @@ export const birthDefinition = {
         item.stage = stage.stageId;
 
         // Quy tắc hạn chót có cấu trúc dựa trên ngày sinh (birthDate)
-        if (task.id === 'task_birth_notification') {
+        // Ghi chú: các id dưới đây phải khớp với ROADMAP_STAGES (birthWizardRules.js)
+        if (task.id === 'task_birth_registration') {
+          // 出生届: 14 ngày TÍNH CẢ ngày sinh (戸籍法第49条・第43条) → hạn = ngày sinh + 13 ngày
           item.deadlineRule = {
             anchorKey: 'birthDate',
-            offsetDays: 14,
+            offsetDays: 13,
             direction: 'after',
           };
-        } else if (task.id === 'task_child_allowance') {
+        } else if (task.id === 'task_child_allowance_claim') {
+          // 児童手当「15日特例」: trong vòng 15 ngày kể từ ngày hôm sau ngày sinh → ngày sinh + 15 ngày
           item.deadlineRule = {
             anchorKey: 'birthDate',
             offsetDays: 15,
@@ -87,13 +90,13 @@ export const birthDefinition = {
             offsetDays: 30,
             direction: 'after',
           };
-        } else if (task.id === 'task_child_health_insurance') {
+        } else if (task.id === 'task_health_insurance_enrollment') {
           item.deadlineRule = {
             anchorKey: 'birthDate',
             offsetDays: 30,
             direction: 'after',
           };
-        } else if (task.id === 'task_maternity_allowance') {
+        } else if (task.id === 'task_prenatal_leave_start') {
           item.relatedCapabilityId = 'family.maternity.allowance';
           item.deepLink = {
             toolId: 'maternity-allowance-jp',
@@ -101,7 +104,7 @@ export const birthDefinition = {
             labelVi: 'Tính tiền trợ cấp thai sản',
             labelEn: 'Open Maternity Allowance Simulator',
           };
-        } else if (task.id === 'task_childcare_leave_benefit') {
+        } else if (task.id === 'task_childcare_benefit_claim') {
           item.relatedCapabilityId = 'family.childcare.benefit';
           item.deepLink = {
             toolId: 'childcare-benefit-jp',
@@ -109,7 +112,7 @@ export const birthDefinition = {
             labelVi: 'Mô phỏng trợ cấp nghỉ chăm con',
             labelEn: 'Open Childcare Benefit Simulator',
           };
-        } else if (task.id === 'task_childcare_leave_request') {
+        } else if (task.id === 'task_papa_ikukyu_bonus') {
           item.relatedCapabilityId = 'family.childcare.eligibility';
           item.deepLink = {
             toolId: 'childcare-leave-eligibility-jp',

@@ -421,8 +421,10 @@ export function ProcedureRequirementCheckerView({ lang = 'vi' }) {
             <div className="bg-surface p-4 rounded-xl border border-outline-variant space-y-2">
               <label className="font-bold text-on-surface block">Chuẩn bị lệ phí:</label>
               <p className="text-on-surface-variant">
-                {evaluation?.procedure.feeRules?.feeNoteI18n[lang] ||
-                  evaluation?.procedure.feeRules?.feeNoteI18n.vi}
+                {evaluation?.submission.feeNoteI18n?.[lang] ||
+                  evaluation?.submission.feeNoteI18n?.vi ||
+                  evaluation?.procedure.feeRules?.feeNoteI18n?.[lang] ||
+                  evaluation?.procedure.feeRules?.feeNoteI18n?.vi}
               </p>
               {evaluation?.submission.isFeeRequired && (
                 <label className="flex items-center gap-2 cursor-pointer font-bold text-on-surface pt-1">
@@ -432,7 +434,7 @@ export function ProcedureRequirementCheckerView({ lang = 'vi' }) {
                     onChange={(e) => setHasFeePrepared(e.target.checked)}
                     className="w-4 h-4 rounded text-primary"
                   />
-                  <span>Đã chuẩn bị tiền / tem {evaluation.submission.feeAmountJpy}円</span>
+                  <span>Đã chuẩn bị tiền / tem {evaluation.submission.feeLabel}円</span>
                 </label>
               )}
             </div>

@@ -4,6 +4,8 @@
  * Được đối chiếu từ e-Gov Law, Thông tư Quốc thuế NTA và Bộ Tổng vụ Nhật Bản.
  */
 
+import { formatPercent, formatRatePeriods } from './rateLabels.js';
+
 export const TaxKnowledgeBase = {
   // 1. 所得税 (Income Tax)
   income_tax: {
@@ -30,7 +32,7 @@ export const TaxKnowledgeBase = {
           sideIncome > 0 ? `③ 副業等の雑所得: ¥${sideIncome.toLocaleString()}` : null,
           `④ 合計所得金額: ¥${totalGrossIncome.toLocaleString()} − 各種所得控除（基礎・社保等） ¥${deductions.total.toLocaleString()} = 課税所得 ¥${taxableIncome.toLocaleString()}（1,000円未満切捨て）`,
           `⑤ 適用税率: ${(bracket.rate * 100).toFixed(0)}%（控除額 ¥${bracket.deduction.toLocaleString()}） → 基準所得税額: ¥${baseIncomeTax.toLocaleString()}`,
-          `⑥ 復興特別所得税（2.1%）: ¥${reconstructionTax.toLocaleString()} → 所得税合計額: ¥${totalIncomeTax.toLocaleString()}`,
+          `⑥ 復興特別所得税（基準所得税額×2.1%）: ¥${reconstructionTax.toLocaleString()} → 合計を100円未満切捨て: 所得税及び復興特別所得税 ¥${totalIncomeTax.toLocaleString()}`,
         ].filter(Boolean),
         vi: [
           `① Tổng thu nhập từ lương/kinh doanh: ¥${salary.toLocaleString()} (Sau khi trừ giảm trừ lương ¥${employmentDeduction.toLocaleString()} còn: Thu nhập lương ¥${employmentIncome.toLocaleString()})`,
@@ -38,7 +40,7 @@ export const TaxKnowledgeBase = {
           sideIncome > 0 ? `③ Thu nhập việc phụ: ¥${sideIncome.toLocaleString()}` : null,
           `④ Tổng thu nhập: ¥${totalGrossIncome.toLocaleString()} − Giảm trừ gia cảnh & BHXH: ¥${deductions.total.toLocaleString()} = Thu nhập tính thuế: ¥${taxableIncome.toLocaleString()} (Làm tròn xuống 1,000円)`,
           `⑤ Bậc thuế áp dụng: ${(bracket.rate * 100).toFixed(0)}% (Khấu trừ cơ sở: ¥${bracket.deduction.toLocaleString()}) → Thuế thu nhập cơ sở: ¥${baseIncomeTax.toLocaleString()}`,
-          `⑥ Thuế tái thiết (2.1%): ¥${reconstructionTax.toLocaleString()} → Tổng thuế thu nhập thực nộp: ¥${totalIncomeTax.toLocaleString()}`,
+          `⑥ Thuế tái thiết (2.1% thuế gốc): ¥${reconstructionTax.toLocaleString()} → Tổng làm tròn xuống 100 yên: ¥${totalIncomeTax.toLocaleString()}`,
         ].filter(Boolean),
         en: [
           `① Gross Earnings: ¥${salary.toLocaleString()} (Minus Employment Deduction ¥${employmentDeduction.toLocaleString()} = Employment Income ¥${employmentIncome.toLocaleString()})`,
@@ -46,7 +48,7 @@ export const TaxKnowledgeBase = {
           sideIncome > 0 ? `③ Miscellaneous/Side Income: ¥${sideIncome.toLocaleString()}` : null,
           `④ Total Gross Income: ¥${totalGrossIncome.toLocaleString()} − Deductions (Basic, Social, etc.): ¥${deductions.total.toLocaleString()} = Taxable Income: ¥${taxableIncome.toLocaleString()} (Floor to nearest 1,000 JPY)`,
           `⑤ Applicable Bracket: ${(bracket.rate * 100).toFixed(0)}% (Deduction: ¥${bracket.deduction.toLocaleString()}) → Base Income Tax: ¥${baseIncomeTax.toLocaleString()}`,
-          `⑥ Reconstruction Tax (2.1%): ¥${reconstructionTax.toLocaleString()} → Total Income Tax: ¥${totalIncomeTax.toLocaleString()}`,
+          `⑥ Reconstruction Tax (2.1% of base): ¥${reconstructionTax.toLocaleString()} → Sum truncated to 100 JPY: ¥${totalIncomeTax.toLocaleString()}`,
         ].filter(Boolean),
       };
     },
@@ -74,9 +76,9 @@ export const TaxKnowledgeBase = {
     category: 'local',
 
     level1: {
-      ja: '毎年1月1日時点で日本国内に住所がある人が、前年の所得に応じて居住地の都道府県および市区町村に納める地方税です。所得割（原則10%）と一律負担の均等割（約5,000円）、国税の森林環境税（1,000円）で構成されます。',
-      vi: 'Thuế địa phương dành cho người có đăng ký cư trú tại Nhật Bản tính đến ngày 1 tháng 1 hàng năm, nộp cho Tỉnh và Quận/Xã/Thị trấn nơi sinh sống. Gồm phần tính theo thu nhập (所得割 chuẩn 10%), phần đóng cố định (均等割 khoảng 5,000 yên) và Thuế môi trường rừng (1,000 yên).',
-      en: 'A local tax paid to your prefecture and municipality where you officially reside as of January 1, based on previous calendar year income. Consists of an Income Levy (typically 10%), a Per Capita Flat Levy (~5,000 JPY), and the national Forest Environment Tax (1,000 JPY).',
+      ja: '毎年1月1日時点で日本国内に住所がある人が、前年の所得に応じて居住地の都道府県および市区町村に納める地方税です。所得割（原則10%）と一律負担の均等割（標準4,000円＋一部の県で超過課税）、国税の森林環境税（1,000円）で構成されます。',
+      vi: 'Thuế địa phương dành cho người có đăng ký cư trú tại Nhật Bản tính đến ngày 1 tháng 1 hàng năm, nộp cho Tỉnh và Quận/Xã/Thị trấn nơi sinh sống. Gồm phần tính theo thu nhập (所得割 chuẩn 10%), phần đóng cố định (均等割 chuẩn 4,000 yên, một số tỉnh thu thêm) và Thuế môi trường rừng (1,000 yên).',
+      en: 'A local tax paid to your prefecture and municipality where you officially reside as of January 1, based on previous calendar year income. Consists of an Income Levy (typically 10%), a Per Capita Flat Levy (4,000 JPY standard, plus surcharges in some prefectures), and the national Forest Environment Tax (1,000 JPY).',
     },
 
     getLevel2(calc) {
@@ -92,7 +94,7 @@ export const TaxKnowledgeBase = {
         ja: [
           `① 対象地域: ${residentTax.prefectureName_ja}`,
           `② 課税標準額: ¥${residentTax.taxableIncome.toLocaleString()}（所得税とは異なり基礎控除額等は住民税基準の43万円が適用されます）`,
-          `③ 所得割額（税率 ${(residentTax.incomeLevyRate * 100).toFixed(2)}%）: 都道府県民税 ¥${residentTax.prefectureIncomeLevy.toLocaleString()} ＋ 市区町村民税 ¥${residentTax.municipalIncomeLevy.toLocaleString()} = ¥${residentTax.incomeLevy.toLocaleString()}`,
+          `③ 所得割額（税率 ${(residentTax.incomeLevyRate * 100).toFixed(2)}%、調整控除 ¥${(residentTax.adjustmentCredit?.total || 0).toLocaleString()} 差引・各100円未満切捨て）: 都道府県民税 ¥${residentTax.prefectureIncomeLevy.toLocaleString()} ＋ 市区町村民税 ¥${residentTax.municipalIncomeLevy.toLocaleString()} = ¥${residentTax.incomeLevy.toLocaleString()}`,
           `④ 均等割（一律負担）: ¥${residentTax.perCapitaFlat.toLocaleString()}`,
           `⑤ 森林環境税（国税・自治体代行徴収）: ¥${residentTax.forestryTax.toLocaleString()}`,
           `⑥ 住民税年間合計: ¥${residentTax.totalResidentTax.toLocaleString()}`,
@@ -100,7 +102,7 @@ export const TaxKnowledgeBase = {
         vi: [
           `① Khu vực tính thuế: ${residentTax.prefectureName_vi}`,
           `② Thu nhập chịu thuế cư trú: ¥${residentTax.taxableIncome.toLocaleString()} (Áp dụng mức giảm trừ cơ bản của thuế cư trú là 43 vạn yên)`,
-          `③ Thuế tính theo thu nhập (Thuế suất ${(residentTax.incomeLevyRate * 100).toFixed(2)}%): Phần Tỉnh ¥${residentTax.prefectureIncomeLevy.toLocaleString()} ＋ Phần Xã/Phường ¥${residentTax.municipalIncomeLevy.toLocaleString()} = ¥${residentTax.incomeLevy.toLocaleString()}`,
+          `③ Thuế tính theo thu nhập (Thuế suất ${(residentTax.incomeLevyRate * 100).toFixed(2)}%, trừ điều chỉnh 調整控除 ¥${(residentTax.adjustmentCredit?.total || 0).toLocaleString()}, làm tròn 100 yên từng phần): Phần Tỉnh ¥${residentTax.prefectureIncomeLevy.toLocaleString()} ＋ Phần Xã/Phường ¥${residentTax.municipalIncomeLevy.toLocaleString()} = ¥${residentTax.incomeLevy.toLocaleString()}`,
           `④ Thuế đóng cào bằng theo đầu người (均等割): ¥${residentTax.perCapitaFlat.toLocaleString()}`,
           `⑤ Thuế môi trường rừng (森林環境税 thu từ Reiwa 6): ¥${residentTax.forestryTax.toLocaleString()}`,
           `⑥ Tổng thuế cư trú cả năm: ¥${residentTax.totalResidentTax.toLocaleString()}`,
@@ -108,7 +110,7 @@ export const TaxKnowledgeBase = {
         en: [
           `① Municipality/Prefecture: ${residentTax.prefectureName_en}`,
           `② Resident Taxable Income: ¥${residentTax.taxableIncome.toLocaleString()} (Uses resident basic deduction of 430,000 JPY)`,
-          `③ Income Levy (${(residentTax.incomeLevyRate * 100).toFixed(2)}%): Prefectural ¥${residentTax.prefectureIncomeLevy.toLocaleString()} + Municipal ¥${residentTax.municipalIncomeLevy.toLocaleString()} = ¥${residentTax.incomeLevy.toLocaleString()}`,
+          `③ Income Levy (${(residentTax.incomeLevyRate * 100).toFixed(2)}%, minus adjustment credit ¥${(residentTax.adjustmentCredit?.total || 0).toLocaleString()}, each part truncated to 100 JPY): Prefectural ¥${residentTax.prefectureIncomeLevy.toLocaleString()} + Municipal ¥${residentTax.municipalIncomeLevy.toLocaleString()} = ¥${residentTax.incomeLevy.toLocaleString()}`,
           `④ Per Capita Flat Rate: ¥${residentTax.perCapitaFlat.toLocaleString()}`,
           `⑤ National Forest Environment Tax: ¥${residentTax.forestryTax.toLocaleString()}`,
           `⑥ Total Annual Resident Tax: ¥${residentTax.totalResidentTax.toLocaleString()}`,
@@ -327,29 +329,37 @@ export const TaxKnowledgeBase = {
     getLevel2(calc) {
       const { socialInsurance } = calc;
       if (socialInsurance.isCompanyEmployee) {
+        const pensionPct = formatPercent(socialInsurance.rates?.pensionEmployee || 0);
+        const empJa = formatRatePeriods(socialInsurance.rates?.employmentEmployee, { lang: 'ja' });
+        const empVi = formatRatePeriods(socialInsurance.rates?.employmentEmployee, { lang: 'vi' });
+        const empEn = formatRatePeriods(socialInsurance.rates?.employmentEmployee, { lang: 'en' });
+        const child = socialInsurance.childSupportContribution || 0;
         return {
           ja: [
-            `① 制度区分: 会社員（社会保険・労使折半）`,
+            `① 制度区分: 会社員（社会保険・労使折半、年収÷12を標準報酬月額に当てはめた概算）`,
             `② 健康保険料（協会けんぽ）: ¥${socialInsurance.healthInsurance.toLocaleString()}（本人負担分。会社も同額負担）`,
-            socialInsurance.careInsurance > 0 ? `③ 介護保険料（40歳以上）: ¥${socialInsurance.careInsurance.toLocaleString()}` : null,
-            `④ 厚生年金保険料（折半後 9.15%）: ¥${socialInsurance.welfarePension.toLocaleString()}（会社も同額負担）`,
-            `⑤ 雇用保険料（0.6%）: ¥${socialInsurance.employmentInsurance.toLocaleString()}`,
+            child > 0 ? `②' 子ども・子育て支援金（令和8年4月分〜）: ¥${child.toLocaleString()}` : null,
+            socialInsurance.careInsurance > 0 ? `③ 介護保険料（40歳以上65歳未満）: ¥${socialInsurance.careInsurance.toLocaleString()}` : null,
+            `④ 厚生年金保険料（本人負担 ${pensionPct}）: ¥${socialInsurance.welfarePension.toLocaleString()}（会社も同額負担）`,
+            `⑤ 雇用保険料（${empJa}）: ¥${socialInsurance.employmentInsurance.toLocaleString()}`,
             `⑥ 年間自己負担合計: ¥${socialInsurance.totalSocialInsurance.toLocaleString()}（会社側の負担額: 約¥${socialInsurance.employerContribution.toLocaleString()}）`,
           ].filter(Boolean),
           vi: [
-            `① Chế độ áp dụng: Nhân viên công ty (BHXH đoàn thể - Công ty đóng cùng 50/50)`,
+            `① Chế độ áp dụng: Nhân viên công ty (BHXH 50/50; ước tính theo lương năm ÷ 12 và bậc lương chuẩn)`,
             `② Bảo hiểm y tế (協会けんぽ): ¥${socialInsurance.healthInsurance.toLocaleString()} (Phần bạn đóng; công ty đóng thêm khoản tương đương)`,
-            socialInsurance.careInsurance > 0 ? `③ Bảo hiểm chăm sóc người già (từ 40 tuổi trở lên): ¥${socialInsurance.careInsurance.toLocaleString()}` : null,
-            `④ Hưu trí phúc lợi (厚生年金 9.15%): ¥${socialInsurance.welfarePension.toLocaleString()} (Công ty đóng cùng khoản tương đương)`,
-            `⑤ Bảo hiểm thất nghiệp (雇用保険 0.6%): ¥${socialInsurance.employmentInsurance.toLocaleString()}`,
+            child > 0 ? `②' Tiền hỗ trợ nuôi dạy trẻ em (từ phí tháng 4/2026): ¥${child.toLocaleString()}` : null,
+            socialInsurance.careInsurance > 0 ? `③ Bảo hiểm chăm sóc dài hạn (40〜64 tuổi): ¥${socialInsurance.careInsurance.toLocaleString()}` : null,
+            `④ Hưu trí phúc lợi (厚生年金, NLĐ ${pensionPct}): ¥${socialInsurance.welfarePension.toLocaleString()} (Công ty đóng cùng khoản tương đương)`,
+            `⑤ Bảo hiểm thất nghiệp (雇用保険 ${empVi}): ¥${socialInsurance.employmentInsurance.toLocaleString()}`,
             `⑥ Tổng tiền bạn bị trừ cả năm: ¥${socialInsurance.totalSocialInsurance.toLocaleString()} (Công ty đóng thay bạn khoảng: ¥${socialInsurance.employerContribution.toLocaleString()})`,
           ].filter(Boolean),
           en: [
-            `① Scheme: Corporate Employee (50/50 employer-employee contribution)`,
+            `① Scheme: Corporate Employee (50/50; estimated from annual salary ÷ 12 and standard remuneration grades)`,
             `② Health Insurance (Kyokai Kenpo): ¥${socialInsurance.healthInsurance.toLocaleString()} (Your share, matched by employer)`,
-            socialInsurance.careInsurance > 0 ? `③ Long-term Care Insurance (Age 40+): ¥${socialInsurance.careInsurance.toLocaleString()}` : null,
-            `④ Welfare Pension Insurance (9.15%): ¥${socialInsurance.welfarePension.toLocaleString()} (Matched by employer)`,
-            `⑤ Employment Insurance (0.6%): ¥${socialInsurance.employmentInsurance.toLocaleString()}`,
+            child > 0 ? `②' Child & Family Support Levy (from April 2026 premiums): ¥${child.toLocaleString()}` : null,
+            socialInsurance.careInsurance > 0 ? `③ Long-term Care Insurance (Age 40-64): ¥${socialInsurance.careInsurance.toLocaleString()}` : null,
+            `④ Welfare Pension Insurance (employee ${pensionPct}): ¥${socialInsurance.welfarePension.toLocaleString()} (Matched by employer)`,
+            `⑤ Employment Insurance (${empEn}): ¥${socialInsurance.employmentInsurance.toLocaleString()}`,
             `⑥ Total Annual Employee Contribution: ¥${socialInsurance.totalSocialInsurance.toLocaleString()} (Employer contributes approx: ¥${socialInsurance.employerContribution.toLocaleString()})`,
           ].filter(Boolean),
         };
@@ -365,13 +375,13 @@ export const TaxKnowledgeBase = {
         vi: [
           `① Chế độ áp dụng: Cá nhân tự do / Hộ kinh doanh (BHYT Quốc dân ＋ Hưu trí Quốc dân)`,
           `② Tiền BHYT Quốc dân (国民健康保険): ¥${socialInsurance.nationalHealthInsurance.toLocaleString()} (Tính theo thu nhập năm trước và biểu phí của Tòa thị chính)`,
-          `③ Tiền Hưu trí Quốc dân (国民年金): ¥${socialInsurance.nationalPension.toLocaleString()} (Cố định khoảng ¥${Math.round(socialInsurance.nationalPension / 12).toLocaleString()}/tháng)`,
+          `③ Tiền Hưu trí Quốc dân (国民年金): ¥${socialInsurance.nationalPension.toLocaleString()} (Phí cố định theo tháng × 12, đổi mức từ tháng 4)`,
           `④ Tổng tiền bảo hiểm bạn tự nộp cả năm: ¥${socialInsurance.totalSocialInsurance.toLocaleString()}`,
         ],
         en: [
           `① Scheme: Self-Employed / Freelance (National Health Insurance + National Pension)`,
           `② National Health Insurance: ¥${socialInsurance.nationalHealthInsurance.toLocaleString()} (Assessed by municipality)`,
-          `③ National Pension: ¥${socialInsurance.nationalPension.toLocaleString()} (Fixed monthly premium of approx ¥${Math.round(socialInsurance.nationalPension / 12).toLocaleString()})`,
+          `③ National Pension: ¥${socialInsurance.nationalPension.toLocaleString()} (Flat monthly premium × 12; revised each April)`,
           `④ Total Annual Social Contribution: ¥${socialInsurance.totalSocialInsurance.toLocaleString()}`,
         ],
       };

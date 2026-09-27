@@ -125,8 +125,14 @@ export class FlappyEngine {
   }
 
   unlockAudio() {
-    if (this.destroyed) return;
+    if (this.destroyed || !this.isSoundOn) return;
     this.sounds.prime();
+  }
+
+  setSoundEnabled(on) {
+    this.isSoundOn = Boolean(on);
+    if (this.isSoundOn) this.sounds.prime();
+    else this.sounds.stopKeepAlive();
   }
 
   playSound(type) {

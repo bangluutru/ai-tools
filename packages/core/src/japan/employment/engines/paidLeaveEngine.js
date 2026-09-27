@@ -17,34 +17,90 @@ import {
   STATUTE_OF_LIMITATIONS_YEARS,
   PAID_LEAVE_SOURCES
 } from '../rules/paidLeaveTables.js';
+import {
+  addDaysISO,
+  addMonthsClampISO,
+  daysInMonth,
+  formatISODateParts,
+  isValidISODate,
+  parseISODateParts,
+  toLocalISODate,
+  todayLocalISO
+} from '../localDate.js';
+
+/**
+ * Chuẩn hóa đầu vào ngày (chuỗi 'YYYY-MM-DD' hoặc Date) thành chuỗi ngày lịch địa phương.
+ * @param {string|Date} value
+ * @returns {string} '' nếu không hợp lệ
+ */
+function normalizeISODate(value) {
+  if (value instanceof Date) return isNaN(value.getTime()) ? '' : toLocalISODate(value);
+  if (isValidISODate(value)) {
+    const p = parseISODateParts(value);
+    return formatISODateParts(p.y, p.m, p.d);
+  }
+  return '';
+}
+
+/**
+ * Ngày cuối cùng của một thời hạn tính theo tháng bắt đầu từ `startIso` (tính cả ngày đầu).
+ * 民法第143条: thời hạn kết thúc vào ngày TRƯỚC ngày tương ứng (応当日); nếu tháng cuối không có
+ * ngày tương ứng thì kết thúc vào ngày cuối của tháng đó.
+ * VD: 2025-08-31 + 6 tháng → kết thúc 2026-02-28; 2026-10-01 + 12 tháng → 2027-09-30.
+ * @param {string} startIso
+ * @param {number} months
+ * @returns {string}
+ */
+export function periodEndISO(startIso, months) {
+  const p = parseISODateParts(startIso);
+  if (!p) return '';
+  const total = p.y * 12 + (p.m - 1) + months;
+  const y = Math.floor(total / 12);
+  const m = (total % 12) + 1;
+  if (p.d > daysInMonth(y, m)) {
+    return formatISODateParts(y, m, daysInMonth(y, m));
+  }
+  return addDaysISO(formatISODateParts(y, m, p.d), -1);
+}
+
+/**
+ * Ngày cấp phép (基準日) sau `months` tháng làm việc liên tục kể từ ngày vào công ty
+ * = ngày kế tiếp sau khi thời hạn `months` tháng kết thúc.
+ * VD: vào 2025-04-01 → cấp 2025-10-01; vào 2025-08-31 → cấp 2026-03-01.
+ * @param {string} hireIso
+ * @param {number} months
+ * @returns {string}
+ */
+export function grantDateISO(hireIso, months) {
+  const end = periodEndISO(hireIso, months);
+  return end ? addDaysISO(end, 1) : '';
+}
 
 /**
  * Tính số tháng làm việc liên tục giữa 2 mốc thời gian.
+ * Số tháng = số "tháng tròn" đã hoàn thành theo 民法第143条 (khớp với ngày cấp phép).
  * @param {string|Date} hireDate
- * @param {string|Date} [asOfDate]
+ * @param {string|Date} [asOfDate] - mặc định hôm nay (lịch địa phương)
  * @returns {{ months: number, years: number, formattedService: string }}
  */
-export function calculateServiceDuration(hireDate, asOfDate = new Date()) {
-  const start = new Date(hireDate);
-  const end = new Date(asOfDate);
+export function calculateServiceDuration(hireDate, asOfDate = todayLocalISO()) {
+  const start = normalizeISODate(hireDate);
+  const end = normalizeISODate(asOfDate);
 
-  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
-    return { months: 0, years: 0, formattedService: '0年0ヶ月' };
+  if (!start || !end || start > end) {
+    return { months: 0, years: 0, fullYears: 0, remainingMonths: 0, formattedService: '0年0ヶ月' };
   }
 
-  let years = end.getFullYear() - start.getFullYear();
-  let months = end.getMonth() - start.getMonth();
-  const dayDiff = end.getDate() - start.getDate();
-
-  if (dayDiff < 0) {
-    months -= 1;
-  }
-  if (months < 0) {
-    years -= 1;
-    months += 12;
+  const s = parseISODateParts(start);
+  const e = parseISODateParts(end);
+  let totalMonths = Math.max(0, (e.y - s.y) * 12 + (e.m - s.m));
+  // Lùi lại cho đến khi tháng thứ totalMonths đã thực sự hoàn thành
+  while (totalMonths > 0 && grantDateISO(start, totalMonths) > end) {
+    totalMonths -= 1;
   }
 
-  const totalMonths = years * 12 + months;
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
   const floatYears = parseFloat((totalMonths / 12).toFixed(1));
 
   return {
@@ -57,16 +113,18 @@ export function calculateServiceDuration(hireDate, asOfDate = new Date()) {
 }
 
 /**
- * Cộng thêm số tháng vào một ngày cụ thể (giữ đúng ngày hoặc ngày cuối tháng).
+ * Cộng thêm số tháng vào một ngày cụ thể; nếu tháng đích không có ngày tương ứng thì kẹp về ngày cuối tháng
+ * (VD 31/08 + 6 tháng → 28/02, không bị tràn sang 03/03 như Date.setMonth).
  * @param {Date} date
  * @param {number} months
  * @returns {Date}
  */
 export function addMonths(date, months) {
-  const result = new Date(date);
-  const expectedMonth = result.getMonth() + months;
-  result.setMonth(expectedMonth);
-  return result;
+  const base = normalizeISODate(date);
+  if (!base) return new Date(NaN);
+  const iso = addMonthsClampISO(base, months);
+  const p = parseISODateParts(iso);
+  return new Date(p.y, p.m - 1, p.d);
 }
 
 /**
@@ -180,26 +238,29 @@ export function lookupStatutoryGrantDays({ proportional, serviceMonths, weeklyDa
  * @param {number} [params.annualDays]
  * @returns {Array<Object>}
  */
-export function generateGrantSchedule({ hireDate, asOfDate = new Date(), proportional, weeklyDays, annualDays }) {
-  const start = new Date(hireDate);
-  const now = new Date(asOfDate);
+export function generateGrantSchedule({ hireDate, asOfDate = todayLocalISO(), proportional, weeklyDays, annualDays }) {
+  const start = normalizeISODate(hireDate);
+  const now = normalizeISODate(asOfDate) || todayLocalISO();
   const schedule = [];
+  if (!start) return schedule;
 
   const milestones = [6, 18, 30, 42, 54, 66, 78, 90, 102, 114, 126];
 
   for (const months of milestones) {
-    const grantDate = addMonths(start, months);
-    const expiryDate = addMonths(grantDate, 24); // 2 năm theo Điều 115
+    const grantDate = grantDateISO(start, months);
+    // Thời hiệu 2 năm (Điều 115): dùng được đến ngày trước ngày tương ứng 2 năm sau
+    const expiryDate = periodEndISO(grantDate, 24);
+    const oneYearEnd = periodEndISO(grantDate, 12);
     const days = lookupStatutoryGrantDays({ proportional, serviceMonths: months, weeklyDays, annualDays });
 
     const isPast = grantDate <= now;
     const isExpired = expiryDate < now;
-    const isCurrentPeriod = isPast && !isExpired && addMonths(grantDate, 12) >= now;
+    const isCurrentPeriod = isPast && !isExpired && oneYearEnd >= now;
 
     schedule.push({
       serviceMonths: months,
-      grantDate: formatDate(grantDate),
-      expiryDate: formatDate(expiryDate),
+      grantDate,
+      expiryDate,
       grantDays: days,
       isPast,
       isExpired,
@@ -232,7 +293,7 @@ export function generateGrantSchedule({ hireDate, asOfDate = new Date(), proport
  */
 export function calculatePaidLeaveEntitlement({
   hireDate,
-  asOfDate = new Date(),
+  asOfDate = todayLocalISO(),
   employmentType = 'full_time',
   weeklyHours = 40,
   weeklyDays = 5,
@@ -287,9 +348,8 @@ export function calculatePaidLeaveEntitlement({
     ? Math.max(0, MANDATORY_LEAVE_DAYS - totalDaysTaken)
     : 0;
 
-  // Ngày hết hạn nghĩa vụ nghỉ 5 ngày (1 năm từ ngày cấp hiện tại)
-  const currentGrantDateObj = currentMilestone ? new Date(currentMilestone.grantDate) : null;
-  const mandatoryDeadlineDate = currentGrantDateObj ? formatDate(addMonths(currentGrantDateObj, 12)) : null;
+  // Hạn nghĩa vụ nghỉ 5 ngày: trong vòng 1 năm kể từ ngày cấp (ngày cấp + 1 năm − 1 ngày)
+  const mandatoryDeadlineDate = currentMilestone ? periodEndISO(currentMilestone.grantDate, 12) : null;
 
   // Tính số dư khả dụng (Available Balance)
   const validCarriedOver = Math.max(0, Number(carriedOverDays) || 0);

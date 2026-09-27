@@ -17,7 +17,8 @@ import RegulatorySourceView from '../regulatory/RegulatorySourceView.jsx';
 import {
   generateArrivalPlan,
   ARRIVAL_STAGES,
-  ARRIVAL_SOURCES
+  ARRIVAL_SOURCES,
+  todayLocalISO
 } from '../../japan/immigration/index.js';
 import {
   PlaneLanding,
@@ -42,14 +43,14 @@ const STORAGE_KEY = 'ai_tools_arriving-in-japan-wizard-jp_progress';
 
 export default function ArrivingInJapanWizardView({ lang = 'vi' }) {
   const entryDateInput = useId();
+  const moveInDateInput = useId();
   const statusCategoryInput = useId();
   const shakaiHokenInput = useId();
   const partTimeInput = useId();
 
   // State
-  const [entryDate, setEntryDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
-  });
+  const [entryDate, setEntryDate] = useState(() => todayLocalISO());
+  const [moveInDate, setMoveInDate] = useState('');
   const [statusCategory, setStatusCategory] = useState('work');
   const [hasCompanyShakaiHoken, setHasCompanyShakaiHoken] = useState(true);
   const [needsPartTimeWork, setNeedsPartTimeWork] = useState(false);
@@ -110,6 +111,7 @@ export default function ArrivingInJapanWizardView({ lang = 'vi' }) {
     return generateArrivalPlan(
       {
         entryDate,
+        moveInDate: moveInDate || entryDate,
         statusCategory,
         hasCompanyShakaiHoken,
         needsPartTimeWork,
@@ -118,7 +120,7 @@ export default function ArrivingInJapanWizardView({ lang = 'vi' }) {
         completedTaskIds,
       }
     );
-  }, [entryDate, statusCategory, hasCompanyShakaiHoken, needsPartTimeWork, completedTaskIds]);
+  }, [entryDate, moveInDate, statusCategory, hasCompanyShakaiHoken, needsPartTimeWork, completedTaskIds]);
 
   // Filter tasks
   const displayedTasks = useMemo(() => {
@@ -141,6 +143,7 @@ export default function ArrivingInJapanWizardView({ lang = 'vi' }) {
       badge: 'Sự Kiện Đời Sống: Nhập Cảnh',
       inputSection: 'Thiết Lập Điều Kiện Ban Đầu',
       entryDateLabel: 'Ngày đặt chân đến Nhật Bản (Ngày nhập cảnh)',
+      moveInDateLabel: 'Ngày bắt đầu ở tại chỗ ở (住居地を定めた日) — hạn 14 ngày tính từ ngày này; để trống nếu trùng ngày nhập cảnh',
       statusLabel: 'Nhóm tư cách lưu trú',
       statusWork: 'Đi làm chuyên môn (Kỹ sư, Kinh tế, Nhân văn, v.v.)',
       statusStudent: 'Du học (Đại học, Cao đẳng, Trường tiếng Nhật)',
@@ -175,6 +178,7 @@ export default function ArrivingInJapanWizardView({ lang = 'vi' }) {
       badge: 'ライフイベント：新規入国',
       inputSection: '初期条件・スケジュールの設定',
       entryDateLabel: '日本入国日（来日日）',
+      moveInDateLabel: '住居地を定めた日（14日の期限の起算日。入国日と同じなら空欄）',
       statusLabel: '在留資格の区分',
       statusWork: '就労系在留資格（技術・人文知識・国際業務等）',
       statusStudent: '留学（大学・専門学校・日本語学校）',
@@ -209,6 +213,7 @@ export default function ArrivingInJapanWizardView({ lang = 'vi' }) {
       badge: 'Life Event: Arriving in Japan',
       inputSection: 'Initial Conditions & Schedule',
       entryDateLabel: 'Arrival Date in Japan (Entry Date)',
+      moveInDateLabel: 'Date you settled at your address (the 14-day deadline counts from this; leave blank if same as entry date)',
       statusLabel: 'Status of Residence Category',
       statusWork: 'Work Status (Engineer/Specialist in Humanities, etc.)',
       statusStudent: 'Student (University, College, Language School)',
@@ -267,6 +272,21 @@ export default function ArrivingInJapanWizardView({ lang = 'vi' }) {
                 aria-label={t.entryDateLabel}
                 value={entryDate}
                 onChange={(e) => setEntryDate(e.target.value)}
+                className="w-full px-3 py-2 border border-outline rounded-xl bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+
+            <div>
+              <label htmlFor={moveInDateInput} className="block text-sm font-semibold text-on-surface mb-1">
+                {t.moveInDateLabel}
+              </label>
+              <input
+                id={moveInDateInput}
+                type="date"
+                aria-label={t.moveInDateLabel}
+                value={moveInDate}
+                min={entryDate}
+                onChange={(e) => setMoveInDate(e.target.value)}
                 className="w-full px-3 py-2 border border-outline rounded-xl bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>

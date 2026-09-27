@@ -40,10 +40,10 @@ const I18N = {
     salaryInputLabel: 'Mức lương làm căn cứ đóng bảo hiểm',
     placeholderSalary: '30,000,000',
     regionLabel: 'Vùng lương tối thiểu (áp dụng trần BHTN 20 lần)',
-    region1: 'Vùng I (Trần BHTN: 99.2 triệu/tháng)',
-    region2: 'Vùng II (Trần BHTN: 88.2 triệu/tháng)',
-    region3: 'Vùng III (Trần BHTN: 77.2 triệu/tháng)',
-    region4: 'Vùng IV (Trần BHTN: 69.0 triệu/tháng)',
+    region1: 'Vùng I (Trần BHTN: 106.2 triệu/tháng)',
+    region2: 'Vùng II (Trần BHTN: 94.6 triệu/tháng)',
+    region3: 'Vùng III (Trần BHTN: 82.8 triệu/tháng)',
+    region4: 'Vùng IV (Trần BHTN: 74.0 triệu/tháng)',
     monthYearLabel: 'Thời điểm áp dụng (Tháng/Năm)',
     monthYearHint: 'Trước 01/07/2026 trần BHXH/BHYT là 46.8M; từ 01/07/2026 là 50.6M',
     metricTotalCombined: 'Tổng trích nộp bảo hiểm (32%)',
@@ -84,10 +84,10 @@ const I18N = {
     salaryInputLabel: 'Insurance Base Salary',
     placeholderSalary: '30,000,000',
     regionLabel: 'Minimum Wage Region (UI 20x Ceiling)',
-    region1: 'Region I (UI Cap: 99.2M VND/month)',
-    region2: 'Region II (UI Cap: 88.2M VND/month)',
-    region3: 'Region III (UI Cap: 77.2M VND/month)',
-    region4: 'Region IV (UI Cap: 69.0M VND/month)',
+    region1: 'Region I (UI Cap: 106.2M VND/month)',
+    region2: 'Region II (UI Cap: 94.6M VND/month)',
+    region3: 'Region III (UI Cap: 82.8M VND/month)',
+    region4: 'Region IV (UI Cap: 74.0M VND/month)',
     monthYearLabel: 'Effective Month/Year',
     monthYearHint: 'Before 01/07/2026 SI/HI cap is 46.8M; from 01/07/2026 it is 50.6M',
     metricTotalCombined: 'Total Compulsory Insurance (32%)',
@@ -128,10 +128,10 @@ const I18N = {
     salaryInputLabel: '社会保険算定基礎給与額',
     placeholderSalary: '30,000,000',
     regionLabel: '最低賃金地域区分（失業保険20倍上限基準）',
-    region1: '第I地域（失業保険上限: 月9,920万ドン）',
-    region2: '第II地域（失業保険上限: 月8,820万ドン）',
-    region3: '第III地域（失業保険上限: 月7,720万ドン）',
-    region4: '第IV地域（失業保険上限: 月6,900万ドン）',
+    region1: '第I地域（失業保険上限: 月1億620万ドン）',
+    region2: '第II地域（失業保険上限: 月9,460万ドン）',
+    region3: '第III地域（失業保険上限: 月8,280万ドン）',
+    region4: '第IV地域（失業保険上限: 月7,400万ドン）',
     monthYearLabel: '適用年月（支給時期）',
     monthYearHint: '2026年7月1日前（上限4,680万）と改定後（上限5,060万）に自動連動',
     metricTotalCombined: '保険料納付総額 (32%)',
@@ -330,8 +330,15 @@ export default function SocialInsuranceCalculatorVNView({ displayLang = 'vi' }) 
               </label>
               <input
                 type="month"
+                // Bộ quy tắc (giảm trừ 15,5M/6,2M, biểu 5 bậc, lương tối thiểu NĐ 293/2025) chỉ đúng cho năm 2026.
+                min="2026-01"
+                max="2026-12"
                 value={monthYear}
-                onChange={(e) => setMonthYear(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  setMonthYear(v < '2026-01' ? '2026-01' : v > '2026-12' ? '2026-12' : v);
+                }}
                 className="w-full px-3 py-2.5 rounded-xl bg-surface border border-border-subtle text-on-surface text-xs sm:text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary cursor-pointer"
               />
               <p className="text-[11px] text-on-surface-variant leading-tight mt-1">

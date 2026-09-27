@@ -1,11 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
     FileSpreadsheet, Upload, Download, Sparkles, Plus,
-    Trash2, ChevronDown, ChevronUp, AlertCircle, Save, Loader2
+    Trash2, ChevronDown, ChevronUp, AlertCircle, Save
 } from 'lucide-react';
-import { readExcelFile, autoMapFields, exportMappedExcel } from '../utils/excel';
+import {
+    readExcelFile, autoMapFields, exportMappedExcel,
+    updateZoneCell, serializeZoneEdits, applyZoneEdits
+} from '../utils/excel';
 import ZoneEditor from './ZoneEditor';
-import { useAntigravityAgent } from '../hooks/useAntigravityAgent';
 
 export default function ExcelMappingView({ t: tProp }) {
     const t = tProp || {};
@@ -26,7 +28,9 @@ export default function ExcelMappingView({ t: tProp }) {
     const [footerZone, setFooterZone] = useState([]);       // Zone 3
     const [footerStartRow, setFooterStartRow] = useState(null);
     const [existingDataSlots, setExistingDataSlots] = useState(0);
-    const [colCount, setColCount] = useState(0);
+    const [sourceParseInfo, setSourceParseInfo] = useState(null);
+    // Zone edits from a profile loaded before the template was uploaded
+    const pendingZoneEditsRef = useRef(null);
 
     // Mapping & Profiles
     const [mappingRules, setMappingRules] = useState([]);
@@ -45,8 +49,6 @@ export default function ExcelMappingView({ t: tProp }) {
     const [error, setError] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const { execute: executeAutoMap, isLoading: isMappingLoading } = useAntigravityAgent('/map-fields');
-
     // --- ACTIONS ---
     const handleFileUpload = async (event, isSource) => {
         const file = event.target.files[0];
@@ -61,17 +63,24 @@ export default function ExcelMappingView({ t: tProp }) {
                 setSourceHeaders(result.headers);
                 setSourceData(result.sampleRows);
                 setSourceAllData(result.allRows);
+                setSourceParseInfo({
+                    parsedRowCount: result.parsedRowCount ?? result.allRows.length,
+                    skippedRows: result.skippedRows || 0,
+                    stoppedAtRow: result.stoppedAtRow ?? null,
+                    stopLabel: result.stopLabel || ''
+                });
             } else {
                 setTargetFile(file.name);
                 setTargetHeaders(result.headers);
                 setTargetBuffer(result.rawBuffer);
                 setHeaderRowIndex(result.headerRowIndex);
                 // Store 3-Zone data
-                setHeaderZone(result.headerZone || []);
-                setFooterZone(result.footerZone || []);
+                const pending = pendingZoneEditsRef.current;
+                setHeaderZone(applyZoneEdits(result.headerZone || [], pending?.headerZone));
+                setFooterZone(applyZoneEdits(result.footerZone || [], pending?.footerZone));
+                pendingZoneEditsRef.current = null;
                 setFooterStartRow(result.footerStartRow);
                 setExistingDataSlots(result.existingDataSlots || 0);
-                setColCount(result.colCount || 0);
             }
 
             // Auto-map
@@ -81,44 +90,22 @@ export default function ExcelMappingView({ t: tProp }) {
                 setMappingRules(autoMapFields(sourceHeaders, result.headers));
             }
         } catch (err) {
-            setError(`Error reading file: ${err.message}`);
+            setError(`Không đọc được tệp: ${err.message}`);
         } finally {
             setIsProcessing(false);
+            // allow re-selecting the same file
+            if (event.target) event.target.value = '';
         }
     };
 
-    const handleAutoMap = async () => {
+    // Auto-map runs locally (header name heuristics). No file content leaves the browser.
+    const handleAutoMap = () => {
         if (sourceHeaders.length === 0 || targetHeaders.length === 0) {
-            setError("Please upload both source and target files first.");
+            setError('Hãy tải lên cả tệp nguồn và mẫu đích trước.');
             return;
         }
         setError('');
-        
-        try {
-            const payload = {
-                source_headers: sourceHeaders,
-                target_headers: targetHeaders,
-                sample_data: sourceData.slice(0, 3)
-            };
-
-            const result = await executeAutoMap(payload);
-            if (result && result.mappings) {
-                const combinedRules = targetHeaders.map(targetCol => {
-                    const found = result.mappings.find(m => m.target_col === targetCol);
-                    return {
-                        sourceCol: found ? found.source_col : '',
-                        targetCol: targetCol,
-                        type: found ? 'auto' : 'unmapped'
-                    };
-                });
-                setMappingRules(combinedRules);
-            } else {
-                setMappingRules(autoMapFields(sourceHeaders, targetHeaders));
-            }
-        } catch (err) {
-            console.warn("Backend auto-map failed, falling back to local auto-map:", err);
-            setMappingRules(autoMapFields(sourceHeaders, targetHeaders));
-        }
+        setMappingRules(autoMapFields(sourceHeaders, targetHeaders));
     };
 
     const handleExport = async () => {
@@ -127,85 +114,58 @@ export default function ExcelMappingView({ t: tProp }) {
         setError('');
 
         try {
-            // Build the mapping dictionary { targetCol: sourceCol }
-            const mappingDict = {};
-            mappingRules.forEach(rule => {
-                if (rule.sourceCol && rule.targetCol) {
-                    mappingDict[rule.targetCol] = rule.sourceCol;
-                }
-            });
+            const activeRules = mappingRules.filter(rule => rule.sourceCol && rule.targetCol);
+            if (activeRules.length === 0) {
+                throw new Error('Chưa có quy tắc nào ghép đủ cột nguồn và cột đích.');
+            }
 
             // Use all data if available, fallback to sampleData
             const dataToExport = sourceAllData.length > 0 ? sourceAllData : sourceData;
 
-            // Call the 3-Zone export engine
+            // 3-Zone export engine returns the .xlsx buffer; download happens here only.
             const outBuffer = await exportMappedExcel({
-                rawTargetBuffer: targetBuffer,
-                mappingDict,
-                sourceData: dataToExport,
+                sourceAllRows: dataToExport,
+                mappingRules: activeRules,
+                targetBuffer,
                 headerRowIndex,
                 headerZone,
                 footerZone,
                 footerStartRow,
-                existingDataSlots,
-                colCount
+                existingDataSlots
             });
 
-            // Download file
             const blob = new Blob([outBuffer], {
                 type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Mapped_${targetFile}`;
+            a.download = `Mapped_${targetFile.replace(/\.[^.]+$/, '')}.xlsx`;
             document.body.appendChild(a);
             a.click();
-            window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
+            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 
         } catch (err) {
-            setError(`Error exporting file: ${err.message}`);
+            setError(`Xuất tệp thất bại: ${err.message}`);
         } finally {
             setIsProcessing(false);
         }
     };
 
-    // Callbacks for ZoneEditor cell edits
-    const handleHeaderZoneChange = useCallback((cellAddress, newValue) => {
-        setHeaderZone(prev => prev.map(row => ({
-            ...row,
-            cells: row.cells.map(cell =>
-                cell.address === cellAddress ? { ...cell, value: newValue } : cell
-            )
-        })));
+    // Callbacks for ZoneEditor cell edits: (rowIdx, cellIdx, value) → marks the cell as edited
+    const handleHeaderZoneChange = useCallback((rowIdx, cellIdx, newValue) => {
+        setHeaderZone(prev => updateZoneCell(prev, rowIdx, cellIdx, newValue));
     }, []);
 
-    const handleFooterZoneChange = useCallback((cellAddress, newValue) => {
-        setFooterZone(prev => prev.map(row => ({
-            ...row,
-            cells: row.cells.map(cell =>
-                cell.address === cellAddress ? { ...cell, value: newValue } : cell
-            )
-        })));
+    const handleFooterZoneChange = useCallback((rowIdx, cellIdx, newValue) => {
+        setFooterZone(prev => updateZoneCell(prev, rowIdx, cellIdx, newValue));
     }, []);
 
-    // Save profile including 3-Zone configurations
+    // Save profile: mapping rules + only the zone cells the user edited ({rowNum, cells:[{col,value}]})
     const saveProfile = () => {
-        const name = prompt("Enter Profile Name:", currentProfileName === 'New Profile' ? '' : currentProfileName);
+        const name = prompt('Tên profile:', currentProfileName === 'New Profile' ? '' : currentProfileName);
         if (!name) return;
-
-        // Strip bulky raw buffers/formulas, save only structural cell overrides
-        const cleanZone = (zone) => zone.map(row => ({
-            rowIdx: row.rowIdx,
-            cells: row.cells.map(c => ({
-                address: c.address,
-                // Ensure value is a clean string/number, never serialize [object Object]
-                value: typeof c.value === 'object' && c.value !== null
-                    ? (c.value.v !== undefined ? c.value.v : '')
-                    : (c.value === '[object Object]' ? '' : c.value)
-            }))
-        }));
 
         const newProfiles = {
             ...profiles,
@@ -213,8 +173,8 @@ export default function ExcelMappingView({ t: tProp }) {
                 mappingRules,
                 sourceHeaders,
                 targetHeaders,
-                headerZone: cleanZone(headerZone),
-                footerZone: cleanZone(footerZone),
+                headerZone: serializeZoneEdits(headerZone),
+                footerZone: serializeZoneEdits(footerZone),
                 savedAt: new Date().toISOString()
             }
         };
@@ -234,19 +194,14 @@ export default function ExcelMappingView({ t: tProp }) {
         setCurrentProfileName(name);
         setMappingRules(profile.mappingRules || []);
 
-        // Sanitize zone data: clean [object Object] from old cached profiles
-        const sanitizeZone = (zone) => {
-            if (!zone) return zone;
-            return zone.map(row => ({
-                ...row,
-                cells: row.cells.map(cell => ({
-                    ...cell,
-                    value: cell.value === '[object Object]' ? '' : cell.value
-                }))
-            }));
-        };
-        if (profile.headerZone) setHeaderZone(sanitizeZone(profile.headerZone));
-        if (profile.footerZone) setFooterZone(sanitizeZone(profile.footerZone));
+        const edits = { headerZone: profile.headerZone || [], footerZone: profile.footerZone || [] };
+        if (targetHeaders.length > 0) {
+            setHeaderZone(prev => applyZoneEdits(prev, edits.headerZone));
+            setFooterZone(prev => applyZoneEdits(prev, edits.footerZone));
+        } else {
+            // Template not uploaded yet: apply once it is
+            pendingZoneEditsRef.current = edits;
+        }
     };
 
     const removeRule = (index) => {
@@ -349,13 +304,22 @@ export default function ExcelMappingView({ t: tProp }) {
                         <div className="p-3 border-b border-border-subtle/40 bg-surface-container flex items-center justify-between shrink-0">
                             <h2 className="font-title-sm text-title-sm text-on-surface font-semibold">{t.sourceCustomer || 'Nguồn: Đơn hàng Khách'}</h2>
                             <label className="cursor-pointer">
-                                <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleFileUpload(e, true)} />
+                                <input type="file" aria-label="Tải lên tệp đơn hàng khách (Source)" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleFileUpload(e, true)} />
                                 <div className={`px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors flex items-center gap-2 ${sourceFile ? 'bg-primary-container/15 border-primary-container/40 text-brand-cyan-bright font-semibold' : 'hover:bg-surface-subtle border-border-subtle text-on-surface-variant'}`}>
                                     <Upload className="w-3.5 h-3.5" />
                                     {sourceFile ? `${sourceFile} ✓` : 'Upload File'}
                                 </div>
                             </label>
                         </div>
+
+                        {sourceParseInfo && (
+                            <div className="px-3 py-1.5 text-[11px] text-on-surface-variant border-b border-border-subtle/30 bg-surface-container shrink-0" role="status">
+                                Đã đọc <strong className="text-on-surface">{sourceParseInfo.parsedRowCount}</strong> dòng dữ liệu
+                                {sourceParseInfo.stoppedAtRow ? ` · dừng ở dòng ${sourceParseInfo.stoppedAtRow}${sourceParseInfo.stopLabel ? ` („${sourceParseInfo.stopLabel}“)` : ''}` : ''}
+                                {sourceParseInfo.skippedRows > 0 ? ` · bỏ qua ${sourceParseInfo.skippedRows} dòng thưa/ghi chú` : ''}
+                                . Hãy kiểm tra lại số dòng trước khi xuất.
+                            </div>
+                        )}
 
                         <div className="flex-1 overflow-auto p-3" tabIndex={0} role="region" aria-label="Bảng xem trước dữ liệu nguồn">
                             {sourceHeaders.length > 0 ? (
@@ -397,11 +361,12 @@ export default function ExcelMappingView({ t: tProp }) {
                     <button
                         type="button"
                         onClick={handleAutoMap}
-                        disabled={!sourceFile || !targetFile || isProcessing || isMappingLoading}
+                        disabled={!sourceFile || !targetFile || isProcessing}
                         className="bg-primary-container hover:bg-brand-cyan-bright text-on-primary-container rounded-full p-3 shadow-lg transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed group cursor-pointer"
-                        title={t.autoMapBtn || 'AI Auto-Map'}
+                        title="Tự động ghép cột theo tên (xử lý ngay trên trình duyệt)"
+                        aria-label="Tự động ghép cột theo tên"
                     >
-                        {isMappingLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5 animate-pulse group-hover:animate-none" />}
+                        <Sparkles className="w-5 h-5 animate-pulse group-hover:animate-none" />
                     </button>
                     <div className="text-[10px] font-bold tracking-wider text-brand-cyan-bright mt-2 uppercase font-mono">Auto-map</div>
                     <div className="flex-1 w-px bg-border-subtle/40 my-4" />
@@ -413,7 +378,7 @@ export default function ExcelMappingView({ t: tProp }) {
                         <div className="p-3 border-b border-border-subtle/40 bg-surface-container flex items-center justify-between shrink-0">
                             <h2 className="font-title-sm text-title-sm text-on-surface font-semibold">{t.targetSupplier || 'Đích: Mẫu Nhà cung cấp'}</h2>
                             <label className="cursor-pointer">
-                                <input type="file" aria-label="Tải lên tệp biểu mẫu nhà cung cấp (Target)" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleFileUpload(e, false)} />
+                                <input type="file" aria-label="Tải lên tệp biểu mẫu nhà cung cấp (Target)" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={(e) => handleFileUpload(e, false)} />
                                 <div className={`px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed transition-colors flex items-center gap-2 ${targetFile ? 'bg-primary-container/15 border-primary-container/40 text-brand-cyan-bright font-semibold' : 'hover:bg-surface-subtle border-border-subtle text-on-surface-variant'}`}>
                                     <Upload className="w-3.5 h-3.5" />
                                     {targetFile ? `${targetFile} ✓` : 'Upload Template'}

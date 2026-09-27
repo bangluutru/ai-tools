@@ -106,9 +106,9 @@ test('Japan Insurance Golden 3: Normal Remuneration (Tokyo, 300,000 JPY, age 30,
   assert.equal(res.grades.pension.grade, 19);
   assert.equal(res.grades.pension.standardMonthly, 300000);
 
-  // Tokyo Kenpo 2026: 9.98% / 2 = 4.99% -> 300,000 * 0.0499 = 14,970 JPY
-  assert.equal(res.monthly.healthInsurance.employee, 14970);
-  assert.equal(res.monthly.healthInsurance.employer, 14970);
+  // Tokyo Kenpo 令和8年度 (2026年3月分〜): 9.85% / 2 = 4.925% -> 300,000 * 0.04925 = 14,775 JPY
+  assert.equal(res.monthly.healthInsurance.employee, 14775);
+  assert.equal(res.monthly.healthInsurance.employer, 14775);
 
   // Child support fund 2026: 0.23% / 2 = 0.115% -> 300,000 * 0.00115 = 345 JPY
   assert.equal(res.monthly.childSupportFund.employee, 345);
@@ -132,14 +132,14 @@ test('Japan Insurance Golden 3: Normal Remuneration (Tokyo, 300,000 JPY, age 30,
   assert.equal(res.monthly.childWelfareContribution.employee, 0);
   assert.equal(res.monthly.childWelfareContribution.employer, 1080);
 
-  // Total employee deduction = 14970 + 345 + 0 + 27450 + 1500 = 44,265 JPY
-  assert.equal(res.monthly.employeeTotal, 44265);
+  // Total employee deduction = 14775 + 345 + 0 + 27450 + 1500 = 44,070 JPY
+  assert.equal(res.monthly.employeeTotal, 44070);
 
-  // Total employer expense = 14970 + 345 + 0 + 27450 + 2550 + 1080 = 46,395 JPY
-  assert.equal(res.monthly.employerTotal, 46395);
+  // Total employer expense = 14775 + 345 + 0 + 27450 + 2550 + 1080 = 46,200 JPY
+  assert.equal(res.monthly.employerTotal, 46200);
 
-  // Total employment cost = 300,000 + 46,395 = 346,395 JPY
-  assert.equal(res.monthly.totalEmploymentCost, 346395);
+  // Total employment cost = 300,000 + 46,200 = 346,200 JPY
+  assert.equal(res.monthly.totalEmploymentCost, 346200);
 });
 
 test('Japan Insurance Golden 4: Care insurance age boundary (39, 40, 64, 65)', () => {
@@ -170,9 +170,9 @@ test('Japan Insurance Golden 5: Prefecture rate difference (Tokyo vs Fukuoka)', 
   const tokyo = resolveKenpoRate('tokyo', '2026-04-01');
   const fukuoka = resolveKenpoRate('fukuoka', '2026-04-01');
 
-  // Tokyo: 9.98%
-  assert.equal(tokyo.totalRate, 0.0998);
-  assert.equal(tokyo.employeeRate, 0.0499);
+  // Tokyo 令和8年度: 9.85%
+  assert.equal(tokyo.totalRate, 0.0985);
+  assert.equal(tokyo.employeeRate, 0.04925);
 
   // Fukuoka: 10.11%
   assert.equal(fukuoka.totalRate, 0.1011);
@@ -195,13 +195,14 @@ test('Japan Insurance Golden 6: Employment insurance industry differences (Gener
 });
 
 test('Japan Insurance Golden 7: Fiscal year boundary (2026-03-31 vs 2026-04-01)', () => {
-  // Prior to 2026-04-01 (FY2025): child support is 0, employment is 6/1000
+  // Prior to 2026-04-01 (FY2025): child support is 0, employment is 5.5/1000 (令和7年度)
   const child2025 = resolveChildSupportRate('2026-03-31');
   assert.equal(child2025.isIntroduced, false);
   assert.equal(child2025.totalRate, 0);
 
   const emp2025 = resolveEmploymentInsuranceRate('general', '2026-03-31');
-  assert.equal(emp2025.employeeRate, 0.006);
+  assert.equal(emp2025.employeeRate, 0.0055);
+  assert.equal(emp2025.employerRate, 0.009);
 
   // From 2026-04-01 (FY2026): child support is 0.23%, employment is 5/1000
   const child2026 = resolveChildSupportRate('2026-04-01');
@@ -381,9 +382,9 @@ test('Japan Insurance Golden 16: National Pension - Advance payment discounts (�
   assert.equal(adv1yr.success, true);
   assert.equal(adv1yr.baseMonthlyPremium, 17920);
   assert.equal(adv1yr.advanceCalculation.grossAmount, 17920 * 12); // 215,040 JPY
-  assert.equal(adv1yr.advanceCalculation.discountAmount, 4160); // Official JPS discount
-  assert.equal(adv1yr.advanceCalculation.netPayableAmount, 215040 - 4160); // 210,880 JPY
-  assert.equal(adv1yr.advanceCalculation.savingsPercentage, 1.93);
+  assert.equal(adv1yr.advanceCalculation.discountAmount, 4510); // 日本年金機構 令和8年度 口座振替 1年前納
+  assert.equal(adv1yr.advanceCalculation.netPayableAmount, 210530); // official 1回あたりの納付額
+  assert.equal(adv1yr.advanceCalculation.savingsPercentage, 2.1);
 
   // 2 years advance via account transfer
   const adv2yr = calculateNationalPension({
@@ -393,9 +394,10 @@ test('Japan Insurance Golden 16: National Pension - Advance payment discounts (�
     advancePaymentPlan: 'two_years',
     advancePaymentMethod: 'account_transfer'
   });
-  assert.equal(adv2yr.advanceCalculation.grossAmount, 17920 * 24); // 430,080 JPY
-  assert.equal(adv2yr.advanceCalculation.discountAmount, 16590);
-  assert.equal(adv2yr.advanceCalculation.netPayableAmount, 430080 - 16590); // 413,490 JPY
+  // 2年前納 = 令和8年度 17,920×12 + 令和9年度 18,290×12 = 434,520円
+  assert.equal(adv2yr.advanceCalculation.grossAmount, 17920 * 12 + 18290 * 12);
+  assert.equal(adv2yr.advanceCalculation.discountAmount, 17370);
+  assert.equal(adv2yr.advanceCalculation.netPayableAmount, 417150); // official 1回あたりの納付額
 });
 
 test('Japan Insurance Golden 17: National Pension - Exemption types and benefit reflection', () => {
@@ -458,7 +460,7 @@ test('Japan Insurance Golden 19: Dependent - Spouse cohabiting with 1M JPY proje
 
   assert.equal(d1.status, 'likely_eligible');
   assert.equal(d1.ceiling, 1300000);
-  assert.equal(d1.checks.every((c) => c.status === 'pass'), true);
+  assert.equal(d1.checks.filter((c) => c.status !== 'info').every((c) => c.status === 'pass'), true);
   assert.equal(d1.taxDistinction.isNotTaxEvaluation, true);
 });
 

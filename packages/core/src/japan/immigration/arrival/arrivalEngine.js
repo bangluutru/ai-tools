@@ -6,6 +6,7 @@
  */
 
 import { ARRIVAL_STAGES, ARRIVAL_TASKS_CATALOG, ARRIVAL_SOURCES } from './arrivalRules.js';
+import { parseLocalDate, formatLocalDate, addDaysLocal, diffCalendarDays, resolveCurrentDate, todayLocalISO } from '../shared/localDate.js';
 
 /**
  * Cộng thêm số ngày vào chuỗi ngày YYYY-MM-DD
@@ -14,11 +15,9 @@ import { ARRIVAL_STAGES, ARRIVAL_TASKS_CATALOG, ARRIVAL_SOURCES } from './arriva
  * @returns {string}
  */
 export function addDays(dateStr, days) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '';
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
+  const d = parseLocalDate(dateStr);
+  if (!d) return '';
+  return formatLocalDate(addDaysLocal(d, days));
 }
 
 /**
@@ -28,12 +27,11 @@ export function addDays(dateStr, days) {
  * @returns {number|null}
  */
 export function calculateDaysRemaining(deadlineDate, currentDate) {
-  if (!deadlineDate) return null;
-  const now = currentDate ? new Date(currentDate) : new Date();
-  const target = new Date(deadlineDate);
-  if (isNaN(now.getTime()) || isNaN(target.getTime())) return null;
-  const diffTime = target.getTime() - now.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  // Số ngày lịch (0 = hôm nay là hạn chót, vẫn còn trong hạn; âm = quá hạn)
+  const target = parseLocalDate(deadlineDate);
+  if (!target) return null;
+  const now = resolveCurrentDate(currentDate);
+  return diffCalendarDays(now, target);
 }
 
 /**
@@ -44,7 +42,9 @@ export function calculateDaysRemaining(deadlineDate, currentDate) {
  */
 export function evaluateArrivalChecklist(context = {}, options = {}) {
   const {
-    entryDate = new Date().toISOString().split('T')[0],
+    entryDate = todayLocalISO(),
+    moveInDate, // Ngày xác định chỗ ở (住居地を定めた日) — mặc định bằng ngày nhập cảnh
+    currentDate,
     statusCategory = 'work', // 'work' | 'student' | 'dependent'
     hasCompanyShakaiHoken = statusCategory === 'work',
     needsPartTimeWork = statusCategory === 'student' || statusCategory === 'dependent',
@@ -56,7 +56,11 @@ export function evaluateArrivalChecklist(context = {}, options = {}) {
     let include = true;
 
     if (task.id === 'task_part_time_permit') {
-      include = Boolean(needsPartTimeWork);
+      // Xin tại sân bay chỉ dành cho du học sinh MỚI nhập cảnh (留学)
+      include = Boolean(needsPartTimeWork) && statusCategory === 'student';
+    } else if (task.id === 'task_part_time_permit_regional') {
+      // 家族滞在 v.v.: nộp tại Cục XNC khu vực sau khi đến Nhật
+      include = Boolean(needsPartTimeWork) && statusCategory !== 'student';
     } else if (task.id === 'task_kokumin_kenpo' || task.id === 'task_kokumin_nenkin') {
       include = !hasCompanyShakaiHoken;
     } else if (task.id === 'task_fuyou_declaration') {
@@ -71,9 +75,12 @@ export function evaluateArrivalChecklist(context = {}, options = {}) {
     const item = { ...task };
 
     // Tính toán hạn chót cụ thể
-    if (item.deadlineRule && item.deadlineRule.anchorKey === 'entryDate' && entryDate) {
-      item.calculatedDeadlineDate = addDays(entryDate, item.deadlineRule.offsetDays);
-      item.daysRemaining = calculateDaysRemaining(item.calculatedDeadlineDate);
+    const anchorDate = item.deadlineRule && item.deadlineRule.anchorKey === 'moveInDate'
+      ? (moveInDate || entryDate)
+      : entryDate;
+    if (item.deadlineRule && ['entryDate', 'moveInDate'].includes(item.deadlineRule.anchorKey) && anchorDate) {
+      item.calculatedDeadlineDate = addDays(anchorDate, item.deadlineRule.offsetDays);
+      item.daysRemaining = calculateDaysRemaining(item.calculatedDeadlineDate, currentDate);
       item.isUrgent = item.daysRemaining !== null && item.daysRemaining <= 3;
       item.isOverdue = item.daysRemaining !== null && item.daysRemaining < 0;
     }

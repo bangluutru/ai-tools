@@ -31,13 +31,17 @@ const toISO = (val) => {
 // ---------------------------------------------------------------------------
 // ZoneEditor — standalone component (NOT defined inside parent)
 // ---------------------------------------------------------------------------
+/**
+ * onCellChange(rowIdx, cellIdx, value): rowIdx = index in `zone`, cellIdx = index in zone[rowIdx].cells.
+ */
 export default function ZoneEditor({ zone, onCellChange, title, icon, defaultExpanded = false }) {
     const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
     // Compute visible rows (those with at least 1 non-empty cell)
     const visibleRows = React.useMemo(() => {
         return zone.map((row, rowIdx) => {
-            const nonEmptyCells = row.cells.filter(c => c.value && c.value.trim() !== '');
+            // Keep cells the user edited (even if cleared) so they can be retyped
+            const nonEmptyCells = row.cells.filter(c => c.edited || (c.value && String(c.value).trim() !== ''));
             return { rowIdx, cells: nonEmptyCells };
         }).filter(r => r.cells.length > 0);
     }, [zone]);
@@ -97,8 +101,8 @@ export default function ZoneEditor({ zone, onCellChange, title, icon, defaultExp
                                         key={cell.col}
                                         type="text"
                                         className="flex-1 min-w-[80px] max-w-[220px] text-xs px-2 py-1.5 border border-slate-200 rounded bg-white hover:border-indigo-300 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200 outline-none transition-colors"
-                                        value={cell.value}
-                                        title={cell.value}
+                                        value={cell.value ?? ''}
+                                        title={cell.value ?? ''}
                                         onChange={(e) => onCellChange(rowIdx, originalCellIdx, e.target.value)}
                                     />
                                 );

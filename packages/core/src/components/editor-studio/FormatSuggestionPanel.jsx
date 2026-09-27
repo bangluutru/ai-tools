@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, CheckCheck, ChevronDown, Sparkles, AlertCircle } from 'lucide-react';
 import { FORMAT_TYPES, FORMAT_LABELS, FORMAT_COLORS } from '../../lib/editor-studio/formatSuggester';
+import { normalizeDocStudioLang } from '../../lib/editor-studio/layoutPresets';
 
 /**
  * FormatSuggestionPanel
@@ -31,7 +32,7 @@ export default function FormatSuggestionPanel({
 }) {
     if (!suggestions || suggestions.length === 0) return null;
 
-    const labels = FORMAT_LABELS[displayLang] || FORMAT_LABELS.vn;
+    const labels = FORMAT_LABELS[normalizeDocStudioLang(displayLang)] || FORMAT_LABELS.vn;
 
     return (
         <div className="bg-white border border-indigo-200 rounded-xl shadow-sm overflow-hidden flex flex-col max-h-[60vh]">

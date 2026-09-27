@@ -10,6 +10,13 @@
  */
 
 import { defineRuleMetadata } from '../../../../regulatory/ruleMetadata.js';
+import { buildSpouseDeductionRules, RESIDENT_TAX_COMMON } from '../shared/deductionTables.js';
+
+const DEDUCTIONS_2026 = buildSpouseDeductionRules({
+  // 国税庁 No.1191 / No.1195 / No.1180（令和8年分: 令和8年12月1日施行）
+  spouseIncomeLimit: 620000, // 合計所得62万円以下（給与のみなら136万円以下）
+  dependentIncomeLimit: 620000,
+});
 
 export const Rules2026 = {
   year: 2026,
@@ -18,9 +25,9 @@ export const Rules2026 = {
   effectiveFrom: '2026-01-01',
   effectiveTo: '2026-12-31',
   verifiedDate: '2026-09-10',
-  notes_ja: '基礎控除104万円・給与所得控除最低保障74万円により「178万円の壁」に対応。子ども・子育て支援金（0.23%）は2026年4月施行。国民年金17,920円/月。雇用保険料率0.5%（労働者負担）。',
-  notes_vi: 'Áp dụng mức giảm trừ cơ bản 104 vạn yên và mức sàn giảm trừ tiền lương 74 vạn yên (tương đương bức tường 178 vạn yên). Quỹ hỗ trợ trẻ em 0.23% và BHYT/BHXH mới áp dụng từ 04/2026. Hưu trí quốc dân 17,920 yên/tháng.',
-  notes_en: 'Fiscal Year 2026 rules: Basic deduction 1.04M JPY, Min employment deduction 740k JPY (1.78M wall). Child Support Contribution 0.23% effective Apr 2026. National Pension 17,920 JPY/mo. Employment insurance 0.5%.',
+  notes_ja: '基礎控除104万円（合計所得489万円以下）・給与所得控除最低保障74万円（令和8年12月1日施行、年末調整で適用）。子ども・子育て支援金（0.23%）は令和8年4月分から。協会けんぽ・介護保険料率は令和8年3月分から改定。国民年金17,920円/月（4月〜）。雇用保険料率0.5%（労働者負担、4月〜）。',
+  notes_vi: 'Giảm trừ cơ bản 104 vạn yên (tổng thu nhập ≤489 vạn) và mức sàn giảm trừ tiền lương 74 vạn yên — hiệu lực 01/12/2026, áp dụng khi quyết toán cuối năm. Tiền hỗ trợ trẻ em 0.23% từ phí tháng 4/2026; tỷ lệ BHYT 協会けんぽ và 介護 mới từ phí tháng 3/2026. Hưu trí quốc dân 17,920 yên/tháng (từ 4/2026).',
+  notes_en: 'FY2026 rules: Basic deduction 1.04M JPY (total income ≤4.89M) and 740k minimum employment deduction (enacted 1 Dec 2026, applied at year-end adjustment). Child support levy 0.23% from April 2026 premiums; Kyokai Kenpo and care rates revised from March 2026 premiums. National Pension 17,920 JPY/mo from April. Employment insurance 0.5% from April.',
 
   metadata: defineRuleMetadata({
     id: 'jp-tax-rules-2026',
@@ -49,8 +56,6 @@ export const Rules2026 = {
       { limit: 8999000, rate: 0.23, deduction: 636000 },
       { limit: 17999000, rate: 0.33, deduction: 1536000 },
       { limit: 39999000, rate: 0.40, deduction: 2796000 },
-      { limit: 17999000, rate: 0.33, deduction: 1536000 },
-      { limit: 39999000, rate: 0.40, deduction: 2796000 },
       { limit: Infinity, rate: 0.45, deduction: 4796000 },
     ],
     // Thuế tái thiết 復興特別所得税 (2.1%)
@@ -59,18 +64,20 @@ export const Rules2026 = {
     // 基礎控除 (Basic Deduction 2026 - 国税庁 No.1199)
     basicDeduction: {
       sourceId: 'nta-no1199-2026',
-      standard: 1040000, // 104万円 cho thu nhập <= 132万円
+      // 令和8年分（令和8年12月1日施行・年末調整で適用）: 国税庁 No.1199
+      standard: 1040000, // 104万円 cho 合計所得 <= 489万円
       phases: [
-        { maxTotalIncome: 1320000, amount: 1040000 },
-        { maxTotalIncome: 3360000, amount: 880000 },
-        { maxTotalIncome: 4890000, amount: 680000 },
-        { maxTotalIncome: 6550000, amount: 630000 },
-        { maxTotalIncome: 23500000, amount: 580000 },
+        { maxTotalIncome: 4890000, amount: 1040000 },
+        { maxTotalIncome: 6550000, amount: 670000 },
+        { maxTotalIncome: 23500000, amount: 620000 },
         { maxTotalIncome: 24000000, amount: 480000 },
         { maxTotalIncome: 24500000, amount: 320000 },
         { maxTotalIncome: 25000000, amount: 160000 },
         { maxTotalIncome: Infinity, amount: 0 },
       ],
+      enactmentNote_ja: '令和8年分の基礎控除・給与所得控除の改正は令和8年12月1日施行。月々の源泉徴収は改正前の税額表のままで、差額は年末調整（または確定申告）で精算されます。',
+      enactmentNote_vi: 'Cải cách giảm trừ năm 2026 có hiệu lực từ 01/12/2026. Thuế khấu trừ hàng tháng vẫn theo bảng cũ; phần chênh lệch được hoàn/điều chỉnh khi quyết toán cuối năm (年末調整) hoặc 確定申告.',
+      enactmentNote_en: 'The 2026 basic/employment deduction changes take effect 1 Dec 2026; monthly withholding stays on the old tables and the difference is settled at year-end adjustment or in the tax return.',
     },
 
     // 給与所得控除 (Employment Income Deduction 2026 - 国税庁 No.1410 令和8・9年分)
@@ -89,13 +96,7 @@ export const Rules2026 = {
     },
 
     // Khấu trừ người phụ thuộc & gia cảnh
-    deductions: {
-      spouseStandard: 380000,
-      dependentGeneral: 380000,
-      dependentSpecific: 630000,
-      dependentElderlyCohabitant: 580000,
-      dependentElderlyOther: 480000,
-    },
+    deductions: DEDUCTIONS_2026,
 
     // Khấu trừ khai thuế xanh 青色申告特別控除
     blueReturnDeduction: {
@@ -107,23 +108,19 @@ export const Rules2026 = {
   },
 
   // 2. 住民税 (Resident Tax - 総務省 / 地方税法)
-  residentTax: {
-    sourceId: 'soumu-resident-tax-std',
-    standardIncomeLevy: 0.10,
-    basicDeductionResident: 430000,
-    perCapitaFlatStandard: 5000,
-    forestryTax: 1000,
-  },
+  residentTax: RESIDENT_TAX_COMMON,
 
   // 3. 社会保険料 (Social Insurance 2026 - Tách riêng biệt theo quy định nhà nước)
   socialInsurance: {
+    isRatesByMonth: true,
     // 国民年金 (National Pension - 日本年金機構)
     nationalPension: {
       sourceId: 'jps-national-pension-2026',
       monthly: 17920, // 令和8年度: 17,920円/tháng
       monthlyPremium: 17920,
-      annual: 215040, // 17,920 * 12 = 215,040円/năm
+      annual: 215040, // 17,920 * 12 = 215,040円/năm (năm tài chính 4/2026〜3/2027)
       annualPremium: 215040,
+      previousMonthlyPremium: 17510, // 令和7年度 (tháng 1〜3/2026)
       effectiveFrom: '2026-04-01',
       effectiveTo: '2027-03-31',
       applicablePeriod: { type: 'fiscal-year', from: 2026 },
@@ -164,7 +161,7 @@ export const Rules2026 = {
       totalRate: 0.0023, // 0.23% toàn quốc từ 2026-04-01
       employeeRate: 0.00115, // 労使折半 (50%): 0.115%
       employerRate: 0.00115,
-      effectiveFrom: '2026-04-01',
+      effectiveFrom: '2026-04-01', // 令和8年4月分保険料から（năm 2026: 9 tháng）
     },
 
     // 介護保険 (Nursing Care Insurance - 協会けんぽ 40-64 tuổi)
@@ -175,6 +172,7 @@ export const Rules2026 = {
       employerRate: 0.0081,
       minAge: 40,
       maxAge: 64,
+      effectiveFromMonth: '2026-03', // 令和8年3月分から
     },
 
     // 厚生年金 (Welfare Pension)

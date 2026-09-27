@@ -32,7 +32,7 @@ export {
 export function addDays(dateStr, days) {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
-  d.setDate(d.getDate() + days);
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().split('T')[0];
 }
 
@@ -45,7 +45,7 @@ export function addDays(dateStr, days) {
 export function subtractDays(dateStr, days) {
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
-  d.setDate(d.getDate() - days);
+  d.setUTCDate(d.getUTCDate() - days);
   return d.toISOString().split('T')[0];
 }
 

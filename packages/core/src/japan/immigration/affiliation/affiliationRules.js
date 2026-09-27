@@ -60,11 +60,11 @@ export const AUTHORIZED_EMPLOYMENT_CERT_RULE = defineRuleMetadata({
   effectiveFrom: '1990-06-01',
   applicablePeriod: { type: 'calendar-year', from: 1990, to: 2099 },
   version: '2026.1',
-  lastVerifiedAt: '2026-09-11',
+  lastVerifiedAt: '2026-09-27',
   status: 'verified',
   effectiveBy: 'applicationDate',
   ruleNature: 'guidance',
-  notes: 'Thủ tục tự nguyện nhưng được khuyến nghị khi chuyển việc: xác nhận công việc mới phù hợp với visa hiện tại, lệ phí 1.200 JPY tem doanh thu.',
+  notes: 'Thủ tục tự nguyện nhưng được khuyến nghị khi chuyển việc: xác nhận công việc mới phù hợp với visa hiện tại. Lệ phí: 2.000 JPY tại quầy (tem 収入印紙) / 1.600 JPY online (từ 01/10/2026 online cộng phí thanh toán 220 JPY). Nguồn: https://www.moj.go.jp/isa/applications/procedures/16-9.html',
 });
 
 /**
@@ -99,3 +99,42 @@ export const FILING_METHODS = [
     recommended: false,
   },
 ];
+
+/**
+ * Loại nghĩa vụ thông báo theo Điều 19-16 (入管法第19条の16) theo tư cách lưu trú (canonical id).
+ * Nguồn: https://www.moj.go.jp/isa/applications/procedures/index.html (mục 所属機関等に関する届出)
+ * - 'activity-institution' (活動機関): 教授, 高度専門職1号ハ, 経営・管理, 法律・会計業務, 医療, 教育, 企業内転勤, 技能実習, 留学, 研修
+ * - 'contract-institution' (契約機関): 高度専門職1号イ・ロ, 研究, 技術・人文知識・国際業務, 介護, 興行, 技能, 特定技能
+ * - 'spouse' (配偶者に関する届出 — chỉ khi ly hôn/tử biệt): 家族滞在, 特定活動(配偶者), 日本人の配偶者等, 永住者の配偶者等
+ * - Tư cách không có trong bảng → 'none' (永住者, 定住者, 文化活動, 短期滞在, 特定活動 nói chung, 芸術, 宗教, 報道...)
+ * Ghi chú: 高度専門職1号/2号 gồm cả ハ (活動機関) và イ・ロ (契約機関) — công cụ gộp vào 'contract-institution'; mẫu đơn khác nhau.
+ */
+export const NOTIFICATION_TYPE_BY_STATUS = Object.freeze({
+  'professor': 'activity-institution',
+  'business-manager': 'activity-institution',
+  'legal-accounting': 'activity-institution',
+  'medical-services': 'activity-institution',
+  'instructor': 'activity-institution',
+  'intra-company-transferee': 'activity-institution',
+  'technical-intern-training': 'activity-institution',
+  'student': 'activity-institution',
+  'trainee': 'activity-institution',
+  'highly-skilled-professional-1': 'contract-institution',
+  'highly-skilled-professional-2': 'contract-institution',
+  'researcher': 'contract-institution',
+  'engineer-humanities-international': 'contract-institution',
+  'nursing-care': 'contract-institution',
+  'entertainer': 'contract-institution',
+  'skilled-labor': 'contract-institution',
+  'specified-skilled-worker-1': 'contract-institution',
+  'specified-skilled-worker-2': 'contract-institution',
+  'dependent': 'spouse',
+  'spouse-of-japanese': 'spouse',
+  'spouse-of-permanent-resident': 'spouse',
+});
+
+export const NOTIFICATION_FORM_URLS = Object.freeze({
+  'activity-institution': 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri10_00014.html',
+  'contract-institution': 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri10_00015.html',
+  'spouse': 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri10_00016.html',
+});

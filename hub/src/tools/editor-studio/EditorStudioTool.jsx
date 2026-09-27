@@ -39,7 +39,7 @@ export default function EditorStudioTool({ displayLang }) {
         </div>
 
         <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl">
-          Soạn thảo và chuẩn hóa văn bản hành chính theo tiêu chuẩn thể thức Nghị định 30/2020/NĐ-CP. Tự động nhận diện cấu trúc công văn, phân đoạn điều khoản, căn lề chuẩn quốc gia và kết xuất file Word (.docx) chuyên nghiệp.
+          Soạn thảo văn bản, gợi ý cấu trúc (tiêu đề, điều khoản, danh sách) và xuất file Word (.docx) hoặc in / lưu PDF. Có sẵn cài đặt phông chữ và lề trang theo Nghị định 30/2020/NĐ-CP (Times New Roman 13pt; lề trên/dưới 20 mm, trái 30 mm, phải 15 mm). Công cụ chưa tự dựng đầy đủ thể thức (khối quốc hiệu–tiêu ngữ, số/ký hiệu, nơi nhận, chữ ký) — hãy tự kiểm tra trước khi ban hành.
         </p>
         <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
           <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />

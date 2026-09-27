@@ -309,8 +309,11 @@ export function calculateLoanAPRFromCashFlow({
   const estimatedInterest = Math.max(0, totalScheduledPayments - safePrincipal);
 
   // Giải IRR
-  const periodicRate = solveIRR(cashFlows);
-  const isRateComputable = periodicRate !== null && Number.isFinite(periodicRate) && periodicRate >= -0.5;
+  // Tổng tiền trả thấp hơn số tiền thực nhận → không phải khoản vay có lãi (thường là nhập
+  // thiếu số kỳ hoặc số tiền trả mỗi kỳ). IRR khi đó ra số âm, hiển thị "APR -112%" là sai.
+  const repaysLessThanReceived = monthlyCashOut * safeTerm < initialCashFlow;
+  const periodicRate = repaysLessThanReceived ? null : solveIRR(cashFlows);
+  const isRateComputable = periodicRate !== null && Number.isFinite(periodicRate) && periodicRate >= 0;
 
   const rateInfo = isRateComputable
     ? annualizeRate(periodicRate, 12)
@@ -319,7 +322,11 @@ export function calculateLoanAPRFromCashFlow({
   return {
     isValid: true,
     isRateComputable,
-    validationError: isRateComputable ? null : 'Không thể xác định lãi suất thực từ dòng tiền này. Vui lòng kiểm tra lại số liệu.',
+    validationError: isRateComputable
+      ? null
+      : repaysLessThanReceived
+        ? 'Tổng tiền trả góp thấp hơn số tiền thực nhận — không tính được lãi suất. Vui lòng kiểm tra số kỳ và số tiền trả mỗi kỳ.'
+        : 'Không thể xác định lãi suất thực từ dòng tiền này. Vui lòng kiểm tra lại số liệu.',
     contractPrincipal: safePrincipal,
     netProceeds,
     netDisbursed: netProceeds,

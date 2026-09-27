@@ -2,6 +2,7 @@
  * DocStudio Export Service
  * Lazy-loads the docx library to generate Word documents from the Schema.
  */
+import { resolveLayout, DEFAULT_LAYOUT_CONFIG } from './layoutPresets.js';
 
 export async function exportDocx(schema, filename = 'DocStudio_Export.docx', layoutConfig = null) {
     if (!schema || !schema.sections || schema.sections.length === 0) {
@@ -12,37 +13,11 @@ export async function exportDocx(schema, filename = 'DocStudio_Export.docx', lay
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, BorderStyle, WidthType, Header, Footer, AlignmentType, PageNumber } = await import('docx');
     const { saveAs } = await import('file-saver');
 
-    // Default configuration parsing
-    const config = layoutConfig || {
-        fontFamily: 'font-sans',
-        fontSize: 'text-sm',
-        lineSpacing: 'leading-relaxed',
-        margins: 'p-[2.5cm]',
-        headerOptions: { enabled: false, text: '' },
-        footerOptions: { enabled: false, pageNumbers: true }
-    };
-
-    const marginMapping = {
-        'p-[1.27cm]': 720,   // ~0.5 inch
-        'p-[2cm]': 1134,     // ~0.79 inch
-        'p-[2.5cm]': 1417,   // ~0.98 inch
-        'p-[2.54cm]': 1440   // 1 inch
-    };
-    const docMargin = marginMapping[config.margins] || 1440;
-
-    const fontMapping = {
-        'font-sans': 'Arial',
-        'font-serif': 'Times New Roman',
-        'font-mono': 'Courier New'
-    };
-    const docFont = fontMapping[config.fontFamily] || 'Arial';
-
-    const sizeMapping = {
-        'text-sm': 22, // 11pt * 2 (half-points in docx)
-        'text-base': 24, // 12pt * 2
-        'text-lg': 28 // 14pt * 2
-    };
-    const docSize = sizeMapping[config.fontSize] || 24;
+    // Same resolved layout as the on-screen preview (font, size, spacing, per-side margins)
+    const layout = resolveLayout(layoutConfig || DEFAULT_LAYOUT_CONFIG);
+    const config = { headerOptions: layout.headerOptions, footerOptions: layout.footerOptions };
+    const docFont = layout.fontDocx;
+    const docSize = layout.sizePt * 2; // half-points
 
     const children = [];
 
@@ -140,7 +115,7 @@ export async function exportDocx(schema, filename = 'DocStudio_Export.docx', lay
 
                 case 'date_field':
                     children.push(new Paragraph({
-                        children: [new TextRun({ text: block.text, italics: true, size: 20, color: '64748b' })],
+                        children: [new TextRun({ text: block.text, italics: true })],
                         alignment: 'right',
                         spacing: { before: 100, after: 100 }
                     }));
@@ -148,7 +123,7 @@ export async function exportDocx(schema, filename = 'DocStudio_Export.docx', lay
 
                 case 'closing':
                     children.push(new Paragraph({
-                        children: [new TextRun({ text: block.text, bold: true, size: 22 })],
+                        children: [new TextRun({ text: block.text, bold: true })],
                         alignment: 'right',
                         spacing: { before: 100, after: 100 }
                     }));
@@ -203,7 +178,7 @@ export async function exportDocx(schema, filename = 'DocStudio_Export.docx', lay
                         color: '000000'
                     },
                     paragraph: {
-                        spacing: { line: 276, before: 0, after: 0 }
+                        spacing: { line: layout.docxLine, before: 0, after: 0 }
                     }
                 }
             },
@@ -240,7 +215,8 @@ export async function exportDocx(schema, filename = 'DocStudio_Export.docx', lay
         sections: [{
             properties: {
                 page: {
-                    margin: { top: docMargin, right: docMargin, bottom: docMargin, left: docMargin }
+                    size: { width: 11906, height: 16838 }, // A4
+                    margin: { ...layout.marginsTwip }
                 }
             },
             headers: headers,

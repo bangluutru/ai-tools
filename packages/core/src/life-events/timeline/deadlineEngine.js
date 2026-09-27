@@ -16,7 +16,9 @@ export function addCalendarDays(dateStr, days) {
   if (!dateStr || typeof dateStr !== 'string') return '';
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '';
-  d.setDate(d.getDate() + Number(days || 0));
+  // Cộng trên trục UTC: 'YYYY-MM-DD' được parse là 00:00 UTC, nếu cộng bằng setDate (giờ địa
+  // phương) rồi toISOString thì ở múi giờ có DST (hoặc âm UTC) hạn chót lệch một ngày.
+  d.setUTCDate(d.getUTCDate() + Math.trunc(Number(days) || 0));
   return d.toISOString().split('T')[0];
 }
 

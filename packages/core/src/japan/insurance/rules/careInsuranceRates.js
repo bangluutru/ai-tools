@@ -12,13 +12,13 @@ export const CARE_INSURANCE_METADATA_2026 = defineRuleMetadata({
   id: 'jp-care-insurance-rates-2026',
   jurisdiction: JAPAN_JURISDICTION,
   sourceId: 'kyoukaikenpo-care-insurance-2026',
-  effectiveFrom: '2026-04-01',
-  effectiveTo: '2027-03-31',
+  effectiveFrom: '2026-03-01',
+  effectiveTo: '2027-02-28',
   applicablePeriod: createApplicablePeriod('fiscal-year', 2026, 2026),
   version: '2026.1',
   lastVerifiedAt: '2026-09-10',
   status: 'verified',
-  notes: 'Bảo hiểm chăm sóc người già 介護保険 令和8年度 toàn quốc: 1.62% (chia đôi 50/50: 0.81% mỗi bên).',
+  notes: 'Bảo hiểm chăm sóc người già 介護保険 令和8年度 toàn quốc: 1.62% từ phí tháng 3/2026 (chia đôi 50/50: 0.81% mỗi bên). 令和7年度: 1.59%.',
 });
 
 /**
@@ -28,18 +28,21 @@ export const CARE_INSURANCE_METADATA_2026 = defineRuleMetadata({
  */
 export function resolveCareInsuranceRate(age = 30, applicableDate = '2026-04-01') {
   const numericAge = Number(age) || 0;
-  const dateStr = applicableDate ? String(applicableDate).substring(0, 10) : '2026-04-01';
+  // Tỷ lệ 介護 (協会けんぽ) đổi theo tháng phí 3月分, cùng lúc với tỷ lệ BHYT
+  const month = applicableDate ? String(applicableDate).substring(0, 7) : '2026-04';
 
-  let totalRate = 0.0162; // FY2026: 1.62%
+  let totalRate = 0.0162; // 令和8年度 (2026年3月分〜): 1.62%
   let isVerifiedPeriod = true;
   let periodNotice = null;
 
-  if (dateStr >= '2027-04-01') {
+  if (month >= '2027-03') {
     isVerifiedPeriod = false;
-    periodNotice = 'Care insurance rate for FY2027 onwards is unverified. Baseline 1.62% applied with warning.';
+    periodNotice = 'Care insurance rate from March 2027 premiums is unverified. Baseline 1.62% applied with warning.';
     totalRate = 0.0162;
-  } else if (dateStr < '2026-04-01') {
-    totalRate = 0.0160; // FY2025: 1.60%
+  } else if (month >= '2025-03' && month < '2026-03') {
+    totalRate = 0.0159; // 令和7年度 (2025年3月分〜2026年2月分): 1.59%
+  } else if (month < '2025-03') {
+    totalRate = 0.0160; // 令和6年度: 1.60%
   }
 
   // Phân loại chế độ theo độ tuổi

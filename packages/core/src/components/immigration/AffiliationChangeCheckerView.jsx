@@ -96,13 +96,15 @@ export function AffiliationChangeCheckerView({ lang = 'vi' }) {
       eventJoined: 'Mới gia nhập công ty (Chưa khai báo)',
       eventTransferred: 'Chuyển việc hoàn tất (Rời công ty cũ và vào công ty mới)',
       eventContract: 'Thay đổi tên công ty / Địa chỉ trụ sở / Loại hợp đồng',
+      eventDivorce: 'Ly hôn (diện vợ/chồng, 家族滞在)',
+      eventSpouseDeath: 'Vợ/chồng qua đời (diện vợ/chồng, 家族滞在)',
       timelineTitle: 'Thời Hạn Thông Báo & Rủi Ro Pháp Lý',
       deadlineLabel: 'Hạn chót thông báo 14 ngày',
       threeMonthLabel: 'Hạn 3 tháng không hoạt động (Điều 22-4)',
       filingTitle: '3 Phương Thức Nộp Thông Báo Chính Thức',
       certTitle: 'Giấy Chứng Nhận Tư Cách Làm Việc (就労資格証明書)',
       certDesc: 'Thủ tục khuyến nghị tự nguyện giúp kỳ gia hạn tới không bị từ chối đột ngột',
-      certFee: 'Lệ phí tem doanh thu: 1.200 JPY',
+      certFee: 'Lệ phí: 2.000 JPY tại quầy (tem 収入印紙) / 1.600 JPY online (từ 01/10/2026 online + 220 JPY phí thanh toán)',
       discretionNoticeTitle: 'Lưu ý Thẩm quyền Cục Xuất Nhập Cảnh',
       relatedTools: 'Công cụ liên quan liên kết hệ sinh thái',
       taxSimLink: 'Kiểm tra thuế thu nhập & cư trú (Japan Tax Simulator)',
@@ -111,7 +113,7 @@ export function AffiliationChangeCheckerView({ lang = 'vi' }) {
     },
     ja: {
       title: '転職・所属機関変更ナビゲーター',
-      subtitle: '入管法第19条の16に基づく14日以内届出期限の自動算出、退職後3か月の在留資格取消リスク判定、就労資格証明書（1,200円）手続案内。',
+      subtitle: '入管法第19条の16に基づく14日以内届出期限の自動算出、退職後3か月の在留資格取消リスク判定、就労資格証明書（窓口2,000円／オンライン1,600円）手続案内。',
       statusLabel: '現在の在留資格',
       eventTypeLabel: '事由の区分',
       eventDateLabel: '退職日または転職・受入日',
@@ -125,13 +127,15 @@ export function AffiliationChangeCheckerView({ lang = 'vi' }) {
       eventJoined: '所属機関への移籍（新たな就職）',
       eventTransferred: '離脱及び移籍（同時期の転職）',
       eventContract: '名称変更・所在地変更・契約内容の変更',
+      eventDivorce: '配偶者との離婚',
+      eventSpouseDeath: '配偶者との死別',
       timelineTitle: '届出期日と在留資格リスクタイムライン',
       deadlineLabel: '14日以内の届出法定期限',
       threeMonthLabel: '3か月未活動取消リスク限界日',
       filingTitle: '入管への届出方法（3つの公的ルート）',
       certTitle: '就労資格証明書交付申請（第19条の2）',
       certDesc: '新勤務先での就労適合性を事前公証し次回更新不許可リスクを未然防止',
-      certFee: '手数料（収入印紙代）：1,200円',
+      certFee: '手数料：窓口2,000円（収入印紙）／オンライン1,600円（2026年10月1日以降は別途決済手数料220円）',
       discretionNoticeTitle: '法務大臣の行政処分に関する留意事項',
       relatedTools: '関連するライフサポートツール',
       taxSimLink: '日本所得税・住民税シミュレーター',
@@ -154,13 +158,15 @@ export function AffiliationChangeCheckerView({ lang = 'vi' }) {
       eventJoined: 'Joined new organization',
       eventTransferred: 'Transferred (Left previous and joined new)',
       eventContract: 'Contractual or organizational changes',
+      eventDivorce: 'Divorce (spouse-based status)',
+      eventSpouseDeath: 'Death of spouse (spouse-based status)',
       timelineTitle: 'Filing Timeline & Regulatory Risk Assessment',
       deadlineLabel: '14-Day Statutory Deadline',
       threeMonthLabel: '3-Month Inactivity Revocation Threshold',
       filingTitle: 'Official Submission Channels to ISA',
       certTitle: 'Certificate of Authorized Employment (Art. 19-2)',
       certDesc: 'Pre-certifies compatibility with current status, ensuring smooth future renewal',
-      certFee: 'Revenue Stamp Fee: 1,200 JPY',
+      certFee: 'Fee: 2,000 JPY at the counter (revenue stamp) / 1,600 JPY online (+220 JPY payment fee from 1 Oct 2026)',
       discretionNoticeTitle: 'Immigration Services Agency Notice',
       relatedTools: 'Related Ecosystem Tools',
       taxSimLink: 'Japan Tax Simulator',
@@ -224,6 +230,8 @@ export function AffiliationChangeCheckerView({ lang = 'vi' }) {
                 <option value="left-company">{t.eventLeft}</option>
                 <option value="joined-company">{t.eventJoined}</option>
                 <option value="contract-change">{t.eventContract}</option>
+                <option value="divorce">{t.eventDivorce}</option>
+                <option value="spouse-death">{t.eventSpouseDeath}</option>
               </select>
             </div>
 

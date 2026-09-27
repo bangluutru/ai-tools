@@ -88,11 +88,17 @@ function scoreItem(item, rawQuery, normalizedQuery, tokens, context = {}) {
   const keywords = (item.keywords || []).map((k) => k.toLowerCase());
   const normKeywords = keywords.map((k) => normalizeSearchQuery(k));
 
+  // Độ dài tối thiểu cho khớp chuỗi con: 1 ký tự CJK có nghĩa, nhưng 1 ký tự Latin thì khớp gần như mọi thứ.
+  const isCjkQuery = containsCJK(rawQuery);
+  const minSubLen = isCjkQuery ? 1 : 2;
+  const canSubstring = normalizedQuery.length >= minSubLen;
+  const canDescSubstring = normalizedQuery.length >= (isCjkQuery ? 2 : 3);
+
   // 1. Exact ID Match (+150)
   if (itemId === rawQuery || itemId === normalizedQuery) {
     score += 150;
     matchedFields.push('id_exact');
-  } else if (itemId.includes(rawQuery) || itemId.includes(normalizedQuery)) {
+  } else if (normalizedQuery.length >= 3 && (itemId.includes(rawQuery) || itemId.includes(normalizedQuery))) {
     score += 60;
     matchedFields.push('id_substring');
   }
@@ -111,9 +117,10 @@ function scoreItem(item, rawQuery, normalizedQuery, tokens, context = {}) {
 
   // 3. Substring in Title (+50)
   if (
-    (titleJa && rawQuery.length >= 2 && titleJa.includes(rawQuery)) ||
-    (normTitleVi && normTitleVi.includes(normalizedQuery)) ||
-    (normTitleEn && normTitleEn.includes(normalizedQuery))
+    canSubstring &&
+    ((titleJa && titleJa.includes(rawQuery)) ||
+      (normTitleVi && normTitleVi.includes(normalizedQuery)) ||
+      (normTitleEn && normTitleEn.includes(normalizedQuery)))
   ) {
     score += 50;
     matchedFields.push('title_substring');
@@ -158,7 +165,7 @@ function scoreItem(item, rawQuery, normalizedQuery, tokens, context = {}) {
   // 6. Token matching: cộng điểm cho từng từ khóa khớp
   let tokenMatches = 0;
   for (const token of tokens) {
-    if (token.length < 2) continue;
+    if (token.length < (containsCJK(token) ? 1 : 2)) continue;
     let matchedInItem = false;
 
     if (
@@ -188,12 +195,18 @@ function scoreItem(item, rawQuery, normalizedQuery, tokens, context = {}) {
 
   // 7. Substring in Description (+10)
   if (
-    (descJa && rawQuery.length >= 2 && descJa.includes(rawQuery)) ||
-    (normDescVi && normDescVi.includes(normalizedQuery)) ||
-    (normDescEn && normDescEn.includes(normalizedQuery))
+    canDescSubstring &&
+    ((descJa && descJa.includes(rawQuery)) ||
+      (normDescVi && normDescVi.includes(normalizedQuery)) ||
+      (normDescEn && normDescEn.includes(normalizedQuery)))
   ) {
     score += 10;
     matchedFields.push('description_substring');
+  }
+
+  // Không khớp văn bản nào → không cộng điểm ngữ cảnh / ưu tiên loại (tránh trả về mọi mục).
+  if (score <= 0) {
+    return { score: 0, matchedFields: [] };
   }
 
   // 8. Context Boost (+25)

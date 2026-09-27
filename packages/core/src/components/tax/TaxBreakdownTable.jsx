@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Info,
 } from 'lucide-react';
+import { formatPercent, formatRatePeriods, formatYen } from '../../utils/tax/knowledge/rateLabels.js';
 
 export default function TaxBreakdownTable({
   result,
@@ -32,22 +33,22 @@ export default function TaxBreakdownTable({
     summary = {},
   } = result;
 
-  const formatJPY = (amount) => {
-    return '¥' + Math.round(amount || 0).toLocaleString();
-  };
+  const formatJPY = formatYen;
+  const L = (ja, vi, en) => (lang === 'ja' ? ja : lang === 'vi' ? vi : en);
 
   // 1. Build List of Public Taxes
   const taxItems = [];
 
   // Income Tax & Reconstruction Tax
-  if (incomeTax.baseIncomeTax > 0 || incomeTax.totalIncomeTax > 0) {
+  if (incomeTax.totalIncomeTax > 0 || incomeTax.baseIncomeTax > 0) {
+    const reconRate = result.rules?.incomeTax?.reconstructionTaxRate ?? 0.021;
     taxItems.push({
       id: 'income_tax',
       name_ja: '所得税',
       name_vi: 'Thuế thu nhập cá nhân (所得税)',
       name_en: 'National Income Tax',
-      baseLabel: `${formatJPY(incomeTax.taxableIncome)} (${lang === 'ja' ? '課税所得' : lang === 'vi' ? 'Thu nhập chịu thuế' : 'Taxable income'})`,
-      rateLabel: `${incomeTax.marginalRate ? (incomeTax.marginalRate * 100).toFixed(0) + '%' : '5% - 45%'} (${lang === 'ja' ? '累進税率' : lang === 'vi' ? 'Lũy tiến' : 'Progressive'})`,
+      baseLabel: `${formatJPY(incomeTax.taxableIncome)} (${L('課税所得', 'Thu nhập chịu thuế', 'Taxable income')})`,
+      rateLabel: `${formatPercent(incomeTax.marginalRate || incomeTax.bracket?.rate || 0)} (${L('累進税率', 'Lũy tiến', 'Progressive')})`,
       amount: incomeTax.baseIncomeTax,
     });
 
@@ -56,71 +57,111 @@ export default function TaxBreakdownTable({
       name_ja: '復興特別所得税',
       name_vi: 'Thuế tái thiết động đất (復興特別所得税)',
       name_en: 'Reconstruction Special Income Tax',
-      baseLabel: `${formatJPY(incomeTax.baseIncomeTax)} (${lang === 'ja' ? '基準所得税額' : lang === 'vi' ? 'Số thuế TNCN gốc' : 'Base income tax'})`,
-      rateLabel: '2.1%',
+      baseLabel: `${formatJPY(incomeTax.baseIncomeTax)} (${L('基準所得税額', 'Số thuế TNCN gốc', 'Base income tax')})`,
+      rateLabel: formatPercent(reconRate),
       amount: incomeTax.reconstructionTax,
     });
+
+    if (incomeTax.roundingAdjustment) {
+      taxItems.push({
+        id: 'income_tax',
+        name_ja: '端数処理（100円未満切捨て）',
+        name_vi: 'Làm tròn (bỏ phần dưới 100 yên)',
+        name_en: 'Rounding (below 100 JPY truncated)',
+        baseLabel: formatJPY(incomeTax.baseIncomeTax + incomeTax.reconstructionTax),
+        rateLabel: '—',
+        amount: incomeTax.roundingAdjustment,
+      });
+    }
   }
 
   // Resident Tax
   if (residentTax.totalResidentTax > 0) {
-    taxItems.push({
-      id: 'resident_tax',
-      name_ja: '住民税（所得割）',
-      name_vi: 'Thuế cư trú phần tính theo thu nhập (所得割)',
-      name_en: 'Resident Tax (Income-levied portion)',
-      baseLabel: `${formatJPY(residentTax.taxableIncomeResident)} (${lang === 'ja' ? '住民税課税所得' : lang === 'vi' ? 'Thu nhập tính thuế cư trú' : 'Resident taxable income'})`,
-      rateLabel: `${((residentTax.prefRate + residentTax.muniRate) * 100).toFixed(0)}% (${lang === 'ja' ? '都道府県4%＋市区町村6%' : lang === 'vi' ? 'Tỉnh 4% + Xã 6%' : 'Pref 4% + Muni 6%'})`,
-      amount: residentTax.incomeLevy,
-    });
+    const prefRate = residentTax.prefectureRate ?? 0;
+    const muniRate = residentTax.municipalRate ?? 0;
+    if (residentTax.incomeLevy > 0) {
+      const credit = residentTax.adjustmentCredit?.total || 0;
+      taxItems.push({
+        id: 'resident_tax',
+        name_ja: '住民税（所得割）',
+        name_vi: 'Thuế cư trú phần tính theo thu nhập (所得割)',
+        name_en: 'Resident Tax (Income-levied portion)',
+        baseLabel: `${formatJPY(residentTax.taxableIncome)} (${L('住民税課税所得', 'Thu nhập tính thuế cư trú', 'Resident taxable income')})${credit > 0 ? ` − ${L('調整控除', 'điều chỉnh', 'adj. credit')} ${formatJPY(credit)}` : ''}`,
+        rateLabel: `${formatPercent(prefRate + muniRate)} (${L('都道府県', 'Tỉnh', 'Pref')} ${formatPercent(prefRate)}＋${L('市区町村', 'Xã', 'Muni')} ${formatPercent(muniRate)})`,
+        amount: residentTax.incomeLevy,
+      });
+    }
 
     taxItems.push({
       id: 'resident_tax',
-      name_ja: '住民税（均等割＋森林環境税）',
-      name_vi: 'Thuế cư trú phần đồng đều & Thuế rừng (均等割・森林税)',
-      name_en: 'Resident Tax (Per-capita levy & Forest Tax)',
-      baseLabel: lang === 'ja' ? '定額負担（全住民一律）' : lang === 'vi' ? 'Mức cố định áp dụng cho cư dân' : 'Flat rate per inhabitant',
-      rateLabel: `${formatJPY(residentTax.perCapitaTotal)} / ${lang === 'ja' ? '年' : lang === 'vi' ? 'năm' : 'yr'}`,
-      amount: residentTax.perCapitaTotal,
+      name_ja: '住民税（均等割）',
+      name_vi: 'Thuế cư trú phần đồng đều (均等割)',
+      name_en: 'Resident Tax (Per-capita levy)',
+      baseLabel: residentTax.perCapitaSurcharge > 0
+        ? L(`定額（標準4,000円＋県独自の超過課税${residentTax.perCapitaSurcharge.toLocaleString()}円）`, `Cố định (chuẩn 4,000 + phụ thu tỉnh ${residentTax.perCapitaSurcharge.toLocaleString()} yên)`, `Flat (4,000 standard + prefectural surcharge ${residentTax.perCapitaSurcharge.toLocaleString()})`)
+        : L('定額（道府県民税＋市区町村民税）', 'Mức cố định (Tỉnh + Xã/Phường)', 'Flat rate (prefecture + municipality)'),
+      rateLabel: `${formatJPY(residentTax.perCapitaFlat)} / ${L('年', 'năm', 'yr')}`,
+      amount: residentTax.perCapitaFlat,
     });
+
+    if (residentTax.forestryTax > 0) {
+      taxItems.push({
+        id: 'resident_tax',
+        name_ja: '森林環境税（国税）',
+        name_vi: 'Thuế môi trường rừng (森林環境税)',
+        name_en: 'Forest Environment Tax (national)',
+        baseLabel: L('住民税均等割と併せて徴収', 'Thu cùng thuế cư trú', 'Collected with resident tax'),
+        rateLabel: `${formatJPY(residentTax.forestryTax)} / ${L('年', 'năm', 'yr')}`,
+        amount: residentTax.forestryTax,
+      });
+    }
   }
 
   // Enterprise Tax (if applicable)
   if (enterpriseTax && enterpriseTax.enterpriseTax > 0) {
+    const catName = enterpriseTax.category?.[`name_${lang}`] || enterpriseTax.category?.name_ja || '';
     taxItems.push({
       id: 'enterprise_tax',
       name_ja: '個人事業税',
       name_vi: 'Thuế kinh doanh cá nhân (個人事業税)',
       name_en: 'Individual Enterprise Tax',
-      baseLabel: `${formatJPY(enterpriseTax.taxableBusinessIncome)} (${lang === 'ja' ? '控除後所得' : lang === 'vi' ? 'Sau trừ 290 vạn' : 'After 2.9M deduction'})`,
-      rateLabel: `${(enterpriseTax.taxRate * 100).toFixed(0)}% (${enterpriseTax.categoryName_ja})`,
+      baseLabel: `${formatJPY(enterpriseTax.taxableIncome)} (${L('事業主控除後', 'Sau giảm trừ chủ kinh doanh', 'After proprietor deduction')} ${formatJPY(enterpriseTax.proprietorDeduction)})`,
+      rateLabel: `${formatPercent(enterpriseTax.rate)}${catName ? ` (${catName})` : ''}`,
       amount: enterpriseTax.enterpriseTax,
     });
   }
 
   // Consumption Tax (if applicable)
   if (consumptionTax && consumptionTax.payableTax > 0) {
+    const methodLabels = {
+      special_20: L('2割特例', 'Đặc lệ 20%', '20% special rule'),
+      simplified: L('簡易課税', 'Khai giản dịch (簡易課税)', 'Simplified method'),
+      standard: L('本則課税', 'Khai tiêu chuẩn (本則課税)', 'Standard method'),
+    };
     taxItems.push({
       id: 'consumption_tax',
       name_ja: '消費税及び地方消費税',
       name_vi: 'Thuế tiêu thụ & Thuế tiêu thụ địa phương (消費税)',
       name_en: 'Consumption Tax & Local Consumption Tax',
-      baseLabel: `${formatJPY(consumptionTax.taxableSales)} (${consumptionTax.methodName_ja})`,
-      rateLabel: consumptionTax.is20PercentRule ? '20%特例' : '10% (国7.8%＋地2.2%)',
+      baseLabel: `${formatJPY(consumptionTax.taxableSales)} (${methodLabels[consumptionTax.calcMethod] || consumptionTax.calcMethod})`,
+      rateLabel: formatPercent(consumptionTax.taxRate || 0),
       amount: consumptionTax.payableTax,
     });
   }
 
   // Corporate Taxes (if applicable)
   if (corporateTax && corporateTax.totalCorporateTax > 0) {
+    const ct = result.rules?.corporateTax || {};
     taxItems.push({
       id: 'corporate_tax',
       name_ja: '法人税・地方法人税',
       name_vi: 'Thuế doanh nghiệp & Thuế DN địa phương (法人税)',
       name_en: 'Corporate Tax & Local Corporate Tax',
-      baseLabel: `${formatJPY(corporateTax.corporateIncome)} (${lang === 'ja' ? '所得金額' : lang === 'vi' ? 'Lợi nhuận tính thuế' : 'Taxable profit'})`,
-      rateLabel: corporateTax.corporateIncome <= 8000000 ? '15% (軽減税率)' : '15% / 23.2%',
-      amount: corporateTax.corporateNationalTax + corporateTax.localCorporateTax,
+      baseLabel: `${formatJPY(corporateTax.taxableIncome)} (${L('所得金額', 'Lợi nhuận tính thuế', 'Taxable profit')})`,
+      rateLabel: corporateTax.taxableIncome <= 8000000
+        ? `${formatPercent(ct.nationalRateBelow8M || 0)} (${L('軽減税率', 'thuế suất ưu đãi', 'reduced')})`
+        : `${formatPercent(ct.nationalRateBelow8M || 0)} / ${formatPercent(ct.nationalRateAbove8M || 0)}`,
+      amount: corporateTax.corporateTax + corporateTax.localCorporateTax,
     });
 
     taxItems.push({
@@ -128,8 +169,8 @@ export default function TaxBreakdownTable({
       name_ja: '法人住民税（法人税割＋均等割）',
       name_vi: 'Thuế cư trú pháp nhân (法人住民税)',
       name_en: 'Corporate Inhabitant Tax',
-      baseLabel: lang === 'ja' ? '均等割（赤字でも7万円）＋税割' : lang === 'vi' ? 'Đồng đều (lỗ vẫn đóng 7 vạn) + tính theo thuế' : 'Per-capita (min 70k even in loss) + tax levy',
-      rateLabel: '7.0% + 均等割',
+      baseLabel: L(`均等割 ${formatJPY(corporateTax.residentPerCapita)}（赤字でも課税）＋法人税割`, `Đồng đều ${formatJPY(corporateTax.residentPerCapita)} (lỗ vẫn đóng) + tính theo thuế`, `Per-capita ${formatJPY(corporateTax.residentPerCapita)} (even in loss) + tax levy`),
+      rateLabel: `${formatPercent(ct.residentTaxInhabitantRate || 0)} + ${L('均等割', 'đồng đều', 'per-capita')}`,
       amount: corporateTax.corporateResidentTax,
     });
 
@@ -138,60 +179,100 @@ export default function TaxBreakdownTable({
       name_ja: '法人事業税・特別法人事業税',
       name_vi: 'Thuế kinh doanh pháp nhân (法人事業税)',
       name_en: 'Corporate Enterprise Tax',
-      baseLabel: formatJPY(corporateTax.corporateIncome),
-      rateLabel: '約 3.5% 〜 7.0%',
-      amount: corporateTax.corporateEnterpriseTax + corporateTax.specialEnterpriseTax,
+      baseLabel: formatJPY(corporateTax.taxableIncome),
+      rateLabel: (ct.enterpriseTaxIncomeRates || []).map((r) => formatPercent(r.rate)).join(' / ') || '—',
+      amount: corporateTax.enterpriseTax + corporateTax.specialEnterpriseTax,
     });
   }
 
   // 2. Build List of Social Insurance Items
   const socialItems = [];
-  if (socialInsurance.healthInsurance > 0) {
-    socialItems.push({
-      id: 'social_insurance',
-      name_ja: socialInsurance.isCompanySocial ? '健康保険料（本人負担分）' : '国民健康保険料',
-      name_vi: socialInsurance.isCompanySocial ? 'BHYT công ty (Phần NLĐ đóng - 健康保険)' : 'BHYT Quốc dân (国民健康保険)',
-      name_en: socialInsurance.isCompanySocial ? 'Health Insurance (Employee 50%)' : 'National Health Insurance',
-      baseLabel: socialInsurance.isCompanySocial ? '標準報酬月額 (労使折半 50/50)' : '前年総所得金額',
-      rateLabel: `約 ${(socialInsurance.healthRate * 100).toFixed(2)}%`,
-      amount: socialInsurance.healthInsurance,
-    });
-  }
-
-  if (socialInsurance.careInsurance > 0) {
-    socialItems.push({
-      id: 'social_insurance',
-      name_ja: '介護保険料（第2号被保険者・40〜64歳）',
-      name_vi: 'Bảo hiểm chăm sóc người cao tuổi (介護保険 - Từ 40 tuổi)',
-      name_en: 'Nursing Care Insurance (Age 40-64)',
-      baseLabel: lang === 'ja' ? '40歳以上65歳未満一律' : lang === 'vi' ? 'Bắt buộc với người từ 40-64 tuổi' : 'Compulsory age 40-64',
-      rateLabel: `約 ${(socialInsurance.careRate * 100).toFixed(2)}%`,
-      amount: socialInsurance.careInsurance,
-    });
-  }
-
-  if (socialInsurance.pensionInsurance > 0) {
-    socialItems.push({
-      id: 'social_insurance',
-      name_ja: socialInsurance.isCompanySocial ? '厚生年金保険料（本人負担分）' : '国民年金保険料',
-      name_vi: socialInsurance.isCompanySocial ? 'Bảo hiểm hưu trí Kosei Nenkin (厚生年金 - NLĐ 50%)' : 'Bảo hiểm hưu trí Quốc dân (国民年金)',
-      name_en: socialInsurance.isCompanySocial ? 'Employees Pension (Kosei Nenkin 50%)' : 'National Pension (Kokumin Nenkin)',
-      baseLabel: socialInsurance.isCompanySocial ? '標準報酬月額 (上限65万円・労使折半)' : '法定定額（月額16,980円）',
-      rateLabel: socialInsurance.isCompanySocial ? '9.15% (折半後)' : '定額',
-      amount: socialInsurance.pensionInsurance,
-    });
-  }
-
-  if (socialInsurance.employmentInsurance > 0) {
-    socialItems.push({
-      id: 'social_insurance',
-      name_ja: '雇用保険料（本人負担分）',
-      name_vi: 'Bảo hiểm thất nghiệp (雇用保険 - NLĐ đóng)',
-      name_en: 'Employment Insurance (Employee share)',
-      baseLabel: lang === 'ja' ? '賃金総額' : lang === 'vi' ? 'Tổng tiền lương thực lĩnh' : 'Total gross wages',
-      rateLabel: '0.6% (一般事業)',
-      amount: socialInsurance.employmentInsurance,
-    });
+  const si = socialInsurance;
+  const estimateSuffix = si.isEstimated ? L('（概算）', ' (ước tính)', ' (estimate)') : '';
+  if (si.isCompanyEmployee) {
+    const std = si.standardMonthly || {};
+    const kenpoBase = `${L('標準報酬月額', 'Lương chuẩn tháng', 'Standard monthly remuneration')} ${formatJPY(std.kenpo)} × 12${estimateSuffix}`;
+    if (si.healthInsurance > 0) {
+      socialItems.push({
+        id: 'social_insurance',
+        name_ja: '健康保険料（本人負担分）',
+        name_vi: 'BHYT công ty (Phần NLĐ đóng - 健康保険)',
+        name_en: 'Health Insurance (Employee share)',
+        baseLabel: kenpoBase,
+        rateLabel: `${formatRatePeriods(si.rates?.health, { share: 0.5, lang })} (${L('折半後', 'NLĐ 50%', 'employee 50%')})`,
+        amount: si.healthInsurance,
+      });
+    }
+    if (si.childSupportContribution > 0) {
+      socialItems.push({
+        id: 'social_insurance',
+        name_ja: '子ども・子育て支援金（本人負担分）',
+        name_vi: 'Tiền hỗ trợ nuôi dạy trẻ em (子ども・子育て支援金)',
+        name_en: 'Child & Family Support Levy (Employee share)',
+        baseLabel: `${kenpoBase.replace(' × 12', ` × ${si.childSupportMonths || 0}`)}`,
+        rateLabel: formatRatePeriods(si.rates?.childSupport, { share: 0.5, lang }),
+        amount: si.childSupportContribution,
+      });
+    }
+    if (si.careInsurance > 0) {
+      socialItems.push({
+        id: 'social_insurance',
+        name_ja: '介護保険料（第2号被保険者・40〜64歳）',
+        name_vi: 'Bảo hiểm chăm sóc dài hạn (介護保険 - 40〜64 tuổi)',
+        name_en: 'Long-term Care Insurance (Age 40-64)',
+        baseLabel: kenpoBase,
+        rateLabel: formatRatePeriods(si.rates?.care, { share: 0.5, lang }),
+        amount: si.careInsurance,
+      });
+    }
+    if (si.welfarePension > 0) {
+      socialItems.push({
+        id: 'social_insurance',
+        name_ja: '厚生年金保険料（本人負担分）',
+        name_vi: 'Hưu trí phúc lợi (厚生年金 - Phần NLĐ)',
+        name_en: 'Employees Pension (Employee share)',
+        baseLabel: `${L('標準報酬月額', 'Lương chuẩn tháng', 'Standard monthly remuneration')} ${formatJPY(std.pension)} × 12${estimateSuffix}`,
+        rateLabel: formatPercent(si.rates?.pensionEmployee || 0),
+        amount: si.welfarePension,
+      });
+    }
+    if (si.employmentInsurance > 0) {
+      socialItems.push({
+        id: 'social_insurance',
+        name_ja: '雇用保険料（本人負担分）',
+        name_vi: 'Bảo hiểm thất nghiệp (雇用保険 - NLĐ đóng)',
+        name_en: 'Employment Insurance (Employee share)',
+        baseLabel: `${L('賃金総額', 'Tổng tiền lương', 'Total gross wages')} ${formatJPY(si.monthlySalaryAssumed)} × 12`,
+        rateLabel: formatRatePeriods(si.rates?.employmentEmployee, { lang }),
+        amount: si.employmentInsurance,
+      });
+    }
+  } else {
+    if (si.nationalHealthInsurance > 0) {
+      socialItems.push({
+        id: 'social_insurance',
+        name_ja: '国民健康保険料（概算）',
+        name_vi: 'BHYT Quốc dân (国民健康保険 - ước tính)',
+        name_en: 'National Health Insurance (estimate)',
+        baseLabel: L('前年の所得（旧ただし書き所得）', 'Thu nhập năm trước', 'Previous-year income'),
+        rateLabel: L('市区町村により異なる', 'Khác nhau theo địa phương', 'Varies by municipality'),
+        amount: si.nationalHealthInsurance,
+      });
+    }
+    if (si.nationalPension > 0) {
+      const npm = si.nationalPensionMonthly || {};
+      socialItems.push({
+        id: 'social_insurance',
+        name_ja: '国民年金保険料',
+        name_vi: 'Hưu trí Quốc dân (国民年金)',
+        name_en: 'National Pension',
+        baseLabel: L('定額（月額）', 'Mức cố định theo tháng', 'Flat monthly premium'),
+        rateLabel: npm.previous && npm.previous !== npm.current
+          ? `${formatJPY(npm.previous)} × ${npm.previousMonths} + ${formatJPY(npm.current)} × ${npm.currentMonths}`
+          : `${formatJPY(npm.current)} × 12`,
+        amount: si.nationalPension,
+      });
+    }
   }
 
   return (

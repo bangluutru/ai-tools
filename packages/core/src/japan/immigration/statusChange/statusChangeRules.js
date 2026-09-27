@@ -10,23 +10,25 @@
 
 import { defineRuleMetadata } from '../../../regulatory/ruleMetadata.js';
 import { JAPAN_JURISDICTION } from '../../../regulatory/jurisdiction.js';
+import { getResidencePermitFee } from '../shared/immigrationFeeTable.js';
 
 /**
  * Metadata cho quy tắc lệ phí thay đổi tư cách lưu trú
- * Áp dụng theo ngày nộp hồ sơ (applicationDate): 4.000 JPY trước 2026-10-01, 6.000 JPY từ 2026-10-01.
+ * Theo ngày TIẾP NHẬN hồ sơ: đến 30/09/2026 6.000 JPY (quầy) / 5.500 JPY (online);
+ * từ 01/10/2026 theo thời hạn được cấp (10.000 – 75.000 JPY tại quầy).
  */
 export const STATUS_CHANGE_FEE_RULE = defineRuleMetadata({
   id: 'jp-imm-status-change-fee-2026',
   jurisdiction: JAPAN_JURISDICTION,
   sourceId: 'isa-fee-table',
-  effectiveFrom: '1990-06-01',
-  applicablePeriod: { type: 'calendar-year', from: 1990, to: 2099 },
-  version: '2026.1',
-  lastVerifiedAt: '2026-09-11',
+  effectiveFrom: '2026-10-01',
+  applicablePeriod: { type: 'calendar-year', from: 2025, to: 2099 },
+  version: '2026.2',
+  lastVerifiedAt: '2026-09-27',
   status: 'verified',
   effectiveBy: 'applicationDate',
   ruleNature: 'deterministic',
-  notes: 'Lệ phí nộp bằng tem doanh thu (収入印紙) khi nhận kết quả cấp phép mới. Mức phí xác định theo ngày nộp đơn.',
+  notes: 'Nộp khi được cấp phép. Quầy: tem 収入印紙; online từ 01/10/2026: combini/ngân hàng + phí thanh toán. Mức phí theo ngày tiếp nhận hồ sơ và (từ 01/10/2026) theo thời hạn được cấp.',
 });
 
 /**
@@ -231,7 +233,8 @@ export const STATUS_TRANSITION_ROUTES = {
     title_ja: '就労ビザから「経営・管理」への変更',
     title_vn: 'Chuyển từ Visa Lao động sang Kinh doanh / Quản lý (経営・管理)',
     title_en: 'Change from Work Visa to Business Manager',
-    legalBasis: '出入国管理及び難民認定法別表第1の2の表「経営・管理」、上陸基準省令',
+    legalBasis: '出入国管理及び難民認定法別表第1の2の表「経営・管理」、上陸基準省令（2025年10月16日改正施行）',
+    officialUrl: 'https://www.moj.go.jp/isa/applications/resources/10_00237.html',
     coreRequirements: [
       {
         id: 'physical_office',
@@ -242,15 +245,22 @@ export const STATUS_TRANSITION_ROUTES = {
       },
       {
         id: 'capital_or_scale',
-        label_ja: '資本金500万円以上の出資または2名以上の常勤職員（日本人・永住者等）の雇用',
-        label_vn: 'Vốn điều lệ tối thiểu 5.000.000 JPY hoặc thuê ít nhất 2 nhân viên chính thức (Nhật/Vĩnh trú)',
-        label_en: 'Capital investment of 5,000,000+ JPY OR hiring 2+ full-time residents',
+        label_ja: '資本金等3,000万円以上 かつ 常勤職員（日本人・永住者等）1名以上の雇用（2025年10月16日施行）',
+        label_vn: 'Vốn từ 30.000.000 JPY VÀ thuê ít nhất 1 nhân viên chính thức (Nhật/Vĩnh trú...) — áp dụng từ 16/10/2025',
+        label_en: 'Capital of 30,000,000+ JPY AND at least 1 full-time resident employee (from 16 Oct 2025)',
+        required: true,
+      },
+      {
+        id: 'japanese_and_experience',
+        label_ja: '申請人又は常勤職員の日本語能力B2相当、及び経営経験3年以上又は修士以上の学位',
+        label_vn: 'Tiếng Nhật B2 (bản thân hoặc nhân viên) và 3 năm kinh nghiệm quản lý hoặc bằng thạc sĩ trở lên',
+        label_en: 'Japanese at B2 (applicant or staff) and 3+ years management experience or master\'s degree',
         required: true,
       },
       {
         id: 'feasible_business_plan',
-        label_ja: '事業の継続性・実現可能性を立証する詳細な事業計画書および収支シミュレーション',
-        label_vn: 'Bản kế hoạch kinh doanh chi tiết và bảng dự toán thu chi khả thi',
+        label_ja: '事業の継続性・実現可能性を立証する詳細な事業計画書（中小企業診断士・公認会計士・税理士の確認が必要）',
+        label_vn: 'Bản kế hoạch kinh doanh chi tiết, khả thi — phải được 中小企業診断士 / 公認会計士 / 税理士 thẩm định',
         label_en: 'Detailed, viable business plan demonstrating continuity and profitability',
         required: true,
       },
@@ -356,44 +366,28 @@ export const STATUS_CHANGE_DOCUMENT_CATEGORIES = {
   }
 };
 
-export const IMMIGRATION_FEE_SCHEDULE_2026 = {
-  EFFECTIVE_DATE: '2026-10-01',
-  CURRENT_FEES: {
-    RENEWAL: 4000,
-    CHANGE: 4000,
-    PERMANENT_RESIDENCE: 8000,
-    ACQUISITION: 4000,
-    CERTIFICATE_OF_AUTHORIZED_EMPLOYMENT: 1200,
-  },
-  NEW_FEES: {
-    RENEWAL: 6000,
-    CHANGE: 6000,
-    PERMANENT_RESIDENCE: 10000,
-    ACQUISITION: 6000,
-    CERTIFICATE_OF_AUTHORIZED_EMPLOYMENT: 1400,
-  },
-  STATUTORY_BASIS: '出入国管理及び難民認定法関係手数料令第2条',
-};
-
 /**
- * Đánh giá mức phí dựa trên ngày nộp hồ sơ / ngày quyết định
+ * Lệ phí đổi tư cách lưu trú — đọc từ bảng phí dùng chung (shared/immigrationFeeTable.js).
+ * - Hồ sơ tiếp nhận đến 30/09/2026: 6.000 JPY (quầy) / 5.500 JPY (online).
+ * - Hồ sơ tiếp nhận từ 01/10/2026: 10.000 – 75.000 JPY (quầy) / 10.000 – 65.000 JPY (online) theo thời hạn được cấp.
+ *
+ * @param {string|Date} [applicationDate] - Ngày Cục XNC tiếp nhận hồ sơ (mặc định: hôm nay, giờ địa phương)
+ * @param {{ method?: 'counter'|'online', expectedPeriod?: string }} [options]
  */
-export function getStatusChangeFeeSchedule(applicationDate = new Date().toISOString().slice(0, 10)) {
-  const isPostOct2026 = applicationDate >= IMMIGRATION_FEE_SCHEDULE_2026.EFFECTIVE_DATE;
-  const amount = isPostOct2026
-    ? IMMIGRATION_FEE_SCHEDULE_2026.NEW_FEES.CHANGE
-    : IMMIGRATION_FEE_SCHEDULE_2026.CURRENT_FEES.CHANGE;
-
+export function getStatusChangeFeeSchedule(applicationDate, options = {}) {
+  const fee = getResidencePermitFee({
+    procedure: 'change',
+    acceptanceDate: applicationDate,
+    method: options.method,
+    expectedPeriod: options.expectedPeriod,
+  });
   return {
-    amount,
-    currency: 'JPY',
-    paymentMethod: '収入印紙 (Revenue Stamp)',
+    ...fee,
+    paymentMethod: fee.paymentMethod_ja,
     condition_ja: '許可時のみ納付（不許可の場合は手数料不要）',
     condition_vn: 'Chỉ nộp khi có kết quả ĐƯỢC CHẤP THUẬN (Từ chối không mất phí)',
     condition_en: 'Payable only upon approval (No fee charged if denied)',
-    statutoryBasis: IMMIGRATION_FEE_SCHEDULE_2026.STATUTORY_BASIS,
-    note: isPostOct2026
-      ? '2026年10月1日以降の手数料改定（6,000円）が適用されます。'
-      : '2026年9月30日までの現行手数料（4,000円）が適用されます。'
+    statutoryBasis: fee.legalBasis,
+    note: fee.transitionNote_ja,
   };
 }

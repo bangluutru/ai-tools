@@ -1,7 +1,13 @@
 /**
  * @file packages/core/src/utils/tax/rules/locations/prefectureDefaults.js
  * @description Quy chuẩn thuế cư trú (住民税) và bảo hiểm y tế 協会けんぽ theo 47 tỉnh thành Nhật Bản.
+ *
+ * 均等割: 標準 4,000円 (道府県民税1,000円 + 市町村民税3,000円) + 森林環境税 1,000円 (tách riêng ở forestryTax).
+ * perCapitaSurcharge = 超過課税 của tỉnh (森林・水源環境税 v.v.) đã mô hình hoá — ghi theo tên thuế trong comment,
+ * chưa đối chiếu từng tỉnh với nguồn chính thức; không mô hình hoá 超過課税 cấp thành phố (vd. 横浜みどり税).
  */
+
+import { PREFECTURE_KENPO_DATA } from '../../../../japan/insurance/rules/kyokaiKenpoRates.js';
 
 export const DefaultLocation = {
   code: 'standard',
@@ -13,16 +19,19 @@ export const DefaultLocation = {
     incomeLevyRate: 0.10, // 所得割 10% (Tỉnh 4% + Xã/Phường 6%)
     prefectureRate: 0.04,
     municipalRate: 0.06,
-    perCapitaFlat: 5000,   // 均等割 5,000円
+    perCapitaFlat: 4000,   // 均等割 標準 4,000円 (道府県民税1,000円 + 市町村民税3,000円)
+    perCapitaSurcharge: 0,
     forestryTax: 1000,     // 森林環境税 1,000円 (Áp dụng toàn quốc từ 2024)
     nonTaxableSingleLimit: 450000, // Tiêu chuẩn miễn thuế cư trú người độc thân chuẩn: 45万円
   },
   socialInsurance: {
-    kenpoRate: 0.1000,     // Tỷ lệ BHYT 協会けんぽ trung bình ~10% (chia đôi)
-    careInsuranceRate: 0.0160, // BHYT chăm sóc người già 介護保険 (40-64 tuổi) 1.60%
+    kenpoRate: PREFECTURE_KENPO_DATA.tokyo.rate2025, // Không chọn tỉnh: dùng Tokyo làm chuẩn
+    kenpoRate2025: PREFECTURE_KENPO_DATA.tokyo.rate2025,
+    kenpoRate2026: PREFECTURE_KENPO_DATA.tokyo.rate2026,
+    careInsuranceRate: 0.0159, // 介護保険 (40-64 tuổi) 令和7年度 1.59% (令和8年度 1.62%)
     pensionRate: 0.183,    // Hưu trí 厚生年金 18.3% (chia đôi)
-    employmentRate: 0.006, // Bảo hiểm thất nghiệp 雇用保険 phần nhân viên 0.6%
-    nationalPensionMonthly: 17510, // 国民年金 (17,510円/tháng)
+    employmentRate: 0.0055, // 雇用保険 phần nhân viên 令和7年度 5.5/1000 (令和8年度 5/1000)
+    nationalPensionMonthly: 17510, // 国民年金 令和7年度 (17,510円/tháng)
   },
 };
 
@@ -35,11 +44,25 @@ const COMMON_RESIDENT = {
 };
 
 const COMMON_SOCIAL = {
-  careInsuranceRate: 0.0160,
+  careInsuranceRate: 0.0159, // 令和7年度 1.59% (令和8年度 1.62% — xem rules/2026)
   pensionRate: 0.183,
-  employmentRate: 0.006,
+  employmentRate: 0.0055, // 令和7年度 一般の事業 5.5/1000 (令和8年度 5/1000)
   nationalPensionMonthly: 17510,
 };
+
+/**
+ * Tỷ lệ 協会けんぽ lấy trực tiếp từ bảng của miền bảo hiểm (một nguồn dữ liệu duy nhất).
+ * kenpoRate = 令和7年度 (tương thích cũ); kenpoRate2025/2026 dùng theo tháng phí.
+ */
+function socialFor(code) {
+  const kenpo = PREFECTURE_KENPO_DATA[code] || PREFECTURE_KENPO_DATA.tokyo;
+  return {
+    ...COMMON_SOCIAL,
+    kenpoRate: kenpo.rate2025,
+    kenpoRate2025: kenpo.rate2025,
+    kenpoRate2026: kenpo.rate2026,
+  };
+}
 
 export const PrefectureLocations = {
   // 01. Hokkaido
@@ -49,8 +72,8 @@ export const PrefectureLocations = {
     name_vi: 'Hokkaido',
     name_en: 'Hokkaido',
     region: 'Hokkaido',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000 },
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1028 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4000, perCapitaSurcharge: 0 },
+    socialInsurance: socialFor('hokkaido'),
   },
 
   // Tohoku (02 - 07)
@@ -60,8 +83,8 @@ export const PrefectureLocations = {
     name_vi: 'Aomori',
     name_en: 'Aomori',
     region: 'Tohoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000 },
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1002 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4000, perCapitaSurcharge: 0 },
+    socialInsurance: socialFor('aomori'),
   },
   iwate: {
     code: 'iwate',
@@ -69,8 +92,8 @@ export const PrefectureLocations = {
     name_vi: 'Iwate',
     name_en: 'Iwate',
     region: 'Tohoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 6000 }, // いわての森林づくり県民税 1,000円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0968 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000, perCapitaSurcharge: 1000 }, // いわての森林づくり県民税 1,000円
+    socialInsurance: socialFor('iwate'),
   },
   miyagi: {
     code: 'miyagi',
@@ -78,8 +101,8 @@ export const PrefectureLocations = {
     name_vi: 'Miyagi',
     name_en: 'Miyagi',
     region: 'Tohoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 6200 }, // みやぎ発展税 + 水と緑の森林づくり税 1,200円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1012 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5200, perCapitaSurcharge: 1200 }, // みやぎ発展税 + 水と緑の森林づくり税 1,200円
+    socialInsurance: socialFor('miyagi'),
   },
   akita: {
     code: 'akita',
@@ -87,8 +110,8 @@ export const PrefectureLocations = {
     name_vi: 'Akita',
     name_en: 'Akita',
     region: 'Tohoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5800 }, // あきた水と緑の森林整備税 800円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1003 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4800, perCapitaSurcharge: 800 }, // あきた水と緑の森林整備税 800円
+    socialInsurance: socialFor('akita'),
   },
   yamagata: {
     code: 'yamagata',
@@ -96,8 +119,8 @@ export const PrefectureLocations = {
     name_vi: 'Yamagata',
     name_en: 'Yamagata',
     region: 'Tohoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 6000 }, // やまがた緑環境税 1,000円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0994 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000, perCapitaSurcharge: 1000 }, // やまがた緑環境税 1,000円
+    socialInsurance: socialFor('yamagata'),
   },
   fukushima: {
     code: 'fukushima',
@@ -105,8 +128,8 @@ export const PrefectureLocations = {
     name_vi: 'Fukushima',
     name_en: 'Fukushima',
     region: 'Tohoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 6000 }, // 福島県森林環境税 1,000円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0987 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000, perCapitaSurcharge: 1000 }, // 福島県森林環境税 1,000円
+    socialInsurance: socialFor('fukushima'),
   },
 
   // Kanto (08 - 14)
@@ -116,8 +139,8 @@ export const PrefectureLocations = {
     name_vi: 'Ibaraki',
     name_en: 'Ibaraki',
     region: 'Kanto',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 6000 }, // いばらき森林名水環境税 1,000円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0981 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000, perCapitaSurcharge: 1000 }, // いばらき森林名水環境税 1,000円
+    socialInsurance: socialFor('ibaraki'),
   },
   tochigi: {
     code: 'tochigi',
@@ -125,8 +148,8 @@ export const PrefectureLocations = {
     name_vi: 'Tochigi',
     name_en: 'Tochigi',
     region: 'Kanto',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5700 }, // とちぎの元気な森づくり県民税 700円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0977 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4700, perCapitaSurcharge: 700 }, // とちぎの元気な森づくり県民税 700円
+    socialInsurance: socialFor('tochigi'),
   },
   gunma: {
     code: 'gunma',
@@ -134,8 +157,8 @@ export const PrefectureLocations = {
     name_vi: 'Gunma',
     name_en: 'Gunma',
     region: 'Kanto',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5700 }, // ぐんま緑の県民税 700円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0973 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4700, perCapitaSurcharge: 700 }, // ぐんま緑の県民税 700円
+    socialInsurance: socialFor('gunma'),
   },
   saitama: {
     code: 'saitama',
@@ -143,8 +166,8 @@ export const PrefectureLocations = {
     name_vi: 'Saitama',
     name_en: 'Saitama',
     region: 'Kanto',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000 },
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0988 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4000, perCapitaSurcharge: 0 },
+    socialInsurance: socialFor('saitama'),
   },
   chiba: {
     code: 'chiba',
@@ -152,8 +175,8 @@ export const PrefectureLocations = {
     name_vi: 'Chiba',
     name_en: 'Chiba',
     region: 'Kanto',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000 },
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0991 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4000, perCapitaSurcharge: 0 },
+    socialInsurance: socialFor('chiba'),
   },
   tokyo: {
     code: 'tokyo',
@@ -161,8 +184,8 @@ export const PrefectureLocations = {
     name_vi: 'Tokyo',
     name_en: 'Tokyo',
     region: 'Kanto',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000 },
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0998 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4000, perCapitaSurcharge: 0 },
+    socialInsurance: socialFor('tokyo'),
   },
   kanagawa: {
     code: 'kanagawa',
@@ -174,11 +197,11 @@ export const PrefectureLocations = {
       incomeLevyRate: 0.10025, // 神奈川県 có thuế bảo vệ nguồn nước +0.025%
       prefectureRate: 0.04025,
       municipalRate: 0.06,
-      perCapitaFlat: 5300,     // 神奈川県水源環境保全税 300円
+      perCapitaFlat: 4300, perCapitaSurcharge: 300,     // 神奈川県水源環境保全税 300円
       forestryTax: 1000,
       nonTaxableSingleLimit: 450000,
     },
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1002 },
+    socialInsurance: socialFor('kanagawa'),
   },
 
   // Chubu (15 - 23)
@@ -188,8 +211,8 @@ export const PrefectureLocations = {
     name_vi: 'Niigata',
     name_en: 'Niigata',
     region: 'Chubu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000 },
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0957 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4000, perCapitaSurcharge: 0 },
+    socialInsurance: socialFor('niigata'),
   },
   toyama: {
     code: 'toyama',
@@ -197,8 +220,8 @@ export const PrefectureLocations = {
     name_vi: 'Toyama',
     name_en: 'Toyama',
     region: 'Chubu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 水と緑の森づくり税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0963 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // 水と緑の森づくり税 500円
+    socialInsurance: socialFor('toyama'),
   },
   ishikawa: {
     code: 'ishikawa',
@@ -206,8 +229,8 @@ export const PrefectureLocations = {
     name_vi: 'Ishikawa',
     name_en: 'Ishikawa',
     region: 'Chubu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // いしかわ森林環境税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1008 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // いしかわ森林環境税 500円
+    socialInsurance: socialFor('ishikawa'),
   },
   fukui: {
     code: 'fukui',
@@ -215,8 +238,8 @@ export const PrefectureLocations = {
     name_vi: 'Fukui',
     name_en: 'Fukui',
     region: 'Chubu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // ふくいの森と水環境税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1000 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // ふくいの森と水環境税 500円
+    socialInsurance: socialFor('fukui'),
   },
   yamanashi: {
     code: 'yamanashi',
@@ -224,8 +247,8 @@ export const PrefectureLocations = {
     name_vi: 'Yamanashi',
     name_en: 'Yamanashi',
     region: 'Chubu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 森林環境税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0993 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // 森林環境税 500円
+    socialInsurance: socialFor('yamanashi'),
   },
   nagano: {
     code: 'nagano',
@@ -233,8 +256,8 @@ export const PrefectureLocations = {
     name_vi: 'Nagano',
     name_en: 'Nagano',
     region: 'Chubu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 長野県森林づくり県民税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0972 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // 長野県森林づくり県民税 500円
+    socialInsurance: socialFor('nagano'),
   },
   gifu: {
     code: 'gifu',
@@ -242,8 +265,8 @@ export const PrefectureLocations = {
     name_vi: 'Gifu',
     name_en: 'Gifu',
     region: 'Chubu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 6000 }, // 清流の国ぎふ森林環境税 1,000円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0991 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000, perCapitaSurcharge: 1000 }, // 清流の国ぎふ森林環境税 1,000円
+    socialInsurance: socialFor('gifu'),
   },
   shizuoka: {
     code: 'shizuoka',
@@ -251,8 +274,8 @@ export const PrefectureLocations = {
     name_vi: 'Shizuoka',
     name_en: 'Shizuoka',
     region: 'Chubu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5400 }, // 森林づくり県民税 400円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0984 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4400, perCapitaSurcharge: 400 }, // 森林づくり県民税 400円
+    socialInsurance: socialFor('shizuoka'),
   },
   aichi: {
     code: 'aichi',
@@ -260,8 +283,8 @@ export const PrefectureLocations = {
     name_vi: 'Aichi',
     name_en: 'Aichi',
     region: 'Chubu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // あいち森と緑づくり税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0997 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // あいち森と緑づくり税 500円
+    socialInsurance: socialFor('aichi'),
   },
 
   // Kansai (24 - 30)
@@ -271,8 +294,8 @@ export const PrefectureLocations = {
     name_vi: 'Mie',
     name_en: 'Mie',
     region: 'Kansai',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 6000 }, // みえの森づくり県民税 1,000円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0994 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000, perCapitaSurcharge: 1000 }, // みえの森づくり県民税 1,000円
+    socialInsurance: socialFor('mie'),
   },
   shiga: {
     code: 'shiga',
@@ -280,8 +303,8 @@ export const PrefectureLocations = {
     name_vi: 'Shiga',
     name_en: 'Shiga',
     region: 'Kansai',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5800 }, // 琵琶湖森林づくり県民税 800円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.0992 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4800, perCapitaSurcharge: 800 }, // 琵琶湖森林づくり県民税 800円
+    socialInsurance: socialFor('shiga'),
   },
   kyoto: {
     code: 'kyoto',
@@ -289,8 +312,8 @@ export const PrefectureLocations = {
     name_vi: 'Kyoto',
     name_en: 'Kyoto',
     region: 'Kansai',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5600 }, // 豊かな森を育てる府民税 600円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1008 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4600, perCapitaSurcharge: 600 }, // 豊かな森を育てる府民税 600円
+    socialInsurance: socialFor('kyoto'),
   },
   osaka: {
     code: 'osaka',
@@ -298,8 +321,8 @@ export const PrefectureLocations = {
     name_vi: 'Osaka',
     name_en: 'Osaka',
     region: 'Kansai',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5300 }, // 森林環境税 300円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1034 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4300, perCapitaSurcharge: 300 }, // 森林環境税 300円
+    socialInsurance: socialFor('osaka'),
   },
   hyogo: {
     code: 'hyogo',
@@ -307,8 +330,8 @@ export const PrefectureLocations = {
     name_vi: 'Hyogo',
     name_en: 'Hyogo',
     region: 'Kansai',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5800 }, // 県民緑税 800円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1018 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4800, perCapitaSurcharge: 800 }, // 県民緑税 800円
+    socialInsurance: socialFor('hyogo'),
   },
   nara: {
     code: 'nara',
@@ -316,8 +339,8 @@ export const PrefectureLocations = {
     name_vi: 'Nara',
     name_en: 'Nara',
     region: 'Kansai',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 奈良県森林環境税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1015 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // 奈良県森林環境税 500円
+    socialInsurance: socialFor('nara'),
   },
   wakayama: {
     code: 'wakayama',
@@ -325,8 +348,8 @@ export const PrefectureLocations = {
     name_vi: 'Wakayama',
     name_en: 'Wakayama',
     region: 'Kansai',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 紀の国森づくり税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1015 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // 紀の国森づくり税 500円
+    socialInsurance: socialFor('wakayama'),
   },
 
   // Chugoku (31 - 35)
@@ -336,8 +359,8 @@ export const PrefectureLocations = {
     name_vi: 'Tottori',
     name_en: 'Tottori',
     region: 'Chugoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 鳥取県豊かな森づくり税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1001 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // 鳥取県豊かな森づくり税 500円
+    socialInsurance: socialFor('tottori'),
   },
   shimane: {
     code: 'shimane',
@@ -345,8 +368,8 @@ export const PrefectureLocations = {
     name_vi: 'Shimane',
     name_en: 'Shimane',
     region: 'Chugoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 水と緑の森づくり税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1019 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // 水と緑の森づくり税 500円
+    socialInsurance: socialFor('shimane'),
   },
   okayama: {
     code: 'okayama',
@@ -354,8 +377,8 @@ export const PrefectureLocations = {
     name_vi: 'Okayama',
     name_en: 'Okayama',
     region: 'Chugoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // おかやま森づくり県民税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1018 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // おかやま森づくり県民税 500円
+    socialInsurance: socialFor('okayama'),
   },
   hiroshima: {
     code: 'hiroshima',
@@ -363,8 +386,8 @@ export const PrefectureLocations = {
     name_vi: 'Hiroshima',
     name_en: 'Hiroshima',
     region: 'Chugoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // ひろしまの森づくり県民税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1015 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // ひろしまの森づくり県民税 500円
+    socialInsurance: socialFor('hiroshima'),
   },
   yamaguchi: {
     code: 'yamaguchi',
@@ -372,8 +395,8 @@ export const PrefectureLocations = {
     name_vi: 'Yamaguchi',
     name_en: 'Yamaguchi',
     region: 'Chugoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // やまぐち森林づくり県民税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1023 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // やまぐち森林づくり県民税 500円
+    socialInsurance: socialFor('yamaguchi'),
   },
 
   // Shikoku (36 - 39)
@@ -383,8 +406,8 @@ export const PrefectureLocations = {
     name_vi: 'Tokushima',
     name_en: 'Tokushima',
     region: 'Shikoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000 },
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1034 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4000, perCapitaSurcharge: 0 },
+    socialInsurance: socialFor('tokushima'),
   },
   kagawa: {
     code: 'kagawa',
@@ -392,8 +415,8 @@ export const PrefectureLocations = {
     name_vi: 'Kagawa',
     name_en: 'Kagawa',
     region: 'Shikoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000 },
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1024 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4000, perCapitaSurcharge: 0 },
+    socialInsurance: socialFor('kagawa'),
   },
   ehime: {
     code: 'ehime',
@@ -401,8 +424,8 @@ export const PrefectureLocations = {
     name_vi: 'Ehime',
     name_en: 'Ehime',
     region: 'Shikoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5700 }, // えひめ森林基金 700円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1019 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4700, perCapitaSurcharge: 700 }, // えひめ森林基金 700円
+    socialInsurance: socialFor('ehime'),
   },
   kochi: {
     code: 'kochi',
@@ -410,8 +433,8 @@ export const PrefectureLocations = {
     name_vi: 'Kochi',
     name_en: 'Kochi',
     region: 'Shikoku',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // こうち森林環境税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1032 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // こうち森林環境税 500円
+    socialInsurance: socialFor('kochi'),
   },
 
   // Kyushu & Okinawa (40 - 47)
@@ -421,8 +444,8 @@ export const PrefectureLocations = {
     name_vi: 'Fukuoka',
     name_en: 'Fukuoka',
     region: 'Kyushu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 福岡県森林環境税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1011 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // 福岡県森林環境税 500円
+    socialInsurance: socialFor('fukuoka'),
   },
   saga: {
     code: 'saga',
@@ -430,8 +453,8 @@ export const PrefectureLocations = {
     name_vi: 'Saga',
     name_en: 'Saga',
     region: 'Kyushu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // さがの森づくり税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1051 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // さがの森づくり税 500円
+    socialInsurance: socialFor('saga'),
   },
   nagasaki: {
     code: 'nagasaki',
@@ -439,8 +462,8 @@ export const PrefectureLocations = {
     name_vi: 'Nagasaki',
     name_en: 'Nagasaki',
     region: 'Kyushu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // ながさきの森環境税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1023 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // ながさきの森環境税 500円
+    socialInsurance: socialFor('nagasaki'),
   },
   kumamoto: {
     code: 'kumamoto',
@@ -448,8 +471,8 @@ export const PrefectureLocations = {
     name_vi: 'Kumamoto',
     name_en: 'Kumamoto',
     region: 'Kyushu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 熊本県水とみどりの森づくり税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1024 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // 熊本県水とみどりの森づくり税 500円
+    socialInsurance: socialFor('kumamoto'),
   },
   oita: {
     code: 'oita',
@@ -457,8 +480,8 @@ export const PrefectureLocations = {
     name_vi: 'Oita',
     name_en: 'Oita',
     region: 'Kyushu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // おおいた森林環境税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1020 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // おおいた森林環境税 500円
+    socialInsurance: socialFor('oita'),
   },
   miyazaki: {
     code: 'miyazaki',
@@ -466,8 +489,8 @@ export const PrefectureLocations = {
     name_vi: 'Miyazaki',
     name_en: 'Miyazaki',
     region: 'Kyushu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 森林環境税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1010 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // 森林環境税 500円
+    socialInsurance: socialFor('miyazaki'),
   },
   kagoshima: {
     code: 'kagoshima',
@@ -475,8 +498,8 @@ export const PrefectureLocations = {
     name_vi: 'Kagoshima',
     name_en: 'Kagoshima',
     region: 'Kyushu',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5500 }, // 鹿児島県森林環境税 500円
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1025 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4500, perCapitaSurcharge: 500 }, // 鹿児島県森林環境税 500円
+    socialInsurance: socialFor('kagoshima'),
   },
   okinawa: {
     code: 'okinawa',
@@ -484,7 +507,7 @@ export const PrefectureLocations = {
     name_vi: 'Okinawa',
     name_en: 'Okinawa',
     region: 'Okinawa',
-    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 5000 },
-    socialInsurance: { ...COMMON_SOCIAL, kenpoRate: 0.1001 },
+    residentTax: { ...COMMON_RESIDENT, perCapitaFlat: 4000, perCapitaSurcharge: 0 },
+    socialInsurance: socialFor('okinawa'),
   },
 };

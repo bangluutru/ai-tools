@@ -12,7 +12,8 @@ import {
   Compass,
   FileCheck2,
 } from 'lucide-react';
-import { CONSULAR_CATEGORIES, CONSULAR_PROCEDURES } from '../../consular/procedures/index.js';
+import { CONSULAR_CATEGORIES } from '../../consular/procedures/index.js';
+import { searchConsularProcedures } from '../../consular/search/consularSearch.js';
 import { CROSS_SYSTEM_JOURNEYS } from '../../consular/journeys/crossSystemJourneys.js';
 import { getConsularI18n } from '../../consular/i18n/consularI18n.js';
 
@@ -54,15 +55,8 @@ export default function ProcedureNavigatorPane({
     }));
   };
 
-  // Lọc theo search
-  const filteredProcedures = CONSULAR_PROCEDURES.filter((p) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    const titleMatch = (p.title.vi + p.title.en + p.title.ja).toLowerCase().includes(q);
-    const summaryMatch = (p.summary?.vi || p.summary || '').toLowerCase().includes(q);
-    const aliasMatch = p.aliases?.some((a) => a.toLowerCase().includes(q));
-    return titleMatch || summaryMatch || aliasMatch;
-  });
+  // Lọc theo search: bỏ dấu, theo token, hỗ trợ câu tự nhiên & tiếng Nhật
+  const filteredProcedures = searchConsularProcedures(searchQuery);
 
   return (
     <aside className="w-full flex flex-col bg-surface-container-low border border-border-subtle rounded-2xl overflow-hidden shadow-xs">

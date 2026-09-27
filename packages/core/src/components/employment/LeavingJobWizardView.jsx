@@ -37,6 +37,7 @@ import {
   RESIDENT_TAX_RULES,
   LEAVING_JOB_SOURCES
 } from '../../japan/employment/index.js';
+import { addDaysISO, todayLocalISO } from '../../japan/employment/localDate.js';
 
 const TRANSLATIONS = {
   ja: {
@@ -203,11 +204,7 @@ export default function LeavingJobWizardView({ lang = 'ja' }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.ja;
 
   // Form State
-  const defaultDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 30); // 30 days ahead by default
-    return d.toISOString().split('T')[0];
-  }, []);
+  const defaultDate = useMemo(() => addDaysISO(todayLocalISO(), 30), []); // 30 ngày sau hôm nay (lịch địa phương)
 
   const [resignationDate, setResignationDate] = useState(defaultDate);
   const [separationType, setSeparationType] = useState('personal');
@@ -328,9 +325,11 @@ export default function LeavingJobWizardView({ lang = 'ja' }) {
                 <option value="contract_expiry">{t.sepContract}</option>
               </select>
               <p className="text-xs text-muted-foreground">
-                {separationType === 'company'
-                  ? (lang === 'ja' ? '※ 会社都合退職は国保保険料の軽減措置対象です。' : '※ Thôi việc do công ty được hưởng giảm phí BHYT Quốc dân đến 70%.')
-                  : (lang === 'ja' ? '※ 自己都合退職はハローワーク給付制限等の確認が必要です。' : '※ Tự thôi việc cần lưu ý thời gian hạn chế chi trả BHTN.')}
+                {separationType === 'company' || separationType === 'contract_expiry'
+                  ? (lang === 'ja'
+                    ? '※ 特定受給資格者・特定理由離職者（65歳未満）は、国保料の算定で前年の給与所得が100分の30とみなされる軽減の対象です（均等割は軽減なし）。'
+                    : '※ Diện 特定受給資格者 / 特定理由離職者 (dưới 65 tuổi): khi tính phí BHYT Quốc dân, 給与所得 năm trước chỉ bị tính 30% (phần 均等割 không giảm).')
+                  : (lang === 'ja' ? '※ 自己都合退職は原則1ヶ月の給付制限があります（2025年4月1日以降の離職）。' : '※ Tự thôi việc: bị hạn chế chi trả BHTN thường 1 tháng (nghỉ từ 01/04/2025).')}
               </p>
             </div>
 
@@ -761,6 +760,11 @@ export default function LeavingJobWizardView({ lang = 'ja' }) {
                   ? plan.healthInsuranceAdvice.recommendationReasonVi
                   : plan.healthInsuranceAdvice.recommendationReasonEn}
               </p>
+              {plan.healthInsuranceAdvice.warnings.map((w) => (
+                <p key={w.code} className="text-amber-800 dark:text-amber-300 font-semibold leading-relaxed">
+                  ⚠ {lang === 'ja' ? w.ja : lang === 'vi' ? w.vi : w.en}
+                </p>
+              ))}
             </div>
 
             <div className="space-y-3 pt-2">
@@ -801,12 +805,12 @@ export default function LeavingJobWizardView({ lang = 'ja' }) {
             <div className="p-4 rounded-xl bg-background border border-border space-y-2 text-xs">
               <h4 className="font-bold text-foreground flex items-center gap-1.5">
                 <FileText className="w-4 h-4 text-primary" />
-                {lang === 'ja' ? '確定申告での所得税還付（翌年2月16日〜3月15日）' : 'Hoàn thuế Thu nhập cá nhân (確定申告)'}
+                {lang === 'ja' ? '還付申告での所得税還付（翌年1月1日から5年間提出可能）' : 'Hoàn thuế Thu nhập cá nhân (還付申告 — nộp được từ 1/1 năm sau, trong 5 năm)'}
               </h4>
               <p className="text-muted-foreground leading-relaxed">
                 {lang === 'ja'
-                  ? '年の途中で退職し年末時点で再就職していない場合、毎月の給与から源泉徴収されていた所得税は「1年間働き続けた前提」で引かれているため、確定申告をすることで納めすぎた税金が還付金として戻ってくる可能性が極めて高いです。'
-                  : 'Nếu nghỉ việc giữa năm và chưa đi làm lại trước 31/12, các tháng trước bạn bị trừ thuế giả định làm đủ 12 tháng. Khi nộp tờ khai 確定申告 vào tháng 2-3 năm sau, bạn gần như chắc chắn được nhận lại tiền hoàn thuế.'}
+                  ? '年の途中で退職し年末時点で再就職していない場合、毎月の給与から源泉徴収されていた所得税は「1年間働き続けた前提」で引かれているため、還付申告（翌年1月1日から5年間提出可能）をすることで納めすぎた税金が還付金として戻ってくる可能性が極めて高いです。'
+                  : 'Nếu nghỉ việc giữa năm và chưa đi làm lại trước 31/12, các tháng trước bạn bị trừ thuế giả định làm đủ 12 tháng. Nộp tờ khai hoàn thuế (還付申告) — không cần chờ kỳ 16/2–15/3, có thể nộp từ 1/1 năm sau và trong vòng 5 năm — bạn gần như chắc chắn được nhận lại tiền hoàn thuế.'}
               </p>
               <div className="pt-2">
                 <a

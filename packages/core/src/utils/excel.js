@@ -1,5 +1,5 @@
 const loadSheetJs = () => import('xlsx');
-const loadExcelJs = () => import('exceljs').then((module) => module.default);
+const loadExcelJs = () => import('exceljs').then((module) => module.default ?? module);
 
 // =====================================================================
 // Constants
@@ -8,24 +8,70 @@ const FOOTER_KEYWORDS = [
     'subtotal', 'sub total', 'total', 'tax', 'tax rate', 's & h', 's&h',
     'other', 'shipping', 'discount', 'grand total',
     'other comments', 'special instructions', 'comments', 'please provide',
-    'certificate', 'ghi chú', 'tổng cộng', 'thuế',
+    'certificate', 'ghi chú', 'tổng cộng', 'tổng tiền', 'cộng tiền hàng', 'thuế',
     '合計', '税', '小計', '送料', '備考'
 ];
+
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const HAS_CJK = /[぀-ヿ㐀-鿿]/;
+
+// Latin/Vietnamese keywords must match as a whole word at the start of the
+// label ("Total:", "Sub Total (VND)", "Other comments") so that product names
+// such as "Mother board" or "Totalizer" are not mistaken for a footer.
+// CJK has no word boundaries, so those keywords must prefix the label.
+const FOOTER_MATCHERS = FOOTER_KEYWORDS.map((kw) => {
+    if (HAS_CJK.test(kw)) return (text) => text.startsWith(kw);
+    const re = new RegExp(`^${escapeRegExp(kw)}(?![\\p{L}\\p{N}])`, 'u');
+    return (text) => re.test(text);
+});
+
+const normalizeLabel = (value) => String(value ?? '')
+    .normalize('NFC')
+    .trim()
+    .toLowerCase()
+    .replace(/^[\s:.\-–—*#()[\]]+/, '');
+
+/** True when a single cell looks like a footer label ("Total", "Tổng cộng", "合計"...). */
+export const isFooterLabel = (value) => {
+    const text = normalizeLabel(value);
+    if (!text) return false;
+    return FOOTER_MATCHERS.some((match) => match(text));
+};
+
+/**
+ * Only the first 1–2 non-empty cells of a row are treated as its label.
+ * A row that starts with a sequence number ("2", "3.") is a numbered item row,
+ * never a footer — even if the product name starts with "Tax"/"Other".
+ */
+const rowHasFooterLabel = (values) => {
+    const firstCells = values
+        .map((v) => String(v ?? '').trim())
+        .filter((v) => v !== '')
+        .slice(0, 2);
+    if (firstCells.length === 0 || /^\d+[.)]?$/.test(firstCells[0])) return false;
+    return firstCells.some(isFooterLabel);
+};
+
+/**
+ * Classify a source row that follows the header row:
+ *  - 'footer': the first 1–2 non-empty cells carry a footer label → stop reading.
+ *  - 'blank' / 'sparse': skipped, reading continues.
+ *  - 'data': a product row.
+ */
+export const classifySourceRow = (row, headerCount) => {
+    if (!row || !Array.isArray(row)) return 'blank';
+    const filledCells = row.filter(c => String(c ?? '').trim() !== '').length;
+    if (filledCells === 0) return 'blank';
+    if (rowHasFooterLabel(row)) return 'footer';
+    if (filledCells < Math.max(2, Math.floor(headerCount * 0.3))) return 'sparse';
+    return 'data';
+};
+
+export const isFooterRow = (row, headerCount) => classifySourceRow(row, headerCount) === 'footer';
 
 // =====================================================================
 // 1. Reading Excel Files
 // =====================================================================
-
-const isFooterRow = (row, headerCount) => {
-    if (!row || !Array.isArray(row)) return false;
-    const rowText = row.map(c => String(c).trim().toLowerCase()).join(' ');
-    for (const kw of FOOTER_KEYWORDS) {
-        if (rowText.includes(kw)) return true;
-    }
-    const filledCells = row.filter(c => String(c).trim() !== '').length;
-    if (filledCells < Math.max(2, Math.floor(headerCount * 0.3))) return true;
-    return false;
-};
 
 const findHeaderRow = (jsonData) => {
     const headerKeywords = [
@@ -68,131 +114,189 @@ const findHeaderRow = (jsonData) => {
     return bestIndex;
 };
 
+/** Readable display value from any ExcelJS cell value. */
+const extractCellDisplayValue = (cell) => {
+    const v = cell.value;
+    if (v === null || v === undefined) return '';
+    if (typeof v !== 'object') return String(v);
+    // Formula object: {formula: '...', result: ...}
+    if (v.formula) return '=' + v.formula;
+    // Shared formula clone without its own formula
+    if (v.sharedFormula !== undefined) {
+        return v.result !== undefined ? String(v.result) : '';
+    }
+    // Rich text: {richText: [{text: '...'}]}
+    if (v.richText && Array.isArray(v.richText)) {
+        return v.richText.map(rt => rt.text || '').join('');
+    }
+    // Hyperlink: {text, hyperlink}
+    if (v.text !== undefined && v.hyperlink !== undefined) return String(v.text);
+    // Error: {error: '#REF!'}
+    if (v.error) return String(v.error);
+    // Date object
+    if (v instanceof Date) return v.toLocaleDateString();
+    // Result-only objects
+    if (v.result !== undefined) return String(v.result);
+    try { return JSON.stringify(v); } catch { return ''; }
+};
+
 const findFooterStartInWorksheet = (ejsWs, headerRowNum) => {
     for (let r = headerRowNum + 1; r <= ejsWs.rowCount; r++) {
-        const row = ejsWs.getRow(r);
         const values = [];
-        row.eachCell({ includeEmpty: false }, (cell) => {
-            values.push(String(cell.value || '').trim().toLowerCase());
+        ejsWs.getRow(r).eachCell({ includeEmpty: false }, (cell) => {
+            values.push(extractCellDisplayValue(cell));
         });
-        const rowText = values.join(' ');
-        if (FOOTER_KEYWORDS.some(kw => rowText.includes(kw))) {
-            return r;
-        }
+        if (rowHasFooterLabel(values)) return r;
     }
     return ejsWs.rowCount + 1;
 };
 
-export const readExcelFile = async (file, isSource = true) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
+const readZoneRows = (ejsWs, fromRow, toRow, colCount) => {
+    const rows = [];
+    for (let r = fromRow; r <= toRow; r++) {
+        const row = ejsWs.getRow(r);
+        const cells = [];
+        for (let c = 1; c <= colCount; c++) {
+            cells.push({ col: c, value: extractCellDisplayValue(row.getCell(c)) });
+        }
+        rows.push({ rowNum: r, cells });
+    }
+    return rows;
+};
 
-        reader.onload = async (e) => {
-            try {
-                const XLSX = await loadSheetJs();
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+/**
+ * Parse an Excel file already loaded into memory (ArrayBuffer / Uint8Array / Buffer).
+ * Source mode returns the product rows; target mode returns the 3-zone template layout.
+ */
+export const parseExcelBuffer = async (buffer, isSource = true) => {
+    const data = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+    const XLSX = await loadSheetJs();
+    const workbook = XLSX.read(data, { type: 'array' });
+    const firstSheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[firstSheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
-                if (!jsonData || jsonData.length === 0) {
-                    throw new Error("File is empty or invalid format.");
-                }
+    if (!jsonData || jsonData.length === 0) {
+        throw new Error("File is empty or invalid format.");
+    }
 
-                const headerRowIndex = findHeaderRow(jsonData);
-                const rawHeaders = (jsonData[headerRowIndex] || []).map(h => String(h).trim());
-                const headers = rawHeaders.filter(h => h !== '');
+    // sheet_to_json starts at the first row of the used range, which is not
+    // necessarily sheet row 1. Keep indexes absolute (0-based sheet row).
+    const rangeStartRow = worksheet?.['!ref'] ? XLSX.utils.decode_range(worksheet['!ref']).s.r : 0;
+    const localHeaderIndex = findHeaderRow(jsonData);
+    const headerRowIndex = rangeStartRow + localHeaderIndex;
+    const rawHeaders = (jsonData[localHeaderIndex] || []).map(h => String(h).trim());
+    const headers = rawHeaders.filter(h => h !== '');
 
-                if (isSource) {
-                    const dataRows = [];
-                    for (let i = headerRowIndex + 1; i < jsonData.length; i++) {
-                        const row = jsonData[i];
-                        if (isFooterRow(row, headers.length)) break;
-                        if (row && Array.isArray(row)) {
-                            const rowObj = {};
-                            headers.forEach((header) => {
-                                const origIdx = rawHeaders.indexOf(header);
-                                if (origIdx !== -1) {
-                                    rowObj[header] = row[origIdx] !== undefined ? row[origIdx] : '';
-                                }
-                            });
-                            dataRows.push(rowObj);
-                        }
-                    }
-                    resolve({ headers, sampleRows: dataRows, allRows: dataRows });
-                } else {
-                    const ExcelJS = await loadExcelJs();
-                    const ejsWb = new ExcelJS.Workbook();
-                    await ejsWb.xlsx.load(data);
-                    const ejsWs = ejsWb.worksheets[0];
-                    const headerRowNum = headerRowIndex + 1;
-                    const colCount = ejsWs.columnCount || 20;
-
-                    const footerStartRow = findFooterStartInWorksheet(ejsWs, headerRowNum);
-                    const existingDataSlots = footerStartRow - headerRowNum - 1;
-
-                    // Helper: extract readable display value from any ExcelJS cell
-                    const extractCellDisplayValue = (cell) => {
-                        const v = cell.value;
-                        if (v === null || v === undefined) return '';
-                        if (typeof v !== 'object') return String(v);
-                        // Formula object: {formula: '...', result: ...}
-                        if (v.formula) return '=' + v.formula;
-                        // Shared formula without own formula
-                        if (v.sharedFormula !== undefined) {
-                            return v.result !== undefined ? String(v.result) : '';
-                        }
-                        // Rich text: {richText: [{text: '...'}]}
-                        if (v.richText && Array.isArray(v.richText)) {
-                            return v.richText.map(rt => rt.text || '').join('');
-                        }
-                        // Error: {error: '#REF!'}
-                        if (v.error) return String(v.error);
-                        // Date object
-                        if (v instanceof Date) return v.toLocaleDateString();
-                        // Result-only objects
-                        if (v.result !== undefined) return String(v.result);
-                        // Fallback: try to get something readable
-                        try { return JSON.stringify(v); } catch { return ''; }
-                    };
-
-                    const headerZone = [];
-                    for (let r = 1; r < headerRowNum; r++) {
-                        const row = ejsWs.getRow(r);
-                        const cells = [];
-                        for (let c = 1; c <= colCount; c++) {
-                            const cell = row.getCell(c);
-                            cells.push({ col: c, value: extractCellDisplayValue(cell) });
-                        }
-                        headerZone.push({ rowNum: r, cells });
-                    }
-
-                    const footerZone = [];
-                    for (let r = footerStartRow; r <= ejsWs.rowCount; r++) {
-                        const row = ejsWs.getRow(r);
-                        const cells = [];
-                        for (let c = 1; c <= colCount; c++) {
-                            const cell = row.getCell(c);
-                            cells.push({ col: c, value: extractCellDisplayValue(cell) });
-                        }
-                        footerZone.push({ rowNum: r, cells });
-                    }
-
-                    resolve({
-                        headers, headerRowIndex, rawBuffer: data,
-                        headerZone, footerZone, footerStartRow,
-                        existingDataSlots, colCount
-                    });
-                }
-            } catch (error) {
-                reject(error);
+    if (isSource) {
+        const dataRows = [];
+        let skippedRows = 0;
+        let stoppedAtRow = null;
+        let stopLabel = '';
+        for (let i = localHeaderIndex + 1; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            const kind = classifySourceRow(row, headers.length);
+            if (kind === 'footer') {
+                stoppedAtRow = rangeStartRow + i + 1;
+                stopLabel = row.map(c => String(c ?? '').trim()).find(Boolean) || '';
+                break;
             }
+            if (kind === 'blank') continue;
+            if (kind === 'sparse') { skippedRows++; continue; }
+            const rowObj = {};
+            headers.forEach((header) => {
+                const origIdx = rawHeaders.indexOf(header);
+                if (origIdx !== -1) {
+                    rowObj[header] = row[origIdx] !== undefined ? row[origIdx] : '';
+                }
+            });
+            dataRows.push(rowObj);
+        }
+        return {
+            headers, headerRowIndex, sampleRows: dataRows, allRows: dataRows,
+            parsedRowCount: dataRows.length, skippedRows, stoppedAtRow, stopLabel
         };
+    }
 
-        reader.onerror = (error) => reject(error);
+    const ExcelJS = await loadExcelJs();
+    const ejsWb = new ExcelJS.Workbook();
+    await ejsWb.xlsx.load(data);
+    const ejsWs = ejsWb.worksheets[0];
+    const headerRowNum = headerRowIndex + 1;
+    const colCount = ejsWs.columnCount || 20;
+
+    const footerStartRow = findFooterStartInWorksheet(ejsWs, headerRowNum);
+    const existingDataSlots = footerStartRow - headerRowNum - 1;
+
+    const headerZone = readZoneRows(ejsWs, 1, headerRowNum - 1, colCount);
+    const footerZone = readZoneRows(ejsWs, footerStartRow, ejsWs.rowCount, colCount);
+
+    return {
+        headers, headerRowIndex, rawBuffer: data,
+        headerZone, footerZone, footerStartRow,
+        existingDataSlots, colCount
+    };
+};
+
+export const readExcelFile = async (file, isSource = true) => {
+    if (!isSource && /\.xls$/i.test(file?.name || '')) {
+        throw new Error('Mẫu đích phải là tệp .xlsx (định dạng .xls cũ không được hỗ trợ — hãy mở bằng Excel và lưu lại dạng .xlsx).');
+    }
+    const buffer = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => reject(reader.error || new Error('Không đọc được tệp.'));
         reader.readAsArrayBuffer(file);
     });
+    return parseExcelBuffer(buffer, isSource);
+};
+
+// =====================================================================
+// 1b. Zone edit helpers (header / footer zones of the target template)
+//     A zone is [{ rowNum, cells: [{ col, value, edited? }] }].
+// =====================================================================
+
+/** Immutable update of one zone cell by row/cell index; marks it as user-edited. */
+export const updateZoneCell = (zone, rowIdx, cellIdx, value) => zone.map((row, r) => (
+    r !== rowIdx ? row : {
+        ...row,
+        cells: row.cells.map((cell, c) => (c === cellIdx ? { ...cell, value, edited: true } : cell))
+    }
+));
+
+/** Profile format: only user-edited cells, as [{ rowNum, cells: [{ col, value }] }]. */
+export const serializeZoneEdits = (zone = []) => zone
+    .map(row => ({
+        rowNum: row.rowNum,
+        cells: row.cells
+            .filter(c => c.edited)
+            .map(c => ({ col: c.col, value: typeof c.value === 'string' ? c.value : String(c.value ?? '') }))
+    }))
+    .filter(row => Number.isInteger(row.rowNum) && row.cells.length > 0);
+
+/**
+ * Re-apply saved edits onto a freshly parsed zone (matched by rowNum + col).
+ * Entries from old profiles (rowIdx/address format) are ignored.
+ */
+export const applyZoneEdits = (zone = [], savedEdits = []) => {
+    if (!Array.isArray(savedEdits) || savedEdits.length === 0) return zone;
+    const edits = new Map();
+    savedEdits.forEach(row => {
+        if (!Number.isInteger(row?.rowNum) || !Array.isArray(row.cells)) return;
+        row.cells.forEach(cell => {
+            if (!Number.isInteger(cell?.col) || typeof cell.value !== 'string') return;
+            if (cell.value === '[object Object]') return;
+            edits.set(`${row.rowNum}:${cell.col}`, cell.value);
+        });
+    });
+    if (edits.size === 0) return zone;
+    return zone.map(row => ({
+        ...row,
+        cells: row.cells.map(cell => {
+            const key = `${row.rowNum}:${cell.col}`;
+            return edits.has(key) ? { ...cell, value: edits.get(key), edited: true } : cell;
+        })
+    }));
 };
 
 // =====================================================================
@@ -308,41 +412,81 @@ const collectAllMerges = (ws) => {
     return refs;
 };
 
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/** Convert a user-typed zone value into an ExcelJS cell value, guided by the original cell. */
+const toCellValue = (input, existing) => {
+    const text = String(input ?? '');
+    if (text.trim() === '') return null;
+    if (text.startsWith('=')) return { formula: text.substring(1) };
+    const iso = text.match(ISO_DATE);
+    if (iso && existing instanceof Date) {
+        return new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3]));
+    }
+    if (typeof existing === 'number' && text.trim() !== '' && !Number.isNaN(Number(text))) {
+        return Number(text);
+    }
+    return text;
+};
+
+/**
+ * ExcelJS cannot keep shared formulas consistent once rows are spliced, so turn
+ * every shared formula (master + clones) into an ordinary formula up front.
+ */
+const flattenSharedFormulas = (ws) => {
+    const updates = [];
+    ws.eachRow({ includeEmpty: false }, row => {
+        row.eachCell({ includeEmpty: false }, cell => {
+            const v = cell.value;
+            if (!v || typeof v !== 'object') return;
+            if (v.sharedFormula === undefined && v.shareType !== 'shared') return;
+            const formula = cell.formula;
+            updates.push([cell, formula ? { formula, result: v.result } : (v.result ?? null)]);
+        });
+    });
+    updates.forEach(([cell, value]) => { cell.value = value; });
+};
+
+/**
+ * Fill the target template with source rows (3-zone layout) and return the
+ * resulting .xlsx as a buffer. The caller is responsible for downloading it.
+ */
 export const exportMappedExcel = async ({
     sourceAllRows, mappingRules, targetBuffer, headerRowIndex,
-    headerZone, footerZone, footerStartRow, existingDataSlots,
-    fileName = 'Mapped_Order.xlsx'
+    headerZone, footerZone, footerStartRow, existingDataSlots
 }) => {
+    if (!targetBuffer) throw new Error('Missing target template.');
+    if (!Array.isArray(sourceAllRows)) throw new Error('Missing source rows.');
+    if (!Number.isInteger(headerRowIndex)) throw new Error('Missing template header row.');
+
     const ExcelJS = await loadExcelJs();
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(targetBuffer);
     const ws = workbook.worksheets[0];
+    workbook.worksheets.forEach(flattenSharedFormulas);
 
+    const rules = Array.isArray(mappingRules) ? mappingRules : [];
     const headerRowNum = headerRowIndex + 1;
     const dataStartRow = headerRowNum + 1;
+    const slots = Number.isInteger(existingDataSlots) ? existingDataSlots : 0;
+    const footerStart = Number.isInteger(footerStartRow) ? footerStartRow : dataStartRow + slots;
     const neededRows = sourceAllRows.length;
-    const diff = neededRows - existingDataSlots;
+    const diff = neededRows - slots;
     const maxCol = ws.columnCount || 20;
 
     // 1. Column map (merge-aware: always use leftmost column of merged headers)
     const colMap = {};
     ws.getRow(headerRowNum).eachCell((cell, cn) => {
-        const v = String(cell.value || '').trim();
-        if (v) colMap[v] = cn;
+        const v = extractCellDisplayValue(cell).trim();
+        if (v && colMap[v] === undefined) colMap[v] = cn;
     });
 
-    // Fix: For merged header cells, remap to leftmost column
     const headerMerges = collectAllMerges(ws).map(parseMerge).filter(Boolean);
     headerMerges.forEach(m => {
         if (m.top <= headerRowNum && m.bottom >= headerRowNum) {
-            // This merge covers the header row
-            // Find if any colMap entry points to a column within this merge
             Object.keys(colMap).forEach(header => {
                 const col = colMap[header];
-                if (col >= m.left && col <= m.right) {
-                    // Remap to leftmost column of the merge
-                    colMap[header] = m.left;
-                }
+                if (col >= m.left && col <= m.right) colMap[header] = m.left;
             });
         }
     });
@@ -359,16 +503,16 @@ export const exportMappedExcel = async ({
     collectAllMerges(ws).forEach(ref => {
         const m = parseMerge(ref);
         if (!m || m.top < dataStartRow) return;
-        saved.push({ ...m, zone: m.top >= footerStartRow ? 'footer' : 'data' });
+        saved.push({ ...m, zone: m.top >= footerStart ? 'footer' : 'data' });
     });
 
     // 4. Unmerge all
     saved.forEach(m => {
-        try { ws.unMergeCells(makeMergeRef(m.top, m.left, m.bottom, m.right)); } catch { }
+        try { ws.unMergeCells(makeMergeRef(m.top, m.left, m.bottom, m.right)); } catch { /* not merged */ }
     });
 
     // 5. Splice
-    if (diff > 0) ws.spliceRows(dataStartRow + existingDataSlots, 0, ...new Array(diff).fill([]));
+    if (diff > 0) ws.spliceRows(dataStartRow + slots, 0, ...new Array(diff).fill([]));
     else if (diff < 0) ws.spliceRows(dataStartRow + neededRows, Math.abs(diff));
 
     // 6. Clear + style
@@ -376,14 +520,14 @@ export const exportMappedExcel = async ({
         const row = ws.getRow(dataStartRow + i);
         for (let c = 1; c <= maxCol; c++) {
             row.getCell(c).value = null;
-            try { row.getCell(c).style = baseStyles[c]; } catch { }
+            try { row.getCell(c).style = baseStyles[c]; } catch { /* keep default style */ }
         }
     }
 
     // 7. Write data
     sourceAllRows.forEach((src, idx) => {
         const row = ws.getRow(dataStartRow + idx);
-        mappingRules.forEach(rule => {
+        rules.forEach(rule => {
             if (rule.sourceCol && rule.targetCol && colMap[rule.targetCol]) {
                 const val = src[rule.sourceCol];
                 if (val !== undefined && val !== '') row.getCell(colMap[rule.targetCol]).value = val;
@@ -400,62 +544,41 @@ export const exportMappedExcel = async ({
 
     for (let i = 0; i < neededRows; i++) {
         const r = dataStartRow + i;
-        patterns.forEach(p => { try { ws.mergeCells(makeMergeRef(r, p.left, r, p.right)); } catch { } });
+        patterns.forEach(p => { try { ws.mergeCells(makeMergeRef(r, p.left, r, p.right)); } catch { /* overlap */ } });
     }
 
     // 8b. Footer merges shifted by diff
     saved.filter(m => m.zone === 'footer').forEach(m => {
         const t = m.top + diff, b = m.bottom + diff;
-        if (t > 0 && b > 0) { try { ws.mergeCells(makeMergeRef(t, m.left, b, m.right)); } catch { } }
+        if (t > 0 && b > 0) { try { ws.mergeCells(makeMergeRef(t, m.left, b, m.right)); } catch { /* overlap */ } }
     });
 
-    // 9. Header zone edits
-    if (headerZone?.length > 0) {
-        headerZone.forEach(zr => {
-            const row = ws.getRow(zr.rowNum);
+    // 9 + 10. Header / footer zone edits — only cells the user actually edited,
+    // so untouched rich text, dates, hyperlinks and formulas keep their original value.
+    const applyEdits = (zone, rowOffset) => {
+        if (!Array.isArray(zone)) return;
+        zone.forEach(zr => {
+            const rowNum = zr.rowNum + rowOffset;
+            if (!Number.isInteger(rowNum) || rowNum <= 0) return;
+            const row = ws.getRow(rowNum);
             zr.cells.forEach(cd => {
-                const ex = String(row.getCell(cd.col).value ?? '');
-                if (cd.value !== ex && cd.value.trim()) row.getCell(cd.col).value = cd.value;
+                if (!cd?.edited || !Number.isInteger(cd.col)) return;
+                const cell = row.getCell(cd.col);
+                cell.value = toCellValue(cd.value, cell.value);
             });
         });
-    }
-
-    // 10. Footer zone edits (formula-aware: detect = prefix)
-    if (footerZone?.length > 0) {
-        footerZone.forEach(zr => {
-            const nr = zr.rowNum + diff;
-            if (nr > 0) {
-                const row = ws.getRow(nr);
-                zr.cells.forEach(cd => {
-                    if (!cd.value || !cd.value.trim()) return;
-                    if (cd.value.startsWith('=')) {
-                        // User-edited formula → write as Excel formula
-                        row.getCell(cd.col).value = { formula: cd.value.substring(1) };
-                    } else {
-                        const ex = String(row.getCell(cd.col).value ?? '');
-                        if (cd.value !== ex) {
-                            row.getCell(cd.col).value = cd.value;
-                        }
-                    }
-                });
-            }
-        });
-    }
+    };
+    applyEdits(headerZone, 0);
+    applyEdits(footerZone, diff);
 
     // 11. Adjust formulas: rebuild data-zone ranges + shift footer refs
-    const oldDataEnd = dataStartRow + existingDataSlots - 1;
+    const oldDataEnd = dataStartRow + slots - 1;
     const newDataEnd = dataStartRow + neededRows - 1;
 
     ws.eachRow(row => {
         row.eachCell(cell => {
             const v = cell.value;
             if (!v) return;
-
-            // Fix shared formula corruption first
-            if (typeof v === 'object' && v.sharedFormula !== undefined) {
-                cell.value = v.formula ? { formula: v.formula, result: v.result } : (v.result ?? '');
-                return;
-            }
 
             let formula = null;
             if (typeof v === 'object' && v.formula) {
@@ -466,39 +589,33 @@ export const exportMappedExcel = async ({
             if (!formula) return;
 
             // Pass 1: Fix RANGE references (e.g. SUM(H17:H29) → SUM(H19:H24))
-            // Detect VERTICAL ranges that OVERLAP the original data zone and rebuild
             let adjusted = formula.replace(
                 /(\$?[A-Z]+\$?)(\d+):(\$?[A-Z]+\$?)(\d+)/gi,
                 (match, colRef1, row1Str, colRef2, row2Str) => {
-                    const r1 = parseInt(row1Str);
-                    const r2 = parseInt(row2Str);
-
-                    // Check same column (only adjust vertical ranges, not horizontal)
+                    const r1 = parseInt(row1Str, 10);
+                    const r2 = parseInt(row2Str, 10);
                     const col1 = colRef1.replace(/\$/g, '').toUpperCase();
                     const col2 = colRef2.replace(/\$/g, '').toUpperCase();
 
                     // Vertical range that OVERLAPS the data zone → rebuild to exact data boundaries
-                    if (col1 === col2 && r1 <= oldDataEnd && r2 >= dataStartRow) {
+                    if (col1 === col2 && r1 <= oldDataEnd && r2 >= dataStartRow && neededRows > 0) {
                         return `${colRef1}${dataStartRow}:${colRef2}${newDataEnd}`;
                     }
-
                     // Range entirely in footer zone → shift both ends by diff
-                    if (r1 >= footerStartRow && r2 >= footerStartRow && diff !== 0) {
+                    if (r1 >= footerStart && r2 >= footerStart && diff !== 0) {
                         return `${colRef1}${r1 + diff}:${colRef2}${r2 + diff}`;
                     }
-
                     return match;
                 }
             );
 
-            // Pass 2: Fix STANDALONE references (not part of a range)
-            // Only shift refs to footer cells (>= original footerStartRow)
+            // Pass 2: Fix STANDALONE references (not part of a range) to footer cells
             if (diff !== 0) {
                 adjusted = adjusted.replace(
-                    /(\$?[A-Z]+\$?)(\d+)(?![\d:])/gi,
+                    /(?<![:A-Z$!])(\$?[A-Z]+\$?)(\d+)(?![\d:(])/gi,
                     (match, colRef, rowStr) => {
-                        const rowNum = parseInt(rowStr);
-                        if (rowNum >= footerStartRow) {
+                        const rowNum = parseInt(rowStr, 10);
+                        if (rowNum >= footerStart) {
                             const newRow = rowNum + diff;
                             if (newRow > 0) return `${colRef}${newRow}`;
                         }
@@ -508,27 +625,13 @@ export const exportMappedExcel = async ({
             }
 
             if (adjusted !== formula) {
-                if (typeof v === 'object') {
-                    cell.value = { formula: adjusted, result: v.result };
-                } else {
-                    cell.value = { formula: adjusted };
-                }
+                cell.value = typeof v === 'object'
+                    ? { formula: adjusted, result: v.result }
+                    : { formula: adjusted };
             }
         });
     });
 
-    // 12. Remove extra sheets (keep only the first one)
-    while (workbook.worksheets.length > 1) {
-        workbook.removeWorksheet(workbook.worksheets[workbook.worksheets.length - 1].id);
-    }
-
-    // 13. Download
-    const buf = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    a.click();
-    window.URL.revokeObjectURL(url);
+    // 12. Other worksheets are kept untouched (lookup lists, terms, etc.).
+    return workbook.xlsx.writeBuffer();
 };

@@ -112,7 +112,9 @@ export const RELATIONSHIP_SCOPES = {
 /**
  * Ngưỡng thu nhập ước tính và tiêu chuẩn kinh tế của người bảo lãnh
  */
+// LƯU Ý: Đây là ƯỚC TÍNH THỰC TẾ của giới hành nghề (gyoseishoshi), KHÔNG phải tiêu chuẩn do ISA công bố.
 export const SPONSOR_FINANCIAL_BENCHMARKS = {
+  isOfficialStandard: false,
   BASE_ANNUAL_INCOME_ONE_DEPENDENT: 2500000, // 2.500.000 JPY/năm cho 1 người phụ thuộc
   ADDITIONAL_PER_DEPENDENT: 600000, // Thêm 600.000 JPY cho mỗi người phụ thuộc bổ sung
   RECOMMENDED_MINIMUM_SAVINGS: 1000000, // Tiết kiệm ngân hàng tối thiểu đề xuất
@@ -144,12 +146,12 @@ export const FAMILY_APPLICATION_PROCEDURES = {
     name_vn: 'Xin đổi tư cách lưu trú sang 家族滞在 (Người thân đang có mặt tại Nhật Bản)',
     name_en: 'Change of Status Application (Family member already in Japan)',
     statutoryBasis: '出入国管理及び難民認定法第20条',
-    feeNote_ja: '許可時に収入印紙（4,000円、2026年10月1日以降は6,000円）納付。',
-    feeNote_vn: 'Nộp lệ phí khi được cấp thẻ (4.000 JPY trước 01/10/2026; 6.000 JPY từ 01/10/2026).',
+    feeNote_ja: '許可時に納付。2026年9月30日までに受付された申請は6,000円（オンライン5,500円）。2026年10月1日以降の受付分は許可される在留期間に応じて10,000円〜75,000円（窓口）／10,000円〜65,000円（オンライン、別途決済手数料）。',
+    feeNote_vn: 'Nộp lệ phí khi được cấp phép. Hồ sơ tiếp nhận đến hết 30/09/2026: 6.000 yên (online 5.500 yên). Hồ sơ tiếp nhận từ 01/10/2026: 10.000 – 75.000 yên tại quầy / 10.000 – 65.000 yên online (+ phí thanh toán), tùy thời hạn lưu trú được cấp.',
     steps: [
       'Người thân cùng người bảo lãnh nộp hồ sơ xin đổi tư cách sang 家族滞在 tại Cục Xuất nhập cảnh.',
       'Áp dụng thời hạn đặc lệ (特例期間) ở lại tối đa 2 tháng sau hạn visa cũ nếu nộp trước ngày hết hạn.',
-      'Khi có giấy báo nhận kết quả, mang theo hộ chiếu, thẻ cư trú cũ và tem doanh thu để nhận thẻ mới.'
+      'Khi có giấy báo kết quả (bưu thiếp ghi số tiền phải nộp), mang theo hộ chiếu, thẻ cư trú cũ và tem doanh thu 収入印紙 đúng số tiền để nhận thẻ mới (nộp online: thanh toán qua combini/ngân hàng theo email hướng dẫn).'
     ]
   },
   CHILD_BORN_IN_JAPAN: {

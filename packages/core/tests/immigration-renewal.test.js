@@ -13,25 +13,66 @@ import {
   checkPhotoRequired,
   calculateRenewalSchedule,
   STATUS_DOCUMENTS_CATALOG,
+  getResidencePermitFee,
+  getOtherImmigrationFee,
+  parseLocalDate,
+  formatLocalDate,
+  addMonthsClamped,
 } from '../src/japan/immigration/index.js';
 
-test('M2: Fee cutoff rule strictly determined by applicationDate (2026-10-01 revision)', () => {
-  // 1. Nộp hồ sơ trước ngày 01/10/2026: 4.000 JPY
+test('M2: Fee determined by acceptance date and granted period (2026-10-01 revision)', () => {
+  // 1. Hồ sơ tiếp nhận đến 30/09/2026: 6.000 JPY (quầy) / 5.500 JPY (online), không phụ thuộc thời hạn
   const preRevision1 = getRenewalFee('2026-09-30');
-  assert.equal(preRevision1.amount, 4000, 'Trước 01/10/2026 lệ phí phải là 4.000 JPY');
+  assert.equal(preRevision1.amount, 6000, 'Tiếp nhận đến 30/09/2026: 6.000 JPY tại quầy');
   assert.equal(preRevision1.currency, 'JPY');
-  assert.equal(preRevision1.payableOn, 'issuance', 'Lệ phí nộp bằng tem doanh thu khi cấp mới thẻ cư trú');
+  assert.equal(preRevision1.payableOn, 'issuance');
+  assert.equal(preRevision1.dependsOnGrantedPeriod, false);
+  assert.equal(getRenewalFee('2026-09-30', { method: 'online' }).amount, 5500);
 
-  const preRevision2 = getRenewalFee(new Date('2026-05-15'));
-  assert.equal(preRevision2.amount, 4000);
+  const preRevision2 = getRenewalFee('2026-05-15');
+  assert.equal(preRevision2.amount, 6000);
 
-  // 2. Nộp hồ sơ đúng ngày hoặc sau ngày 01/10/2026: 6.000 JPY
+  // 2. Tiếp nhận từ 01/10/2026: theo thời hạn được cấp (mặc định dự kiến 1 năm = 33.000 JPY tại quầy)
   const postRevision1 = getRenewalFee('2026-10-01');
-  assert.equal(postRevision1.amount, 6000, 'Từ 01/10/2026 lệ phí phải là 6.000 JPY');
+  assert.equal(postRevision1.amount, 33000, '1 năm tại quầy: 33.000 JPY');
   assert.equal(postRevision1.payableOn, 'issuance');
+  assert.equal(postRevision1.dependsOnGrantedPeriod, true);
+  assert.deepEqual(postRevision1.range, { min: 10000, max: 75000 });
 
-  const postRevision2 = getRenewalFee('2026-12-15');
-  assert.equal(postRevision2.amount, 6000);
+  const expected = {
+    upTo3m: [10000, 10000], over3mTo6m: [18000, 15000], over6mUnder1y: [25000, 21000], '1y': [33000, 27000],
+    over1yUnder3y: [48000, 42000], '3yUnder5y': [64000, 56000], '5yPlus': [75000, 65000],
+  };
+  for (const [tier, [counter, online]] of Object.entries(expected)) {
+    assert.equal(getRenewalFee('2026-12-15', { expectedPeriod: tier }).amount, counter, `counter ${tier}`);
+    assert.equal(getRenewalFee('2026-12-15', { expectedPeriod: tier, method: 'online' }).amount, online, `online ${tier}`);
+  }
+  // Online từ 01/10/2026: cộng phí thanh toán (330 / 550 JPY)
+  assert.equal(getRenewalFee('2026-10-01', { method: 'online', expectedPeriod: '1y' }).totalPayable, 27330);
+  assert.equal(getRenewalFee('2026-10-01', { method: 'online', expectedPeriod: '5yPlus' }).totalPayable, 65550);
+});
+
+test('Shared fee table: permanent residence and other fees', () => {
+  assert.equal(getResidencePermitFee({ procedure: 'permanent', acceptanceDate: '2026-09-30' }).amount, 10000);
+  assert.equal(getResidencePermitFee({ procedure: 'permanent', acceptanceDate: '2026-10-01' }).amount, 200000);
+  const prOnline = getResidencePermitFee({ procedure: 'permanent', acceptanceDate: '2026-10-01', method: 'online' });
+  assert.equal(prOnline.onlineNotAvailable, true);
+  assert.equal(getOtherImmigrationFee('reentrySingle').amount, 4000);
+  assert.equal(getOtherImmigrationFee('reentryMultiple').amount, 7000);
+  assert.equal(getOtherImmigrationFee('reentrySingle', { method: 'online' }).amount, 3500);
+  assert.equal(getOtherImmigrationFee('reentryMultiple', { method: 'online' }).amount, 6500);
+  assert.equal(getOtherImmigrationFee('authorizedEmploymentCertificate').amount, 2000);
+  assert.equal(getOtherImmigrationFee('authorizedEmploymentCertificate', { method: 'online' }).amount, 1600);
+  assert.equal(getOtherImmigrationFee('authorizedEmploymentCertificate', { method: 'online', acceptanceDate: '2026-10-01' }).totalPayable, 1820);
+});
+
+test('Local date helpers: YYYY-MM-DD parsed as local calendar day, month-end clamping', () => {
+  const d = parseLocalDate('2026-12-31');
+  assert.equal(d.getDate(), 31);
+  assert.equal(formatLocalDate(addMonthsClamped(d, 2)), '2027-02-28');
+  assert.equal(formatLocalDate(addMonthsClamped(parseLocalDate('2027-12-31'), 2)), '2028-02-29');
+  assert.equal(formatLocalDate(addMonthsClamped(parseLocalDate('2026-05-31'), -3)), '2026-02-28');
+  assert.equal(parseLocalDate('2026-02-30'), null);
 });
 
 test('M2: Photo requirement transition on 2026-06-14 (infant exemption vs under 16 exemption)', () => {
@@ -75,7 +116,17 @@ test('M2: Renewal window and Tokurei Kikan timeline calculation', () => {
     applicationDate: '2026-10-01',
   });
   assert.equal(openResult.windowStatus, 'open');
-  assert.equal(openResult.fee.amount, 6000, 'Nộp ngày 01/10/2026 áp dụng mức phí 6.000 JPY');
+  assert.equal(openResult.fee.amount, 33000, 'Tiếp nhận 01/10/2026, dự kiến 1 năm: 33.000 JPY tại quầy');
+  assert.ok(openResult.warnings.some((w) => w.code === 'FEE_DEPENDS_ON_GRANTED_PERIOD'));
+
+  // 2b. Ngày hết hạn chính là hôm nay: vẫn còn hợp lệ (không phải overstay)
+  const lastDayResult = calculateRenewalSchedule({
+    residenceStatus: 'engineer-specialist',
+    expirationDate: expDate,
+    currentDate: expDate,
+  });
+  assert.equal(lastDayResult.windowStatus, 'open', 'Ngày hết hạn vẫn là ngày hợp lệ để nộp');
+  assert.equal(lastDayResult.daysRemaining, 0);
 
   // 3. Sắp hết hạn (<= 14 ngày): Ngày hiện tại 2026-12-10
   const urgentResult = calculateRenewalSchedule({
@@ -205,4 +256,22 @@ test('M2: Discretion Safety Policy - Zero pseudo-legal promises or percentage ce
       `Output vi phạm Discretion Safety: chứa mẫu cấm "${pattern}"`
     );
   }
+});
+
+test('M6: Permanent Resident / HSP2 / Temporary Visitor are not ordinary renewals; unknown status is flagged', () => {
+  const pr = calculateRenewalSchedule({ residenceStatus: 'permanent-resident', expirationDate: '2027-01-10', currentDate: '2026-11-01' });
+  assert.equal(pr.windowStatus, 'not-applicable');
+  assert.equal(pr.notApplicable.code, 'PERMANENT_RESIDENT_CARD_RENEWAL_ONLY');
+  assert.equal(pr.fee, null);
+
+  const hsp2 = calculateRenewalSchedule({ residenceStatus: 'highly-skilled-professional-2', expirationDate: '2027-01-10', currentDate: '2026-11-01' });
+  assert.equal(hsp2.windowStatus, 'not-applicable');
+
+  const tv = calculateRenewalSchedule({ residenceStatus: 'temporary-visitor', expirationDate: '2027-01-10', currentDate: '2026-11-01' });
+  assert.equal(tv.windowStatus, 'not-applicable');
+
+  const bm = calculateRenewalSchedule({ residenceStatus: 'business-manager', expirationDate: '2027-01-10', currentDate: '2026-11-01' });
+  assert.equal(bm.documentsModeled, false);
+  assert.ok(bm.warnings.some((w) => w.code === 'DOCUMENTS_NOT_MODELED'));
+  assert.ok(!bm.documents.some((d) => d.id === 'doc-tax-withholding-slip'), 'Không được lặng lẽ dùng giấy tờ 技人国');
 });

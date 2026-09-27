@@ -91,12 +91,12 @@ export const ARRIVAL_TASKS_CATALOG = Object.freeze([
     stage: 'stage_airport',
     requirement: 'conditional',
     conditionKey: 'needsPartTimeWork',
-    titleJa: '資格外活動許可申請（空港窓口受取）',
-    titleVi: 'Đăng Ký Phép Hoạt Động Ngoài Tư Cách (Tại Quầy Sân Bay)',
-    titleEn: 'Permission to Engage in Activity other than that Permitted (Airport Desk)',
-    descJa: '「留学」または新規入国の「家族滞在」等でアルバイトを希望する場合、空港の入国審査時に申請書を提出すればその場で裏面に許可印を受領可能（原則週28時間以内、風俗営業等厳禁）。',
-    descVi: 'Du học sinh hoặc visa Gia đình muốn đi làm thêm có thể nộp đơn ngay tại quầy xuất nhập cảnh sân bay để được đóng dấu cho phép làm thêm tối đa 28h/tuần (nghiêm cấm ngành nghề phong tục/giải trí người lớn).',
-    descEn: 'Students and eligible dependents planning part-time work can apply at the airport counter upon arrival to receive the permission stamp on the back of the residence card (max 28 hours/week, adult entertainment prohibited).',
+    titleJa: '資格外活動許可申請（新規入国の「留学」：空港で申請）',
+    titleVi: 'Xin Phép Làm Thêm Ngay Tại Sân Bay (Chỉ Du Học Sinh Mới Nhập Cảnh)',
+    titleEn: 'Permission for Part-time Work at the Airport (Newly Arriving Students Only)',
+    descJa: '新規入国する「留学」の方は、空港の上陸審査時に資格外活動許可申請書を提出すると、許可を受けられます（原則週28時間以内、風俗営業等厳禁）。「家族滞在」の方は空港では申請できず、来日後に住居地を管轄する地方出入国在留管理官署で申請します。',
+    descVi: 'Du học sinh (留学) MỚI nhập cảnh có thể nộp đơn xin phép làm thêm ngay khi làm thủ tục nhập cảnh tại sân bay (tối đa 28h/tuần, nghiêm cấm ngành phong tục/giải trí người lớn). Người có visa Gia đình (家族滞在) KHÔNG xin được tại sân bay — phải nộp tại Cục XNC khu vực sau khi đến Nhật.',
+    descEn: 'Newly arriving Students can apply at the airport landing inspection (max 28 hours/week, adult entertainment prohibited). Dependents cannot apply at the airport; they apply at the regional immigration bureau after arrival.',
     authorityJa: '空港入国審査場',
     authorityVi: 'Quầy Nhập Cảnh Sân Bay',
     authorityEn: 'Airport Immigration Inspection Desk',
@@ -118,7 +118,43 @@ export const ARRIVAL_TASKS_CATALOG = Object.freeze([
       lastVerifiedAt: '2026-09-11',
       status: 'verified',
       ruleNature: 'deterministic',
-      notes: 'Đăng ký giấy phép hoạt động ngoài tư cách 28h/tuần tại sân bay.'
+      notes: 'Xin phép làm thêm tại sân bay chỉ áp dụng cho 留学 mới nhập cảnh. Nguồn: https://www.moj.go.jp/isa/applications/procedures/16-8.html'
+    })
+  },
+  {
+    id: 'task_part_time_permit_regional',
+    stageId: 'stage_municipal',
+    stage: 'stage_municipal',
+    requirement: 'conditional',
+    conditionKey: 'needsPartTimeWork',
+    titleJa: '資格外活動許可申請（地方出入国在留管理官署）',
+    titleVi: 'Xin Phép Làm Thêm Tại Cục Xuất Nhập Cảnh Khu Vực (家族滞在…)',
+    titleEn: 'Permission for Part-time Work at the Regional Immigration Bureau',
+    descJa: '「家族滞在」等でアルバイトを希望する場合は、来日後に住居地を管轄する地方出入国在留管理官署で資格外活動許可を申請します（手数料なし）。許可を受ける前に働くことはできません。',
+    descVi: 'Người có visa Gia đình (家族滞在)… muốn đi làm thêm phải nộp đơn xin 資格外活動許可 tại Cục XNC quản lý nơi cư trú sau khi đến Nhật (miễn phí). Không được đi làm trước khi được cấp phép.',
+    descEn: 'Dependents and others wishing to work part-time apply at the regional immigration bureau for their address after arrival (free). Do not start work before permission is granted.',
+    authorityJa: '住居地を管轄する地方出入国在留管理官署',
+    authorityVi: 'Cục XNC khu vực nơi cư trú',
+    authorityEn: 'Regional Immigration Services Bureau',
+    sourceId: 'isa-extra-activity-perm',
+    relatedCapabilityId: 'immigration.workScope.check',
+    deepLink: {
+      toolId: 'work-scope-checker-jp',
+      labelJa: '就労範囲チェッカーを開く',
+      labelVi: 'Kiểm tra phạm vi làm việc của visa',
+      labelEn: 'Open Work Scope Checker'
+    },
+    metadata: defineRuleMetadata({
+      id: 'jp-imm-arrival-part-time-permit-regional',
+      jurisdiction: JAPAN_JURISDICTION,
+      sourceId: 'isa-extra-activity-perm',
+      effectiveFrom: '2012-07-09',
+      applicablePeriod: { type: 'calendar-year', from: 2012, to: 2099 },
+      version: '2026.1',
+      lastVerifiedAt: '2026-09-27',
+      status: 'verified',
+      ruleNature: 'deterministic',
+      notes: 'Nguồn: https://www.moj.go.jp/isa/applications/procedures/16-8.html'
     })
   },
   {
@@ -129,15 +165,15 @@ export const ARRIVAL_TASKS_CATALOG = Object.freeze([
     titleJa: '住居地届出・転入届の提出（14日以内必須）',
     titleVi: 'Đăng Ký Địa Chỉ Cư Trú (Bắt Buộc Trong 14 Ngày)',
     titleEn: 'Resident Registration / Address Notification (Strict 14 Days)',
-    descJa: '住居地を定めた日から14日以内に、市区町村役場窓口にて転入届を提出し、在留カード裏面に住所を記載（入管法第19条の7・19条の9、住民基本台帳法第22条）。正当な理由なく届出を怠ると在留資格取消または過料の対象。',
-    descVi: 'Trong vòng 14 ngày kể từ khi xác định chỗ ở, bắt buộc phải đến Tòa thị chính (quận/huyện) để nộp đơn chuyển đến (転入届) và in địa chỉ lên mặt sau Thẻ Cư Trú. Không đăng ký đúng hạn có thể bị phạt tiền hoặc bị thu hồi tư cách lưu trú.',
+    descJa: '住居地を定めた日から14日以内に、市区町村役場窓口にて転入届を提出し、在留カード裏面に住所を記載（入管法第19条の7・19条の9、住民基本台帳法第22条）。正当な理由なく届出を怠ると在留資格取消または罰則の対象。2026年6月14日以降は、希望すればこの届出と同時に市区町村窓口で「特定在留カード」（マイナンバーカード機能付き在留カード）を申請できます。',
+    descVi: 'Trong vòng 14 ngày kể từ khi xác định chỗ ở, bắt buộc phải đến Tòa thị chính (quận/huyện) để nộp đơn chuyển đến (転入届) và in địa chỉ lên mặt sau Thẻ Cư Trú. Không đăng ký đúng hạn có thể bị phạt hoặc bị thu hồi tư cách lưu trú. Từ 14/06/2026, nếu muốn bạn có thể xin "特定在留カード" (thẻ cư trú tích hợp chức năng thẻ My Number) ngay khi làm thủ tục này tại Tòa thị chính.',
     descEn: 'Mandatory under Immigration Act Art. 19-7/19-9 and Resident Basic Book Act: file moving-in notice (Tennyu-todoke) at your local municipal office within 14 days of moving in to have your address printed on the back of the residence card.',
     authorityJa: '居住地の市区町村役場（市民課・住民戸籍課）',
     authorityVi: 'Tòa thị chính quận/huyện (Phòng Hộ tịch/Cư dân)',
     authorityEn: 'Local Municipal City/Ward Office (Resident Division)',
     sourceId: 'soumu-resident-basic-book-act',
     deadlineRule: {
-      anchorKey: 'entryDate',
+      anchorKey: 'moveInDate', // 住居地を定めた日（未入力なら入国日）
       offsetDays: 14,
       direction: 'after',
       description: {
@@ -204,7 +240,7 @@ export const ARRIVAL_TASKS_CATALOG = Object.freeze([
     authorityEn: 'National Health Insurance Division, Municipal Office',
     sourceId: 'mhlw-kokumin-kenpo-guide',
     deadlineRule: {
-      anchorKey: 'entryDate',
+      anchorKey: 'moveInDate', // 住居地を定めた日（未入力なら入国日）
       offsetDays: 14,
       direction: 'after',
       description: {
@@ -250,7 +286,7 @@ export const ARRIVAL_TASKS_CATALOG = Object.freeze([
     authorityEn: 'National Pension Division, Municipal Office / Pension Office',
     sourceId: 'nenkin-kokumin-nenkin-overview',
     deadlineRule: {
-      anchorKey: 'entryDate',
+      anchorKey: 'moveInDate', // 住居地を定めた日（未入力なら入国日）
       offsetDays: 14,
       direction: 'after',
       description: {

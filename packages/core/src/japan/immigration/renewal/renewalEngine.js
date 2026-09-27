@@ -9,51 +9,64 @@ import {
   getRenewalFee,
   checkPhotoRequired,
   STATUS_DOCUMENTS_CATALOG,
+  GENERIC_RENEWAL_DOCUMENTS,
 } from './renewalRules.js';
+import {
+  parseLocalDate,
+  formatLocalDate,
+  addMonthsClamped,
+  diffCalendarDays,
+  resolveCurrentDate,
+} from '../shared/localDate.js';
+
+const formatDateISO = formatLocalDate;
 
 /**
- * Thêm hoặc bớt số tháng trên một đối tượng ngày (an toàn theo chuẩn lịch).
- * @param {Date} date 
- * @param {number} months 
- * @returns {Date}
+ * Tư cách KHÔNG làm thủ tục 在留期間更新 thông thường.
  */
-function addMonths(date, months) {
-  const d = new Date(date.getTime());
-  const expectedMonth = (d.getMonth() + months) % 12;
-  d.setMonth(d.getMonth() + months);
-  // Xử lý tràn ngày cuối tháng (vd: 31/05 - 3 tháng)
-  if (d.getMonth() !== (expectedMonth < 0 ? expectedMonth + 12 : expectedMonth)) {
-    d.setDate(0); // ngày cuối cùng tháng trước
-  }
-  return d;
-}
-
-/**
- * Format ngày dạng YYYY-MM-DD
- * @param {Date} date 
- * @returns {string}
- */
-function formatDateISO(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
+const NON_RENEWABLE_STATUSES = {
+  'permanent-resident': {
+    code: 'PERMANENT_RESIDENT_CARD_RENEWAL_ONLY',
+    message_ja: '「永住者」には在留期間がないため、在留期間更新許可申請は不要です。必要なのは在留カードの有効期間更新申請のみで、有効期間満了日の3か月前から満了日までに申請でき、手数料はかかりません（特例期間の制度もありません）。有効期間を過ぎると罰則の対象となるため、満了日までに必ず申請してください。',
+    message_vi: 'Người Vĩnh trú (永住者) KHÔNG có thời hạn lưu trú nên không làm thủ tục gia hạn lưu trú. Bạn chỉ cần xin gia hạn hiệu lực THẺ cư trú (在留カードの有効期間更新申請): nộp trong khoảng từ 3 tháng trước đến ngày hết hiệu lực ghi trên thẻ, KHÔNG mất lệ phí, và KHÔNG có "thời kỳ đặc lệ" 2 tháng. Quá hạn thẻ có thể bị xử phạt — hãy nộp trước ngày hết hiệu lực.',
+    message_en: 'Permanent Residents have no period of stay, so no extension of stay is needed. Only the residence card validity renewal is required: apply from 3 months before the card expiry date until that date, free of charge; there is no special (tokurei) period. Apply before the card expires.',
+    officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri10_00011.html',
+  },
+  'highly-skilled-professional-2': {
+    code: 'HSP2_NO_PERIOD_OF_STAY',
+    message_ja: '「高度専門職2号」の在留期間は無期限のため、在留期間更新許可申請はありません。在留カードの有効期間更新申請（手数料なし）のみ必要です。',
+    message_vi: 'Tư cách "Nhân lực chất lượng cao số 2" có thời hạn lưu trú vô thời hạn nên không có thủ tục gia hạn lưu trú. Chỉ cần gia hạn hiệu lực thẻ cư trú (không mất lệ phí).',
+    message_en: 'Highly Skilled Professional (ii) has an unlimited period of stay; no extension is needed. Only the residence card validity renewal (free) applies.',
+    officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri10_00011.html',
+  },
+  'temporary-visitor': {
+    code: 'TEMPORARY_VISITOR_EXTENSION_EXCEPTIONAL',
+    message_ja: '「短期滞在」の在留期間更新は、病気・事故など人道上やむを得ない事情がある場合に限り例外的に認められるもので、本ツールの対象外です。管轄の出入国在留管理局に直接ご相談ください。',
+    message_vi: 'Gia hạn "Lưu trú ngắn hạn" (短期滞在) chỉ được xét ngoại lệ khi có lý do bất khả kháng (bệnh, tai nạn…) và nằm ngoài phạm vi công cụ này. Hãy liên hệ trực tiếp Cục XNC khu vực.',
+    message_en: 'Extension of Temporary Visitor status is only exceptionally granted for unavoidable reasons (illness, accident) and is outside this tool. Consult your regional immigration bureau.',
+    officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-3.html',
+  },
+};
 
 /**
  * Tính toán toàn diện thủ tục gia hạn thời hạn lưu trú
- * 
+ *
+ * Mọi so sánh ngày theo NGÀY LỊCH địa phương: ngày hết hạn (満了日) vẫn là ngày hợp lệ,
+ * chỉ từ ngày hôm sau mới là quá hạn.
+ *
  * @param {Object} params
- * @param {string} params.residenceStatus - Mã tư cách lưu trú (vd: 'engineer-specialist', 'dependent', 'student', 'spouse-japanese')
- * @param {string|Date} params.expirationDate - Ngày hết hạn thẻ cư trú (YYYY-MM-DD)
- * @param {string|Date} [params.applicationDate] - Ngày nộp đơn (mặc định là hôm nay)
- * @param {string|Date} [params.currentDate] - Ngày đối chiếu hiện tại (mặc định là hôm nay)
- * @param {number} [params.applicantAge=30] - Tuổi của người nộp đơn
- * @param {boolean} [params.hasFiled=false] - Đã nộp đơn lên Cục XNC trước ngày hết hạn chưa?
- * @param {boolean} [params.hasTaxArrears=false] - Có nợ thuế cư trú không?
- * @param {boolean} [params.hasPensionArrears=false] - Có nợ tiền bảo hiểm hưu trí Nenkin không?
- * @param {number} [params.companyCategory=3] - Phân loại doanh nghiệp tiếp nhận (1, 2, 3, 4)
- * @param {'ja'|'en'|'vi'} [params.language='vi'] - Ngôn ngữ hiển thị
+ * @param {string} params.residenceStatus - Mã tư cách lưu trú
+ * @param {string|Date} params.expirationDate - Ngày hết hạn lưu trú (YYYY-MM-DD)
+ * @param {string|Date} [params.applicationDate] - Ngày Cục XNC tiếp nhận hồ sơ (mặc định: hôm nay)
+ * @param {string|Date} [params.currentDate] - Ngày đối chiếu (mặc định: hôm nay)
+ * @param {number} [params.applicantAge=30]
+ * @param {boolean} [params.hasFiled=false]
+ * @param {boolean} [params.hasTaxArrears=false]
+ * @param {boolean} [params.hasPensionArrears=false]
+ * @param {number} [params.companyCategory=3]
+ * @param {'counter'|'online'} [params.filingMethod='counter'] - Nộp tại quầy hay online
+ * @param {string} [params.expectedPeriod='1y'] - Bậc thời hạn dự kiến được cấp (ảnh hưởng phí từ 01/10/2026)
+ * @param {'ja'|'en'|'vi'} [params.language='vi']
  */
 export function calculateRenewalSchedule({
   residenceStatus = 'engineer-specialist',
@@ -65,61 +78,82 @@ export function calculateRenewalSchedule({
   hasTaxArrears = false,
   hasPensionArrears = false,
   companyCategory = 3,
+  filingMethod = 'counter',
+  expectedPeriod,
   language = 'vi',
 }) {
   if (!expirationDate) {
     throw new Error('expirationDate is required for renewal schedule calculation');
   }
 
-  const exp = new Date(expirationDate);
-  if (isNaN(exp.getTime())) {
+  const exp = parseLocalDate(expirationDate);
+  if (!exp) {
     throw new Error(`Invalid expirationDate: ${expirationDate}`);
   }
 
-  const now = currentDate ? new Date(currentDate) : new Date();
-  const appDate = applicationDate ? new Date(applicationDate) : now;
+  const now = resolveCurrentDate(currentDate);
+  const appDate = parseLocalDate(applicationDate) || now;
+  const pickLang = (o, base) => (language === 'ja' ? o[`${base}_ja`] : language === 'en' ? o[`${base}_en`] : o[`${base}_vi`]);
+
+  // 0. Tư cách không áp dụng thủ tục gia hạn thông thường
+  const nonRenewable = NON_RENEWABLE_STATUSES[residenceStatus];
+  if (nonRenewable) {
+    return {
+      windowStatus: 'not-applicable',
+      notApplicable: {
+        code: nonRenewable.code,
+        message: pickLang(nonRenewable, 'message'),
+        officialUrl: nonRenewable.officialUrl,
+      },
+      windowStart: null,
+      expirationDate: formatDateISO(exp),
+      gracePeriodLimit: null,
+      daysRemaining: diffCalendarDays(now, exp),
+      fee: null,
+      photoRequirement: null,
+      documents: [],
+      warnings: [{ type: 'info', code: nonRenewable.code, message: pickLang(nonRenewable, 'message') }],
+      regulatoryNotice: null,
+    };
+  }
 
   // 1. Cửa sổ nộp hồ sơ (thông thường 3 tháng trước khi hết hạn)
-  const windowStart = addMonths(exp, -3);
+  const windowStart = addMonthsClamped(exp, -3);
 
-  // 2. Thời kỳ đặc lệ (特例期間 - Tokurei Kikan): tối đa 2 tháng sau ngày hết hạn
-  const gracePeriodLimit = addMonths(exp, 2);
+  // 2. Thời kỳ đặc lệ (特例期間 - Điều 20 Khoản 6 áp dụng qua Điều 21 Khoản 4): tối đa đến ngày tròn 2 tháng sau ngày hết hạn
+  const gracePeriodLimit = addMonthsClamped(exp, 2);
 
-  // 3. Số ngày còn lại đến khi hết hạn
-  const msPerDay = 24 * 60 * 60 * 1000;
-  const daysRemaining = Math.ceil((exp.getTime() - now.getTime()) / msPerDay);
+  // 3. Số ngày lịch còn lại đến ngày hết hạn (0 = hôm nay là ngày hết hạn, vẫn hợp lệ)
+  const daysRemaining = diffCalendarDays(now, exp);
+  const daysToWindow = diffCalendarDays(now, windowStart);
+  const daysToGraceLimit = diffCalendarDays(now, gracePeriodLimit);
 
   // 4. Xác định trạng thái thời gian nộp đơn
   let windowStatus = 'open';
-  if (now < windowStart) {
+  if (daysToWindow > 0) {
     windowStatus = 'too-early';
-  } else if (now <= exp) {
+  } else if (daysRemaining >= 0) {
     windowStatus = 'open';
+  } else if (hasFiled) {
+    windowStatus = daysToGraceLimit >= 0 ? 'grace-period' : 'grace-period-expired';
   } else {
-    // now > exp (Đã qua ngày hết hạn)
-    if (hasFiled) {
-      if (now <= gracePeriodLimit) {
-        windowStatus = 'grace-period';
-      } else {
-        windowStatus = 'grace-period-expired';
-      }
-    } else {
-      windowStatus = 'overstay';
-    }
+    windowStatus = 'overstay';
   }
 
   // 5. Xác định lệ phí (Revenue Stamp) áp dụng theo applicationDate
-  const feeInfo = getRenewalFee(appDate);
+  const feeInfo = getRenewalFee(appDate, { method: filingMethod, expectedPeriod });
 
   // 6. Kiểm tra quy định nộp ảnh thẻ (xét theo tuổi và ngày nộp đơn)
   const photoRule = checkPhotoRequired(applicantAge, appDate);
 
   // 7. Lập danh mục hồ sơ giấy tờ cần thiết
-  const rawDocs = STATUS_DOCUMENTS_CATALOG[residenceStatus] || STATUS_DOCUMENTS_CATALOG['engineer-specialist'];
+  const catalogDocs = STATUS_DOCUMENTS_CATALOG[residenceStatus];
+  const documentsModeled = Boolean(catalogDocs);
+  const rawDocs = catalogDocs || GENERIC_RENEWAL_DOCUMENTS;
   const documents = rawDocs.map((doc) => {
     const item = { ...doc };
     // Cập nhật điều kiện ảnh
-    if (item.id === 'doc-photo' || item.id === 'doc-photo-dep') {
+    if (item.id.startsWith('doc-photo')) {
       item.required = photoRule.required;
       if (!photoRule.required) {
         item.conditional = true;
@@ -148,6 +182,32 @@ export function calculateRenewalSchedule({
 
   // 8. Cảnh báo tuân thủ pháp luật & các yếu tố rủi ro xét duyệt
   const warnings = [];
+
+  if (!documentsModeled) {
+    warnings.push({
+      type: 'warning',
+      code: 'DOCUMENTS_NOT_MODELED',
+      message: language === 'ja'
+        ? 'この在留資格の提出書類一覧は本ツールでは未整備です。共通書類（申請書・写真・旅券・在留カード）のみ表示しています。在留資格ごとの必要書類は出入国在留管理庁の公式ページで必ず確認してください。'
+        : language === 'en'
+          ? 'The document list for this status is not modeled in this tool. Only common items (form, photo, passport, residence card) are shown. Check the official ISA page for status-specific documents.'
+          : 'Công cụ chưa có danh mục giấy tờ riêng cho tư cách này. Chỉ hiển thị giấy tờ chung (đơn, ảnh, hộ chiếu, thẻ cư trú). Hãy kiểm tra giấy tờ riêng theo tư cách trên trang chính thức của Cục XNC.',
+    });
+  }
+
+  if (feeInfo.regime === 'post-2026-10') {
+    warnings.push({
+      type: 'info',
+      code: 'FEE_DEPENDS_ON_GRANTED_PERIOD',
+      message: language === 'ja' ? feeInfo.transitionNote_ja : language === 'en' ? feeInfo.transitionNote_en : feeInfo.transitionNote_vi,
+    });
+  } else {
+    warnings.push({
+      type: 'info',
+      code: 'FEE_REVISION_2026_10_NOTICE',
+      message: language === 'ja' ? feeInfo.transitionNote_ja : language === 'en' ? feeInfo.transitionNote_en : feeInfo.transitionNote_vi,
+    });
+  }
 
   if (windowStatus === 'too-early') {
     warnings.push({
@@ -236,6 +296,7 @@ export function calculateRenewalSchedule({
     expirationDate: formatDateISO(exp),
     gracePeriodLimit: formatDateISO(gracePeriodLimit),
     daysRemaining,
+    documentsModeled,
     fee: feeInfo,
     photoRequirement: photoRule,
     documents,

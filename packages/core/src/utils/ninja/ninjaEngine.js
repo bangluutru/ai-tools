@@ -42,6 +42,10 @@ import {
   drawObstacleMonster,
 } from './ninjaLandmarks.js';
 
+// Frame timing: game constants are tuned per 60 fps frame.
+const FRAME_MS = 1000 / 60;
+const MAX_FRAME_MS = 1000 / 30; // clamp: at most 2 frames of catch-up (as before)
+
 export const GAME_STATE = {
   READY: 0,
   PLAYING: 1,
@@ -766,7 +770,10 @@ export class NinjaEngine {
   loop(timestamp) {
     if (this.destroyed) return;
 
-    const dt = Math.min(32, Math.max(8, timestamp - this.lastTimestamp)) / 16.667;
+    // Real elapsed time (so 120/144 Hz screens don't run the game faster), clamped
+    // to avoid huge jumps after a background tab or a long frame.
+    const elapsed = timestamp - this.lastTimestamp;
+    const dt = Math.min(MAX_FRAME_MS, Math.max(0, Number.isFinite(elapsed) ? elapsed : 0)) / FRAME_MS;
     this.lastTimestamp = timestamp;
 
     this.update(dt);

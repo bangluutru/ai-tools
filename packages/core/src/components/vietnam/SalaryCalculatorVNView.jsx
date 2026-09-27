@@ -465,8 +465,15 @@ export default function SalaryCalculatorVNView({ displayLang = 'vi' }) {
               </label>
               <input
                 type="month"
+                // Bộ quy tắc (giảm trừ 15,5M/6,2M, biểu 5 bậc, lương tối thiểu NĐ 293/2025) chỉ đúng cho năm 2026.
+                min="2026-01"
+                max="2026-12"
                 value={monthYear}
-                onChange={(e) => setMonthYear(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  setMonthYear(v < '2026-01' ? '2026-01' : v > '2026-12' ? '2026-12' : v);
+                }}
                 className="w-full px-3 py-2.5 rounded-xl bg-surface border border-border-subtle text-on-surface text-xs sm:text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary cursor-pointer"
               />
               <p className="text-[11px] text-on-surface-variant leading-tight mt-1">

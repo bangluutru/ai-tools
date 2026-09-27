@@ -5,6 +5,7 @@
  */
 
 import { getRequirementsForProcedure, validateDocumentFreshness } from '../resolvers/procedureRequirementResolver.js';
+import { getImmigrationFee } from '../registry/immigrationFees.js';
 
 export const READINESS_LEVELS = {
   READY: 'ready',
@@ -25,11 +26,16 @@ export const READINESS_LEVELS = {
  */
 export function evaluateProcedureReadiness({
   procedureId,
-  timingState = {},
-  preparedDocs = {},
-  submissionState = {},
+  timingState: rawTimingState = {},
+  preparedDocs: rawPreparedDocs = {},
+  submissionState: rawSubmissionState = {},
   referenceDate = new Date(),
-}) {
+  grantedPeriodMonths = null,
+} = {}) {
+  // null-safe: UI có thể truyền null trước khi người dùng nhập gì
+  const timingState = rawTimingState || {};
+  const preparedDocs = rawPreparedDocs || {};
+  const submissionState = rawSubmissionState || {};
   const reqData = getRequirementsForProcedure(procedureId);
   if (!reqData) return null;
 
@@ -95,11 +101,29 @@ export function evaluateProcedureReadiness({
   const feePrepared = submissionState.hasFeePrepared ?? false;
   const isFeeRequired = procedure.feeRules?.feeAmountJpy > 0;
 
+  // Lệ phí nhập cư phụ thuộc ngày tiếp nhận hồ sơ (cải cách 2026-10-01) — https://www.moj.go.jp/isa/01_00644.html
+  const feeSchedule = procedure.feeRules?.feeScheduleKind
+    ? getImmigrationFee({
+        kind: procedure.feeRules.feeScheduleKind,
+        method: submissionMethod,
+        applicationDate: referenceDate,
+        grantedPeriodMonths,
+      })
+    : null;
+
   const submission = {
     selectedMethod: submissionMethod,
     feePrepared: isFeeRequired ? feePrepared : true,
     isFeeRequired,
-    feeAmountJpy: procedure.feeRules?.feeAmountJpy || 0,
+    feeAmountJpy: feeSchedule ? feeSchedule.amountJpy ?? feeSchedule.maxJpy : procedure.feeRules?.feeAmountJpy || 0,
+    feeMinJpy: feeSchedule ? feeSchedule.minJpy : procedure.feeRules?.feeAmountJpy || 0,
+    feeMaxJpy: feeSchedule ? feeSchedule.maxJpy : procedure.feeRules?.feeAmountJpy || 0,
+    feeRegime: feeSchedule?.regime || null,
+    feeNoteI18n: feeSchedule?.noteI18n || procedure.feeRules?.feeNoteI18n || null,
+    feeLabel:
+      feeSchedule && feeSchedule.amountJpy == null
+        ? `${feeSchedule.minJpy.toLocaleString('ja-JP')}〜${feeSchedule.maxJpy.toLocaleString('ja-JP')}`
+        : String((feeSchedule ? feeSchedule.amountJpy : procedure.feeRules?.feeAmountJpy || 0).toLocaleString('ja-JP')),
     feeType: procedure.feeRules?.feeType || 'free',
   };
 
@@ -161,9 +185,9 @@ export function evaluateProcedureReadiness({
     gaps.push({
       type: 'fee_not_prepared',
       messageI18n: {
-        ja: `手数料（${submission.feeAmountJpy}円の収入印紙等）の準備が必要です。`,
-        vi: `Chưa chuẩn bị lệ phí (${submission.feeAmountJpy}円 tiền tem Shūnyū Inshi).`,
-        en: `Fee (${submission.feeAmountJpy} JPY revenue stamp) not prepared yet.`,
+        ja: `手数料（${submission.feeLabel}円の収入印紙等）の準備が必要です。`,
+        vi: `Chưa chuẩn bị lệ phí (${submission.feeLabel}円, nộp khi nhận kết quả).`,
+        en: `Fee (${submission.feeLabel} JPY) not prepared yet.`,
       },
     });
   }

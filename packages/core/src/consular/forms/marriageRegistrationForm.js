@@ -1,6 +1,6 @@
 /**
  * Biểu mẫu Tờ khai đăng ký kết hôn / Tờ khai ghi chú kết hôn
- * Ban hành kèm theo Thông tư số 04/2020/TT-BTP ngày 28/05/2020 của Bộ Tư pháp.
+ * BẢN NHÁP tham khảo (bố cục theo mẫu hộ tịch của Bộ Tư pháp; phiên bản hiện hành cần xác nhận với cơ quan).
  * 
  * Áp dụng cho:
  * 1. Đăng ký kết hôn giữa hai công dân Việt Nam tại Cơ quan đại diện Việt Nam tại Nhật Bản
@@ -15,10 +15,10 @@ export const marriageRegistrationForm = {
     en: 'Marriage Registration / Transcription Form',
     ja: '婚姻届出／婚姻登録申請書',
   },
-  standardBasis: 'Thông tư số 04/2020/TT-BTP ngày 28/05/2020 của Bộ Tư pháp',
-  sha256Fingerprint: '9a31bc76e3d24218a5146d90e29b12854cf048ba97e452140a3e0f9b6c4398e2',
-  status: 'VERIFIED',
-  sourceUrl: 'https://vnembassy-jp.org/vi/thu-tuc-dang-ky-ket-hon-tai-dai-su-quan',
+  standardBasis: 'Bản nháp tham khảo — dùng tờ khai theo hướng dẫn của ĐSQ (https://vnembassy-jp.org/vi/huong-dan-lien-quan-den-ket-hon)',
+  isDraftHelper: true,
+  status: 'DRAFT_HELPER',
+  sourceUrl: 'https://vnembassy-jp.org/vi/huong-dan-lien-quan-den-ket-hon',
   applicableOffices: ['tokyo_embassy', 'osaka_consulate', 'fukuoka_consulate'],
   printOrientation: 'portrait',
   paperSize: 'A4',

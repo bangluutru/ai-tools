@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   ExternalLink,
   ChevronRight,
-  DollarSign,
   Camera,
   Layers,
 } from 'lucide-react';
@@ -25,6 +24,7 @@ import StandardToolLayout from '../shared/StandardToolLayout.jsx';
 import RegulatorySourceView from '../regulatory/RegulatorySourceView.jsx';
 import { getAllStatuses } from '../../japan/immigration/status/statusCatalog.js';
 import { calculateRenewalSchedule } from '../../japan/immigration/renewal/renewalEngine.js';
+import { ResidencePermitFeePanel } from './ResidencePermitFeePanel.jsx';
 
 const RENEWAL_SOURCES = [
   'isa-act-art21',
@@ -55,6 +55,8 @@ export function ResidenceRenewalGuideView({ lang = 'vi' }) {
   const [hasTaxArrears, setHasTaxArrears] = useState(false);
   const [hasPensionArrears, setHasPensionArrears] = useState(false);
   const [completedDocs, setCompletedDocs] = useState({});
+  const [filingMethod, setFilingMethod] = useState('counter');
+  const [expectedPeriod, setExpectedPeriod] = useState('1y');
 
   const toggleDoc = (id) => {
     setCompletedDocs((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -65,11 +67,13 @@ export function ResidenceRenewalGuideView({ lang = 'vi' }) {
       return calculateRenewalSchedule({
         residenceStatus,
         expirationDate,
-        applicantAge: Number(applicantAge) || 30,
+        applicantAge: applicantAge !== '' && Number.isFinite(Number(applicantAge)) ? Number(applicantAge) : 30,
         hasFiled,
         companyCategory: Number(companyCategory) || 3,
         hasTaxArrears,
         hasPensionArrears,
+        filingMethod,
+        expectedPeriod,
         language: lang,
       });
     } catch {
@@ -83,6 +87,8 @@ export function ResidenceRenewalGuideView({ lang = 'vi' }) {
     companyCategory,
     hasTaxArrears,
     hasPensionArrears,
+    filingMethod,
+    expectedPeriod,
     lang,
   ]);
 
@@ -101,8 +107,8 @@ export function ResidenceRenewalGuideView({ lang = 'vi' }) {
       windowOpen: 'Mở nhận hồ sơ (3 tháng trước)',
       cardExpire: 'Hạn thẻ cư trú',
       tokureiLimit: 'Hạn tối đa Đặc Lệ (+2 tháng)',
-      feeTitle: 'Lệ phí hành chính (Tem doanh thu)',
-      feeNote: 'Chỉ nộp khi nhận thẻ mới, xác định theo ngày nộp đơn',
+      feeTitle: 'Lệ phí hành chính',
+      feeNote: 'Chỉ nộp khi được cấp phép. Mức phí tính theo ngày Cục XNC TIẾP NHẬN hồ sơ; từ 01/10/2026 còn tùy thời hạn lưu trú được cấp',
       photoTitle: 'Quy chuẩn ảnh thẻ',
       docTitle: 'Danh mục hồ sơ giấy tờ cần nộp',
       docDesc: 'Được tùy biến theo tư cách lưu trú và phân loại doanh nghiệp',
@@ -131,7 +137,7 @@ export function ResidenceRenewalGuideView({ lang = 'vi' }) {
       cardExpire: '在留期間満了日',
       tokureiLimit: '特例期間満了日（最大2か月）',
       feeTitle: '申請手数料（収入印紙）',
-      feeNote: '許可受取時に納付（申請受付日で判定）',
+      feeNote: '許可時に納付（申請受付日で判定。2026年10月1日以降の受付分は許可される在留期間で決定）',
       photoTitle: '提出写真規格と免除基準',
       docTitle: '公的必要書類チェックリスト',
       docDesc: '在留資格及び所属機関カテゴリーに応じて必要書類を最適化',
@@ -160,7 +166,7 @@ export function ResidenceRenewalGuideView({ lang = 'vi' }) {
       cardExpire: 'Card Expiration',
       tokureiLimit: 'Grace Limit (+2 Months)',
       feeTitle: 'Official Fee (Revenue Stamp)',
-      feeNote: 'Payable only upon card issuance; rate anchored on filing date',
+      feeNote: 'Payable only upon grant; based on acceptance date and, from 1 Oct 2026, on the period granted',
       photoTitle: 'Photo Specification',
       docTitle: 'Required Official Documents',
       docDesc: 'Optimized by residence category and employer category',
@@ -311,7 +317,23 @@ export function ResidenceRenewalGuideView({ lang = 'vi' }) {
 
           {/* Right Column: Schedule & Guidance */}
           <div className="lg:col-span-7 space-y-6">
-            {scheduleResult ? (
+            {scheduleResult && scheduleResult.windowStatus === 'not-applicable' ? (
+              <div className="p-5 rounded-2xl border bg-primary-container/20 border-primary/30 text-on-primary-container space-y-3">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <p className="text-sm font-medium leading-relaxed">{scheduleResult.notApplicable.message}</p>
+                </div>
+                <a
+                  href={scheduleResult.notApplicable.officialUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary font-semibold inline-flex items-center gap-1 hover:underline"
+                >
+                  {lang === 'ja' ? '出入国在留管理庁 公式ページ' : lang === 'en' ? 'Official ISA page' : 'Trang chính thức của Cục XNC'}
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            ) : scheduleResult ? (
               <>
                 {/* Warnings Banner */}
                 {scheduleResult.warnings.length > 0 && (
@@ -401,7 +423,7 @@ export function ResidenceRenewalGuideView({ lang = 'vi' }) {
                         {scheduleResult.gracePeriodLimit}
                       </div>
                       <div className="text-[10px] text-on-surface-variant mt-0.5">
-                        Luật Nhập quản Điều 20 khoản 5
+                        {lang === 'ja' ? '入管法第20条第6項（第21条第4項で準用）' : lang === 'en' ? 'Immigration Act Art. 20(6) (applied by Art. 21(4))' : 'Luật Nhập quản Điều 20 khoản 6 (áp dụng qua Điều 21 khoản 4)'}
                       </div>
                     </div>
                   </div>
@@ -409,21 +431,17 @@ export function ResidenceRenewalGuideView({ lang = 'vi' }) {
 
                 {/* Fee & Photo Information Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Fee Card */}
-                  <div className="bg-surface-container-low p-5 rounded-2xl border border-outline-variant/30 shadow-sm space-y-2">
-                    <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                      <DollarSign className="w-4 h-4" />
-                      <span>{t.feeTitle}</span>
-                    </div>
-                    <div className="text-2xl font-black text-on-surface">
-                      ¥{scheduleResult.fee.amount.toLocaleString()}
-                    </div>
-                    <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                      {t.feeNote}
-                    </p>
-                    <div className="text-[10px] font-mono text-outline">
-                      {scheduleResult.fee.legalBasis}
-                    </div>
+                  {/* Fee Card: đọc từ bảng phí dùng chung */}
+                  <div className="sm:col-span-2 space-y-2">
+                    <ResidencePermitFeePanel
+                      fee={scheduleResult.fee}
+                      lang={lang}
+                      method={filingMethod}
+                      onMethodChange={setFilingMethod}
+                      expectedPeriod={expectedPeriod}
+                      onExpectedPeriodChange={setExpectedPeriod}
+                    />
+                    <p className="text-[11px] text-on-surface-variant leading-relaxed px-1">{t.feeNote}</p>
                   </div>
 
                   {/* Photo Card */}

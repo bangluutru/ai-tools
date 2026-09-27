@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { tools, activeTools } from '../../src/config/toolsRegistry.js';
 import {
   simulateJapanTaxes,
-  exportTaxSimulationCsv,
   DEFAULT_TAX_YEAR,
+  loadTaxExporters,
 } from '../../../packages/core/src/utils/tax/index.js';
+import { exportTaxSimulationCsv } from '../../../packages/core/src/utils/tax/export/csvExporter.js';
 
 test('japan-tax-simulator is correctly registered in toolsRegistry', () => {
   const tool = tools.find((t) => t.id === 'japan-tax-simulator');
@@ -175,8 +179,18 @@ test('japan-tax-simulator revenue isolation: employee_side ignores stale busines
   assert.ok(result.summary.netTakeHome > 4000000, 'Take home on 5.1M gross should be ~4.05M JPY');
 });
 
-test('japan-tax-simulator PDF export functionality generates valid PDF across languages', async () => {
-  const { generateTaxPdfReport } = await import('../../../packages/core/src/utils/tax/index.js');
+test('japan-tax-simulator PDF export functionality generates valid PDF across languages', async (t) => {
+  // Exporter không còn được re-export tĩnh từ utils/tax/index.js (tránh kéo jsPDF vào bundle ban đầu)
+  const { generateTaxPdfReport } = await loadTaxExporters();
+  // jsPDF trong Node ghi file thật vào cwd khi gọi doc.save(); chạy trong thư mục tạm
+  // để mỗi lần `npm test` không rải thêm 3 file PDF vào hub/.
+  const originalCwd = process.cwd();
+  const tmpDir = mkdtempSync(join(tmpdir(), 'toolio-tax-pdf-'));
+  process.chdir(tmpDir);
+  t.after(() => {
+    process.chdir(originalCwd);
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
   const sim = simulateJapanTaxes({
     year: 2025,
     profile: 'employee_side',

@@ -53,7 +53,8 @@ const I18N = {
     dailyHoursLabel: '1日の所定労働時間（時間）',
     overtimeHoursSection: '時間外・深夜・休日労働の実績時間',
     normalOvertime: '法定時間外労働（月60時間以下）',
-    normalOvertimeDesc: '1日8時間・週40時間を超える時間外労働（割増率 25%・1.25倍）',
+    normalOvertimeDesc: '1日8時間・週40時間を超える時間外労働（割増率 25%・1.25倍）。合計が月60時間を超えた分は自動的に1.50倍で計算します。',
+    dailyHoursHint: '※ 日給÷1日の所定労働時間で時間単価を算出します（未入力時は8時間と仮定）。',
     above60Overtime: '月60時間を超える時間外労働',
     above60OvertimeDesc: '月60時間を超えた部分の残業時間（割増率 50%・1.50倍 / 中小企業も適用）',
     lateNight: '深夜労働（22時〜翌朝5時）',
@@ -109,7 +110,8 @@ const I18N = {
     dailyHoursLabel: 'Số giờ làm việc quy định/ngày (Giờ)',
     overtimeHoursSection: 'Thống Kê Số Giờ Làm Thêm Giờ Thực Tế',
     normalOvertime: 'Làm thêm giờ thông thường (dưới 60h/tháng)',
-    normalOvertimeDesc: 'Thời gian làm vượt 8h/ngày hoặc 40h/tuần (Hệ số 1.25x / Tăng 25%)',
+    normalOvertimeDesc: 'Thời gian làm vượt 8h/ngày hoặc 40h/tuần (Hệ số 1.25x / Tăng 25%). Phần tổng vượt 60h/tháng tự động tính 1.50x.',
+    dailyHoursHint: '※ Lương giờ = Lương ngày ÷ số giờ quy định/ngày (nếu để trống, giả định 8 giờ).',
     above60Overtime: 'Làm thêm giờ vượt 60h/tháng',
     above60OvertimeDesc: 'Thời gian làm thêm vượt mốc 60 giờ trong tháng (Hệ số 1.50x / Tăng 50% - áp dụng cho mọi DN)',
     lateNight: 'Làm việc ban đêm (22:00 - 05:00)',
@@ -165,7 +167,8 @@ const I18N = {
     dailyHoursLabel: 'Daily Scheduled Hours (Hours)',
     overtimeHoursSection: 'Actual Overtime Hours Input',
     normalOvertime: 'Standard Overtime (<= 60h/mo)',
-    normalOvertimeDesc: 'Hours exceeding 8h/day or 40h/week (25% premium / 1.25x multiplier)',
+    normalOvertimeDesc: 'Hours exceeding 8h/day or 40h/week (25% premium / 1.25x multiplier). Any total above 60h/month is automatically paid at 1.50x.',
+    dailyHoursHint: '※ Hourly base = daily wage ÷ scheduled daily hours (assumed 8h if left blank).',
     above60Overtime: 'Overtime Exceeding 60h/month',
     above60OvertimeDesc: 'Overtime hours beyond 60h/month threshold (50% premium / 1.50x multiplier)',
     lateNight: 'Late-Night Work (22:00 - 05:00)',
@@ -223,10 +226,11 @@ export default function OvertimeCalculatorView({ lang = 'ja' }) {
     return calculateOvertimePay({
       wageType,
       baseWage: Number(baseWage) || 0,
-      excludedAllowances: Number(excludedAllowances) || 0,
+      // 除外賃金 là số tiền theo tháng → chỉ áp dụng cho lương tháng
+      excludedAllowances: wageType === 'monthly' ? Number(excludedAllowances) || 0 : 0,
       averageMonthlyHours: hoursMode === 'direct' ? Number(averageMonthlyHours) : undefined,
       annualScheduledDays: hoursMode === 'yearly' ? Number(annualScheduledDays) : undefined,
-      dailyScheduledHours: Number(dailyScheduledHours) || 8,
+      dailyScheduledHours: Number(dailyScheduledHours) > 0 ? Number(dailyScheduledHours) : undefined,
       normalOvertimeHours: Number(normalOvertimeHours) || 0,
       overtimeAbove60h: Number(overtimeAbove60h) || 0,
       lateNightHours: Number(lateNightHours) || 0,
@@ -370,6 +374,29 @@ export default function OvertimeCalculatorView({ lang = 'ja' }) {
             </div>
           )}
 
+          {/* Daily scheduled hours (Daily wage only) */}
+          {wageType === 'daily' && (
+            <div className="bg-surface p-4 rounded-xl border border-outline-variant/30 space-y-2 max-w-md">
+              <label htmlFor="overtime-daily-hours-daily" className="block text-sm font-semibold text-on-surface">
+                {t.dailyHoursLabel}
+              </label>
+              <input
+                id="overtime-daily-hours-daily"
+                type="number"
+                min="1"
+                max="24"
+                step="0.5"
+                value={dailyScheduledHours}
+                onChange={(e) => setDailyScheduledHours(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-surface-container border border-outline-variant/40 text-on-surface text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              <p className="text-xs text-on-surface-variant">
+                {t.dailyHoursHint}
+                {result.isEstimatedHours ? ` (${result.calculatedPrescribedHours}h)` : ''}
+              </p>
+            </div>
+          )}
+
           {/* Prescribed Working Hours (Monthly only) */}
           {wageType === 'monthly' && (
             <div className="bg-surface p-4 rounded-xl border border-outline-variant/30 space-y-3">
@@ -488,7 +515,7 @@ export default function OvertimeCalculatorView({ lang = 'ja' }) {
                   aria-label={t.normalOvertime}
                   type="number"
                   min="0"
-                  max="60"
+                  max="300"
                   step="0.5"
                   value={normalOvertimeHours}
                   onChange={(e) => setNormalOvertimeHours(e.target.value)}

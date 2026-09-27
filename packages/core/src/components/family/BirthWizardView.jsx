@@ -72,7 +72,7 @@ const TRANSLATIONS = {
     yenUnit: '円',
     childUnit: '人',
     sectionLocalityTitle: 'お住まいの自治体（市区町村）を選択',
-    sectionLocalityHint: '※ 自治体独自の妊婦健診助成（受診票）、子ども医療費助成、出産応援ギフト（10万円）等の詳細が反映されます。',
+    sectionLocalityHint: '※ 自治体独自の妊婦健診助成（受診票）、子ども医療費助成、妊婦のための支援給付（単胎で計10万円）等の詳細が反映されます。',
     localityLabel: '市区町村窓口の選択',
     roadmapSectionTitle: '妊娠・出産・育児 手続きロードマップ（全6ステージ）',
     roadmapProgressLabel: '全体の準備完了度：',
@@ -116,7 +116,7 @@ const TRANSLATIONS = {
     yenUnit: '円',
     childUnit: 'bé',
     sectionLocalityTitle: 'Chọn Địa Phương Cư Trú (Tỉnh / Thành phố)',
-    sectionLocalityHint: '※ Tùy địa phương sẽ hiển thị chính sách riêng: Giá trị phiếu khám thai, trợ cấp khám chữa bệnh miễn phí cho bé, quà sinh con 10 vạn Yên.',
+    sectionLocalityHint: '※ Tùy địa phương sẽ hiển thị chính sách riêng: Giá trị phiếu khám thai, trợ cấp khám chữa bệnh miễn phí cho bé, trợ cấp hỗ trợ thai phụ 妊婦のための支援給付 (thai đơn tổng 10 vạn Yên).',
     localityLabel: 'Địa phương đang sinh sống',
     roadmapSectionTitle: 'Bản Đồ Thủ Tục Hành Chính Thai Sản (6 Giai Đoạn A-Z)',
     roadmapProgressLabel: 'Tiến độ hoàn thành:',
@@ -160,7 +160,7 @@ const TRANSLATIONS = {
     yenUnit: 'JPY',
     childUnit: 'children',
     sectionLocalityTitle: 'Select Your Municipality / Local Jurisdiction',
-    sectionLocalityHint: '※ Displays localized prenatal voucher values, free pediatric medical coverage, and 100,000 JPY newborn gift grants.',
+    sectionLocalityHint: '※ Displays localized prenatal voucher values, free pediatric medical coverage, and the Support Benefit for Pregnant Women (100,000 JPY for a single pregnancy).',
     localityLabel: 'Residing Municipality',
     roadmapSectionTitle: 'Administrative Lifecycle Roadmap (6 Stages A to Z)',
     roadmapProgressLabel: 'Overall Completion:',
@@ -507,8 +507,8 @@ export default function BirthWizardView({ lang = 'ja' }) {
                   <span className="text-foreground font-bold">{lang === 'vi' ? municipalInfo.childMedicalSubsidy.targetAgeVi : municipalInfo.childMedicalSubsidy.targetAgeJa}</span>
                 </div>
                 <div className="p-2.5 rounded-lg bg-surface border border-border space-y-1">
-                  <span className="font-semibold text-muted-foreground block">Quà tặng sinh con</span>
-                  <span className="text-foreground font-bold">{municipalInfo.birthGiftGrant.amountYen.toLocaleString()}円 (Quà hỗ trợ)</span>
+                  <span className="font-semibold text-muted-foreground block">妊婦のための支援給付</span>
+                  <span className="text-foreground font-bold">{municipalInfo.birthGiftGrant.amountYen.toLocaleString()}円 (5万円 + 5万円 × số thai)</span>
                 </div>
               </div>
             </div>

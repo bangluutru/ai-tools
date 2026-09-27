@@ -11,7 +11,7 @@
  */
 
 import { getDocumentById } from './documentResolver.js';
-import { resolveLocality, LOCALITY_TIERS } from '../acquisition/localityRegistry.js';
+import { resolveLocality, LOCALITY_TIERS, isKonbiniServiceActive } from '../acquisition/localityRegistry.js';
 import { ACQUISITION_CHANNELS, CHANNEL_METADATA } from '../acquisition/acquisitionChannels.js';
 import { ISSUER_TYPES } from '../registry/documentRegistry.js';
 
@@ -161,32 +161,44 @@ export function resolveAcquisitionGuidance(documentId, context = {}) {
     if (!meta) return { channelId };
 
     // Calculate fee based on locality if available
+    // Phí quầy 戸籍全部事項証明書 là 450円 (khác mức 300円 của 住民票) — không dùng typicalFeeJpy của kênh.
+    const DOC_FEE_KEYS = {
+      'document.resident-record-copy': { feeKey: 'residentRecord', supportKey: 'residentRecord' },
+      'document.seal-registration-certificate': { feeKey: 'sealRegistration', supportKey: 'sealRegistration' },
+      'document.taxation-certificate': { feeKey: 'taxationCert', supportKey: 'taxCertificate' },
+      'document.tax-payment-certificate': { feeKey: 'taxPaymentCert', supportKey: 'taxCertificate' },
+      'document.family-register-full': { feeKey: 'familyRegisterFull', supportKey: 'familyRegister' },
+    };
+    const docKeys = DOC_FEE_KEYS[document.id] || null;
     let feeJpy = meta.typicalFeeJpy;
+    if (document.id === 'document.family-register-full' &&
+      (channelId === ACQUISITION_CHANNELS.MUNICIPAL_COUNTER || channelId === ACQUISITION_CHANNELS.MAIL_REQUEST)) {
+      feeJpy = 450;
+    }
+    // true = hỗ trợ; false = địa phương xác nhận KHÔNG hỗ trợ; null = chưa xác nhận
     let isKonbiniSupportedInLocality = true;
+    let konbiniSupportStatus = 'assumed';
 
-    if (channelId === ACQUISITION_CHANNELS.CONVENIENCE_STORE && locality.fees) {
-      if (document.id === 'document.resident-record-copy' && locality.fees.residentRecord) {
-        feeJpy = locality.fees.residentRecord.konbini;
-      } else if (document.id === 'document.seal-registration-certificate' && locality.fees.sealRegistration) {
-        feeJpy = locality.fees.sealRegistration.konbini;
-      } else if (document.id === 'document.taxation-certificate' && locality.fees.taxationCert) {
-        feeJpy = locality.fees.taxationCert.konbini;
-      } else if (document.id === 'document.family-register-full' && locality.fees.familyRegisterFull) {
-        feeJpy = locality.fees.familyRegisterFull.konbini;
-      }
+    if (channelId === ACQUISITION_CHANNELS.CONVENIENCE_STORE && !locality.isFallback) {
+      const localFee = docKeys ? locality.fees?.[docKeys.feeKey]?.konbini : undefined;
+      if (localFee !== undefined) feeJpy = localFee; // có thể là null = chưa xác nhận
 
-      // Check if this document type is supported at konbini in this municipality
-      if (locality.convenienceStoreSupport) {
-        if (document.id === 'document.taxation-certificate' && !locality.convenienceStoreSupport.taxCertificate) {
-          isKonbiniSupportedInLocality = false;
-        }
+      const supportFlag = docKeys ? locality.convenienceStoreSupport?.[docKeys.supportKey] : undefined;
+      if (!isKonbiniServiceActive(locality, context.referenceDate || new Date())) {
+        isKonbiniSupportedInLocality = false;
+        konbiniSupportStatus = 'not_started';
+      } else if (supportFlag === false) {
+        isKonbiniSupportedInLocality = false;
+        konbiniSupportStatus = 'not_supported';
+      } else if (supportFlag === null) {
+        isKonbiniSupportedInLocality = null;
+        konbiniSupportStatus = 'unconfirmed';
+      } else if (supportFlag === true) {
+        konbiniSupportStatus = 'verified';
       }
-    } else if (channelId === ACQUISITION_CHANNELS.MUNICIPAL_COUNTER && locality.fees) {
-      if (document.id === 'document.resident-record-copy' && locality.fees.residentRecord) {
-        feeJpy = locality.fees.residentRecord.counter;
-      } else if (document.id === 'document.seal-registration-certificate' && locality.fees.sealRegistration) {
-        feeJpy = locality.fees.sealRegistration.counter;
-      }
+    } else if (channelId === ACQUISITION_CHANNELS.MUNICIPAL_COUNTER && !locality.isFallback && docKeys) {
+      const localFee = locality.fees?.[docKeys.feeKey]?.counter;
+      if (localFee !== undefined && localFee !== null) feeJpy = localFee;
     }
 
     return {
@@ -199,6 +211,9 @@ export function resolveAcquisitionGuidance(documentId, context = {}) {
       prerequisites: meta.prerequisites,
       isAvailableWithUserSetup: channelId === ACQUISITION_CHANNELS.CONVENIENCE_STORE ? context.hasMyNumberCard : true,
       isSupportedInQueriedLocality: isKonbiniSupportedInLocality,
+      konbiniSupportStatus: channelId === ACQUISITION_CHANNELS.CONVENIENCE_STORE ? konbiniSupportStatus : null,
+      localityNoteJa: channelId === ACQUISITION_CHANNELS.CONVENIENCE_STORE ? locality.specialNotesJa || null : null,
+      localityHoursJa: channelId === ACQUISITION_CHANNELS.CONVENIENCE_STORE ? locality.kioskHoursJa || null : null,
       iconName: meta.iconName,
     };
   });

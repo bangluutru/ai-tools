@@ -136,11 +136,11 @@ export const leavingJobDefinition = {
           customNoteEn = 'Transferred directly to new employer welfare pension, municipal procedure not needed.';
         }
       } else if (item.id === 'hellowork_unemployment_claim') {
-        item.deadlineRule = {
-          anchorKey: 'resignationDate',
-          offsetDays: 14,
-          direction: 'after',
-        };
+        // Không có hạn chót luật định cố định: nộp ngay khi nhận 離職票.
+        // 受給期間 (1 năm kể từ ngày hôm sau ngày nghỉ) được tính trong engine (unemploymentBenefitPeriodEnd).
+        customNoteJa = '離職票が届き次第すぐに申込みを。受給期間（離職日の翌日から1年）を過ぎると残りの給付日数は失われます。';
+        customNoteVi = 'Đi Hello Work ngay khi nhận 離職票. Quá thời hạn nhận trợ cấp (1 năm kể từ ngày hôm sau ngày nghỉ) thì số ngày còn lại bị mất.';
+        customNoteEn = 'Apply as soon as the 離職票 arrives. Remaining benefit days are forfeited after the 1-year benefit period.';
         item.relatedCapabilityId = 'employment.unemployment.benefit';
         item.deepLink = {
           toolId: 'unemployment-benefit-jp',

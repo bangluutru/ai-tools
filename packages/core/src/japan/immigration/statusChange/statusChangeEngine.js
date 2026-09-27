@@ -12,6 +12,14 @@ import {
   STATUS_CHANGE_DOCUMENT_CATEGORIES,
   getStatusChangeFeeSchedule,
 } from './statusChangeRules.js';
+import {
+  parseLocalDate,
+  formatLocalDate,
+  addMonthsClamped,
+  diffCalendarDays,
+  resolveCurrentDate,
+  todayLocalISO,
+} from '../shared/localDate.js';
 
 /**
  * Đánh giá hồ sơ xin thay đổi tư cách lưu trú
@@ -20,7 +28,10 @@ import {
  * @param {string} input.currentStatusId - Mã tư cách lưu trú hiện tại (e.g. 'student', 'dependent', 'temporary_visitor')
  * @param {string} input.targetStatusId - Mã tư cách muốn chuyển sang (e.g. 'engineer_specialist', 'specified_skilled_1')
  * @param {string} [input.currentExpirationDate] - Ngày hết hạn thẻ cư trú hiện tại (YYYY-MM-DD)
- * @param {string} [input.applicationDate] - Ngày dự kiến nộp hồ sơ (YYYY-MM-DD)
+ * @param {string} [input.applicationDate] - Ngày dự kiến nộp hồ sơ (YYYY-MM-DD, giờ địa phương)
+ * @param {string} [input.currentDate] - Ngày đối chiếu "hôm nay" (YYYY-MM-DD) — dùng cho test
+ * @param {'counter'|'online'} [input.filingMethod='counter'] - Nộp tại quầy hay online
+ * @param {string} [input.expectedPeriod='1y'] - Bậc thời hạn dự kiến được cấp (ảnh hưởng phí từ 01/10/2026)
  * @param {Object} [input.applicantProfile] - Thông tin điều kiện của đương đơn
  * @returns {Object} Kết quả đánh giá pháp lý và danh mục thủ tục
  */
@@ -29,7 +40,10 @@ export function evaluateStatusChange(input = {}) {
     currentStatusId = 'student',
     targetStatusId = 'engineer_specialist',
     currentExpirationDate = null,
-    applicationDate = new Date().toISOString().slice(0, 10),
+    applicationDate = todayLocalISO(),
+    currentDate,
+    filingMethod = 'counter',
+    expectedPeriod,
     applicantProfile = {}
   } = input;
 
@@ -244,17 +258,82 @@ export function evaluateStatusChange(input = {}) {
       guidance_en: 'Lease agreement under corporate name separated from residence. Virtual offices are not accepted.'
     });
 
-    const capitalAtLeast5M = Boolean(applicantProfile.capitalAtLeast5M);
+    // Tiêu chuẩn sửa đổi có hiệu lực từ 16/10/2025 (上陸基準省令改正) — nguồn:
+    // https://www.moj.go.jp/isa/applications/resources/10_00237.html
+    const capitalAtLeast30M = Boolean(applicantProfile.capitalAtLeast30M);
     prerequisites.push({
       id: 'capital_investment',
-      title_ja: '500万円以上の資本金または2名以上の常勤職員雇用',
-      title_vn: 'Vốn điều lệ tối thiểu 5.000.000 JPY hoặc tuyển 2 nhân sự chính thức',
-      title_en: 'Capital investment of 5,000,000+ JPY or 2+ full-time resident staff',
-      met: capitalAtLeast5M,
+      title_ja: '資本金の額又は出資の総額が3,000万円以上（個人事業は事業に投下された総額）',
+      title_vn: 'Vốn điều lệ / tổng vốn góp từ 30.000.000 JPY trở lên (hộ kinh doanh: tổng số vốn đã đầu tư vào kinh doanh)',
+      title_en: 'Paid-in capital or total contributions of 30,000,000+ JPY (sole proprietors: total invested in the business)',
+      met: capitalAtLeast30M,
       required: true,
-      guidance_ja: '登記事項証明書および出資資金の形成過程（預金通帳履歴、送金証明等）が厳格に審査されます。',
-      guidance_vn: 'Đăng ký kinh doanh và sao kê tài khoản ngân hàng chứng minh nguồn gốc hình thành hợp pháp của 5 triệu yên vốn góp.',
-      guidance_en: 'Corporate registration and bank statements proving the lawful formation of the 5M JPY capital.'
+      guidance_ja: '2025年10月16日施行の基準改正により、従来の「500万円以上又は常勤職員2名」から「3,000万円以上」かつ常勤職員1名以上の雇用へ引き上げられました。資本準備金・利益剰余金は含まれません。出資資金の形成過程も審査されます。',
+      guidance_vn: 'Từ 16/10/2025, tiêu chuẩn cũ "vốn 5 triệu yên HOẶC 2 nhân viên" đã được thay bằng: vốn từ 30 triệu yên VÀ thuê ít nhất 1 nhân viên chính thức. Thặng dư vốn/lợi nhuận giữ lại không được tính. Nguồn gốc hình thành vốn vẫn bị thẩm tra.',
+      guidance_en: 'Since 16 Oct 2025 the old "5M JPY OR 2 staff" standard was replaced by 30M JPY capital AND at least 1 full-time employee. Capital reserves / retained earnings do not count. The source of funds is examined.'
+    });
+
+    const hasFullTimeEmployee = Boolean(applicantProfile.hasFullTimeEmployee);
+    prerequisites.push({
+      id: 'full_time_employee',
+      title_ja: '常勤職員（日本人・特別永住者・永住者・日本人の配偶者等・永住者の配偶者等・定住者）1名以上の雇用',
+      title_vn: 'Thuê ít nhất 1 nhân viên toàn thời gian là người Nhật / Vĩnh trú đặc biệt / Vĩnh trú / diện vợ chồng / Định trú',
+      title_en: 'At least 1 full-time employee who is Japanese, Special PR, PR, spouse status, or Long-Term Resident',
+      met: hasFullTimeEmployee,
+      required: true,
+      guidance_ja: '別表第一の在留資格（技術・人文知識・国際業務等）の職員は該当しません。',
+      guidance_vn: 'Nhân viên đang giữ visa lao động Biểu 1 (vd: 技人国) KHÔNG được tính.',
+      guidance_en: 'Staff holding Annexed Table 1 statuses (e.g. Engineer/Specialist) do not count.'
+    });
+
+    const hasJapaneseB2 = Boolean(applicantProfile.hasJapaneseB2);
+    prerequisites.push({
+      id: 'japanese_b2',
+      title_ja: '申請人又は常勤職員のいずれかが日本語能力B2相当（JLPT N2以上等）',
+      title_vn: 'Bản thân hoặc ít nhất 1 nhân viên chính thức có tiếng Nhật tương đương B2 (JLPT N2 trở lên, BJT 400 điểm…)',
+      title_en: 'Applicant or a full-time employee has Japanese at CEFR B2 level (e.g. JLPT N2+)',
+      met: hasJapaneseB2,
+      required: true,
+      guidance_ja: 'JLPT N2以上、BJT400点以上、20年以上の在留、日本の大学等卒業などで立証します。',
+      guidance_vn: 'Chứng minh bằng JLPT N2 trở lên, BJT từ 400 điểm, đã cư trú tại Nhật từ 20 năm, hoặc tốt nghiệp đại học/cao đẳng tại Nhật…',
+      guidance_en: 'Proven by JLPT N2+, BJT 400+, 20+ years of residence, graduation from a Japanese higher education institution, etc.'
+    });
+
+    const hasManagementExperienceOrDegree = Boolean(applicantProfile.hasManagementExperienceOrDegree);
+    prerequisites.push({
+      id: 'management_experience_or_degree',
+      title_ja: '経営・管理の実務経験3年以上、又は経営管理・関連分野の修士以上の学位',
+      title_vn: 'Kinh nghiệm kinh doanh/quản lý từ 3 năm, HOẶC bằng thạc sĩ trở lên ngành quản trị / lĩnh vực liên quan',
+      title_en: '3+ years of management experience, or a master\'s (or higher) degree in management or a relevant field',
+      met: hasManagementExperienceOrDegree,
+      required: true,
+      guidance_ja: '起業準備活動（特定活動）期間も経験に含まれ得ます。',
+      guidance_vn: 'Thời gian chuẩn bị khởi nghiệp (特定活動) có thể được tính vào kinh nghiệm.',
+      guidance_en: 'Start-up preparation periods under Designated Activities may count as experience.'
+    });
+
+    const planCheckedByExpert = Boolean(applicantProfile.planCheckedByExpert);
+    prerequisites.push({
+      id: 'business_plan_expert_check',
+      title_ja: '事業計画書について中小企業診断士・公認会計士・税理士による確認',
+      title_vn: 'Kế hoạch kinh doanh đã được chuyên gia (中小企業診断士 / kế toán viên công chứng 公認会計士 / kế toán thuế 税理士) thẩm định',
+      title_en: 'Business plan reviewed by an SME consultant, CPA, or licensed tax accountant',
+      met: planCheckedByExpert,
+      required: true,
+      guidance_ja: '具体性・合理性・実現可能性の評価が必要です。申請会社の役職員による確認は不可です。',
+      guidance_vn: 'Chuyên gia phải đánh giá tính cụ thể, hợp lý và khả thi. Nhân viên/lãnh đạo của chính công ty không được tự thẩm định.',
+      guidance_en: 'The reviewer evaluates specificity, rationality and feasibility; officers/employees of the applicant company cannot act as reviewer.'
+    });
+
+    warnings.push({
+      code: 'BUSINESS_MANAGER_2025_STANDARDS',
+      severity: 'warning',
+      title_ja: '「経営・管理」の許可基準は2025年10月16日に大幅改正されました',
+      title_vn: 'Tiêu chuẩn visa "Kinh doanh / Quản lý" đã thay đổi lớn từ 16/10/2025',
+      title_en: 'Business Manager standards were substantially revised on 16 Oct 2025',
+      message_ja: '新たに「経営・管理」へ変更する場合は改正後の基準（資本金等3,000万円以上、常勤職員1名以上、日本語B2相当、経験3年以上又は修士、専門家による事業計画確認）が適用されます。改正前から「経営・管理」で在留している方は2028年10月16日までの経過措置があります。',
+      message_vn: 'Người MỚI đổi sang "経営・管理" phải đáp ứng tiêu chuẩn mới (vốn từ 30 triệu yên, ít nhất 1 nhân viên chính thức, tiếng Nhật B2, 3 năm kinh nghiệm hoặc thạc sĩ, kế hoạch kinh doanh được chuyên gia thẩm định). Người đã có visa 経営・管理 từ trước khi sửa đổi được hưởng thời gian chuyển tiếp đến 16/10/2028.',
+      message_en: 'New applicants for Business Manager must meet the revised standards (30M JPY capital, 1+ full-time employee, Japanese B2, 3 years experience or master\'s, expert-reviewed business plan). Existing holders have a transition period until 16 Oct 2028.'
     });
 
     const hasFeasiblePlan = Boolean(applicantProfile.hasFeasibleBusinessPlan);
@@ -270,7 +349,7 @@ export function evaluateStatusChange(input = {}) {
       guidance_en: 'Revenue projections, supplier contracts, and market analysis demonstrating business viability.'
     });
 
-    if (!hasPhysicalOffice || !capitalAtLeast5M || !hasFeasiblePlan) {
+    if (!hasPhysicalOffice || !capitalAtLeast30M || !hasFullTimeEmployee || !hasJapaneseB2 || !hasManagementExperienceOrDegree || !planCheckedByExpert || !hasFeasiblePlan) {
       if (readinessStatus !== 'restricted') readinessStatus = 'missing_requirements';
     }
   }
@@ -288,20 +367,18 @@ export function evaluateStatusChange(input = {}) {
   });
 
   // 5. Tính toán Thời hạn đặc lệ (Tokurei Period - 特例期間: Điều 20 Khoản 6)
+  // "処分がされる時又は在留期間の満了の日から二月が経過する日が終了する時のいずれか早い時まで"
+  // → ngày tròn 2 tháng sau ngày hết hạn, kẹp về cuối tháng (31/12 → 28/02).
+  // Ngày hết hạn (満了日) vẫn là ngày hợp lệ để nộp hồ sơ.
   let tokureiExpirationDate = null;
   let daysUntilCurrentExpiration = null;
-  if (currentExpirationDate) {
-    const expDate = new Date(currentExpirationDate);
-    const today = new Date();
-    const diffTime = expDate.getTime() - today.getTime();
-    daysUntilCurrentExpiration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const expDate = currentExpirationDate ? parseLocalDate(currentExpirationDate) : null;
+  if (expDate) {
+    const today = resolveCurrentDate(currentDate);
+    daysUntilCurrentExpiration = diffCalendarDays(today, expDate);
+    tokureiExpirationDate = formatLocalDate(addMonthsClamped(expDate, 2));
 
-    // Tokurei: thêm tối đa 2 tháng sau ngày hết hạn
-    const tokureiDate = new Date(expDate);
-    tokureiDate.setMonth(tokureiDate.getMonth() + 2);
-    tokureiExpirationDate = tokureiDate.toISOString().slice(0, 10);
-
-    if (daysUntilCurrentExpiration <= 0) {
+    if (daysUntilCurrentExpiration < 0) {
       warnings.push({
         code: 'ALREADY_EXPIRED',
         severity: 'danger',
@@ -314,15 +391,16 @@ export function evaluateStatusChange(input = {}) {
       });
       readinessStatus = 'restricted';
     } else if (daysUntilCurrentExpiration <= 14) {
+      const isLastDay = daysUntilCurrentExpiration === 0;
       warnings.push({
-        code: 'EXPIRATION_APPROACHING',
+        code: isLastDay ? 'EXPIRATION_TODAY' : 'EXPIRATION_APPROACHING',
         severity: 'warning',
-        title_ja: '在留期限まで2週間未満です',
-        title_vn: 'Thẻ cư trú chỉ còn dưới 14 ngày nữa là hết hạn',
-        title_en: 'Less than 14 days remaining on current residence status',
+        title_ja: isLastDay ? '本日が在留期間の満了日です（本日中の申請が必要）' : '在留期限まで2週間未満です',
+        title_vn: isLastDay ? 'Hôm nay là ngày cuối cùng của thời hạn lưu trú — phải nộp hồ sơ TRONG HÔM NAY' : 'Thẻ cư trú chỉ còn dưới 14 ngày nữa là hết hạn',
+        title_en: isLastDay ? 'Today is the last day of your period of stay — file today' : 'Less than 14 days remaining on current residence status',
         message_ja: `期限日（${currentExpirationDate}）までに申請を受理させれば、結果が出るか期限後2か月（${tokureiExpirationDate}）まで適法に在留（特例期間）できます。至急申請を完了させてください。`,
-        message_vn: `Nếu nộp kịp trước ngày ${currentExpirationDate}, bạn sẽ được hưởng thời hạn đặc lệ (特例期間) ở lại tối đa thêm 2 tháng (đến ${tokureiExpirationDate}) trong lúc chờ kết quả.`,
-        message_en: `Filing before ${currentExpirationDate} entitles you to the Special Period (Tokurei) allowing legal stay up to 2 months (${tokureiExpirationDate}) while awaiting decision.`
+        message_vn: `Nếu nộp kịp trong hạn (chậm nhất ngày ${currentExpirationDate}), bạn sẽ được hưởng thời hạn đặc lệ (特例期間) ở lại tối đa đến ${tokureiExpirationDate} hoặc đến khi có kết quả (tùy mốc nào đến trước).`,
+        message_en: `Filing by ${currentExpirationDate} entitles you to the Special Period (Tokurei) allowing legal stay until the decision or ${tokureiExpirationDate}, whichever comes first.`
       });
     }
   }
@@ -340,7 +418,7 @@ export function evaluateStatusChange(input = {}) {
   });
 
   // 7. Lệ phí
-  const feeSchedule = getStatusChangeFeeSchedule(applicationDate);
+  const feeSchedule = getStatusChangeFeeSchedule(applicationDate, { method: filingMethod, expectedPeriod });
 
   // 8. Danh mục tài liệu theo Category doanh nghiệp (nếu là visa lao động)
   const employerCategory = applicantProfile.employerCategory || 3;

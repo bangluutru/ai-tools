@@ -6,10 +6,23 @@
 import React from 'react';
 import VietnamConsularWorkspace from '@ai-tools/core/components/consular/VietnamConsularWorkspace.jsx';
 
+function readInitialProcedureId() {
+  try {
+    const hash = window.location.hash || '';
+    const query = hash.includes('?') ? hash.slice(hash.indexOf('?') + 1) : window.location.search.slice(1);
+    const id = new URLSearchParams(query).get('procedureId');
+    return id && /^vn_[a-z0-9_]+$/.test(id) ? id : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export default function VietnamConsularTool({ displayLang = 'vi', onSelectTool }) {
+  const initialProcedureId = typeof window !== 'undefined' ? readInitialProcedureId() : undefined;
   return (
     <div className="w-full max-w-[1240px] mx-auto text-on-surface">
       <VietnamConsularWorkspace
+        initialProcedureId={initialProcedureId}
         onNavigateToTool={onSelectTool}
         displayLang={displayLang}
       />

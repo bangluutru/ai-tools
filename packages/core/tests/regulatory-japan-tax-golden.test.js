@@ -67,32 +67,22 @@ test('GOLDEN: NTA No.1199 Basic Deduction 2026 step-down boundary conditions', (
     return 0;
   };
 
+  // 令和8年分 (令和8年12月1日施行): 489万円以下 104万 / 655万円以下 67万 / 2,350万円以下 62万 / 2,400万 48万 / 2,450万 32万 / 2,500万 16万 / 超 0
   const goldenPhases = [
-    // Phase 1: <= 1.32M -> 1,040,000 JPY
-    { income: 1000000, expected: 1040000, desc: 'Under 1.32M standard' },
-    { income: 1320000, expected: 1040000, desc: 'Boundary 1.32M inclusive' },
-    // Phase 2: > 1.32M to 3.36M -> 880,000 JPY
-    { income: 1320001, expected: 880000, desc: 'Boundary 1.32M + 1 step down' },
-    { income: 3360000, expected: 880000, desc: 'Boundary 3.36M inclusive' },
-    // Phase 3: > 3.36M to 4.89M -> 680,000 JPY
-    { income: 3360001, expected: 680000, desc: 'Boundary 3.36M + 1 step down' },
-    { income: 4890000, expected: 680000, desc: 'Boundary 4.89M inclusive' },
-    // Phase 4: > 4.89M to 6.55M -> 630,000 JPY
-    { income: 4890001, expected: 630000, desc: 'Boundary 4.89M + 1 step down' },
-    { income: 6550000, expected: 630000, desc: 'Boundary 6.55M inclusive' },
-    // Phase 5: > 6.55M to 23.5M -> 580,000 JPY
-    { income: 6550001, expected: 580000, desc: 'Boundary 6.55M + 1 step down' },
-    { income: 23500000, expected: 580000, desc: 'Boundary 23.5M inclusive' },
-    // Phase 6: > 23.5M to 24.0M -> 480,000 JPY
+    { income: 1000000, expected: 1040000, desc: 'Low income' },
+    { income: 1320001, expected: 1040000, desc: 'R8: no step at 1.32M' },
+    { income: 3360001, expected: 1040000, desc: 'R8: no step at 3.36M' },
+    { income: 4890000, expected: 1040000, desc: 'Boundary 4.89M inclusive' },
+    { income: 4890001, expected: 670000, desc: 'Boundary 4.89M + 1 step down' },
+    { income: 6550000, expected: 670000, desc: 'Boundary 6.55M inclusive' },
+    { income: 6550001, expected: 620000, desc: 'Boundary 6.55M + 1 step down' },
+    { income: 23500000, expected: 620000, desc: 'Boundary 23.5M inclusive' },
     { income: 23500001, expected: 480000, desc: 'Boundary 23.5M + 1 step down' },
     { income: 24000000, expected: 480000, desc: 'Boundary 24.0M inclusive' },
-    // Phase 7: > 24.0M to 24.5M -> 320,000 JPY
     { income: 24000001, expected: 320000, desc: 'Boundary 24.0M + 1 step down' },
     { income: 24500000, expected: 320000, desc: 'Boundary 24.5M inclusive' },
-    // Phase 8: > 24.5M to 25.0M -> 160,000 JPY
     { income: 24500001, expected: 160000, desc: 'Boundary 24.5M + 1 step down' },
     { income: 25000000, expected: 160000, desc: 'Boundary 25.0M inclusive' },
-    // Phase 9: > 25.0M -> 0 JPY
     { income: 25000001, expected: 0, desc: 'Over 25M zero deduction' },
     { income: 30000000, expected: 0, desc: 'High income zero deduction' },
   ];
@@ -122,9 +112,10 @@ test('GOLDEN: National Pension 2026 official rate 17,920 JPY/month and FY2026 pe
     age: 30,
   });
 
-  assert.equal(result.nationalPension, 215040, 'Freelancer 2026 national pension must equal 215,040 JPY');
+  // Calendar year 2026 (社会保険料控除): Jan–Mar at 令和7年度 17,510 + Apr–Dec at 令和8年度 17,920
+  assert.equal(result.nationalPension, 17510 * 3 + 17920 * 9, 'Freelancer 2026 national pension paid in calendar 2026 = 213,810 JPY');
   assert.equal(result.isEstimated, true, 'NHI/Freelancer must be marked as estimated');
-  assert.equal(result.disclosureNote, '実際の保険料は市区町村によって異なります。');
+  assert.match(result.disclosureNote, /市区町村/);
 });
 
 // ============================================================================
@@ -144,8 +135,9 @@ test('GOLDEN: Employment Insurance 2026 employee rate 0.5% (5/1000)', () => {
     age: 30,
   });
 
-  // 4,000,000 * 0.005 = 20,000 JPY
-  assert.equal(result.employmentInsurance, 20000, '4M salary employment insurance at 0.5% must be 20,000 JPY');
+  // Monthly 333,333: Jan–Mar 5.5/1000 → 1,833 (50銭以下切捨て) ×3; Apr–Dec 5/1000 → 1,666.665 → 1,667 (50銭超切上げ) ×9
+  assert.equal(result.employmentInsurance, 1833 * 3 + 1667 * 9, 'Employment insurance must blend 令和7/8年度 rates by month');
+  assert.equal(result.rates.employmentEmployee.map((p) => p.rate).join(','), '0.0055,0.005');
 });
 
 // ============================================================================
@@ -164,20 +156,22 @@ test('GOLDEN: Kyokai Kenpo Fukuoka 10.11%, Child Support 0.23%, and Care Insuran
     age: 39,
   });
 
-  // Fukuoka Kenpo 10.11% / 2 = 5.055% -> 4,000,000 * 0.05055 = 202,200 JPY
-  assert.equal(res39.healthInsurance, 202200, 'Fukuoka 10.11% / 2 on 4M salary must be 202,200 JPY');
-  // Child Support 0.23% / 2 = 0.115% -> 4,000,000 * 0.00115 = 4,600 JPY
-  assert.equal(res39.childSupportContribution, 4600, 'Child support 0.23% / 2 on 4M salary must be 4,600 JPY');
+  // Monthly 333,333 → 標準報酬月額 340,000 (health & pension)
+  // Health: Jan–Feb 令和7年度 10.31%/2 → 17,527 ×2; Mar–Dec 令和8年度 10.11%/2 → 17,187 ×10
+  assert.equal(res39.healthInsurance, 17527 * 2 + 17187 * 10, 'Fukuoka health insurance blends R7/R8 by premium month');
+  // Child Support 0.23% / 2 = 0.115% from April 2026 premiums: 340,000 * 0.00115 = 391 ×9
+  assert.equal(res39.childSupportContribution, 391 * 9, 'Child support only for April–December 2026');
+  assert.equal(res39.childSupportMonths, 9);
   // Care Insurance at age 39 = 0
   assert.equal(res39.careInsurance, 0, 'Care insurance at age 39 must be 0');
-  // Welfare pension: 4M * 9.15% = 366,000 JPY
-  assert.equal(res39.welfarePension, 366000);
-  // Employment insurance: 4M * 0.5% = 20,000 JPY
-  assert.equal(res39.employmentInsurance, 20000);
-  // Total: 202,200 + 4,600 + 0 + 366,000 + 20,000 = 592,800 JPY
-  assert.equal(res39.totalSocialInsurance, 592800);
+  // Welfare pension: 340,000 * 9.15% = 31,110 ×12
+  assert.equal(res39.welfarePension, 31110 * 12);
+  assert.equal(res39.employmentInsurance, 1833 * 3 + 1667 * 9);
+  const total39 = 17527 * 2 + 17187 * 10 + 391 * 9 + 31110 * 12 + 1833 * 3 + 1667 * 9;
+  assert.equal(res39.totalSocialInsurance, total39);
+  assert.equal(res39.isEstimated, true);
 
-  // Case B: Fukuoka, Age 40 (Inclusive boundary for Care Insurance 1.62% / 2 = 0.81%)
+  // Case B: Fukuoka, Age 40 — care: Jan–Feb 1.59%/2 → 2,703; Mar–Dec 1.62%/2 → 2,754
   const res40 = calculateSocialInsurance({
     rules,
     profile: 'employee',
@@ -185,11 +179,10 @@ test('GOLDEN: Kyokai Kenpo Fukuoka 10.11%, Child Support 0.23%, and Care Insuran
     prefecture: 'fukuoka',
     age: 40,
   });
-  // 4,000,000 * 0.0081 = 32,400 JPY
-  assert.equal(res40.careInsurance, 32400, 'Care insurance at age 40 (1.62% / 2) must be 32,400 JPY');
-  assert.equal(res40.totalSocialInsurance, 592800 + 32400);
+  assert.equal(res40.careInsurance, 2703 * 2 + 2754 * 10, 'Care insurance at age 40 blends 1.59% / 1.62%');
+  assert.equal(res40.totalSocialInsurance, total39 + 2703 * 2 + 2754 * 10);
 
-  // Case C: Fukuoka, Age 64 (Upper inclusive boundary for Care Insurance 1.62% / 2 = 0.81%)
+  // Case C: Fukuoka, Age 64 (upper inclusive boundary)
   const res64 = calculateSocialInsurance({
     rules,
     profile: 'employee',
@@ -197,7 +190,7 @@ test('GOLDEN: Kyokai Kenpo Fukuoka 10.11%, Child Support 0.23%, and Care Insuran
     prefecture: 'fukuoka',
     age: 64,
   });
-  assert.equal(res64.careInsurance, 32400, 'Care insurance at age 64 must be 32,400 JPY');
+  assert.equal(res64.careInsurance, 2703 * 2 + 2754 * 10, 'Care insurance at age 64 must still apply');
 
   // Case D: Fukuoka, Age 65 (Care insurance transitions to Category 1 via municipality deduction)
   const res65 = calculateSocialInsurance({

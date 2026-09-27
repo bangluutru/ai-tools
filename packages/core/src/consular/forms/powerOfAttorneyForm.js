@@ -1,7 +1,9 @@
 /**
  * Biểu mẫu Giấy ủy quyền (Power of Attorney)
- * Biên soạn chuẩn theo thể thức văn bản hành chính quy định tại Nghị định số 30/2020/NĐ-CP
- * và các quy định của Bộ luật Dân sự 2015 về đại diện theo ủy quyền.
+ * BẢN NHÁP tham khảo theo Bộ luật Dân sự 2015 (đại diện theo ủy quyền, hợp đồng ủy quyền) và
+ * Nghị định 23/2015/NĐ-CP về chứng thực chữ ký (đã sửa đổi, bổ sung) — https://vanban.chinhphu.vn/?pageid=27160&docid=179100
+ * (NĐ 30/2020/NĐ-CP là quy định về công tác văn thư của cơ quan nhà nước, KHÔNG phải căn cứ cho giấy ủy quyền cá nhân.)
+ * ĐSQ: https://vnembassy-jp.org/vi/huong-dan-thu-tuc-chung-thuc-giay-uy-quyen-ban-sao-hop-dong-uy-quyen-tu-choi-di-san-th%C6%B0a-ke
  * 
  * Văn bản này được người đang cư trú tại Nhật Bản lập để ủy quyền cho người thân tại Việt Nam
  * thực hiện các giao dịch dân sự, rút bảo hiểm, thủ tục đất đai, ngân hàng, hoặc nhận giấy tờ hộ tịch.
@@ -10,16 +12,16 @@
 
 export const powerOfAttorneyForm = {
   id: 'form_power_of_attorney',
-  code: 'GUQ-ND30',
+  code: 'GUQ-BLDS',
   title: {
-    vi: 'Giấy ủy quyền (Chuẩn thể thức NĐ 30/2020/NĐ-CP)',
-    en: 'Power of Attorney (Decree 30/2020/ND-CP Standard)',
-    ja: '委任状（ベトナム公用公文規格）',
+    vi: 'Giấy ủy quyền (bản nháp tham khảo)',
+    en: 'Power of Attorney (reference draft)',
+    ja: '委任状（参考下書き）',
   },
-  standardBasis: 'Nghị định 30/2020/NĐ-CP & Bộ luật Dân sự 2015',
-  sha256Fingerprint: '7e54c8d1920b784a6c83df235789a421b01c37b830d94f28519e913a7c645b20',
-  status: 'VERIFIED',
-  sourceUrl: 'https://vnembassy-jp.org/vi/hop-phap-hoa-va-chung-thuc-chu-ky',
+  standardBasis: 'Bộ luật Dân sự 2015 (đại diện, hợp đồng ủy quyền) & Nghị định 23/2015/NĐ-CP về chứng thực (đã sửa đổi, bổ sung) — bản nháp tham khảo',
+  isDraftHelper: true,
+  status: 'DRAFT_HELPER',
+  sourceUrl: 'https://vnembassy-jp.org/vi/huong-dan-thu-tuc-chung-thuc-giay-uy-quyen-ban-sao-hop-dong-uy-quyen-tu-choi-di-san-th%C6%B0a-ke',
   applicableOffices: ['tokyo_embassy', 'osaka_consulate', 'fukuoka_consulate'],
   printOrientation: 'portrait',
   paperSize: 'A4',
@@ -88,7 +90,7 @@ export const powerOfAttorneyForm = {
       id: 'proxyAddressVN',
       label: 'Nơi thường trú tại Việt Nam của người được ủy quyền',
       type: 'text',
-      placeholder: 'Số 10, ngõ 5, phố X, phường Y, quận Cầu Giấy, TP Hà Nội',
+      placeholder: 'Số 10, ngõ 5, phố X, phường Cầu Giấy, TP Hà Nội',
       required: true,
     },
     {

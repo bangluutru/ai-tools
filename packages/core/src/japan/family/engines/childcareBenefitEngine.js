@@ -7,8 +7,101 @@
 
 import {
   CHILDCARE_BENEFIT_CONSTANTS,
+  CHILDCARE_BENEFIT_PERIODS,
   CHILDCARE_BENEFIT_SOURCES,
 } from '../rules/childcareBenefitRules.js';
+import { isValidISODate, todayLocalISO } from '../../employment/localDate.js';
+
+/**
+ * Chọn kỳ mức trần/sàn MHLW theo ngày (đổi ngày 1/8 hàng năm).
+ * Ngày trước 01/08/2025 dùng kỳ cũ nhất đang lưu (Reiwa 7).
+ * @param {string} [date] - YYYY-MM-DD (mặc định: hôm nay theo lịch địa phương)
+ * @returns {Object}
+ */
+export function resolveChildcareBenefitPeriod(date) {
+  const d = isValidISODate(date) ? date : todayLocalISO();
+  if (d >= CHILDCARE_BENEFIT_PERIODS.PERIOD_2026_08.startDate) return CHILDCARE_BENEFIT_PERIODS.PERIOD_2026_08;
+  return CHILDCARE_BENEFIT_PERIODS.PERIOD_2025_08;
+}
+
+/**
+ * Tiền trợ cấp của một 支給単位期間 có `days` ngày, có xét lương công ty trả (雇用保険法第61条の7第5項).
+ * Dùng số nguyên (%) để tránh sai số dấu phẩy động; 1円未満切捨て.
+ * @param {number} wageDaily - 休業開始時賃金日額 (đã kẹp trần/sàn)
+ * @param {number} days - số ngày của kỳ
+ * @param {number} ratePercent - 67 | 50
+ * @param {number} wagePaid - lương công ty trả trong kỳ
+ * @returns {{ amount: number, standard: number, offsetApplied: boolean, fullOffset: boolean }}
+ */
+function computePeriodBenefit(wageDaily, days, ratePercent, wagePaid) {
+  const base = wageDaily * days; // 賃金日額 × 支給日数
+  const standard = Math.floor((base * ratePercent) / 100);
+  if (wagePaid <= 0) return { amount: standard, standard, offsetApplied: false, fullOffset: false };
+  const ceiling80 = Math.floor((base * 80) / 100);
+  if (wagePaid >= ceiling80) return { amount: 0, standard, offsetApplied: true, fullOffset: true };
+  // Lương <= (80% − tỷ lệ) → không giảm (13% cho kỳ 67%, 30% cho kỳ 50%)
+  if (wagePaid * 100 <= base * (80 - ratePercent)) {
+    return { amount: standard, standard, offsetApplied: false, fullOffset: false };
+  }
+  return { amount: Math.min(standard, ceiling80 - wagePaid), standard, offsetApplied: true, fullOffset: false };
+}
+
+/**
+ * Tổng trợ cấp cho `totalDays` ngày, chia thành các kỳ 30 ngày (kỳ cuối có thể ngắn hơn).
+ * @param {number} wageDaily
+ * @param {number} totalDays
+ * @param {number} ratePercent
+ * @param {number} monthlySalaryDuringLeave - lương công ty trả mỗi 30 ngày
+ * @returns {{ total: number, fullPeriodAmount: number, offsetApplied: boolean, fullOffset: boolean }}
+ */
+function computeTierTotal(wageDaily, totalDays, ratePercent, monthlySalaryDuringLeave) {
+  let remaining = totalDays;
+  let total = 0;
+  let offsetApplied = false;
+  let fullOffset = false;
+  const full = computePeriodBenefit(wageDaily, 30, ratePercent, monthlySalaryDuringLeave);
+  while (remaining > 0) {
+    const d = Math.min(30, remaining);
+    const paid = d === 30 ? monthlySalaryDuringLeave : Math.floor((monthlySalaryDuringLeave * d) / 30);
+    const r = d === 30 ? full : computePeriodBenefit(wageDaily, d, ratePercent, paid);
+    total += r.amount;
+    offsetApplied = offsetApplied || r.offsetApplied;
+    fullOffset = fullOffset || r.fullOffset;
+    remaining -= d;
+  }
+  if (totalDays > 0 && full.offsetApplied) offsetApplied = true;
+  if (totalDays > 0 && full.fullOffset) fullOffset = true;
+  return { total, fullPeriodAmount: full.amount, offsetApplied, fullOffset };
+}
+
+/**
+ * Tính 育児時短就業給付 cho một tháng (育児時短就業給付, từ 04/2025).
+ * - Lương thực trả ≤ 90% 時短就業開始時賃金月額: 10% × lương thực trả.
+ * - 90% < lương < 100%: tỷ lệ giảm dần: lương × {90 × 賃金月額 ÷ lương − 90} ÷ 100 (= 0.9 × (賃金月額 − lương)).
+ * - Lương ≥ 100% hoặc ≥ 支給限度額: 0. Lương + trợ cấp > 限度額 → trợ cấp = 限度額 − lương.
+ * - Trợ cấp tính ra ≤ 最低限度額 → không chi trả.
+ * @param {Object} params
+ * @param {number} params.preShortTimeMonthlyWage - 時短就業開始時賃金月額 (đã kẹp trần/sàn)
+ * @param {number} params.paidWage - Lương thực trả trong tháng làm giờ ngắn
+ * @param {Object} params.period - Kỳ MHLW
+ * @returns {number}
+ */
+export function calculateShortTimeWorkMonthlyBenefit({ preShortTimeMonthlyWage, paidWage, period }) {
+  const pre = Math.max(0, Math.floor(Number(preShortTimeMonthlyWage) || 0));
+  const wage = Math.max(0, Math.floor(Number(paidWage) || 0));
+  if (pre <= 0 || wage >= pre || wage >= period.SHORT_TIME_PAYMENT_LIMIT) return 0;
+  let benefit;
+  if (wage * 100 <= pre * 90) {
+    benefit = Math.floor(wage / 10);
+  } else {
+    benefit = Math.floor((90 * (pre - wage)) / 100);
+  }
+  if (wage + benefit > period.SHORT_TIME_PAYMENT_LIMIT) {
+    benefit = period.SHORT_TIME_PAYMENT_LIMIT - wage;
+  }
+  if (benefit <= period.SHORT_TIME_MIN_BENEFIT) return 0;
+  return benefit;
+}
 
 /**
  * Tính toán số tiền Trợ cấp Nghỉ chăm con, Thưởng hỗ trợ sau sinh và Trợ cấp rút ngắn giờ
@@ -22,6 +115,9 @@ import {
  * @param {boolean} [params.isDaycareRejected=false] - Trượt nhà trẻ công lập (để gia hạn sau 1 tuổi)
  * @param {boolean} [params.isShortTimeWork=false] - Có đi làm lại và rút ngắn giờ nuôi con dưới 2 tuổi (từ 04/2025)
  * @param {number} [params.shortTimeMonths=6] - Số tháng làm việc rút ngắn giờ dự kiến
+ * @param {number} [params.shortTimeMonthlyWage] - Lương THỰC NHẬN mỗi tháng khi làm giờ ngắn
+ *   (nếu không nhập: GIẢ ĐỊNH = 80% lương trước khi nghỉ, trả về cờ isShortTimeWageAssumed)
+ * @param {string} [params.leaveStartDate] - Ngày bắt đầu nghỉ (YYYY-MM-DD) để chọn kỳ mức trần/sàn (mặc định: hôm nay)
  * @returns {Object}
  */
 export function calculateChildcareBenefit({
@@ -34,27 +130,31 @@ export function calculateChildcareBenefit({
   isDaycareRejected = false,
   isShortTimeWork = false,
   shortTimeMonths = 6,
+  shortTimeMonthlyWage,
+  leaveStartDate,
 } = {}) {
-  const { DAILY_WAGE_LIMITS, RATES, PERIOD_DAYS, SALARY_OFFSET_THRESHOLDS } = CHILDCARE_BENEFIT_CONSTANTS;
+  const { RATES, PERIOD_DAYS } = CHILDCARE_BENEFIT_CONSTANTS;
+  const period = resolveChildcareBenefitPeriod(leaveStartDate);
 
   const validMonthlySalary = Math.max(0, Number(monthlySalary) || 0);
   const total6MWage = sixMonthsTotalWage > 0 ? Number(sixMonthsTotalWage) : validMonthlySalary * 6;
-  const totalLeaveDays = Math.max(0, Math.min(730, Number(plannedLeaveDays) || 0)); // Tối đa 2 năm = 730 ngày
-  const validSalaryDuringLeave = Math.max(0, Number(monthlySalaryDuringLeave) || 0);
+  const totalLeaveDays = Math.max(0, Math.min(730, Math.floor(Number(plannedLeaveDays) || 0))); // Tối đa 2 năm = 730 ngày
+  const validSalaryDuringLeave = Math.max(0, Math.floor(Number(monthlySalaryDuringLeave) || 0));
 
   // 1. TÍNH MỨC TIỀN LƯƠNG NGÀY BẮT ĐẦU NGHỈ (休業開始時賃金日額)
-  // Công thức luật định: Tổng tiền lương 6 tháng trước khi nghỉ ÷ 180 ngày
+  // Công thức luật định: Tổng tiền lương 6 tháng trước khi nghỉ ÷ 180 ngày (1円未満切捨て)
   const rawDailyWage = total6MWage / 180;
+  const flooredDailyWage = Math.floor(rawDailyWage);
 
-  // Áp dụng trần và sàn MHLW
-  const isCappedByMaxLimit = rawDailyWage > DAILY_WAGE_LIMITS.MAX_DAILY_WAGE;
-  const isFlooredByMinLimit = rawDailyWage < DAILY_WAGE_LIMITS.MIN_DAILY_WAGE;
+  // Áp dụng trần và sàn MHLW của kỳ tương ứng
+  const isCappedByMaxLimit = flooredDailyWage > period.MAX_DAILY_WAGE;
+  const isFlooredByMinLimit = flooredDailyWage < period.MIN_DAILY_WAGE;
 
-  let wageDailyBasis = Math.round(rawDailyWage);
+  let wageDailyBasis = flooredDailyWage;
   if (isCappedByMaxLimit) {
-    wageDailyBasis = DAILY_WAGE_LIMITS.MAX_DAILY_WAGE;
+    wageDailyBasis = period.MAX_DAILY_WAGE;
   } else if (isFlooredByMinLimit) {
-    wageDailyBasis = DAILY_WAGE_LIMITS.MIN_DAILY_WAGE;
+    wageDailyBasis = period.MIN_DAILY_WAGE;
   }
 
   // 2. PHÂN BỔ SỐ NGÀY THEO TỪNG GIAI ĐOẠN LUẬT ĐỊNH
@@ -63,82 +163,71 @@ export function calculateChildcareBenefit({
   // Giai đoạn 2: Từ ngày 181 trở đi (mức 50%)
   const tier2Days = Math.max(0, totalLeaveDays - PERIOD_DAYS.INITIAL_67_MAX_DAYS);
 
-  // Mức trợ cấp ngày tiêu chuẩn (50銭以上四捨五入 hoặc Math.floor theo thông lệ BHTN)
-  const tier1StandardDaily = Math.floor(wageDailyBasis * RATES.INITIAL_PERIOD_RATE);
-  const tier2StandardDaily = Math.floor(wageDailyBasis * RATES.SUBSEQUENT_PERIOD_RATE);
-
-  // Mức trợ cấp tháng chuẩn (quy đổi 30 ngày)
-  const tier1MonthlyAmount = Math.min(
-    DAILY_WAGE_LIMITS.MAX_MONTHLY_BENEFIT_67,
-    tier1StandardDaily * PERIOD_DAYS.STANDARD_MONTH_DAYS
-  );
-  const tier2MonthlyAmount = Math.min(
-    DAILY_WAGE_LIMITS.MAX_MONTHLY_BENEFIT_50,
-    tier2StandardDaily * PERIOD_DAYS.STANDARD_MONTH_DAYS
-  );
+  // Mức trợ cấp ngày tham khảo (1円未満切捨て). Vì wageDailyBasis đã bị kẹp trần nên
+  // mức ngày × 30 luôn ≤ trần tháng công bố (VD 16,540 × 30 × 67% = 332,454円).
+  const tier1StandardDaily = Math.floor((wageDailyBasis * 67) / 100);
+  const tier2StandardDaily = Math.floor((wageDailyBasis * 50) / 100);
 
   // 3. XÉT THƯỞNG HỖ TRỢ NGHỈ SAU SINH (+13% ĐẠT 80% LƯƠNG NGÀY)
-  // Căn cứ: 雇用保険法第61条の9 (出生後休業支援給付金)
+  // Căn cứ: 出生後休業支援給付金 (2025年4月新設), trần 28 ngày = 賃金日額上限 × 28 × 13%
   let bonusDays = 0;
   let bonusDailyAmount = 0;
   let bonusTotalAmount = 0;
 
   if (qualifiesForPostBirthBonus) {
     bonusDays = Math.min(
-      Math.max(0, Number(postBirthBonusDays) || 0),
+      Math.max(0, Math.floor(Number(postBirthBonusDays) || 0)),
       Math.min(tier1Days, PERIOD_DAYS.POST_BIRTH_SUPPORT_MAX_DAYS)
     );
-    bonusDailyAmount = Math.floor(wageDailyBasis * RATES.POST_BIRTH_SUPPORT_BONUS);
-    bonusTotalAmount = bonusDailyAmount * bonusDays;
+    bonusDailyAmount = Math.floor((wageDailyBasis * 13) / 100);
+    bonusTotalAmount = Math.min(
+      period.MAX_POST_BIRTH_SUPPORT_28D,
+      Math.floor((wageDailyBasis * bonusDays * 13) / 100)
+    );
   }
 
-  // 4. KIỂM TRA GIẢM TRỪ KHI CÔNG TY TRẢ LƯƠNG TRONG THỜI GIAN NGHỈ (賃金控除)
-  // Căn cứ: 雇用保険法第61条の7第5項
-  // Chuẩn tháng: wageDailyBasis * 30
+  // 4. TÍNH THEO TỪNG 支給単位期間 30 NGÀY + GIẢM TRỪ KHI CÔNG TY TRẢ LƯƠNG (賃金控除)
   const monthlyWageEquivalent = wageDailyBasis * PERIOD_DAYS.STANDARD_MONTH_DAYS;
-  let isSalaryOffsetApplied = false;
-  let isFullSalaryOffset = false;
-  let tier1NetMonthly = tier1MonthlyAmount;
-  let tier2NetMonthly = tier2MonthlyAmount;
+  const tier1Calc = computeTierTotal(wageDailyBasis, tier1Days, 67, validSalaryDuringLeave);
+  const tier2Calc = computeTierTotal(wageDailyBasis, tier2Days, 50, validSalaryDuringLeave);
 
-  if (validSalaryDuringLeave > 0) {
-    const salaryRate = validSalaryDuringLeave / monthlyWageEquivalent;
+  const tier1MonthlyAmount = Math.min(period.MAX_MONTHLY_BENEFIT_67, Math.floor((monthlyWageEquivalent * 67) / 100));
+  const tier2MonthlyAmount = Math.min(period.MAX_MONTHLY_BENEFIT_50, Math.floor((monthlyWageEquivalent * 50) / 100));
+  const tier1NetMonthly = tier1Days > 0 ? tier1Calc.fullPeriodAmount : tier1MonthlyAmount;
+  const tier2NetMonthly = tier2Days > 0 ? tier2Calc.fullPeriodAmount : tier2MonthlyAmount;
+  const isSalaryOffsetApplied = tier1Calc.offsetApplied || tier2Calc.offsetApplied;
+  const isFullSalaryOffset = validSalaryDuringLeave > 0 && tier1Calc.fullOffset && (tier2Days === 0 || tier2Calc.fullOffset);
 
-    if (salaryRate >= SALARY_OFFSET_THRESHOLDS.ZERO_BENEFIT_LIMIT_RATE) {
-      // Lương >= 80% mức lương chuẩn -> Trợ cấp = 0円
-      isSalaryOffsetApplied = true;
-      isFullSalaryOffset = true;
-      tier1NetMonthly = 0;
-      tier2NetMonthly = 0;
-    } else if (salaryRate > SALARY_OFFSET_THRESHOLDS.FULL_BENEFIT_LIMIT_RATE) {
-      // Lương từ 13% đến 80% -> Bù sao cho (Lương + Trợ cấp) <= 80%
-      isSalaryOffsetApplied = true;
-      const maxAllowedTotal = monthlyWageEquivalent * SALARY_OFFSET_THRESHOLDS.REDUCED_BENEFIT_LIMIT_RATE;
-      const cappedBenefit = Math.max(0, maxAllowedTotal - validSalaryDuringLeave);
-      tier1NetMonthly = Math.min(tier1MonthlyAmount, Math.floor(cappedBenefit));
-      tier2NetMonthly = Math.min(tier2MonthlyAmount, Math.floor(cappedBenefit));
-    }
-  }
+  // Mức ngày hiển thị (tham khảo) = mức tháng thực nhận ÷ 30 khi có giảm trừ
+  const tier1NetDaily = tier1NetMonthly === tier1MonthlyAmount ? tier1StandardDaily : Math.floor(tier1NetMonthly / 30);
+  const tier2NetDaily = tier2NetMonthly === tier2MonthlyAmount ? tier2StandardDaily : Math.floor(tier2NetMonthly / 30);
 
-  // Quy đổi tỷ lệ net daily nếu có giảm trừ
-  const tier1NetDaily = tier1MonthlyAmount > 0
-    ? Math.floor(tier1StandardDaily * (tier1NetMonthly / tier1MonthlyAmount))
-    : 0;
-  const tier2NetDaily = tier2MonthlyAmount > 0
-    ? Math.floor(tier2StandardDaily * (tier2NetMonthly / tier2MonthlyAmount))
-    : 0;
-
-  const tier1TotalAmount = tier1NetDaily * tier1Days;
-  const tier2TotalAmount = tier2NetDaily * tier2Days;
+  const tier1TotalAmount = tier1Calc.total;
+  const tier2TotalAmount = tier2Calc.total;
 
   // 5. TRỢ CẤP LÀM VIỆC RÚT NGẮN GIỜ NUÔI CON DƯỚI 2 TUỔI (育児時短就業給付金)
-  // Căn cứ: 雇用保険法第61条の10 (2025年4月新設)
+  // = 10% tiền lương THỰC TRẢ trong tháng làm giờ ngắn (không phải 10% lương trước khi nghỉ)
   let shortTimeTotalAmount = 0;
   let shortTimeMonthlyAmount = 0;
   const validShortTimeMonths = isShortTimeWork ? Math.max(0, Math.min(24, Number(shortTimeMonths) || 0)) : 0;
+  // 時短就業開始時賃金月額 (kẹp trần/sàn như 育児休業給付)
+  const preShortTimeMonthlyWage = Math.min(
+    period.MAX_MONTHLY_WAGE,
+    Math.max(period.MIN_MONTHLY_WAGE, Math.floor(total6MWage / 6))
+  );
+  const hasShortTimeWageInput = shortTimeMonthlyWage !== undefined && shortTimeMonthlyWage !== null
+    && shortTimeMonthlyWage !== '' && Number.isFinite(Number(shortTimeMonthlyWage));
+  const isShortTimeWageAssumed = !hasShortTimeWageInput;
+  const effectiveShortTimeWage = hasShortTimeWageInput
+    ? Math.max(0, Math.floor(Number(shortTimeMonthlyWage)))
+    : Math.floor((validMonthlySalary * 80) / 100); // Giả định: làm giờ ngắn nhận ~80% lương cũ
 
   if (isShortTimeWork && validShortTimeMonths > 0) {
-    shortTimeMonthlyAmount = Math.floor(validMonthlySalary * RATES.SHORT_TIME_WORK_RATE);
+    shortTimeMonthlyAmount = calculateShortTimeWorkMonthlyBenefit({
+      preShortTimeMonthlyWage,
+      paidWage: effectiveShortTimeWage,
+      period,
+    });
     shortTimeTotalAmount = shortTimeMonthlyAmount * validShortTimeMonths;
   }
 
@@ -197,9 +286,9 @@ export function calculateChildcareBenefit({
   if (isShortTimeWork && validShortTimeMonths > 0) {
     timelineStages.push({
       stageId: 'short_time_work',
-      titleJa: '復職後・育児時短就業給付（給与の約10％）',
-      titleVi: 'Đi làm lại rút ngắn giờ làm (Hưởng ~10% lương)',
-      titleEn: 'Post-return Short-Time Work Benefit (~10% Wage)',
+      titleJa: '復職後・育児時短就業給付（時短中に支払われた賃金の10％）',
+      titleVi: 'Đi làm lại rút ngắn giờ làm (10% lương thực nhận khi làm giờ ngắn)',
+      titleEn: 'Post-return Short-Time Work Benefit (10% of reduced wage paid)',
       ratePercent: 10,
       days: validShortTimeMonths * 30,
       months: validShortTimeMonths,
@@ -211,8 +300,9 @@ export function calculateChildcareBenefit({
 
   return {
     isEligible: totalLeaveDays > 0,
+    effectivePeriod: period,
     wageDailyBasis: {
-      rawDailyWage: Math.round(rawDailyWage),
+      rawDailyWage: flooredDailyWage,
       statutoryDailyWage: wageDailyBasis,
       isCappedByMaxLimit,
       isFlooredByMinLimit,
@@ -247,6 +337,10 @@ export function calculateChildcareBenefit({
         months: validShortTimeMonths,
         monthlyAmount: shortTimeMonthlyAmount,
         totalAmount: shortTimeTotalAmount,
+        paidWage: effectiveShortTimeWage,
+        isPaidWageAssumed: isShortTimeWageAssumed,
+        preShortTimeMonthlyWage,
+        paymentLimit: period.SHORT_TIME_PAYMENT_LIMIT,
       },
     },
     financialTotals: {

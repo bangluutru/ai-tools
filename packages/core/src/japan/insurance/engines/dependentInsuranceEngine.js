@@ -6,23 +6,83 @@
 
 import { RELATIONSHIPS, RESIDENCE_EXCEPTIONS } from '../rules/dependentInsuranceRules.js';
 
+function isMissingNumber(value) {
+  return value === undefined || value === null || value === '' || !Number.isFinite(Number(value));
+}
+
+/** Tuổi tại ngày 31/12 của năm chứa ngày công nhận (扶養認定日) */
+function ageAtYearEnd(birthDate, certificationDate) {
+  const b = new Date(`${String(birthDate).slice(0, 10)}T00:00:00Z`);
+  const year = Number(String(certificationDate).slice(0, 4));
+  if (Number.isNaN(b.getTime()) || !year) return null;
+  return year - b.getUTCFullYear();
+}
+
+/** Trần thu nhập năm theo 認定日, quan hệ và tuổi (19〜22 tuổi: 150万円 từ 2025-10-01; vợ/chồng không áp dụng) */
+export function resolveDependentIncomeCeiling({ relationship = 'spouse', ageAtDec31 = 30, isDisabled = false, certificationDate }) {
+  const date = String(certificationDate || new Date().toISOString()).slice(0, 10);
+  const age = Number(ageAtDec31) || 0;
+  if (age >= 60 || isDisabled) {
+    return { ceiling: 1800000, monthlyCeiling: 150000, basis: 'senior_or_disabled' };
+  }
+  if (relationship !== 'spouse' && age >= 19 && age < 23 && date >= '2025-10-01') {
+    return { ceiling: 1500000, monthlyCeiling: 125000, basis: 'age_19_22' };
+  }
+  return { ceiling: 1300000, monthlyCeiling: 108334, basis: 'standard' };
+}
+
 export function evaluateDependentInsuranceEligibility({
   relationship = 'spouse',
   dependentAge = 30,
+  dependentBirthDate,
+  certificationDate,
   isDisabled = false,
   isCohabiting = true,
-  dependentFutureAnnualIncome = 1000000,
-  insuredAnnualIncome = 5000000,
+  dependentFutureAnnualIncome,
+  insuredAnnualIncome,
   annualRemittance = 0,
   residesInJapan = true,
   residenceException = 'none',
   hasEmployerOvertimeProof = false
 } = {}) {
   const rel = RELATIONSHIPS[relationship] || RELATIONSHIPS.spouse;
-  const age = Number(dependentAge) || 0;
+  const certDate = String(certificationDate || new Date().toISOString()).slice(0, 10);
+  // Tuổi xét theo 31/12 của năm 認定日 (nếu có ngày sinh); nếu không, dependentAge được hiểu là tuổi tại 31/12.
+  const ageFromBirth = dependentBirthDate ? ageAtYearEnd(dependentBirthDate, certDate) : null;
+  const age = ageFromBirth ?? (Number(dependentAge) || 0);
   const depIncome = Number(dependentFutureAnnualIncome) || 0;
   const insIncome = Number(insuredAnnualIncome) || 0;
   const remittance = Number(annualRemittance) || 0;
+
+  const missingIncome = isMissingNumber(dependentFutureAnnualIncome);
+  const missingInsured = isCohabiting && isMissingNumber(insuredAnnualIncome);
+  const missingRemittance = !isCohabiting && isMissingNumber(annualRemittance);
+  if (missingIncome || missingInsured || missingRemittance) {
+    const limit = resolveDependentIncomeCeiling({ relationship: rel.id, ageAtDec31: age, isDisabled, certificationDate: certDate });
+    return {
+      status: 'insufficient_info',
+      relationship: rel,
+      dependentAge: age,
+      certificationDate: certDate,
+      ceiling: limit.ceiling,
+      monthlyCeiling: limit.monthlyCeiling,
+      ceilingBasis: limit.basis,
+      isSeniorOrDisabled: limit.basis === 'senior_or_disabled',
+      isCohabiting,
+      checks: [],
+      missingFields: [
+        missingIncome ? 'dependentFutureAnnualIncome' : null,
+        missingInsured ? 'insuredAnnualIncome' : null,
+        missingRemittance ? 'annualRemittance' : null,
+      ].filter(Boolean),
+      message: {
+        ja: '判定に必要な収入情報（被扶養者の見込み年収、同居なら被保険者の年収、別居なら仕送り額）を入力してください。',
+        vi: 'Vui lòng nhập thông tin thu nhập cần thiết (thu nhập dự kiến của người phụ thuộc; thu nhập người bảo hiểm nếu sống chung; tiền chu cấp nếu sống riêng).',
+        en: 'Please enter the income information needed (dependent projected income; insured income if cohabiting; remittance if living apart).'
+      },
+      sources: ['kyoukaikenpo-dependent-2026']
+    };
+  }
 
   const checks = [];
   let isFailure = false;
@@ -143,25 +203,28 @@ export function evaluateDependentInsuranceEligibility({
     });
   }
 
-  // 4. Annual Future Income Ceiling Gate (130万円 / 180万円の壁)
-  const isSeniorOrDisabled = age >= 60 || isDisabled;
-  const ceiling = isSeniorOrDisabled ? 1800000 : 1300000;
-  const monthlyCeiling = isSeniorOrDisabled ? 150000 : 108334;
+  // 4. Annual Future Income Ceiling Gate (130万円 / 150万円 (19〜22歳) / 180万円の壁)
+  const limit = resolveDependentIncomeCeiling({ relationship: rel.id, ageAtDec31: age, isDisabled, certificationDate: certDate });
+  const isSeniorOrDisabled = limit.basis === 'senior_or_disabled';
+  const ceiling = limit.ceiling;
+  const monthlyCeiling = limit.monthlyCeiling;
+  const ceilingMan = ceiling / 10000;
 
   if (depIncome >= ceiling) {
-    if (hasEmployerOvertimeProof && depIncome <= 1500000 && !isSeniorOrDisabled) {
+    if (hasEmployerOvertimeProof) {
+      // 年収の壁・支援強化パッケージ: 事業主の証明による一時的な収入増加 — không có trần tuyệt đối
       checks.push({
         id: 'income_ceiling',
         name: {
-          ja: '年間収入の上限基準（年収の壁支援パッケージ）',
-          vi: 'Hạn mức thu nhập năm (Gói hỗ trợ bức tường thu nhập)',
-          en: 'Annual income ceiling (Relief package)'
+          ja: '年間収入の上限基準（事業主証明による一時的な収入変動）',
+          vi: 'Hạn mức thu nhập năm (Tăng tạm thời có chứng nhận của chủ DN)',
+          en: 'Annual income ceiling (temporary increase certified by employer)'
         },
         status: 'warning',
         message: {
-          ja: `年収が130万円を超えていますが、一時的な増収（事業主証明書あり）の特例措置（最大2年間）の対象となる可能性があります。`,
-          vi: `Thu nhập vượt 130 vạn Yên nhưng có thể được áp dụng gói nới lỏng tạm thời (tối đa 2 năm liên tiếp) nếu có bản xác nhận của chủ sử dụng lao động.`,
-          en: `Income exceeds 1.3M JPY, but may qualify for temporary 2-year relief package with employer certification.`
+          ja: `年収が${ceilingMan}万円以上となる見込みですが、人手不足による残業等の一時的な増収であることを事業主が証明する場合、保険者の判断で引き続き被扶養者と認められる可能性があります（原則として連続2回まで）。`,
+          vi: `Thu nhập dự kiến vượt ${ceilingMan} vạn Yên, nhưng nếu chủ DN chứng nhận đây là tăng tạm thời (tăng ca do thiếu người...), cơ quan bảo hiểm có thể vẫn công nhận là người phụ thuộc (nguyên tắc tối đa 2 lần liên tiếp).`,
+          en: `Income is projected at or above ${ceilingMan}0k JPY, but with employer certification of a temporary increase, the insurer may keep dependent status (in principle up to 2 consecutive times).`
         }
       });
       isWarning = true;
@@ -170,7 +233,7 @@ export function evaluateDependentInsuranceEligibility({
         id: 'income_ceiling',
         name: {
           ja: `年間収入の上限基準（${ceiling.toLocaleString('ja-JP')}円未満）`,
-          vi: `Hạn mức thu nhập năm (Dưới ${(ceiling / 10000)} vạn Yên)`,
+          vi: `Hạn mức thu nhập năm (Dưới ${ceilingMan} vạn Yên)`,
           en: `Annual income ceiling (< ${ceiling.toLocaleString()} JPY)`
         },
         status: 'fail',
@@ -187,7 +250,7 @@ export function evaluateDependentInsuranceEligibility({
       id: 'income_ceiling',
       name: {
         ja: `年間収入の上限基準（${ceiling.toLocaleString('ja-JP')}円未満）`,
-        vi: `Hạn mức thu nhập năm (Dưới ${(ceiling / 10000)} vạn Yên)`,
+        vi: `Hạn mức thu nhập năm (Dưới ${ceilingMan} vạn Yên)`,
         en: `Annual income ceiling (< ${ceiling.toLocaleString()} JPY)`
       },
       status: 'pass',
@@ -195,6 +258,40 @@ export function evaluateDependentInsuranceEligibility({
         ja: `見込み年収は${depIncome.toLocaleString('ja-JP')}円であり、基準（${ceiling.toLocaleString('ja-JP')}円未満）を下回っています。`,
         vi: `Thu nhập dự kiến ${depIncome.toLocaleString('ja-JP')}円/năm nằm trong giới hạn cho phép (dưới ${ceiling.toLocaleString('ja-JP')}円/năm).`,
         en: `Projected income of ${depIncome.toLocaleString()} JPY is within the statutory limit (< ${ceiling.toLocaleString()} JPY).`
+      }
+    });
+  }
+
+  if (limit.basis === 'age_19_22') {
+    checks.push({
+      id: 'age_19_22_ceiling',
+      name: {
+        ja: '19歳以上23歳未満の年間収入要件（150万円未満）',
+        vi: 'Trần thu nhập cho người 19〜22 tuổi (dưới 150 vạn Yên)',
+        en: 'Income requirement for ages 19-22 (< 1.5M JPY)'
+      },
+      status: 'info',
+      message: {
+        ja: '扶養認定日が令和7年10月1日以降で、配偶者以外の19歳以上23歳未満（認定日の属する年の12月31日時点の年齢）の方は、年間収入要件が150万円未満となります。',
+        vi: 'Với ngày công nhận từ 01/10/2025, người phụ thuộc (không phải vợ/chồng) từ 19 đến dưới 23 tuổi (tính tại 31/12 của năm công nhận) có trần thu nhập dưới 150 vạn Yên.',
+        en: 'For certification on or after 1 Oct 2025, non-spouse dependents aged 19-22 (as of 31 Dec of the certification year) have a < 1.5M JPY income requirement.'
+      }
+    });
+  }
+
+  if (certDate >= '2026-04-01') {
+    checks.push({
+      id: 'contract_based_income',
+      name: {
+        ja: '給与収入の判定方法（令和8年4月〜 労働契約ベース）',
+        vi: 'Cách xét thu nhập từ lương (từ 04/2026 theo hợp đồng lao động)',
+        en: 'Salary income judgment (from April 2026: contract-based)'
+      },
+      status: 'info',
+      message: {
+        ja: '令和8年4月1日以降、給与収入のみの方は、労働条件通知書等の労働契約の内容（所定の賃金）に基づく年間収入見込みで判定されます。契約に定めのない時間外労働の賃金などは原則含めません。給与以外の収入がある場合は従来どおり総合的に判定されます。',
+        vi: 'Từ 01/04/2026, người chỉ có thu nhập lương được xét theo thu nhập năm dự kiến tính từ nội dung hợp đồng lao động (労働条件通知書). Tiền tăng ca không ghi trong hợp đồng về nguyên tắc không tính. Nếu có thu nhập khác ngoài lương thì xét tổng hợp như trước.',
+        en: 'From 1 Apr 2026, dependents with only salary income are judged on annual income projected from the labour contract terms; overtime not stipulated in the contract is generally excluded. Other income is assessed as before.'
       }
     });
   }
@@ -310,11 +407,13 @@ export function evaluateDependentInsuranceEligibility({
   }
 
   return {
-    status, // 'likely_eligible' | 'likely_ineligible' | 'case_dependent'
+    status, // 'likely_eligible' | 'likely_ineligible' | 'case_dependent' | 'insufficient_info'
     relationship: rel,
     dependentAge: age,
+    certificationDate: certDate,
     ceiling,
     monthlyCeiling,
+    ceilingBasis: limit.basis,
     isSeniorOrDisabled,
     isCohabiting,
     checks,

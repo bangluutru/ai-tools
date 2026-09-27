@@ -50,9 +50,9 @@ export const SEPARATION_REASONS = {
     {
       id: 'excessive_overtime',
       code: 'TYPE_A_OVERTIME',
-      ja: '過度な時間外労働（直前3ヶ月平均45h超、または1ヶ月100h超、または2ヶ月平均80h超）',
-      vi: 'Tăng ca quá mức vượt ngưỡng Karoshi (3 tháng liền bình quân >45h, hoặc 1 tháng >100h, hoặc 2 tháng bình quân >80h)',
-      en: 'Excessive overtime (> 100h in 1 mo, or > 80h/mo avg for 2 mos, or > 45h/mo for 3 mos)',
+      ja: '過度な時間外労働（離職直前6ヶ月間に、3ヶ月連続で各月45h超、または1ヶ月100h以上、または連続2〜6ヶ月平均で月80h超）',
+      vi: 'Tăng ca quá mức (trong 6 tháng trước khi nghỉ: 3 tháng liên tiếp mỗi tháng >45h, hoặc 1 tháng ≥100h, hoặc trung bình 2–6 tháng liên tiếp >80h/tháng)',
+      en: 'Excessive overtime (within 6 months before leaving: >45h in each of 3 consecutive months, or 100h+ in 1 month, or >80h/month averaged over 2–6 consecutive months)',
       evidenceGuideJa: 'タイムカード、給与明細の残業時間記録、勤怠ログ等',
       evidenceGuideVi: 'Thẻ chấm công, log chấm công điện tử, giờ làm thêm ghi trên bảng lương'
     },
@@ -172,7 +172,7 @@ export const ELIGIBILITY_CRITERIA_BY_CATEGORY = {
     requiredInsuredMonths: 12,
     referencePeriodYears: 2,
     waitingPeriodDays: 7,
-    benefitRestrictionMonths: 2, // Quy chuẩn hiện hành là 2 tháng
+    benefitRestrictionMonths: 1, // Nghỉ từ 01/04/2025: 1 tháng (xem VOLUNTARY_RESTRICTION_RULES)
     hasBenefitRestriction: true,
     benefitDurationFavor: 'Standard (一般基準: 90日〜150日)'
   },
@@ -187,4 +187,25 @@ export const ELIGIBILITY_CRITERIA_BY_CATEGORY = {
     hasBenefitRestriction: true,
     benefitDurationFavor: 'Standard (一般基準: 90日〜150日, 3ヶ月給付制限)'
   }
+};
+
+/**
+ * Quy tắc 給付制限 cho 自己都合離職 (雇用保険法第33条, sửa đổi hiệu lực 01/04/2025).
+ * - Nghỉ từ 01/04/2025: 1 tháng.
+ * - Nghỉ trước 01/04/2025: 2 tháng (quy định từ 10/2020).
+ * - Trong 5 năm trước ngày nghỉ đã có từ 2 lần tự ý nghỉ việc không có lý do chính đáng
+ *   và được 受給資格決定 → 3 tháng.
+ * - Đã tự học 教育訓練 đủ điều kiện (教育訓練給付 đối tượng, 公共職業訓練...) trong vòng 1 năm trước khi nghỉ
+ *   hoặc sau khi nghỉ (chỉ áp dụng khi nghỉ từ 01/04/2025) → 給付制限 được giải trừ.
+ *   (Nếu bắt đầu học sau khi nghỉ, 給付制限 được giải trừ từ ngày bắt đầu khóa học.)
+ * - 重責解雇 không thuộc quy tắc này: luôn 3 tháng.
+ * Nguồn: https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/0000160564_00045.html
+ */
+export const VOLUNTARY_RESTRICTION_RULES = {
+  reformEffectiveDate: '2025-04-01',
+  monthsFromReform: 1,
+  monthsBeforeReform: 2,
+  monthsRepeated: 3,
+  repeatedThresholdIn5Years: 2,
+  educationTrainingLiftsRestriction: true
 };

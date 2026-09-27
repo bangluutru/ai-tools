@@ -1,20 +1,21 @@
 /**
  * @file forms/nationalityAgreementForm.js
  * Canonical Form: Văn bản thỏa thuận lựa chọn quốc tịch cho con
- * Căn cứ: Luật Quốc tịch Việt Nam & Mẫu công bố của ĐSQ/TLSQ Việt Nam tại Nhật Bản.
+ * Căn cứ: Luật Quốc tịch Việt Nam sửa đổi (Luật 79/2025/QH15), NĐ 191/2025/NĐ-CP — https://vnembassy-jp.org (nhóm thủ tục quốc tịch).
+ * BẢN NHÁP tham khảo; mẫu chính thức ĐSQ dẫn là TP/QT-2025-VBTT. Chỉ cần khi cha HOẶC mẹ là người nước ngoài.
  */
 
 export const NATIONALITY_AGREEMENT_FORM = {
   id: 'nationality_agreement',
   code: 'TT-QT-VN-JP.01',
   title: 'Văn bản thỏa thuận lựa chọn quốc tịch cho con',
-  legal_basis: 'Điều 16 Luật Quốc tịch Việt Nam năm 2008 (sửa đổi, bổ sung năm 2014)',
+  legal_basis: 'Luật Quốc tịch Việt Nam (sửa đổi, bổ sung bởi Luật 79/2025/QH15, hiệu lực 01/7/2025) & Nghị định 191/2025/NĐ-CP; mẫu chính thức ĐSQ dẫn: TP/QT-2025-VBTT',
   authority: 'Cơ quan đại diện Việt Nam tại Nhật Bản',
   version: '2024.1',
-  status: 'VERIFIED',
-  fingerprint: 'a4b8e23f9901d8c1192ef941bc4811a7f05282a567e9124a91f5820468f7aa11',
-  verified_at: '2026-09-12',
-  official_source_url: 'https://vnembassy-jp.org/sites/default/files/Thoa%20thuan%20lua%20chon%20quoc%20tich%20cho%20con.doc',
+  isDraftHelper: true,
+  status: 'DRAFT_HELPER',
+  verified_at: '2026-09-27',
+  official_source_url: 'https://vnembassy-jp.org/vi/nh%C3%B3m-th%E1%BB%A7-t%E1%BB%A5c-li%C3%AAn-quan-%C4%91%E1%BA%BFn-qu%E1%BB%91c-t%E1%BB%8Bch',
   page_size: 'A4',
   orientation: 'portrait',
 

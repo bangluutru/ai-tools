@@ -51,6 +51,38 @@ const loadPdfJs = () => {
   return pdfJsPromise;
 };
 
+/**
+ * Chuyển kết quả attemptDirectXmlDownload thành trạng thái của thẻ hóa đơn.
+ * - XML tải về nhưng lệch với PDF (số HĐ, MST, tổng tiền…) không được coi là READY,
+ *   để không bị gom vào ZIP như hóa đơn đã khớp.
+ * - Khi thất bại, directDownloader trả `fallbackStatus` + `reason` (không phải status/note).
+ */
+function applyDownloadResult(downloadResult, metadata, fallback) {
+  if (downloadResult.success && downloadResult.hasMismatch) {
+    const details = (downloadResult.mismatchDetails || []).join('; ');
+    return {
+      status: STATUS_TYPES.MANUAL_REQUIRED,
+      note: `XML tải về không khớp với PDF${details ? `: ${details}` : ''}. Vui lòng kiểm tra và tải thủ công.`,
+      xmlContent: null,
+      xmlFilename: null,
+    };
+  }
+  if (downloadResult.success) {
+    return {
+      status: STATUS_TYPES.READY,
+      note: 'Đã tải thành công file XML tự động',
+      xmlContent: downloadResult.xmlContent,
+      xmlFilename: buildStandardXmlFilename(metadata),
+    };
+  }
+  return {
+    status: downloadResult.fallbackStatus || downloadResult.status || STATUS_TYPES.MANUAL_REQUIRED,
+    note: downloadResult.reason || downloadResult.note || fallback.note,
+    xmlContent: null,
+    xmlFilename: null,
+  };
+}
+
 export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
   const [invoices, setInvoices] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -142,14 +174,10 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
           expectedInvoice: metadata,
         });
 
-        if (downloadResult.success) {
-          xmlContent = downloadResult.xmlContent;
-          xmlFilename = buildStandardXmlFilename(metadata);
-          note = 'Đã tải thành công file XML tự động';
-        } else {
-          status = downloadResult.status || STATUS_TYPES.MANUAL_REQUIRED;
-          note = downloadResult.note || 'Cần truy cập website nhà cung cấp để tải file XML.';
-        }
+        ({ status, note, xmlContent, xmlFilename } = applyDownloadResult(downloadResult, metadata, {
+          status,
+          note: 'Cần truy cập website nhà cung cấp để tải file XML.',
+        }));
       }
 
       return {
@@ -340,14 +368,7 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
         expectedInvoice: metadata,
       });
 
-      if (downloadResult.success) {
-        xmlContent = downloadResult.xmlContent;
-        xmlFilename = buildStandardXmlFilename(metadata);
-        note = 'Đã tải thành công file XML tự động';
-      } else {
-        status = downloadResult.status || STATUS_TYPES.MANUAL_REQUIRED;
-        note = downloadResult.note || note;
-      }
+      ({ status, note, xmlContent, xmlFilename } = applyDownloadResult(downloadResult, metadata, { status, note }));
     }
 
     setInvoices((prev) =>

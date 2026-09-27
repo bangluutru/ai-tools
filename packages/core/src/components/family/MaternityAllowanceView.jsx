@@ -30,6 +30,7 @@ import {
   MATERNITY_STATUTORY_CONSTANTS,
   MATERNITY_ALLOWANCE_SOURCES,
 } from '../../japan/family/index.js';
+import { addDaysISO, todayLocalISO } from '../../japan/employment/localDate.js';
 
 const TRANSLATIONS = {
   ja: {
@@ -45,7 +46,7 @@ const TRANSLATIONS = {
     monthlySalaryHint: '※ 基本給＋残業代＋諸手当の総額。標準報酬月額（全50等級）に自動変換して日額を算出します。',
     tenureLabel: '現在の健康保険の加入期間',
     tenure12Plus: '12ヶ月以上（前12ヶ月間の平均額を適用）',
-    tenureUnder12: '12ヶ月未満（直近平均と協会けんぽ平均30万円の低い方を適用）',
+    tenureUnder12: '12ヶ月未満（直近平均と協会けんぽ全被保険者平均32万円〔支給開始日が2025年3月31日以前は30万円〕の低い方を適用）',
     insurerTypeLabel: '加入している医療保険の種類',
     insurerKyokai: '協会けんぽ（全国健康保険協会）',
     insurerKumi: '健康保険組合（大企業等の単一・総合健保）',
@@ -58,6 +59,8 @@ const TRANSLATIONS = {
     tenureRetireUnder1Year: '1年未満（資格喪失後の継続給付は不可）',
     workedOnRetireDateLabel: '退職日当日（最終雇用日）に出勤して給与が発生しますか？',
     workedOnRetireDateHint: '※ 退職日に勤務すると「給与が発生し休業していない」とみなされ継続受給権を失います。',
+    retirementDateLabel: '退職日',
+    retirementDateHint: '※ 継続給付を受けるには、退職日が出産手当金の支給期間内（出産予定日以前42日〔多胎98日〕以降）である必要があります。',
     yenUnit: '円',
     daysUnit: '日',
     distinctionNoticeTitle: '【重要】「出産手当金」と「出産育児一時金」の違い',
@@ -77,7 +80,7 @@ const TRANSLATIONS = {
     sectionFinancialDetail: '4. 算定根拠と計算式',
     stdRemunerationLabel: '適用された標準報酬月額：',
     formulaTitle: '法定日額計算式（健康保険法第102条）：',
-    formulaText: '標準報酬月額 ÷ 30日 × 2/3 ＝ 1日あたりの支給額（50銭以上四捨五入）',
+    formulaText: '標準報酬月額（平均）÷ 30日（10円未満四捨五入）× 2/3（1円未満四捨五入）＝ 1日あたりの支給額',
     salaryOffsetNotice: '※ 会社から一部給与が支給されているため、日額から給与分を差し引いた差額のみ支給されます。',
     sectionRegulatory: '参照法令・公的情報源（Primary Regulatory Sources）',
     ineligibleTitle: '出産手当金の受給対象外です',
@@ -95,7 +98,7 @@ const TRANSLATIONS = {
     monthlySalaryHint: '※ Lương cơ bản + tăng ca + phụ cấp. Hệ thống tự động tra cứu Bậc lương chuẩn BHYT (標準報酬月額 50 cấp bậc).',
     tenureLabel: 'Thời gian tham gia BHYT công ty hiện tại',
     tenure12Plus: 'Từ 12 tháng trở lên (Tính bình quân thực tế 12 tháng)',
-    tenureUnder12: 'Dưới 12 tháng (Áp dụng mức thấp hơn giữa lương thực tế và trần 300.000 yên của Kyokai Kenpo)',
+    tenureUnder12: 'Dưới 12 tháng (Áp dụng mức thấp hơn giữa bình quân thực tế và mức bình quân toàn hiệp hội Kyokai Kenpo 320.000 yên — 300.000 yên nếu ngày bắt đầu hưởng trước 01/04/2025)',
     insurerTypeLabel: 'Cơ quan/Loại hình Bảo hiểm Y tế đang tham gia',
     insurerKyokai: 'BHYT Doanh nghiệp vừa & nhỏ (協会けんぽ - Kyokai Kenpo)',
     insurerKumi: 'BHYT Nghiệp đoàn/Tập đoàn lớn (健康保険組合)',
@@ -108,6 +111,8 @@ const TRANSLATIONS = {
     tenureRetireUnder1Year: 'Dưới 1 năm (Không đủ điều kiện tiếp tục nhận trợ cấp sau nghỉ việc)',
     workedOnRetireDateLabel: 'Vào ngày nghỉ việc chính thức cuối cùng, bạn có đi làm và nhận lương không?',
     workedOnRetireDateHint: '※ Nếu ngày cuối cùng vẫn đi làm nhận lương, luật coi bạn "không thuộc diện nghỉ việc để sinh con" và sẽ bị mất tư cách nhận trợ cấp.',
+    retirementDateLabel: 'Ngày nghỉ việc (退職日)',
+    retirementDateHint: '※ Muốn nhận tiếp sau khi nghỉ, ngày nghỉ việc phải nằm trong kỳ hưởng 出産手当金 (từ 42 ngày — đa thai 98 ngày — trước ngày dự sinh trở đi).',
     yenUnit: 'yên',
     daysUnit: 'ngày',
     distinctionNoticeTitle: '【LƯU Ý CỐT LÕI】Phân biệt "Trợ cấp thai sản" và "Trợ cấp sinh con 500.000 yên"',
@@ -127,7 +132,7 @@ const TRANSLATIONS = {
     sectionFinancialDetail: '4. Căn cứ pháp lý và Công thức tính tiền',
     stdRemunerationLabel: 'Mức thù lao tháng chuẩn BHYT áp dụng (標準報酬月額):',
     formulaTitle: 'Công thức luật định (Điều 102 Luật BHYT Nhật Bản):',
-    formulaText: 'Thù lao chuẩn tháng ÷ 30 ngày × 2/3 ＝ Số tiền trợ cấp mỗi ngày (làm tròn đến 1 yên)',
+    formulaText: 'Thù lao chuẩn tháng (bình quân) ÷ 30 ngày (làm tròn đến 10 yên) × 2/3 (làm tròn đến 1 yên) ＝ Số tiền trợ cấp mỗi ngày',
     salaryOffsetNotice: '※ Do công ty có trả một phần lương, số tiền thực nhận mỗi ngày là phần chênh lệch giữa mức trợ cấp luật định và mức lương đã trả.',
     sectionRegulatory: 'Văn bản Luật & Hướng dẫn chính thức (Primary Regulatory Sources)',
     ineligibleTitle: 'Không thuộc đối tượng nhận Trợ cấp Thai sản theo ngày',
@@ -145,7 +150,7 @@ const TRANSLATIONS = {
     monthlySalaryHint: '※ Automatically maps to one of the 50 Standard Monthly Remuneration grades.',
     tenureLabel: 'Current Health Insurance Enrollment Tenure',
     tenure12Plus: '12 months or more (Actual 12-month average applied)',
-    tenureUnder12: 'Under 12 months (Lesser of actual average and Kyokai Kenpo cap of 300,000 JPY applied)',
+    tenureUnder12: 'Under 12 months (Lesser of actual average and Kyokai Kenpo average of 320,000 JPY — 300,000 JPY if benefit starts before 2025-04-01)',
     insurerTypeLabel: 'Health Insurance System',
     insurerKyokai: 'Japan Health Insurance Association (Kyokai Kenpo)',
     insurerKumi: 'Health Insurance Society (Large Enterprises)',
@@ -158,6 +163,8 @@ const TRANSLATIONS = {
     tenureRetireUnder1Year: 'Less than 1 year (Ineligible for post-retirement continuation)',
     workedOnRetireDateLabel: 'Working and receiving wages on official retirement date?',
     workedOnRetireDateHint: '※ Working on your last day disqualifies you from post-retirement continuation under statutory rules.',
+    retirementDateLabel: 'Retirement date',
+    retirementDateHint: '※ To continue receiving the allowance, your retirement date must fall within the allowance period (from 42 days — 98 for multiples — before the due date).',
     yenUnit: 'JPY',
     daysUnit: 'days',
     distinctionNoticeTitle: '【IMPORTANT】Maternity Allowance vs Childbirth Lump-Sum Grant',
@@ -177,7 +184,7 @@ const TRANSLATIONS = {
     sectionFinancialDetail: '4. Legal Basis & Calculation Formula',
     stdRemunerationLabel: 'Standard Monthly Remuneration applied:',
     formulaTitle: 'Statutory Daily Formula (Health Insurance Act Art. 102):',
-    formulaText: 'Standard Monthly Remuneration ÷ 30 days × 2/3 = Daily benefit (rounded half-up)',
+    formulaText: 'Average Standard Monthly Remuneration ÷ 30 days (rounded to 10 JPY) × 2/3 (rounded to 1 JPY) = Daily benefit',
     salaryOffsetNotice: '※ As partial wages are paid by employer, allowance covers the net difference.',
     sectionRegulatory: 'Primary Regulatory Sources',
     ineligibleTitle: 'Not eligible for daily Maternity Allowance',
@@ -188,11 +195,7 @@ export default function MaternityAllowanceView({ lang = 'ja' }) {
   const t = TRANSLATIONS[lang] || TRANSLATIONS.ja;
 
   // State
-  const [expectedBirthDate, setExpectedBirthDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 60); // 2 months in future default
-    return d.toISOString().split('T')[0];
-  });
+  const [expectedBirthDate, setExpectedBirthDate] = useState(() => addDaysISO(todayLocalISO(), 60)); // 2 tháng sau hôm nay (lịch địa phương)
   const [hasActualBirthDate, setHasActualBirthDate] = useState(false);
   const [actualBirthDate, setActualBirthDate] = useState('');
   const [isMultiplePregnancy, setIsMultiplePregnancy] = useState(false);
@@ -205,6 +208,7 @@ export default function MaternityAllowanceView({ lang = 'ja' }) {
   const [isLeavingJob, setIsLeavingJob] = useState(false);
   const [tenureYearsBeforeRetire, setTenureYearsBeforeRetire] = useState(1);
   const [workedOnRetireDate, setWorkedOnRetireDate] = useState(false);
+  const [retirementDate, setRetirementDate] = useState('');
 
   // Engine evaluation
   const result = useMemo(() => {
@@ -220,6 +224,7 @@ export default function MaternityAllowanceView({ lang = 'ja' }) {
       isLeavingJob,
       continuousInsuredYearsBeforeLeaving: tenureYearsBeforeRetire,
       workedOnRetirementDate: workedOnRetireDate,
+      retirementDate: retirementDate || null,
     });
   }, [
     expectedBirthDate,
@@ -233,6 +238,7 @@ export default function MaternityAllowanceView({ lang = 'ja' }) {
     isLeavingJob,
     tenureYearsBeforeRetire,
     workedOnRetireDate,
+    retirementDate,
   ]);
 
   return (
@@ -450,6 +456,20 @@ export default function MaternityAllowanceView({ lang = 'ja' }) {
                   </select>
                   <p className="text-2xs text-muted-foreground">{t.workedOnRetireDateHint}</p>
                 </div>
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label htmlFor="retire-date" className="block text-xs font-semibold text-foreground">
+                    {t.retirementDateLabel}
+                  </label>
+                  <input
+                    id="retire-date"
+                    type="date"
+                    value={retirementDate}
+                    onChange={(e) => setRetirementDate(e.target.value)}
+                    className="w-full sm:w-60 px-3 py-2 bg-surface border border-border rounded-lg text-xs font-medium text-foreground"
+                  />
+                  <p className="text-2xs text-muted-foreground">{t.retirementDateHint}</p>
+                </div>
               </div>
             )}
           </div>
@@ -610,7 +630,7 @@ export default function MaternityAllowanceView({ lang = 'ja' }) {
                 <div className="p-3.5 rounded-xl bg-background border border-border space-y-1">
                   <span className="font-semibold block text-foreground">{t.formulaTitle}</span>
                   <div className="font-mono text-xs bg-surface p-2.5 rounded-lg border border-border/80 text-primary font-bold">
-                    {result.financials.standardMonthlyRemuneration.toLocaleString()} ÷ 30 × 2/3 ＝ {result.financials.standardDailyBenefit.toLocaleString()} {t.yenUnit}/{t.daysUnit}
+                    {result.financials.standardMonthlyRemuneration.toLocaleString()} ÷ 30 ≈ {result.financials.dailyRemunerationBase.toLocaleString()} → × 2/3 ＝ {result.financials.standardDailyBenefit.toLocaleString()} {t.yenUnit}/{t.daysUnit}
                   </div>
                   <p className="text-2xs text-muted-foreground pt-1">
                     {lang === 'ja' ? result.financials.basisExplanationJa : result.financials.basisExplanationVi}

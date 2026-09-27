@@ -22,6 +22,30 @@ import { resolveWelfarePensionRate } from '../rules/welfarePensionRates.js';
 import { resolveEmploymentInsuranceRate } from '../rules/employmentInsuranceRates.js';
 
 /**
+ * Làm tròn phần người lao động khi khấu trừ từ lương (被保険者負担分の端数処理):
+ * 50銭以下切り捨て、50銭を超える場合は切り上げ (健康保険法・厚生年金保険法 / 通貨の単位及び貨幣の発行等に関する法律).
+ */
+export function roundEmployeeShare(amount) {
+  const value = Math.max(0, Number(amount) || 0);
+  // Khử sai số dấu phẩy động trước khi xét phần lẻ
+  const cents = Math.round(value * 100);
+  const yen = Math.floor(cents / 100);
+  const fraction = cents - yen * 100;
+  return fraction > 50 ? yen + 1 : yen;
+}
+
+/**
+ * Tách phí bảo hiểm thành phần NLĐ / NSDLĐ.
+ * Tổng phí (全額) làm tròn xuống 1円; phần NLĐ theo quy tắc 50銭; phần công ty = tổng − NLĐ.
+ */
+export function splitPremium(base, totalRate, employeeRate = totalRate / 2) {
+  const safeBase = Math.max(0, Number(base) || 0);
+  const total = Math.floor(Math.round(safeBase * totalRate * 100) / 100);
+  const employee = Math.min(total, roundEmployeeShare(safeBase * employeeRate));
+  return { employee, employer: Math.max(0, total - employee), total };
+}
+
+/**
  * Tính toán toàn diện nghĩa vụ bảo hiểm xã hội
  * @param {object} params
  * @param {number} params.monthlySalary - Tiền lương thực tế hàng tháng (円)
@@ -70,28 +94,38 @@ export function calculateSocialInsuranceSimulation({
   // A. PHẦN TÍNH THEO LƯƠNG HÀNG THÁNG (Monthly Remuneration)
   // -------------------------------------------------------------
 
-  // 1. 健康保険 (Health Insurance)
-  const healthMonthlyEmployee = Math.floor(kenpoMonthlyBase * kenpoRule.employeeRate);
-  const healthMonthlyEmployer = Math.floor(kenpoMonthlyBase * kenpoRule.employerRate);
+  // Ngưỡng tuổi: 厚生年金 chấm dứt từ 70 tuổi; 健康保険/介護/子ども支援金 chấm dứt từ 75 tuổi (後期高齢者医療制度)
+  const isPensionApplicable = empAge < 70;
+  const isHealthApplicable = empAge < 75;
+  const healthBase = isHealthApplicable ? kenpoMonthlyBase : 0;
+  const pensionBase = isPensionApplicable ? pensionMonthlyBase : 0;
 
-  // 2. 子ども・子育て支援金 (Child Support Fund - Tách riêng từ 2026)
-  const childSupportMonthlyEmployee = Math.floor(kenpoMonthlyBase * childRule.employeeRate);
-  const childSupportMonthlyEmployer = Math.floor(kenpoMonthlyBase * childRule.employerRate);
+  // 1. 健康保険 (Health Insurance)
+  const healthM = splitPremium(healthBase, kenpoRule.totalRate, kenpoRule.employeeRate);
+  const healthMonthlyEmployee = healthM.employee;
+  const healthMonthlyEmployer = healthM.employer;
+
+  // 2. 子ども・子育て支援金 (Child Support Fund - Tách riêng từ phí tháng 4/2026)
+  const childM = splitPremium(healthBase, childRule.totalRate, childRule.employeeRate);
+  const childSupportMonthlyEmployee = childM.employee;
+  const childSupportMonthlyEmployer = childM.employer;
 
   // 3. 介護保険 (Nursing Care Insurance - 40〜64 tuổi)
-  const careMonthlyEmployee = Math.floor(kenpoMonthlyBase * careRule.employeeRate);
-  const careMonthlyEmployer = Math.floor(kenpoMonthlyBase * careRule.employerRate);
+  const careM = splitPremium(healthBase, careRule.totalRate, careRule.employeeRate);
+  const careMonthlyEmployee = careM.employee;
+  const careMonthlyEmployer = careM.employer;
 
   // 4. 厚生年金 (Welfare Pension)
-  const pensionMonthlyEmployee = Math.floor(pensionMonthlyBase * pensionRule.employeeRate);
-  const pensionMonthlyEmployer = Math.floor(pensionMonthlyBase * pensionRule.employerRate);
+  const pensionM = splitPremium(pensionBase, pensionRule.totalRate, pensionRule.employeeRate);
+  const pensionMonthlyEmployee = pensionM.employee;
+  const pensionMonthlyEmployer = pensionM.employer;
 
-  // 5. 雇用保険 (Employment Insurance - Tính trên tổng tiền lương thực tế, làm tròn 50 sen)
-  const employmentMonthlyEmployee = Math.round(salary * empRule.employeeRate);
-  const employmentMonthlyEmployer = Math.round(salary * empRule.employerRate);
+  // 5. 雇用保険 (Employment Insurance - Tính trên tổng tiền lương thực tế; phần NLĐ làm tròn theo quy tắc 50銭)
+  const employmentMonthlyEmployee = roundEmployeeShare(salary * empRule.employeeRate);
+  const employmentMonthlyEmployer = roundEmployeeShare(salary * empRule.employerRate);
 
   // 6. 子ども・子育て拠出金 (Child Welfare Contribution - 100% NSDLĐ)
-  const childWelfareMonthlyEmployer = Math.floor(pensionMonthlyBase * childRule.childWelfareEmployerOnlyRate);
+  const childWelfareMonthlyEmployer = Math.floor(pensionBase * childRule.childWelfareEmployerOnlyRate);
 
   const monthlyEmployeeTotal =
     healthMonthlyEmployee +
@@ -111,22 +145,29 @@ export function calculateSocialInsuranceSimulation({
   // -------------------------------------------------------------
   // B. PHẦN TÍNH THEO THƯỞNG (Bonus, nếu có)
   // -------------------------------------------------------------
-  const healthBonusEmployee = Math.floor(bonusInfo.kenpoStandardBonus * kenpoRule.employeeRate);
-  const healthBonusEmployer = Math.floor(bonusInfo.kenpoStandardBonus * kenpoRule.employerRate);
+  const kenpoBonusBase = isHealthApplicable ? bonusInfo.kenpoStandardBonus : 0;
+  const pensionBonusBase = isPensionApplicable ? bonusInfo.pensionStandardBonus : 0;
 
-  const childSupportBonusEmployee = Math.floor(bonusInfo.kenpoStandardBonus * childRule.employeeRate);
-  const childSupportBonusEmployer = Math.floor(bonusInfo.kenpoStandardBonus * childRule.employerRate);
+  const healthB = splitPremium(kenpoBonusBase, kenpoRule.totalRate, kenpoRule.employeeRate);
+  const healthBonusEmployee = healthB.employee;
+  const healthBonusEmployer = healthB.employer;
 
-  const careBonusEmployee = Math.floor(bonusInfo.kenpoStandardBonus * careRule.employeeRate);
-  const careBonusEmployer = Math.floor(bonusInfo.kenpoStandardBonus * careRule.employerRate);
+  const childB = splitPremium(kenpoBonusBase, childRule.totalRate, childRule.employeeRate);
+  const childSupportBonusEmployee = childB.employee;
+  const childSupportBonusEmployer = childB.employer;
 
-  const pensionBonusEmployee = Math.floor(bonusInfo.pensionStandardBonus * pensionRule.employeeRate);
-  const pensionBonusEmployer = Math.floor(bonusInfo.pensionStandardBonus * pensionRule.employerRate);
+  const careB = splitPremium(kenpoBonusBase, careRule.totalRate, careRule.employeeRate);
+  const careBonusEmployee = careB.employee;
+  const careBonusEmployer = careB.employer;
 
-  const employmentBonusEmployee = Math.round(bonus * empRule.employeeRate);
-  const employmentBonusEmployer = Math.round(bonus * empRule.employerRate);
+  const pensionB = splitPremium(pensionBonusBase, pensionRule.totalRate, pensionRule.employeeRate);
+  const pensionBonusEmployee = pensionB.employee;
+  const pensionBonusEmployer = pensionB.employer;
 
-  const childWelfareBonusEmployer = Math.floor(bonusInfo.pensionStandardBonus * childRule.childWelfareEmployerOnlyRate);
+  const employmentBonusEmployee = roundEmployeeShare(bonus * empRule.employeeRate);
+  const employmentBonusEmployer = roundEmployeeShare(bonus * empRule.employerRate);
+
+  const childWelfareBonusEmployer = Math.floor(pensionBonusBase * childRule.childWelfareEmployerOnlyRate);
 
   const bonusEmployeeTotal =
     healthBonusEmployee +
@@ -173,8 +214,9 @@ export function calculateSocialInsuranceSimulation({
         nameJa: '健康保険料（基本分）',
         nameVi: 'Bảo hiểm Y tế (Phần cơ bản)',
         nameEn: 'Health Insurance (Basic)',
-        standardBase: kenpoMonthlyBase,
+        standardBase: healthBase,
         rate: kenpoRule.totalRate,
+        isApplicable: isHealthApplicable,
         employeeRate: kenpoRule.employeeRate,
         employerRate: kenpoRule.employerRate,
         employee: healthMonthlyEmployee,
@@ -186,7 +228,7 @@ export function calculateSocialInsuranceSimulation({
         nameJa: '子ども・子育て支援金',
         nameVi: 'Tiền đóng góp hỗ trợ nuôi dạy trẻ em',
         nameEn: 'Child & Family Support Fund',
-        standardBase: kenpoMonthlyBase,
+        standardBase: healthBase,
         rate: childRule.totalRate,
         employeeRate: childRule.employeeRate,
         employerRate: childRule.employerRate,
@@ -200,7 +242,7 @@ export function calculateSocialInsuranceSimulation({
         nameJa: '介護保険料',
         nameVi: 'Bảo hiểm chăm sóc dài hạn',
         nameEn: 'Long-term Care Insurance',
-        standardBase: careRule.isApplicable ? kenpoMonthlyBase : 0,
+        standardBase: careRule.isApplicable ? healthBase : 0,
         rate: careRule.totalRate,
         employeeRate: careRule.employeeRate,
         employerRate: careRule.employerRate,
@@ -217,8 +259,9 @@ export function calculateSocialInsuranceSimulation({
         nameJa: '厚生年金保険料',
         nameVi: 'Hưu trí Phúc lợi',
         nameEn: 'Welfare Pension Insurance',
-        standardBase: pensionMonthlyBase,
+        standardBase: pensionBase,
         rate: pensionRule.totalRate,
+        isApplicable: isPensionApplicable,
         employeeRate: pensionRule.employeeRate,
         employerRate: pensionRule.employerRate,
         employee: pensionMonthlyEmployee,
@@ -243,7 +286,7 @@ export function calculateSocialInsuranceSimulation({
         nameJa: '子ども・子育て拠出金（旧児童手当拠出金）',
         nameVi: 'Tiền đóng góp phúc lợi trẻ em (Công ty chịu 100%)',
         nameEn: 'Child Welfare Contribution (Employer 100%)',
-        standardBase: pensionMonthlyBase,
+        standardBase: pensionBase,
         rate: childRule.childWelfareEmployerOnlyRate,
         employeeRate: 0,
         employerRate: childRule.childWelfareEmployerOnlyRate,
@@ -262,25 +305,25 @@ export function calculateSocialInsuranceSimulation({
     bonus: bonus > 0 ? {
       actualBonus: bonus,
       healthInsurance: {
-        standardBase: bonusInfo.kenpoStandardBonus,
+        standardBase: kenpoBonusBase,
         employee: healthBonusEmployee,
         employer: healthBonusEmployer,
         total: healthBonusEmployee + healthBonusEmployer,
       },
       childSupportFund: {
-        standardBase: bonusInfo.kenpoStandardBonus,
+        standardBase: kenpoBonusBase,
         employee: childSupportBonusEmployee,
         employer: childSupportBonusEmployer,
         total: childSupportBonusEmployee + childSupportBonusEmployer,
       },
       careInsurance: {
-        standardBase: careRule.isApplicable ? bonusInfo.kenpoStandardBonus : 0,
+        standardBase: careRule.isApplicable ? kenpoBonusBase : 0,
         employee: careBonusEmployee,
         employer: careBonusEmployer,
         total: careBonusEmployee + careBonusEmployer,
       },
       welfarePension: {
-        standardBase: bonusInfo.pensionStandardBonus,
+        standardBase: pensionBonusBase,
         employee: pensionBonusEmployee,
         employer: pensionBonusEmployer,
         total: pensionBonusEmployee + pensionBonusEmployer,
@@ -292,7 +335,7 @@ export function calculateSocialInsuranceSimulation({
         total: employmentBonusEmployee + employmentBonusEmployer,
       },
       childWelfareContribution: {
-        standardBase: bonusInfo.pensionStandardBonus,
+        standardBase: pensionBonusBase,
         employee: 0,
         employer: childWelfareBonusEmployer,
         total: childWelfareBonusEmployer,
@@ -312,11 +355,29 @@ export function calculateSocialInsuranceSimulation({
       estimatedTakeHomeBeforeTax,
     },
 
+    // Trạng thái tư cách theo độ tuổi
+    ageStatus: {
+      isHealthApplicable,
+      isPensionApplicable,
+      notes: [
+        !isPensionApplicable && isHealthApplicable ? {
+          ja: '70歳以上のため厚生年金保険料はかかりません（在職老齢年金の対象となる場合があります）。健康保険は75歳まで継続します。',
+          vi: 'Từ 70 tuổi không còn đóng 厚生年金. BHYT công ty tiếp tục đến 75 tuổi.',
+          en: 'From age 70 no welfare pension premium is charged; health insurance continues until 75.',
+        } : null,
+        !isHealthApplicable ? {
+          ja: '75歳以上は後期高齢者医療制度の被保険者となるため、健康保険・介護保険・子ども・子育て支援金は会社の給与から控除されません（後期高齢者医療保険料は市区町村等へ別途納付）。',
+          vi: 'Từ 75 tuổi chuyển sang chế độ y tế người cao tuổi giai đoạn sau (後期高齢者医療制度): không còn khấu trừ BHYT, 介護, tiền hỗ trợ trẻ em qua lương; phí 後期高齢者 nộp riêng.',
+          en: 'From age 75 you move to the Late-Stage Elderly Medical Care System: no health, care or child-support premiums via payroll; that premium is paid separately.',
+        } : null,
+      ].filter(Boolean),
+    },
+
     // Công bố pháp lý & Nguồn trích dẫn
     disclosures: {
       confidence: 'official-table based',
       disclosureJa:
-        '本試算は全国健康保険協会（協会けんぽ）および日本年金機構の公式料率・標準報酬月額等級表に基づいています。実際の給与計算では、定時決定（4〜6月の算定基礎）や随時改定（月額変更）、50銭端数処理ルールにより、若干の差異が生じる場合があります。',
+        '本試算は全国健康保険協会（協会けんぽ）および日本年金機構の公式料率・標準報酬月額等級表に基づいています（被保険者負担分は50銭以下切捨て・50銭超切上げ）。実際の給与計算では、定時決定（4〜6月の算定基礎）や随時改定（月額変更）、事業所ごとの端数処理の特約により、若干の差異が生じる場合があります。',
       disclosureVi:
         'Kết quả tính dựa trên bảng chuẩn thù lao chính thức của Kyokai Kenpo & Japan Pension Service. Thực tế bảng lương có thể chênh lệch nhỏ do chu kỳ xác định thù lao định kỳ hoặc quy tắc làm tròn 50 sen.',
       disclosureEn:

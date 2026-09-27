@@ -1,29 +1,13 @@
 import React from 'react';
-import { Type, AlignLeft, Maximize, PanelTop, PanelBottom, Check, ChevronDown } from 'lucide-react';
+import { Type, AlignLeft, Maximize, PanelTop, PanelBottom, ChevronDown, Landmark } from 'lucide-react';
+import {
+    FONT_OPTIONS, SIZE_OPTIONS, SPACING_OPTIONS, MARGIN_OPTIONS, ND30_LAYOUT, isNd30Layout
+} from '../../lib/editor-studio/layoutPresets';
 
-const FONTS = [
-    { id: 'font-sans', name: 'Sans-serif (Modern)' },
-    { id: 'font-serif', name: 'Serif (Classic)' },
-    { id: 'font-mono', name: 'Monospace (Code)' }
-];
-
-const SIZES = [
-    { id: 'text-sm', name: '14px (Nhỏ)' },
-    { id: 'text-base', name: '16px (Chuẩn)' },
-    { id: 'text-lg', name: '18px (Lớn)' }
-];
-
-const SPACINGS = [
-    { id: 'leading-snug', name: '1.3 (Dày)' },
-    { id: 'leading-relaxed', name: '1.6 (Chuẩn)' },
-    { id: 'leading-loose', name: '2.0 (Thưa)' }
-];
-
-const MARGINS = [
-    { id: 'p-[1.27cm]', name: 'Hẹp (1.27cm)' },
-    { id: 'p-[2cm]', name: 'Chuẩn (2cm)' },
-    { id: 'p-[2.54cm]', name: 'Rộng (2.54cm)' }
-];
+const FONTS = FONT_OPTIONS;
+const SIZES = SIZE_OPTIONS;
+const SPACINGS = SPACING_OPTIONS;
+const MARGINS = MARGIN_OPTIONS;
 
 export default function LayoutSettingsBar({ config, onChange }) {
     const updateConfig = (key, value) => {
@@ -38,8 +22,23 @@ export default function LayoutSettingsBar({ config, onChange }) {
         onChange({ ...config, footerOptions: { ...config.footerOptions, [key]: value } });
     };
 
+    const nd30Active = isNd30Layout(config);
+
     return (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm mb-4 shrink-0 flex flex-wrap items-center gap-1 p-2 text-sm z-10 sticky top-0">
+            {/* --- ND30 preset --- */}
+            <div className="flex items-center gap-2 px-3 border-r border-slate-200">
+                <button
+                    type="button"
+                    onClick={() => onChange({ ...config, ...ND30_LAYOUT })}
+                    aria-pressed={nd30Active}
+                    title="Times New Roman 13pt, giãn dòng 1,3, lề trên/dưới 20 mm, trái 30 mm, phải 15 mm (Phụ lục I NĐ 30/2020/NĐ-CP). Chưa tự tạo khối quốc hiệu–tiêu ngữ, số/ký hiệu, nơi nhận — hãy tự kiểm tra thể thức."
+                    className={`flex items-center gap-1.5 rounded-md py-1.5 px-2.5 text-xs font-semibold border transition-colors cursor-pointer ${nd30Active ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-indigo-300'}`}
+                >
+                    <Landmark size={14} /> {nd30Active ? 'Đang dùng: phông & lề NĐ30' : 'Áp dụng phông & lề NĐ30'}
+                </button>
+            </div>
+
             {/* --- Typography Section --- */}
             <div className="flex items-center gap-2 px-3 border-r border-slate-200">
                 <Type size={16} className="text-slate-400" />

@@ -227,6 +227,51 @@ export function evaluateWorkScope(input = {}) {
     };
   }
 
+  // 2.6 Tu nghiệp (研修) & Hoạt động văn hóa (文化活動):
+  // Giấy phép toàn diện 28h/tuần (包括許可) CHỈ dành cho 留学, 家族滞在 và một số 特定活動 (vợ/chồng phụ thuộc,
+  // tìm việc tiếp tục sau tốt nghiệp...). Nguồn: https://www.moj.go.jp/isa/applications/procedures/16-8.html
+  if (statusDef.id === 'trainee' || statusDef.id === 'cultural-activities') {
+    const isTrainee = statusDef.id === 'trainee';
+    return {
+      evaluationTier: isTrainee ? 'potentially-outside-scope' : 'needs-confirmation',
+      badgeType: isTrainee ? 'error' : 'warning',
+      summaryJa: isTrainee
+        ? '「研修」は報酬を受ける活動を前提としない在留資格であり、アルバイト等の資格外活動は実務上ほぼ許可されません。'
+        : '「文化活動」には週28時間の包括許可はありません。アルバイト等は個別許可（勤務先・内容ごとの審査）が必要です。',
+      summaryVi: isTrainee
+        ? 'Tư cách "Tu nghiệp" (研修) không cho phép hoạt động có thù lao; trên thực tế gần như KHÔNG được cấp phép làm thêm.'
+        : 'Tư cách "Hoạt động văn hóa" (文化活動) KHÔNG có giấy phép toàn diện 28h/tuần. Muốn làm thêm phải xin giấy phép riêng lẻ (個別許可) cho từng nơi làm/nội dung cụ thể.',
+      summaryEn: isTrainee
+        ? 'Trainee status assumes no remunerated activity; permission for part-time work is practically not granted.'
+        : 'Cultural Activities has no 28-hour comprehensive permission; part-time work requires individual permission for each specific job.',
+      detailsJa: [
+        '週28時間以内の包括許可の対象は「留学」「家族滞在」及び一部の「特定活動」（扶養を受ける配偶者・子、継続就職活動等）に限られます。',
+        '許可を受けずに報酬を受ける活動を行うと資格外活動違反となります。',
+      ],
+      detailsVi: [
+        'Giấy phép toàn diện (包括許可, tối đa 28h/tuần) chỉ dành cho 留学, 家族滞在 và một số 特定活動 (vợ/chồng/con phụ thuộc, tìm việc sau tốt nghiệp…).',
+        'Làm việc có thù lao khi chưa được cấp phép là vi phạm (hoạt động ngoài tư cách).',
+      ],
+      detailsEn: [
+        'Comprehensive permission (up to 28 h/week) is limited to Student, Dependent and certain Designated Activities (dependent spouse/child, continued job hunting, etc.).',
+        'Working for pay without permission is an unauthorized-activity violation.',
+      ],
+      warnings: [],
+      legalCitations: ['isa-ica-art19-work-scope', 'isa-extra-activity-perm'],
+      nextActions: isTrainee ? [] : [
+        {
+          stepOrder: 1,
+          actionJa: '勤務先と業務内容を明示して、地方出入国在留管理官署で資格外活動許可（個別許可）を申請する（手数料なし）',
+          actionVi: 'Nộp đơn xin giấy phép hoạt động ngoài tư cách dạng riêng lẻ (個別許可) tại Cục XNC, ghi rõ nơi làm và nội dung công việc (miễn phí)',
+          actionEn: 'Apply for individual permission at the regional immigration bureau, specifying employer and duties (free)',
+        },
+      ],
+      legalDisclaimerJa: STANDARD_DISCLAIMER_JA,
+      legalDisclaimerVi: STANDARD_DISCLAIMER_VI,
+      legalDisclaimerEn: STANDARD_DISCLAIMER_EN,
+    };
+  }
+
   // 3. NHÓM DU HỌC (留学) & GIA ĐÌNH (家族滞在)
   // Không được làm việc theo nguyên tắc, trừ khi có 資格外活動許可
   if (statusDef.category === 'table-1-non-work') {
@@ -556,15 +601,15 @@ export function evaluateWorkScope(input = {}) {
           summaryEn: `Managing a business as executive director likely requires changing status to "Business Manager".`,
           detailsJa: [
             '「技術・人文知識・国際業務」のまま自身が代表者となって会社を経営することは、在留資格の本来の活動範囲（公私の機関に雇用されて専門業務を行うこと）と乖離します。',
-            '役員報酬を得て本格的な事業経営を行う場合は、資本金500万円以上や独立した事業所の確保などの要件を満たした上で「経営・管理」への在留資格変更許可申請を行うことが通例です。'
+            '役員報酬を得て本格的な事業経営を行う場合は、「経営・管理」への在留資格変更許可が必要となるのが通例です。2025年10月16日の基準改正により、資本金等3,000万円以上、常勤職員1名以上の雇用、日本語B2相当、経営経験3年以上又は修士、専門家確認済みの事業計画、独立した事業所などが求められます。'
           ],
           detailsVi: [
             'Tư cách "Kỹ sư / Nhân văn" vốn dành cho việc làm thuê nhận lương theo hợp đồng chuyên môn với một cơ quan tiếp nhận, không bao gồm hoạt động điều hành toàn bộ công ty.',
-            'Nếu bạn mở công ty và nhận lương giám đốc điều hành, bạn cần đáp ứng các điều kiện (vốn điều lệ từ 5 triệu yên trở lên, văn phòng làm việc độc lập...) và nộp đơn xin đổi sang visa "Kinh doanh / Quản lý" (経営・管理).'
+            'Nếu bạn mở công ty và nhận lương giám đốc điều hành, thường phải đổi sang visa "Kinh doanh / Quản lý" (経営・管理). Từ 16/10/2025 tiêu chuẩn gồm: vốn từ 30 triệu yên, thuê ít nhất 1 nhân viên chính thức (Nhật/Vĩnh trú...), tiếng Nhật B2, 3 năm kinh nghiệm quản lý hoặc bằng thạc sĩ, kế hoạch kinh doanh được chuyên gia thẩm định, văn phòng độc lập.'
           ],
           detailsEn: [
             'Running an enterprise as principal executive deviates from the primary scope of being employed as a professional specialist.',
-            'Transitioning to "Business Manager" status (requiring 5M+ JPY capital, physical office, etc.) is typically necessary.'
+            'Transitioning to "Business Manager" status is typically necessary. Since 16 Oct 2025 it requires 30M+ JPY capital, 1+ full-time resident employee, Japanese B2, 3 years management experience or a master\'s, an expert-reviewed business plan and a dedicated office.'
           ],
           warnings: [
             {
@@ -659,9 +704,9 @@ export function evaluateWorkScope(input = {}) {
       nextActions: [
         {
           stepOrder: 1,
-          actionJa: '出入国在留管理局窓口にて「就労資格証明書交付申請」（手数料1,200円）の利用を検討する',
-          actionVi: 'Cân nhắc nộp đơn xin Giấy chứng nhận tư cách làm việc (就労資格証明書 - lệ phí 1,200 yên) tại ISA',
-          actionEn: 'Consider applying for a Certificate of Authorized Employment (fee: 1,200 JPY) at ISA',
+          actionJa: '出入国在留管理局にて「就労資格証明書交付申請」（手数料：窓口2,000円／オンライン1,600円）の利用を検討する',
+          actionVi: 'Cân nhắc nộp đơn xin Giấy chứng nhận tư cách làm việc (就労資格証明書 — lệ phí 2.000 yên tại quầy / 1.600 yên online) tại ISA',
+          actionEn: 'Consider applying for a Certificate of Authorized Employment (fee: 2,000 JPY counter / 1,600 JPY online) at ISA',
         }
       ],
       legalDisclaimerJa: STANDARD_DISCLAIMER_JA,

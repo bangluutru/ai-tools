@@ -444,3 +444,12 @@ test('Milestone 7: 引越し手続きガイド＆オーケストレーター (Mo
 });
 
 
+
+test('Address change: foreign residents get the residence card address notification item', () => {
+  const foreign = generateAddressChangeChecklist({ moveDate: '2026-10-10' });
+  const all = [foreign.items, foreign.checklist, foreign.allItems, foreign.tasks].find(Array.isArray) || JSON.stringify(foreign);
+  const text = typeof all === 'string' ? all : JSON.stringify(all);
+  assert.ok(text.includes('residence_card_address_notification'));
+  const japanese = JSON.stringify(generateAddressChangeChecklist({ moveDate: '2026-10-10', isForeignResident: false }));
+  assert.ok(!japanese.includes('residence_card_address_notification'));
+});

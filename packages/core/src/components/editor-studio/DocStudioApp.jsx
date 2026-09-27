@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { LayoutTemplate, Layers, User, PlusCircle, Search, MoreVertical, FileText, Download, Printer, Upload, Sparkles, ArrowLeft, FileUp } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { LayoutTemplate, Layers, ShieldCheck, PlusCircle, Search, FileText, Download, Printer, Upload, Sparkles, ArrowLeft, FileUp } from 'lucide-react';
 import { parseMarkdownToSchema, applyFormatSuggestions } from '../../lib/editor-studio/parsers';
 import { validateSchema } from '../../lib/editor-studio/validationEngine';
 import { exportDocx } from '../../lib/editor-studio/export';
@@ -8,6 +9,7 @@ import { importDocx } from '../../lib/editor-studio/docxImporter';
 import DocStudioPreview from './DocStudioPreview';
 import FormatSuggestionPanel from './FormatSuggestionPanel';
 import LayoutSettingsBar from './LayoutSettingsBar';
+import { DEFAULT_LAYOUT_CONFIG, resolveLayout, normalizeDocStudioLang } from '../../lib/editor-studio/layoutPresets';
 
 // =====================================================================
 // i18n translations for DocStudio Tab 9
@@ -18,10 +20,10 @@ const dsTranslations = {
         sidebarSubtitle: 'Quản lý & Xuất tài liệu',
         navDocs: 'Tài liệu',
         navTemplates: 'Mẫu tài liệu',
-        guestUser: 'Khách',
-        openAccess: 'TRUY CẬP MỞ',
-        dashTitle: 'Tài liệu Workspace',
-        dashSubtitle: 'Quản lý và chỉnh sửa tài liệu nội bộ.',
+        guestUser: 'Không cần đăng nhập',
+        openAccess: 'XỬ LÝ TRÊN TRÌNH DUYỆT',
+        dashTitle: 'Văn bản ví dụ',
+        dashSubtitle: 'Các văn bản minh họa có sẵn để thử. Nội dung bạn soạn không được lưu vào danh sách này.',
         createDoc: 'Tạo tài liệu',
         searchPlaceholder: 'Tìm kiếm tài liệu...',
         updated: 'Cập nhật',
@@ -36,7 +38,7 @@ const dsTranslations = {
         validationLabel: 'Vấn đề phát hiện',
         noteLabel: 'Lưu ý',
         uploadBtn: 'Tải file lên',
-        uploadHint: 'Hỗ trợ .txt, .md, .doc, .docx',
+        uploadHint: 'Hỗ trợ .txt, .md, .docx',
         backToDash: 'Quay lại',
         uploadSuccess: 'Đã tải file thành công!',
         analyzeBtn: 'Phân tích & Gợi ý',
@@ -47,16 +49,25 @@ const dsTranslations = {
         high: 'Cao', medium: 'Trung bình', low: 'Thấp',
         formatApplied: 'Đã áp dụng định dạng! Xem bản xem trước bên phải.',
         importingDocx: 'Đang đọc file DOCX...',
+        printBtn: 'In / Lưu PDF',
+        printHint: 'Mở hộp thoại in của trình duyệt — chọn “Lưu dưới dạng PDF” để có tệp PDF.',
+        docxExporting: 'Đang tạo tệp DOCX...',
+        docxDone: 'Đã tạo tệp DOCX.',
+        docxFailed: 'Xuất DOCX thất bại',
+        docUnsupported: 'Định dạng .doc (Word 97-2003) không được hỗ trợ. Hãy mở bằng Word và lưu lại dạng .docx.',
+        sampleLoaded: 'Đã mở văn bản ví dụ.',
+        newDocReady: 'Tài liệu mới — nhập nội dung hoặc tải file lên.',
+        sampleBadge: 'VÍ DỤ',
     },
     en: {
         sidebarTitle: 'Document Studio',
         sidebarSubtitle: 'Manage & Export',
         navDocs: 'Documents',
         navTemplates: 'Templates',
-        guestUser: 'Guest User',
-        openAccess: 'OPEN ACCESS',
-        dashTitle: 'Workspace Documents',
-        dashSubtitle: 'Manage and edit your internal structured documents.',
+        guestUser: 'No sign-in needed',
+        openAccess: 'PROCESSED IN BROWSER',
+        dashTitle: 'Sample documents',
+        dashSubtitle: 'Built-in examples to try. What you write is not saved to this list.',
         createDoc: 'Create Document',
         searchPlaceholder: 'Search documents...',
         updated: 'Updated',
@@ -71,7 +82,7 @@ const dsTranslations = {
         validationLabel: 'Validation Issues',
         noteLabel: 'Note',
         uploadBtn: 'Upload File',
-        uploadHint: 'Supports .txt, .md, .doc, .docx',
+        uploadHint: 'Supports .txt, .md, .docx',
         backToDash: 'Back',
         uploadSuccess: 'File uploaded successfully!',
         analyzeBtn: 'Analyze & Suggest',
@@ -82,16 +93,25 @@ const dsTranslations = {
         high: 'High', medium: 'Medium', low: 'Low',
         formatApplied: 'Format applied! Check the preview on the right.',
         importingDocx: 'Reading DOCX file...',
+        printBtn: 'Print / Save PDF',
+        printHint: 'Opens the browser print dialog — choose “Save as PDF” to get a PDF file.',
+        docxExporting: 'Creating DOCX...',
+        docxDone: 'DOCX created.',
+        docxFailed: 'DOCX export failed',
+        docUnsupported: 'Legacy .doc (Word 97-2003) is not supported. Open it in Word and save as .docx.',
+        sampleLoaded: 'Sample document opened.',
+        newDocReady: 'New document — type content or upload a file.',
+        sampleBadge: 'SAMPLE',
     },
     jp: {
         sidebarTitle: '文書スタジオ',
         sidebarSubtitle: '管理 & エクスポート',
         navDocs: 'ドキュメント',
         navTemplates: 'テンプレート',
-        guestUser: 'ゲスト',
-        openAccess: 'オープンアクセス',
-        dashTitle: 'ワークスペースドキュメント',
-        dashSubtitle: '社内の構造化ドキュメントを管理・編集。',
+        guestUser: 'ログイン不要',
+        openAccess: 'ブラウザ内で処理',
+        dashTitle: 'サンプル文書',
+        dashSubtitle: '試用のためのサンプルです。作成した内容はこの一覧に保存されません。',
         createDoc: 'ドキュメント作成',
         searchPlaceholder: 'ドキュメントを検索...',
         updated: '更新',
@@ -106,7 +126,7 @@ const dsTranslations = {
         validationLabel: '検証結果',
         noteLabel: '注意',
         uploadBtn: 'ファイルアップロード',
-        uploadHint: '.txt, .md, .doc, .docx 対応',
+        uploadHint: '.txt, .md, .docx 対応',
         backToDash: '戻る',
         uploadSuccess: 'ファイルがアップロードされました！',
         analyzeBtn: '分析 & 提案',
@@ -117,13 +137,23 @@ const dsTranslations = {
         high: '高', medium: '中', low: '低',
         formatApplied: 'フォーマット適用済み！右側のプレビューをご確認ください。',
         importingDocx: 'DOCXファイルを読み込み中...',
+        printBtn: '印刷 / PDF保存',
+        printHint: 'ブラウザの印刷ダイアログを開きます。「PDFとして保存」を選択してください。',
+        docxExporting: 'DOCXを作成中...',
+        docxDone: 'DOCXを作成しました。',
+        docxFailed: 'DOCXの書き出しに失敗しました',
+        docUnsupported: '旧形式の .doc は非対応です。Wordで .docx として保存してください。',
+        sampleLoaded: 'サンプル文書を開きました。',
+        newDocReady: '新しい文書 — 内容を入力するかファイルをアップロードしてください。',
+        sampleBadge: 'サンプル',
     },
 };
 
-const MOCK_DOCS = [
-    { id: '1', title_vn: 'Quyết định bổ nhiệm NS', title_en: 'Appointment Decision', title_jp: '人事任命決定', type: 'Official Letter', status: 'DRAFT', updatedAt: '2026-03-10', content: `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n\nQUYẾT ĐỊNH BỔ NHIỆM\n\nSố: 01/2026/QĐ-BN\n\nKính gửi: Phòng Nhân sự, Ông/Bà Lê Trí Nam\n\nĐiều 1: Bổ nhiệm chức danh\nBổ nhiệm Ông Lê Trí Nam giữ chức vụ Trưởng phòng Công nghệ kể từ ngày 15/03/2026.\n\nĐiều 2: Mức lương và phụ cấp\nMức lương cơ bản và phụ cấp được hưởng theo quy định của công ty.` },
-    { id: '2', title_vn: 'Biên bản nghiệm thu dự án', title_en: 'Project Acceptance Report', title_jp: 'プロジェクト検収議事録', type: 'Meeting Minutes', status: 'GENERATED', updatedAt: '2026-03-09', content: `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n\nBIÊN BẢN NGHIỆM THU DỰ ÁN\n\nHôm nay, ngày 09 tháng 03 năm 2026, tại văn phòng công ty.\n\nThành phần tham dự:\n1. Đại diện Bên A: Ông Trần Hải Bằng\n2. Đại diện Bên B: Ông Lê Trí Nam\n\nNội dung nghiệm thu:\n1. Phần mềm quản lý tài liệu DocStudio\n2. Module tích hợp AI Rewrite\n\nKết luận:\nHai bên đồng ý nghiệm thu và ghi nhận hệ thống hoạt động ổn định.` },
-    { id: '3', title_vn: 'Hợp đồng nguyên tắc Hojokin', title_en: 'Hojokin Framework Contract', title_jp: 'Hojokin基本契約', type: 'Contract', status: 'VALIDATED', updatedAt: '2026-03-08', content: `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n\nHỢP ĐỒNG NGUYÊN TẮC\n\nSố: 05/2026/HĐNT-HOJOKIN\n\nBÊN A: Công ty Cổ phần Genki Fami Việt Nam\nĐại diện: Ông Trần Hải Bằng\n\nBÊN B: Đối tác Hojokin\n\nĐiều 1: Phạm vi hợp tác\nHai bên đồng ý hợp tác triển khai hệ thống phân tích trợ cấp Hojokin Navigator tại thị trường Nhật Bản.\n\nĐiều 2: Nghĩa vụ các bên\nBên A cung cấp tài nguyên máy chủ. Bên B cung cấp dữ liệu pháp lý.` },
+// Built-in example documents (illustrative only; nothing is stored or synced).
+const SAMPLE_DOCS = [
+    { id: '1', title_vn: 'Quyết định bổ nhiệm NS', title_en: 'Appointment Decision', title_jp: '人事任命決定', type: 'Official Letter', content: `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n\nQUYẾT ĐỊNH BỔ NHIỆM\n\nSố: 01/2026/QĐ-BN\n\nKính gửi: Phòng Nhân sự, Ông/Bà Trần Văn B\n\nĐiều 1: Bổ nhiệm chức danh\nBổ nhiệm Ông Trần Văn B giữ chức vụ Trưởng phòng Công nghệ kể từ ngày 15/03/2026.\n\nĐiều 2: Mức lương và phụ cấp\nMức lương cơ bản và phụ cấp được hưởng theo quy định của công ty.` },
+    { id: '2', title_vn: 'Biên bản nghiệm thu dự án', title_en: 'Project Acceptance Report', title_jp: 'プロジェクト検収議事録', type: 'Meeting Minutes', content: `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n\nBIÊN BẢN NGHIỆM THU DỰ ÁN\n\nHôm nay, ngày 09 tháng 03 năm 2026, tại văn phòng công ty.\n\nThành phần tham dự:\n1. Đại diện Bên A: Ông Nguyễn Văn A\n2. Đại diện Bên B: Ông Trần Văn B\n\nNội dung nghiệm thu:\n1. Phần mềm quản lý tài liệu DocStudio\n2. Module tích hợp AI Rewrite\n\nKết luận:\nHai bên đồng ý nghiệm thu và ghi nhận hệ thống hoạt động ổn định.` },
+    { id: '3', title_vn: 'Hợp đồng nguyên tắc Hojokin', title_en: 'Hojokin Framework Contract', title_jp: 'Hojokin基本契約', type: 'Contract', content: `CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM\nĐộc lập - Tự do - Hạnh phúc\n\nHỢP ĐỒNG NGUYÊN TẮC\n\nSố: 05/2026/HĐNT-HOJOKIN\n\nBÊN A: Công ty Cổ phần ABC\nĐại diện: Ông Nguyễn Văn A\n\nBÊN B: Đối tác Hojokin\n\nĐiều 1: Phạm vi hợp tác\nHai bên đồng ý hợp tác triển khai hệ thống phân tích trợ cấp Hojokin Navigator tại thị trường Nhật Bản.\n\nĐiều 2: Nghĩa vụ các bên\nBên A cung cấp tài nguyên máy chủ. Bên B cung cấp dữ liệu pháp lý.` },
 ];
 
 const TEMPLATE_BOILERPLATES = {
@@ -146,19 +176,20 @@ export default function DocStudioApp({ displayLang }) {
     const textareaRef = useRef(null);
 
     // Layout Engine configuration state
-    const [layoutConfig, setLayoutConfig] = useState({
-        fontFamily: 'font-sans',
-        fontSize: 'text-sm',
-        lineSpacing: 'leading-relaxed',
-        margins: 'p-[2.5cm]',
-        headerOptions: { enabled: false, text: '' },
-        footerOptions: { enabled: false, pageNumbers: true }
-    });
+    // Default = ND30 page/typography preset (Times New Roman 13pt, lề 20/20/30/15 mm)
+    const [layoutConfig, setLayoutConfig] = useState(() => ({
+        ...DEFAULT_LAYOUT_CONFIG,
+        headerOptions: { ...DEFAULT_LAYOUT_CONFIG.headerOptions },
+        footerOptions: { ...DEFAULT_LAYOUT_CONFIG.footerOptions }
+    }));
+    const [isExportingDocx, setIsExportingDocx] = useState(false);
 
-    const t = dsTranslations[displayLang] || dsTranslations.vn;
+    // Hub passes vi/en/ja; DocStudio dictionaries use vn/en/jp
+    const lang = normalizeDocStudioLang(displayLang);
+    const t = dsTranslations[lang] || dsTranslations.vn;
 
     const getDocTitle = (doc) => {
-        const key = `title_${displayLang}`;
+        const key = `title_${lang}`;
         return doc[key] || doc.title_vn || doc.title_en;
     };
 
@@ -214,7 +245,15 @@ export default function DocStudioApp({ displayLang }) {
 
         const ext = file.name.split('.').pop().toLowerCase();
 
-        if (ext === 'docx' || ext === 'doc') {
+        if (ext === 'doc') {
+            // mammoth only reads Office Open XML (.docx)
+            setStatusMessage(t.docUnsupported);
+            setStatusType('error');
+            e.target.value = '';
+            return;
+        }
+
+        if (ext === 'docx') {
             // DOCX import via mammoth
             setStatusMessage(t.importingDocx);
             setStatusType('info');
@@ -258,10 +297,41 @@ export default function DocStudioApp({ displayLang }) {
         setGeneratedSchema(null);
         setValidationIssues([]);
         setSuggestions([]);
-        setStatusMessage('Đã tải tài liệu từ Workspace.');
+        setStatusMessage(t.sampleLoaded);
         setStatusType('success');
         setActiveSubTab('editor');
     };
+
+    // "Create document": start from an empty editor
+    const handleNewDocument = () => {
+        setRawInput('');
+        setGeneratedSchema(null);
+        setValidationIssues([]);
+        setSuggestions([]);
+        setStatusMessage(t.newDocReady);
+        setStatusType('info');
+        setActiveSubTab('editor');
+    };
+
+    const handleExportDocx = () => {
+        if (!generatedSchema || isExportingDocx) return;
+        setIsExportingDocx(true);
+        setStatusMessage(t.docxExporting);
+        setStatusType('info');
+        exportDocx(generatedSchema, 'DocStudio_Export.docx', layoutConfig)
+            .then(() => {
+                setStatusMessage(t.docxDone);
+                setStatusType('success');
+            })
+            .catch((err) => {
+                setStatusMessage(`${t.docxFailed}: ${err?.message || err}`);
+                setStatusType('error');
+            })
+            .finally(() => setIsExportingDocx(false));
+    };
+
+    const printLayout = resolveLayout(layoutConfig);
+    const pm = printLayout.marginsMm;
 
     // Handle clicking a template
     const handleLoadTemplate = (templateName) => {
@@ -326,7 +396,7 @@ export default function DocStudioApp({ displayLang }) {
                 <div className="mt-auto md:absolute md:bottom-0 left-0 right-0 p-4 border-t border-border-subtle/30 bg-surface-container-low/90 backdrop-blur-md">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-surface-container border border-border-subtle flex items-center justify-center shrink-0">
-                            <User size={14} className="text-on-surface-variant" />
+                            <ShieldCheck size={14} className="text-on-surface-variant" />
                         </div>
                         <div className="overflow-hidden">
                             <p className="text-xs font-bold text-on-surface truncate">{t.guestUser}</p>
@@ -348,7 +418,8 @@ export default function DocStudioApp({ displayLang }) {
                                     <p className="text-on-surface-variant text-sm mt-1">{t.dashSubtitle}</p>
                                 </div>
                                 <button
-                                    onClick={() => setActiveSubTab('editor')}
+                                    type="button"
+                                    onClick={handleNewDocument}
                                     className="px-4 py-2 bg-primary-container hover:bg-brand-cyan-bright text-on-primary-container text-sm font-bold rounded-xl flex items-center gap-2 transition-all shadow-sm cursor-pointer"
                                 >
                                     <PlusCircle size={16} /> {t.createDoc}
@@ -369,7 +440,7 @@ export default function DocStudioApp({ displayLang }) {
                                     </div>
                                 </div>
                                 <div className="divide-y divide-border-subtle/30">
-                                    {MOCK_DOCS.filter(d => getDocTitle(d).toLowerCase().includes(searchQuery.toLowerCase())).map(doc => (
+                                    {SAMPLE_DOCS.filter(d => getDocTitle(d).toLowerCase().includes(searchQuery.toLowerCase())).map(doc => (
                                         <div key={doc.id} onClick={() => handleLoadDocument(doc)} className="p-4 hover:bg-surface-subtle/60 flex items-center justify-between group transition-colors cursor-pointer">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 bg-primary-container/15 text-brand-cyan-bright rounded-lg flex items-center justify-center">
@@ -379,29 +450,12 @@ export default function DocStudioApp({ displayLang }) {
                                                     <h3 className="font-bold text-on-surface text-sm">{getDocTitle(doc)}</h3>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">{doc.type}</span>
-                                                        <span className="w-1 h-1 bg-border-subtle rounded-full"></span>
-                                                        <span className="text-xs text-on-surface-variant">{t.updated} {doc.updatedAt}</span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
-                                                <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide border ${
-                                                    doc.status === 'DRAFT'
-                                                        ? 'bg-surface-subtle text-on-surface-variant border-border-subtle'
-                                                        : doc.status === 'GENERATED'
-                                                        ? 'bg-primary-container/15 text-brand-cyan-bright border-primary-container/30'
-                                                        : 'bg-secondary/15 text-secondary border-secondary/30'
-                                                }`}>
-                                                    {doc.status}
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    aria-label="Tùy chọn thao tác tài liệu"
-                                                    className="text-on-surface-variant hover:text-on-surface p-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                                                >
-                                                    <MoreVertical size={16} />
-                                                </button>
-                                            </div>
+                                            <span className="text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide border bg-surface-subtle text-on-surface-variant border-border-subtle">
+                                                {t.sampleBadge}
+                                            </span>
                                         </div>
                                     ))}
                                 </div>
@@ -466,7 +520,7 @@ export default function DocStudioApp({ displayLang }) {
                                         ref={fileInputRef}
                                         type="file"
                                         aria-label="Tải lên tệp tài liệu văn bản"
-                                        accept=".txt,.md,.text,.markdown,.doc,.docx"
+                                        accept=".txt,.md,.text,.markdown,.docx"
                                         onChange={handleFileUpload}
                                         className="hidden"
                                     />
@@ -499,14 +553,16 @@ export default function DocStudioApp({ displayLang }) {
                                             <button
                                                 type="button"
                                                 onClick={() => window.print()}
+                                                title={t.printHint}
                                                 className="px-3 py-1.5 bg-surface-subtle hover:bg-surface-container border border-border-subtle text-on-surface text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
                                             >
-                                                <Printer size={14} /> PDF
+                                                <Printer size={14} /> {t.printBtn}
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={() => exportDocx(generatedSchema, 'DocStudio_Export.docx', layoutConfig)}
-                                                className="px-3 py-1.5 bg-secondary hover:bg-secondary-container text-on-secondary text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                                                onClick={handleExportDocx}
+                                                disabled={isExportingDocx}
+                                                className="px-3 py-1.5 disabled:opacity-60 bg-secondary hover:bg-secondary-container text-on-secondary text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
                                             >
                                                 <Download size={14} /> DOCX
                                             </button>
@@ -555,7 +611,7 @@ export default function DocStudioApp({ displayLang }) {
                                                 suggestions={suggestions}
                                                 onUpdateSuggestion={handleUpdateSuggestion}
                                                 onAcceptAll={handleAcceptAll}
-                                                displayLang={displayLang}
+                                                displayLang={lang}
                                                 i18n={{
                                                     panelTitle: t.panelTitle,
                                                     acceptAll: t.acceptAll,
@@ -612,6 +668,26 @@ export default function DocStudioApp({ displayLang }) {
                     )}
                 </div>
             </main>
+
+            {/* Print-only copy of the document, rendered directly under <body> so that
+                hub chrome can be hidden and no scroll container clips the pages. */}
+            {activeSubTab === 'editor' && generatedSchema && typeof document !== 'undefined' && createPortal(
+                <div className="ds-print-portal" aria-hidden="true">
+                    <style>{`
+                        @media screen { .ds-print-portal { display: none !important; } }
+                        @media print {
+                            @page { size: A4 portrait; margin: ${pm.top}mm ${pm.right}mm ${pm.bottom}mm ${pm.left}mm; }
+                            html, body { height: auto !important; overflow: visible !important; background: #fff !important; }
+                            body > *:not(.ds-print-portal) { display: none !important; }
+                            .ds-print-portal { display: block !important; position: static !important; width: auto !important; }
+                            .ds-print-portal * { overflow: visible !important; }
+                            .ds-print-document { color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                        }
+                    `}</style>
+                    <DocStudioPreview schema={generatedSchema} layoutConfig={layoutConfig} printMode />
+                </div>,
+                document.body
+            )}
         </div>
     );
 }

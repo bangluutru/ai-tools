@@ -77,8 +77,8 @@ test('Jurisdictions: All 47 Japanese Prefectures are defined and mapped to offic
   assert.equal(okinawaOffice.id, 'fukuoka', 'Okinawa thuộc thẩm quyền chính thức của TLSQ Fukuoka');
 });
 
-test('Procedures Catalog: 20 MVP Consular Procedures are fully structured with complete IA', () => {
-  assert.equal(CONSULAR_PROCEDURES.length, 20, 'Phải có đủ 20 thủ tục lãnh sự thiết yếu (MVP)');
+test('Procedures Catalog: consular procedures are fully structured with honest status & sources', () => {
+  assert.equal(CONSULAR_PROCEDURES.length, 21, 'Phải có 21 thủ tục (thêm ghi chú ly hôn)');
   assert.equal(CONSULAR_CATEGORIES.length, 7, 'Phải có đủ 7 nhóm thủ tục');
 
   for (const proc of CONSULAR_PROCEDURES) {
@@ -90,7 +90,7 @@ test('Procedures Catalog: 20 MVP Consular Procedures are fully structured with c
     assert.ok(proc.summary, `${proc.id} thiếu summary`);
     assert.ok(proc.when_needed, `${proc.id} thiếu when_needed`);
     assert.ok(
-      ['postal_or_direct', 'direct_only', 'direct_or_postal'].includes(proc.submission_mode),
+      ['postal_or_direct', 'direct_only', 'direct_or_postal', 'unconfirmed'].includes(proc.submission_mode),
       `${proc.id} phương thức nộp không hợp lệ: ${proc.submission_mode}`
     );
     assert.ok(proc.processing_time, `${proc.id} thiếu processing_time`);
@@ -102,7 +102,14 @@ test('Procedures Catalog: 20 MVP Consular Procedures are fully structured with c
     assert.ok(proc.official_sources.length > 0, `${proc.id} phải có ít nhất 1 nguồn tham chiếu`);
     assert.ok(Array.isArray(proc.aliases), `${proc.id} aliases phải là mảng`);
     assert.ok(proc.last_verified, `${proc.id} thiếu last_verified`);
-    assert.equal(proc.status, 'VERIFIED', `${proc.id} status phải là VERIFIED`);
+    assert.ok(['VERIFIED', 'PARTIAL', 'NEEDS_REVIEW'].includes(proc.status), `${proc.id} status không hợp lệ`);
+    for (const src of proc.official_sources) {
+      assert.match(src.url, /^https:\/\//, `${proc.id} nguồn phải là https`);
+    }
+    // Không còn bản in Toolio được trình bày như tờ khai nộp
+    for (const doc of proc.required_documents) {
+      if (doc.isForm) assert.equal(doc.isDraftHelper, true, `${proc.id}: biểu mẫu Toolio phải gắn nhãn bản nháp`);
+    }
   }
 
   // Tra cứu thử thủ tục
@@ -117,13 +124,15 @@ test('Procedures Catalog: 20 MVP Consular Procedures are fully structured with c
   assert.equal(birth.formId, 'form_birth_registration');
 });
 
-test('Form Engine: Official forms have verified SHA-256 fingerprints and legal bases', () => {
-  assert.ok(CONSULAR_FORMS.length >= 4, 'Phải có ít nhất 4 biểu mẫu chính thức tích hợp');
+test('Form Engine: draft helpers carry legal bases and NO fake SHA-256 fingerprints', () => {
+  assert.ok(CONSULAR_FORMS.length >= 4, 'Phải có ít nhất 4 bản nháp hỗ trợ');
 
   for (const form of CONSULAR_FORMS) {
     assert.ok(form.id, 'Form thiếu ID');
     assert.ok(form.title, `${form.id} thiếu title`);
-    assert.ok(form.sha256Fingerprint || form.fingerprint, `${form.id} thiếu SHA-256 fingerprint`);
+    assert.ok(!form.sha256Fingerprint && !form.fingerprint, `${form.id} không được có fingerprint giả`);
+    assert.equal(form.isDraftHelper, true, `${form.id} phải là bản nháp`);
+    assert.equal(FORM_INTEGRITY_REGISTRY[form.id].sha256, null);
     assert.ok(form.standardBasis || form.legal_basis, `${form.id} thiếu căn cứ pháp lý`);
     assert.ok(FORM_INTEGRITY_REGISTRY[form.id], `${form.id} thiếu bản ghi trong FORM_INTEGRITY_REGISTRY`);
   }
@@ -144,7 +153,10 @@ test('Form Engine: Official forms have verified SHA-256 fingerprints and legal b
   // Form Giấy ủy quyền
   const poaForm = getFormById('form_power_of_attorney');
   assert.ok(poaForm);
-  assert.equal(poaForm.code, 'GUQ-ND30');
+  assert.equal(poaForm.code, 'GUQ-BLDS');
+  assert.ok(poaForm.standardBasis.includes('Bộ luật Dân sự 2015'));
+  assert.ok(poaForm.standardBasis.includes('23/2015/NĐ-CP'));
+  assert.ok(nationalityForm.legal_basis.includes('79/2025/QH15'));
 });
 
 test('Cross-System Life Journeys: Connecting JP procedures with VN consular procedures', () => {
@@ -246,14 +258,15 @@ test('A4 Aspect Ratio & Screen Geometry: Strictly preserved without distortion u
   }
 });
 
-test('Multi-page Form Architecture: TK02 renders exactly 2 official pages under TT 31/2023/TT-BCA', async () => {
+test('Multi-page Form Architecture: TK02 draft renders 2 pages; basis cites TT 69/2026/TT-BCA', async () => {
   const { FORM_TEMPLATES, getFormTemplate, TK02_PAGE_MAPPING } = await import('../../packages/core/src/consular/index.js');
 
   const tk02 = getFormTemplate('form_passport_tk02');
   assert.ok(tk02);
   assert.equal(tk02.code, 'TK02');
   assert.equal(tk02.pageCount, 2, 'Mẫu TK02 chính thức phải có đúng 2 trang A4');
-  assert.ok(tk02.standardBasis.includes('Thông tư số 31/2023/TT-BCA'));
+  assert.ok(tk02.standardBasis.includes('31/2023/TT-BCA'));
+  assert.ok(tk02.standardBasis.includes('69/2026/TT-BCA'));
 
   // Trang 1: 14 trường thông tin và khung ảnh 4x6 cm
   assert.ok(TK02_PAGE_MAPPING.pages[1].fields.length >= 14);
@@ -266,31 +279,16 @@ test('Multi-page Form Architecture: TK02 renders exactly 2 official pages under 
   assert.ok(TK02_PAGE_MAPPING.pages[2].header.officialVerificationTitle.includes('XÁC NHẬN CỦA CƠ QUAN ĐẠI DIỆN'));
 });
 
-test('Form Integrity & SHA-256 Checksum: Verification passes only on matching fingerprints', async () => {
-  const { verifyTemplateIntegrity, FORM_TEMPLATES } = await import('../../packages/core/src/consular/index.js');
+test('Form Integrity: drafts are never reported as VERIFIED', async () => {
+  const { verifyTemplateIntegrity } = await import('../../packages/core/src/consular/index.js');
 
-  // 1. Kiểm định hợp lệ khi không truyền actualHash (đối chiếu registry chuẩn)
   const tk02Result = verifyTemplateIntegrity('form_passport_tk02');
-  assert.equal(tk02Result.isVerified, true);
-  assert.equal(tk02Result.status, 'VERIFIED');
+  assert.equal(tk02Result.isVerified, false);
+  assert.equal(tk02Result.status, 'REVIEW_REQUIRED');
 
-  // 2. Kiểm định khi truyền đúng hash thực tế
-  const matchResult = verifyTemplateIntegrity(
-    'form_passport_tk02',
-    FORM_TEMPLATES.form_passport_tk02.sha256Fingerprint
-  );
-  assert.equal(matchResult.isVerified, true);
-  assert.equal(matchResult.status, 'VERIFIED');
+  const anyHash = verifyTemplateIntegrity('form_passport_tk02', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+  assert.equal(anyHash.isVerified, false);
 
-  // 3. Kiểm định khi hash bị sai lệch (Phát hiện giả mạo/chỉnh sửa trái phép)
-  const mismatchResult = verifyTemplateIntegrity(
-    'form_passport_tk02',
-    'invalid_tampered_hash_00000000000000000000000000000000000000000000000'
-  );
-  assert.equal(mismatchResult.isVerified, false);
-  assert.equal(mismatchResult.status, 'REVIEW_REQUIRED');
-
-  // 4. Form không tồn tại
   const notFoundResult = verifyTemplateIntegrity('non_existent_form_xyz');
   assert.equal(notFoundResult.isVerified, false);
   assert.equal(notFoundResult.status, 'REVIEW_REQUIRED');
@@ -337,6 +335,12 @@ test('SSOT Official PDF Generator: Generates authentic multi-page A4 PDF documen
   // Kiểm tra hàm sinh tên file dự phòng
   const fallbackName = generatePdfFilename('TK02', {});
   assert.equal(fallbackName, 'TK02_DON_DE_NGHI.pdf');
+
+  // Mã có '/' không được lọt vào tên file
+  const slashName = generatePdfFilename('TP/HT-2020-TKKS.1', { father_name: 'Trần Văn Đức' });
+  assert.ok(!slashName.includes('/'));
+  assert.equal(slashName, 'TP_HT_2020_TKKS_1_TRAN_VAN_DUC.pdf');
+  assert.equal(result.isAsciiFallback, true);
 });
 
 test('Long Data & Diacritics Safety: Handles long Vietnamese names, Japanese Kanji/Romaji without error', async () => {
@@ -369,4 +373,71 @@ test('Long Data & Diacritics Safety: Handles long Vietnamese names, Japanese Kan
     });
     assert.equal(res.pageCount, 2);
   }, 'Sinh PDF với dữ liệu dài và nhiều dấu tiếng Việt không được ném ngoại lệ');
+});
+
+test('Passport procedures: in-person, online declaration, Embassy document list', () => {
+  for (const id of ['vn_passport_renewal', 'vn_passport_lost', 'vn_passport_damaged', 'vn_passport_child']) {
+    const p = getProcedureById(id);
+    assert.equal(p.submission_mode, 'direct_only', `${id} phải nộp trực tiếp`);
+    const names = p.required_documents.map((d) => d.name).join(' | ');
+    assert.ok(names.includes('passport.mofa.gov.vn'), `${id} phải yêu cầu tờ khai trực tuyến`);
+    assert.ok(names.includes('住民票'), `${id} phải có 住民票`);
+    assert.ok(names.includes('在留カード'), `${id} phải có 在留カード`);
+    assert.ok(!names.includes('Letter Pack'), `${id} không được yêu cầu Letter Pack (không nộp bưu điện)`);
+  }
+  const lost = getProcedureById('vn_passport_lost');
+  const lostNames = lost.required_documents.map((d) => d.name).join(' | ');
+  assert.ok(lostNames.includes('CT07'));
+  assert.ok(lostNames.includes('Giấy xác nhận nhân thân'));
+  const child = getProcedureById('vn_passport_child');
+  assert.ok(child.required_documents.some((d) => d.name.includes('TK02a')));
+});
+
+test('Apostille (from 2026-09-11) replaces consular legalization for Convention documents', () => {
+  const jp = getProcedureById('vn_consular_legalization_jp_docs');
+  const vn = getProcedureById('vn_consular_certification_vn_docs');
+  assert.ok(jp.aliases.includes('apostille'));
+  assert.ok(vn.aliases.includes('apostille'));
+  assert.ok(jp.important_notes.some((n) => n.includes('TRƯỚC 11/9/2026')));
+  assert.ok(vn.summary.includes('apostille.lanhsuvietnam.gov.vn'));
+});
+
+test('Birth registration: extract (trích lục), nationality agreement only for mixed parents', () => {
+  const birth = getProcedureById('vn_birth_registration');
+  assert.equal(birth.submission_mode, 'direct_only');
+  const nat = birth.required_documents.find((d) => d.formId === 'form_nationality_agreement');
+  assert.ok(nat.name.includes('người nước ngoài'));
+  assert.ok(birth.important_notes.some((n) => n.includes('TRÍCH LỤC')));
+});
+
+test('Criminal record: Phiếu số 2 cannot be requested via proxy', () => {
+  const lltp = getProcedureById('vn_criminal_record_support');
+  assert.ok(lltp.important_notes.some((n) => n.includes('Phiếu số 2') && n.includes('KHÔNG')));
+});
+
+test('Jurisdiction: unknown prefecture returns null; unconfirmed regions flagged', () => {
+  assert.equal(getOfficeForPrefecture('zz'), null);
+  assert.equal(getOfficeForPrefecture(''), null);
+  assert.equal(getPrefectureById('99'), null);
+  for (const code of ['24', '31', '34', '37']) {
+    const office = getOfficeForPrefecture(code);
+    assert.equal(office.jurisdictionConfirmed, false, `${code} chưa được xác nhận chính thức`);
+    assert.ok(office.jurisdictionNote.includes('xác nhận'));
+  }
+  const tokyo = getOfficeForPrefecture('13');
+  assert.equal(tokyo.hotline, '+81-3-3466-3311', 'hotline hiển thị phải là số phòng lãnh sự, không phải số bảo hộ công dân');
+  assert.equal(tokyo.citizenProtectionHotline, '+81-80-3590-9136');
+});
+
+test('Consular search: diacritic-insensitive, token-based, Japanese', async () => {
+  const { searchConsularProcedures } = await import('../../packages/core/src/consular/index.js');
+  const ids = (q) => searchConsularProcedures(q).map((p) => p.id);
+  assert.equal(ids('ho chieu')[0].startsWith('vn_passport'), true);
+  assert.deepEqual(ids('hộ chiếu').slice(0, 3), ids('ho chieu').slice(0, 3));
+  assert.deepEqual(ids('hộ chiếu'.normalize('NFD')), ids('hộ chiếu'.normalize('NFC')));
+  assert.ok(ids('ket hon').includes('vn_marriage_certificate_dsq'));
+  assert.equal(ids('tôi muốn làm lại hộ chiếu bị mất')[0], 'vn_passport_lost');
+  assert.ok(ids('パスポート').includes('vn_passport_renewal'));
+  assert.ok(ids('apostille').includes('vn_consular_legalization_jp_docs'));
+  assert.equal(ids('a').length, 0);
 });

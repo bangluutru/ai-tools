@@ -61,7 +61,7 @@ export default function SocialInsuranceSimulatorView({ lang = 'ja' }) {
       actualBonus: '賞与・ボーナス（1回あたり）',
       prefecture: '勤務先の都道府県（協会けんぽ支部）',
       age: '年齢',
-      ageHint: '40歳以上64歳未満は介護保険料の対象',
+      ageHint: '40歳以上65歳未満は介護保険料の対象（70歳以上は厚生年金なし、75歳以上は健康保険なし）',
       industry: '雇用保険の事業区分',
       applicableDate: '適用時期',
       resultHeader: '試算結果サマリー',
@@ -100,7 +100,7 @@ export default function SocialInsuranceSimulatorView({ lang = 'ja' }) {
       actualBonus: 'Tiền thưởng (Bonus mỗi lần, nếu có)',
       prefecture: 'Tỉnh thành công ty đóng trụ sở (Chi nhánh Kenpo)',
       age: 'Độ tuổi người lao động',
-      ageHint: 'Từ 40 đến 64 tuổi sẽ đóng thêm BHYT chăm sóc người già',
+      ageHint: 'Từ 40 đến 64 tuổi đóng thêm 介護保険 (từ 70 tuổi không đóng 厚生年金, từ 75 tuổi không đóng BHYT công ty)',
       industry: 'Ngành nghề tính Bảo hiểm thất nghiệp',
       applicableDate: 'Thời điểm áp dụng',
       resultHeader: 'Kết quả tính toán',
@@ -139,7 +139,7 @@ export default function SocialInsuranceSimulatorView({ lang = 'ja' }) {
       actualBonus: 'Bonus Amount (Per payment, optional)',
       prefecture: 'Prefecture (Kyokai Kenpo Branch)',
       age: 'Employee Age',
-      ageHint: 'Ages 40-64 are subject to Long-term Care Insurance',
+      ageHint: 'Ages 40-64 pay Long-term Care Insurance (no welfare pension from 70, no health insurance from 75)',
       industry: 'Employment Insurance Industry Category',
       applicableDate: 'Applicable Date',
       resultHeader: 'Simulation Summary',
@@ -346,7 +346,8 @@ export default function SocialInsuranceSimulatorView({ lang = 'ja' }) {
                 onChange={(e) => setApplicableDate(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-border-subtle bg-surface-container-low text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40"
               >
-                <option value="2026-04-01">令和8年度（2026年4月〜2027年3月）— 最新</option>
+                <option value="2026-04-01">令和8年度（2026年4月分〜：子ども・子育て支援金・雇用保険の新料率を含む）— 最新</option>
+                <option value="2026-03-01">2026年3月分（協会けんぽ・介護の新料率、雇用保険は令和7年度率）</option>
                 <option value="2025-04-01">令和7年度（2025年4月〜2026年3月）— 前年度</option>
               </select>
             </div>
@@ -492,6 +493,13 @@ export default function SocialInsuranceSimulatorView({ lang = 'ja' }) {
                 {result.prefecture.name_ja} / {result.applicableDate}
               </span>
             </div>
+            {result.ageStatus?.notes?.length > 0 && (
+              <div className="px-4 py-2 border-b border-border-subtle text-[11px] text-amber-800 dark:text-amber-300 space-y-1">
+                {result.ageStatus.notes.map((n, i) => (
+                  <p key={i}>{n[lang] || n.ja}</p>
+                ))}
+              </div>
+            )}
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">

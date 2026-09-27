@@ -20,6 +20,8 @@ import {
 import {
   getSupportedYearsMeta,
   getAllPrefectures,
+  getTaxRules,
+  DEFAULT_TAX_YEAR,
 } from '../../utils/tax/taxRulesRegistry.js';
 import { BusinessCategories } from '../../utils/tax/engines/enterpriseTaxEngine.js';
 import { SimplifiedTaxCategories } from '../../utils/tax/engines/consumptionTaxEngine.js';
@@ -35,6 +37,8 @@ export default function ProgressiveForm({
   const [showConsumptionDetails, setShowConsumptionDetails] = useState(false);
 
   const yearsMeta = getSupportedYearsMeta();
+  const selectedRules = getTaxRules(formValues.year || DEFAULT_TAX_YEAR);
+  const spouseLimitMan = Math.round((selectedRules.incomeTax.deductions.spouseIncomeLimit || 0) / 10000);
   const prefectures = getAllPrefectures();
 
   // Helper formatting numbers with commas
@@ -77,24 +81,25 @@ export default function ProgressiveForm({
           <select
             id="tax-select-year"
             aria-label={t?.yearLabel || 'Năm tính thuế'}
-            value={formValues.year || 2025}
+            value={formValues.year || DEFAULT_TAX_YEAR}
             onChange={(e) => onChangeField('year', Number(e.target.value))}
             className="w-full text-xs sm:text-sm bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-rose-500 font-medium"
           >
             {yearsMeta.map((y) => (
               <option key={y.year} value={y.year}>
-                {y.year}年 ({y.reiwaYear}) {y.isCurrent ? '• Hiện tại' : '• Cải cách 178万'}
+                {y[`label_${lang}`] || y.label_ja}
+                {y.year === DEFAULT_TAX_YEAR ? (lang === 'ja' ? ' • 今年' : lang === 'vi' ? ' • Năm nay' : ' • Current') : ''}
               </option>
             ))}
           </select>
-          {formValues.year === 2026 && (
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 flex items-center gap-1 font-medium">
-              <Sparkles className="w-3 h-3 shrink-0" />
+          {Number(formValues.year || DEFAULT_TAX_YEAR) === 2026 && (
+            <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 flex items-start gap-1 font-medium">
+              <Sparkles className="w-3 h-3 shrink-0 mt-0.5" />
               {lang === 'ja'
-                ? '基礎控除104万・給与控除74万（178万円の壁）を反映'
+                ? '基礎控除104万円（合計所得489万円以下）・給与所得控除最低74万円を反映。改正は令和8年12月1日施行のため、会社員は年末調整で精算されます。'
                 : lang === 'vi'
-                ? 'Áp dụng cải cách giảm trừ cơ bản 104 vạn & giảm trừ lương 74 vạn'
-                : 'Reflecting 2026 reform: Basic 1.04M & Salary 740k deduction'}
+                ? 'Áp dụng giảm trừ cơ bản 104 vạn (tổng thu nhập ≤489 vạn) & giảm trừ lương tối thiểu 74 vạn. Luật có hiệu lực 01/12/2026 nên người đi làm được điều chỉnh khi quyết toán cuối năm (年末調整).'
+                : 'Reflects 1.04M basic deduction (total income ≤4.89M) and 740k minimum employment deduction. Enacted 1 Dec 2026, so employees get the difference at year-end adjustment.'}
             </p>
           )}
         </div>
@@ -135,7 +140,7 @@ export default function ProgressiveForm({
             type="number"
             min={15}
             max={99}
-            value={formValues.age || 30}
+            value={formValues.age ?? 30}
             onChange={(e) => onChangeField('age', Number(e.target.value))}
             className="w-full text-xs sm:text-sm bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-rose-500 font-mono font-medium"
           />
@@ -216,6 +221,21 @@ export default function ProgressiveForm({
                     <option value={3}>3+</option>
                   </select>
                 </div>
+                {Number(formValues.employersCount) > 1 && (
+                  <div className="space-y-1">
+                    <label htmlFor="tax-input-secondary-salary" className="block text-on-surface-variant text-[11px]">
+                      {lang === 'ja' ? '従たる給与（年末調整されない給与）の年間収入' : lang === 'vi' ? 'Lương phụ cả năm (nơi không quyết toán 年末調整)' : 'Secondary salary (not year-end adjusted)'}
+                    </label>
+                    <input
+                      id="tax-input-secondary-salary"
+                      type="text"
+                      value={formatInputNumber(formValues.secondarySalary)}
+                      onChange={(e) => onChangeField('secondarySalary', parseNumberInput(e.target.value))}
+                      placeholder="0"
+                      className="w-full max-w-[12rem] text-xs font-mono bg-surface border border-border-subtle rounded px-2 py-1"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -548,7 +568,7 @@ export default function ProgressiveForm({
               <span className="text-xs sm:text-sm font-bold text-on-surface">
                 {t?.familySection || 'Giảm trừ gia cảnh, Người phụ thuộc & iDeCo (控除)'}
               </span>
-              {(formValues.hasSpouse || formValues.dependentsCount > 0 || formValues.idecoMonthly > 0) && (
+              {(formValues.hasSpouse || formValues.dependentsCount > 0 || formValues.specificDependentsCount > 0 || formValues.elderlyDependentsCount > 0 || formValues.cohabitingElderlyParentsCount > 0 || formValues.idecoMonthly > 0) && (
                 <span className="text-[10px] bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 border border-emerald-200/60 dark:border-emerald-800/50 px-2 py-0.5 rounded font-bold">
                   {lang === 'ja' ? '適用中' : lang === 'vi' ? 'ĐÃ ÁP DỤNG' : 'APPLIED'}
                 </span>
@@ -563,7 +583,7 @@ export default function ProgressiveForm({
 
           {showAdvancedDeductions && (
             <div className="p-4 bg-surface space-y-3 text-xs border-t border-border-subtle">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="space-y-2">
                 <label className="inline-flex items-center gap-2 text-on-surface cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -571,22 +591,71 @@ export default function ProgressiveForm({
                     onChange={(e) => onChangeField('hasSpouse', e.target.checked)}
                     className="rounded border-border-subtle text-emerald-500 focus:ring-emerald-500"
                   />
-                  <span>{t?.hasSpouseLabel || 'Có vợ/chồng phụ thuộc (配偶者控除・38万円)'}</span>
+                  <span>{t?.hasSpouseLabel || (lang === 'ja' ? '配偶者あり（配偶者控除・配偶者特別控除）' : lang === 'vi' ? 'Có vợ/chồng (配偶者控除・配偶者特別控除)' : 'Has spouse (spouse deduction)')}</span>
                 </label>
+                {formValues.hasSpouse && (
+                  <div className="pl-6 space-y-1">
+                    <label className="block text-[11px] font-semibold text-on-surface">
+                      {lang === 'ja' ? '配偶者の合計所得金額（給与のみなら 給与収入 − 給与所得控除）' : lang === 'vi' ? 'Tổng thu nhập (合計所得) của vợ/chồng — nếu chỉ có lương: lương − giảm trừ lương' : "Spouse's total income (salary minus employment deduction)"}
+                    </label>
+                    <div className="relative max-w-xs">
+                      <span className="absolute left-3 top-2 text-xs text-on-surface-variant font-mono">¥</span>
+                      <input
+                        type="text"
+                        aria-label={lang === 'ja' ? '配偶者の合計所得金額' : lang === 'vi' ? 'Tổng thu nhập của vợ/chồng' : 'Spouse total income'}
+                        value={formatInputNumber(formValues.spouseIncome)}
+                        onChange={(e) => onChangeField('spouseIncome', parseNumberInput(e.target.value))}
+                        placeholder="0"
+                        className="w-full font-mono bg-surface-container-low border border-border-subtle rounded pl-7 pr-3 py-1.5 font-bold"
+                      />
+                    </div>
+                    <label className="inline-flex items-center gap-2 text-on-surface cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(formValues.spouseIsElderly)}
+                        onChange={(e) => onChangeField('spouseIsElderly', e.target.checked)}
+                        className="rounded border-border-subtle text-emerald-500 focus:ring-emerald-500"
+                      />
+                      <span>{lang === 'ja' ? '配偶者は70歳以上' : lang === 'vi' ? 'Vợ/chồng từ 70 tuổi' : 'Spouse aged 70+'}</span>
+                    </label>
+                    <p className="text-[11px] text-on-surface-variant">
+                      {lang === 'ja'
+                        ? `控除額は本人の合計所得（900万・950万・1,000万円超で段階的に減少・消失）と配偶者の所得（${spouseLimitMan}万円以下は配偶者控除、133万円以下は配偶者特別控除）で変わります。`
+                        : lang === 'vi'
+                        ? `Mức giảm trừ thay đổi theo tổng thu nhập của bạn (giảm dần khi trên 900/950 vạn, mất khi trên 1,000 vạn) và thu nhập của vợ/chồng (≤${spouseLimitMan} vạn: 配偶者控除; ≤133 vạn: 配偶者特別控除).`
+                        : `Amount depends on your total income (phases down above 9M/9.5M, none above 10M) and your spouse's income (≤${spouseLimitMan}0k: spouse deduction; ≤1.33M: special spouse deduction).`}
+                    </p>
+                  </div>
+                )}
 
-                <div className="flex items-center gap-2">
-                  <span className="text-on-surface font-medium">
-                    {t?.dependentsCountLabel || 'Số người phụ thuộc từ 16 tuổi trở lên (扶養親族):'}
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={10}
-                    value={formValues.dependentsCount || 0}
-                    onChange={(e) => onChangeField('dependentsCount', Number(e.target.value))}
-                    className="w-16 font-mono bg-surface-container-low border border-border-subtle rounded px-2 py-1 text-center font-bold"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { field: 'dependentsCount', label: t?.dependentsCountLabel || (lang === 'ja' ? '一般の扶養親族（16〜18歳・23〜69歳）' : lang === 'vi' ? 'Người phụ thuộc thông thường (16〜18, 23〜69 tuổi)' : 'General dependents (16-18, 23-69)') },
+                    { field: 'specificDependentsCount', label: lang === 'ja' ? '特定扶養親族（19〜22歳）' : lang === 'vi' ? 'Phụ thuộc đặc định (19〜22 tuổi)' : 'Specified dependents (19-22)' },
+                    { field: 'elderlyDependentsCount', label: lang === 'ja' ? '老人扶養親族（70歳以上・同居老親以外）' : lang === 'vi' ? 'Phụ thuộc cao tuổi (70+, không sống chung)' : 'Elderly dependents (70+, not cohabiting)' },
+                    { field: 'cohabitingElderlyParentsCount', label: lang === 'ja' ? '同居老親等（70歳以上の父母等と同居）' : lang === 'vi' ? 'Cha mẹ/ông bà 70+ sống chung' : 'Cohabiting elderly parents (70+)' },
+                  ].map(({ field, label }) => (
+                    <div key={field} className="flex items-center justify-between gap-2">
+                      <span className="text-on-surface font-medium text-[11px]">{label}</span>
+                      <input
+                        type="number"
+                        min={0}
+                        max={10}
+                        aria-label={label}
+                        value={formValues[field] || 0}
+                        onChange={(e) => onChangeField(field, Number(e.target.value))}
+                        className="w-16 font-mono bg-surface-container-low border border-border-subtle rounded px-2 py-1 text-center font-bold"
+                      />
+                    </div>
+                  ))}
                 </div>
+                <p className="text-[11px] text-on-surface-variant">
+                  {lang === 'ja'
+                    ? `年齢はその年の12月31日現在。扶養親族は合計所得${spouseLimitMan}万円以下が要件です。特定親族特別控除・障害者控除・ひとり親控除等は未対応です。`
+                    : lang === 'vi'
+                    ? `Tuổi tính tại 31/12 của năm. Người phụ thuộc phải có tổng thu nhập ≤${spouseLimitMan} vạn. Chưa hỗ trợ 特定親族特別控除, giảm trừ người khuyết tật, cha/mẹ đơn thân...`
+                    : `Ages as of 31 Dec. Dependents must have total income ≤${spouseLimitMan}0k JPY. Special relative deduction, disability and single-parent deductions are not modeled.`}
+                </p>
               </div>
 
               <div>

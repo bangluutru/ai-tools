@@ -56,14 +56,17 @@ export const CANONICAL_PROCEDURES = {
       'req.renewal.employment-cert',
     ],
     submissionMethods: ['counter', 'online_portal'],
+    // Lệ phí phụ thuộc NGÀY TIẾP NHẬN hồ sơ — xem immigrationFees.js (nguồn: https://www.moj.go.jp/isa/01_00644.html)
     feeRules: {
       feeType: 'revenue_stamp',
-      feeAmountJpy: 4000,
+      feeScheduleKind: 'change_renewal',
+      feeAmountJpy: 6000,
       feeNoteI18n: {
-        ja: '許可受取時に収入印紙4,000円で納付（※令和8年10月1日以降の申請は6,000円へ改定予定）。申請時は無料。',
-        vi: 'Nộp lệ phí 4,000円 bằng tem doanh thu Shūnyū Inshi khi nhận kết quả (Dự kiến tăng 6,000円 từ 01/10/2026 theo ngày nộp). Khi nộp đơn không mất phí.',
-        en: '4,000 JPY paid via revenue stamp upon approval (scheduled revision to 6,000 JPY from Oct 1, 2026 based on filing date). Free to apply.',
+        ja: '令和8年9月30日までに受付: 窓口6,000円（収入印紙）/オンライン5,500円。10月1日以降受付: 許可される在留期間により窓口10,000〜75,000円、オンライン10,000〜65,000円。許可時に納付。',
+        vi: 'Hồ sơ tiếp nhận đến hết 30/09/2026: 6,000円 tại quầy (tem 収入印紙) / 5,500円 trực tuyến. Hồ sơ tiếp nhận từ 01/10/2026: theo thời hạn được cấp — tại quầy 10,000–75,000円, trực tuyến 10,000–65,000円 (1 năm: 33,000円 / 27,000円). Nộp khi nhận kết quả.',
+        en: 'Accepted by 2026-09-30: 6,000 JPY counter / 5,500 JPY online. Accepted from 2026-10-01: depends on period granted — counter 10,000–75,000 JPY, online 10,000–65,000 JPY. Paid upon approval.',
       },
+      sourceUrl: 'https://www.moj.go.jp/isa/01_00644.html',
     },
     officialActionUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-3.html',
     relatedLifeEventCapability: 'immigration.renewal',
@@ -109,14 +112,17 @@ export const CANONICAL_PROCEDURES = {
       'req.renewal.employment-cert',
     ],
     submissionMethods: ['counter'],
+    // Nguồn: https://www.moj.go.jp/isa/01_00644.html
     feeRules: {
       feeType: 'revenue_stamp',
-      feeAmountJpy: 8000,
+      feeScheduleKind: 'permanent',
+      feeAmountJpy: 10000,
       feeNoteI18n: {
-        ja: '許可受取時に収入印紙8,000円を納付。申請自体は無料。',
-        vi: 'Nộp 8,000円 bằng tem Shūnyū Inshi khi nhận kết quả đậu vĩnh trú. Nộp đơn miễn phí.',
-        en: '8,000 JPY paid via revenue stamps upon approval. Free to submit.',
+        ja: '令和8年9月30日までに受付: 10,000円。令和8年10月1日以降受付: 200,000円。許可時に収入印紙で納付。',
+        vi: 'Hồ sơ tiếp nhận đến hết 30/09/2026: 10,000円. Hồ sơ tiếp nhận từ 01/10/2026: 200,000円. Nộp bằng tem 収入印紙 khi được cấp phép; nộp đơn không mất phí.',
+        en: 'Accepted by 2026-09-30: 10,000 JPY. Accepted from 2026-10-01: 200,000 JPY. Paid upon approval.',
       },
+      sourceUrl: 'https://www.moj.go.jp/isa/01_00644.html',
     },
     officialActionUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-4.html',
     relatedLifeEventCapability: 'immigration.permanent-residence',

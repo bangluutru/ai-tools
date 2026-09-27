@@ -9,6 +9,10 @@
  * 3. Hỗ trợ 3 ngôn ngữ (JA / VI / EN) và bảo vệ an toàn thẩm quyền hành chính (Discretion Safety).
  */
 
+// Shared: bảng lệ phí duy nhất & tiện ích ngày lịch địa phương
+export * from './shared/immigrationFeeTable.js';
+export * from './shared/localDate.js';
+
 // Context
 export * from './context/residenceContext.js';
 

@@ -1,6 +1,8 @@
 /**
- * Biểu mẫu Tờ khai đề nghị cấp hộ chiếu phổ thông ở nước ngoài (Mẫu TK02)
- * Ban hành kèm theo Thông tư số 31/2023/TT-BCA ngày 20/07/2023 của Bộ Công an.
+ * BẢN NHÁP tham khảo theo bố cục Tờ khai cấp hộ chiếu phổ thông ở nước ngoài (Mẫu TK02, người từ 14 tuổi;
+ * người dưới 14 tuổi dùng TK02a). Biểu mẫu: TT 31/2023/TT-BCA, sửa đổi bởi TT 69/2026/TT-BCA (hiệu lực 01/7/2026) —
+ * https://congbao.chinhphu.vn/van-ban/thong-tu-so-69-2026-tt-bca-469711/65703.htm
+ * ĐSQ/TLSQ yêu cầu khai tờ khai trực tuyến tại https://passport.mofa.gov.vn/ rồi in, ký — bản này KHÔNG dùng để nộp.
  * 
  * Lưu ý: Tờ khai sử dụng cho công dân Việt Nam đang cư trú tại nước ngoài (Nhật Bản)
  * đề nghị cấp mới, cấp lại hộ chiếu phổ thông khi hết hạn, bị mất, hỏng hoặc tách hộ chiếu.
@@ -14,10 +16,10 @@ export const passportTK02Form = {
     en: 'Passport Application Form (Form TK02)',
     ja: '一般旅券発給申請書（様式TK02）',
   },
-  standardBasis: 'Thông tư số 31/2023/TT-BCA ngày 20/07/2023 của Bộ Công an',
-  sha256Fingerprint: '4f2d71b8e84a259c719e7a89bc60de649f1a2386ac80f12d83b4e94f923b3781',
-  status: 'VERIFIED',
-  sourceUrl: 'https://vnembassy-jp.org/vi/cap-ho-chieu-lan-dau-cho-nguoi-chua-tung-duoc-cap-ho-chieu-viet-nam',
+  standardBasis: 'Thông tư 31/2023/TT-BCA (sửa đổi, bổ sung bởi TT 68/2025/TT-BCA và TT 69/2026/TT-BCA, hiệu lực 01/7/2026) — bản nháp tham khảo, tờ khai nộp phải khai trực tuyến tại passport.mofa.gov.vn',
+  isDraftHelper: true,
+  status: 'DRAFT_HELPER',
+  sourceUrl: 'https://vnembassy-jp.org/vi/th%E1%BB%A7-t%E1%BB%A5c-li%C3%AAn-quan-%C4%91%E1%BA%BFn-h%E1%BB%99-chi%E1%BA%BFu',
   applicableOffices: ['tokyo_embassy', 'osaka_consulate', 'fukuoka_consulate'],
   printOrientation: 'portrait',
   paperSize: 'A4',
@@ -59,20 +61,20 @@ export const passportTK02Form = {
     },
     {
       id: 'idCardNumber',
-      label: 'Số CCCD / CMND / Mã định danh cá nhân',
+      label: 'Số CCCD / Căn cước / Số định danh cá nhân',
       type: 'text',
-      placeholder: '12 chữ số CCCD hoặc 9 số CMND',
+      placeholder: '12 chữ số định danh cá nhân',
       required: false,
     },
     {
       id: 'idCardIssueDate',
-      label: 'Ngày cấp CCCD / CMND',
+      label: 'Ngày cấp CCCD / Căn cước',
       type: 'date',
       required: false,
     },
     {
       id: 'idCardIssuePlace',
-      label: 'Nơi cấp CCCD / CMND',
+      label: 'Nơi cấp CCCD / Căn cước',
       type: 'text',
       placeholder: 'Cục Cảnh sát QLHC về TTXH',
       required: false,
@@ -95,7 +97,7 @@ export const passportTK02Form = {
       id: 'permanentAddressVN',
       label: 'Địa chỉ thường trú hoặc tạm trú trước khi xuất cảnh tại Việt Nam',
       type: 'text',
-      placeholder: 'Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố',
+      placeholder: 'Số nhà, đường, xã/phường, tỉnh/thành phố (chính quyền 2 cấp từ 01/7/2025)',
       required: false,
     },
     {

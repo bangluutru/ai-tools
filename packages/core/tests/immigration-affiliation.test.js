@@ -161,7 +161,8 @@ test('M3: Job scope mismatch triggers mandatory status change requirement', () =
 
   assert.equal(matchResult.requiresStatusChange, false);
   assert.ok(matchResult.certificateOfAuthorizedEmployment.recommended);
-  assert.equal(matchResult.certificateOfAuthorizedEmployment.fee.amount, 1200);
+  assert.equal(matchResult.certificateOfAuthorizedEmployment.fee.amount, 2000);
+  assert.equal(matchResult.certificateOfAuthorizedEmployment.fee.onlineAmount, 1600);
 });
 
 test('M3: Discretion Safety Policy - Zero pseudo-legal promises or percentage certainty', () => {
@@ -192,4 +193,45 @@ test('M3: Discretion Safety Policy - Zero pseudo-legal promises or percentage ce
       `Output vi phạm Discretion Safety: chứa mẫu cấm "${pattern}"`
     );
   }
+});
+
+test('H3: last day of 14-day window is still in time; day after is overdue', () => {
+  const lastDay = checkAffiliationChange({
+    residenceStatus: 'engineer-humanities-international',
+    eventType: 'left-company',
+    eventDate: '2026-10-01',
+    currentDate: '2026-10-15',
+  });
+  assert.equal(lastDay.daysRemainingForNotification, 0);
+  assert.equal(lastDay.isNotificationOverdue, false);
+
+  const dayAfter = checkAffiliationChange({
+    residenceStatus: 'engineer-humanities-international',
+    eventType: 'left-company',
+    eventDate: '2026-10-01',
+    currentDate: '2026-10-16',
+  });
+  assert.equal(dayAfter.isNotificationOverdue, true);
+});
+
+test('H2: notification duty depends on status type (Art. 19-16)', () => {
+  const dependentJob = checkAffiliationChange({ residenceStatus: 'dependent', eventType: 'left-company', eventDate: '2026-10-01', currentDate: '2026-10-05' });
+  assert.equal(dependentJob.isExemptFromNotification, true);
+  assert.equal(dependentJob.notificationType, 'spouse');
+
+  const spouseDivorce = checkAffiliationChange({ residenceStatus: 'spouse-of-japanese', eventType: 'divorce', eventDate: '2026-10-01', currentDate: '2026-10-05' });
+  assert.equal(spouseDivorce.isExemptFromNotification, false);
+  assert.equal(spouseDivorce.notificationDeadline, '2026-10-15');
+  assert.ok(spouseDivorce.warnings.some((w) => w.code === 'SPOUSE_STATUS_BASIS_LOST'));
+
+  const cultural = checkAffiliationChange({ residenceStatus: 'cultural-activities', eventType: 'left-company', eventDate: '2026-10-01', currentDate: '2026-10-05' });
+  assert.equal(cultural.isExemptFromNotification, true);
+  assert.equal(cultural.notificationType, 'none');
+
+  const student = checkAffiliationChange({ residenceStatus: 'student', eventType: 'transferred', eventDate: '2026-10-01', currentDate: '2026-10-05' });
+  assert.equal(student.notificationType, 'activity-institution');
+  assert.ok(student.notificationFormUrl.endsWith('nyuukokukanri10_00014.html'));
+
+  const gijinkoku = checkAffiliationChange({ residenceStatus: 'engineer-humanities-international', eventType: 'transferred', eventDate: '2026-10-01', currentDate: '2026-10-05' });
+  assert.equal(gijinkoku.notificationType, 'contract-institution');
 });

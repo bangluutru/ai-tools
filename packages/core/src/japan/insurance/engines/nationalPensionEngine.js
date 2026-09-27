@@ -27,9 +27,11 @@ export function calculateNationalPension({
   const baseMonthly = schedule.monthlyPremium;
   const payMultiplier = exemption.payMultiplier;
 
-  // Monthly contribution for regular/exempt
-  const adjustedMonthlyPremium = Math.round(baseMonthly * payMultiplier);
-  
+  // Monthly contribution for regular/exempt (一部免除: số tiền công bố, làm tròn 10円)
+  const adjustedMonthlyPremium = exemption.id === 'none'
+    ? baseMonthly
+    : (schedule.reducedMonthly?.[exemption.id] ?? Math.round((baseMonthly * payMultiplier) / 10) * 10);
+
   // 付加年金 (400円/月) chỉ khả dụng khi đóng thường (không miễn giảm)
   const additionalMonthly = (withAdditionalPension && exemption.id === 'none')
     ? schedule.additionalPensionMonthly
@@ -44,34 +46,42 @@ export function calculateNationalPension({
   // Advance payment discounts (前納割引 - only applicable if regular payment with none exemption)
   let advanceCalculation = null;
   if (exemption.id === 'none' && advancePaymentPlan !== 'none') {
-    let planMonths = 12;
-    let discountAmount = 0;
+    const planKey = ['six_months', 'one_year', 'two_years'].includes(advancePaymentPlan) ? advancePaymentPlan : 'one_year';
+    const planMonths = planKey === 'six_months' ? 6 : planKey === 'two_years' ? 24 : 12;
 
-    const discountTable = schedule.advanceDiscounts?.[advancePaymentMethod] || schedule.advanceDiscounts?.account_transfer;
-
-    if (advancePaymentPlan === 'six_months') {
-      planMonths = 6;
-      discountAmount = discountTable?.six_months || 0;
-    } else if (advancePaymentPlan === 'one_year') {
-      planMonths = 12;
-      discountAmount = discountTable?.one_year || 0;
-    } else if (advancePaymentPlan === 'two_years') {
-      planMonths = 24;
-      discountAmount = discountTable?.two_years || 0;
+    // 2年前納: gộp phí năm nay ×12 + phí năm sau ×12
+    let grossPlanAmount = baseMonthly * planMonths;
+    let grossAvailable = true;
+    if (planKey === 'two_years') {
+      if (schedule.nextFiscalYearMonthlyPremium) {
+        grossPlanAmount = baseMonthly * 12 + schedule.nextFiscalYearMonthlyPremium * 12;
+      } else {
+        grossAvailable = false;
+      }
     }
 
-    const grossPlanAmount = baseMonthly * planMonths;
-    const netPlanAmount = Math.max(0, grossPlanAmount - discountAmount);
-    const planAdditionalTotal = additionalMonthly * planMonths;
+    const discountTable = schedule.advanceDiscounts?.[advancePaymentMethod] || schedule.advanceDiscounts?.account_transfer || null;
+    const additionalDiscountTable = schedule.additionalAdvanceDiscounts?.[advancePaymentMethod] || schedule.additionalAdvanceDiscounts?.account_transfer || null;
+    const isDiscountVerified = Boolean(schedule.discountsVerified && discountTable && grossAvailable);
+    const discountAmount = isDiscountVerified ? discountTable[planKey] : null;
+    const additionalDiscount = additionalMonthly > 0 && isDiscountVerified && additionalDiscountTable ? additionalDiscountTable[planKey] : 0;
+    const planAdditionalTotal = additionalMonthly * planMonths - additionalDiscount;
 
     advanceCalculation = {
-      plan: advancePaymentPlan,
+      plan: planKey,
       paymentMethod: advancePaymentMethod,
       planMonths,
-      grossAmount: grossPlanAmount,
+      grossAmount: grossAvailable ? grossPlanAmount : null,
       discountAmount,
-      netPayableAmount: netPlanAmount + planAdditionalTotal,
-      savingsPercentage: Number(((discountAmount / grossPlanAmount) * 100).toFixed(2))
+      additionalDiscountAmount: additionalDiscount,
+      netPayableAmount: isDiscountVerified ? grossPlanAmount - discountAmount + planAdditionalTotal : null,
+      savingsPercentage: isDiscountVerified ? Number(((discountAmount / grossPlanAmount) * 100).toFixed(2)) : null,
+      isDiscountVerified,
+      notice: isDiscountVerified ? null : {
+        ja: 'この年度の前納割引額は公式発表が未確認のため表示していません。日本年金機構の最新の前納額をご確認ください。',
+        vi: 'Mức giảm khi đóng trước (前納) của năm này chưa được xác minh với nguồn chính thức nên không hiển thị. Hãy kiểm tra trên trang Japan Pension Service.',
+        en: 'Advance-payment discounts for this fiscal year are not verified, so no discounted amount is shown. Check the Japan Pension Service site.'
+      }
     };
   }
 

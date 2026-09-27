@@ -6,7 +6,7 @@
  * - Đầy đủ 6 profile, bảng kê chi tiết, giải thích 3 cấp độ [?], chẩn đoán 確定申告, và mô phỏng What-If.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import {
   ShieldCheck,
   FileSpreadsheet,
@@ -22,22 +22,23 @@ import {
 } from 'lucide-react';
 import {
   simulateJapanTaxes,
-  exportTaxSimulationCsv,
-  generateTaxPdfReport,
   getTaxI18n,
+  DEFAULT_TAX_YEAR,
 } from '../utils/tax/index.js';
 
 import ProfileSelector from './tax/ProfileSelector.jsx';
 import ProgressiveForm from './tax/ProgressiveForm.jsx';
 import TaxSummaryCards from './tax/TaxSummaryCards.jsx';
 import TaxBreakdownTable from './tax/TaxBreakdownTable.jsx';
-import TaxDetailDrawer from './tax/TaxDetailDrawer.jsx';
-import TaxFilingAdvisorModal from './tax/TaxFilingAdvisorModal.jsx';
-import TaxScenarioSimulator from './tax/TaxScenarioSimulator.jsx';
+
+// Chỉ cần khi người dùng tương tác → tách chunk riêng (giảm bundle ban đầu)
+const TaxDetailDrawer = lazy(() => import('./tax/TaxDetailDrawer.jsx'));
+const TaxFilingAdvisorModal = lazy(() => import('./tax/TaxFilingAdvisorModal.jsx'));
+const TaxScenarioSimulator = lazy(() => import('./tax/TaxScenarioSimulator.jsx'));
 import RegulatorySourceSection from './tax/RegulatorySourceSection.jsx';
 
 const DEFAULT_FORM_VALUES = {
-  year: 2025,
+  year: DEFAULT_TAX_YEAR,
   profile: 'employee',
   prefecture: 'tokyo',
   age: 30,
@@ -61,7 +62,12 @@ const DEFAULT_FORM_VALUES = {
   capital: 10000000,
   employeeCount: 5,
   hasSpouse: false,
+  spouseIncome: 0,
+  spouseIsElderly: false,
   dependentsCount: 0,
+  specificDependentsCount: 0,
+  elderlyDependentsCount: 0,
+  cohabitingElderlyParentsCount: 0,
   idecoMonthly: 0,
   hasMedicalExpensesOver100k: false,
   hasFurusatoNozeiOver5Cities: false,
@@ -167,8 +173,9 @@ export default function JapanTaxSimulatorView({ displayLang = 'vi' }) {
   }, [formValues]);
 
   // Export CSV
-  const handleExportCsv = () => {
+  const handleExportCsv = async () => {
     try {
+      const { exportTaxSimulationCsv } = await import('../utils/tax/export/csvExporter.js');
       exportTaxSimulationCsv(simulationResult, currentLang);
       setToastMessage(
         currentLang === 'ja'
@@ -195,6 +202,7 @@ export default function JapanTaxSimulatorView({ displayLang = 'vi' }) {
   const handleExportPdf = async () => {
     try {
       setIsExportingPdf(true);
+      const { generateTaxPdfReport } = await import('../utils/tax/export/pdfReportGenerator.js');
       await generateTaxPdfReport({
         calcResult: simulationResult,
         formValues,
@@ -401,12 +409,14 @@ export default function JapanTaxSimulatorView({ displayLang = 'vi' }) {
       {/* Section 4: What-If Scenario Simulator (Collapsible) */}
       {showWhatIfSection && (
         <div className="animate-in fade-in duration-300">
-          <TaxScenarioSimulator
-            currentFormValues={formValues}
-            currentResult={simulationResult}
-            lang={currentLang}
-            t={t}
-          />
+          <Suspense fallback={<div className="p-4 text-xs text-on-surface-variant">…</div>}>
+            <TaxScenarioSimulator
+              currentFormValues={formValues}
+              currentResult={simulationResult}
+              lang={currentLang}
+              t={t}
+            />
+          </Suspense>
         </div>
       )}
 
@@ -435,24 +445,26 @@ export default function JapanTaxSimulatorView({ displayLang = 'vi' }) {
       </div>
 
       {/* Modals */}
-      {activeTaxDetailId && (
-        <TaxDetailDrawer
-          taxId={activeTaxDetailId}
-          result={simulationResult}
-          onClose={() => setActiveTaxDetailId(null)}
-          lang={currentLang}
-          t={t}
-        />
-      )}
+      <Suspense fallback={null}>
+        {activeTaxDetailId && (
+          <TaxDetailDrawer
+            taxId={activeTaxDetailId}
+            result={simulationResult}
+            onClose={() => setActiveTaxDetailId(null)}
+            lang={currentLang}
+            t={t}
+          />
+        )}
 
-      {showFilingAdvisor && (
-        <TaxFilingAdvisorModal
-          filingNecessity={simulationResult.filingNecessity}
-          onClose={() => setShowFilingAdvisor(false)}
-          lang={currentLang}
-          t={t}
-        />
-      )}
+        {showFilingAdvisor && (
+          <TaxFilingAdvisorModal
+            filingNecessity={simulationResult.filingNecessity}
+            onClose={() => setShowFilingAdvisor(false)}
+            lang={currentLang}
+            t={t}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

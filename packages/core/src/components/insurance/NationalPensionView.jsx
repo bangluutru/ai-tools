@@ -219,6 +219,7 @@ export function NationalPensionView({ lang = 'ja' }) {
                 onChange={(e) => setApplicableDate(e.target.value)}
                 className="w-full px-3 py-2 text-sm rounded-xl bg-surface border border-outline-variant/50 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
               >
+                <option value="2027-05-01">令和9年度 (FY2027: 2027-04-01 〜 2028-03-31 - 18,290円)</option>
                 <option value="2026-05-01">令和8年度 (FY2026: 2026-04-01 〜 2027-03-31 - 17,920円)</option>
                 <option value="2025-05-01">令和7年度 (FY2025: 2025-04-01 〜 2026-03-31 - 17,510円)</option>
               </select>
@@ -385,17 +386,28 @@ export function NationalPensionView({ lang = 'ja' }) {
               </span>
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-extrabold text-primary">
-                  {(result.advanceCalculation
+                  {(result.advanceCalculation?.netPayableAmount != null
                     ? result.advanceCalculation.netPayableAmount
+                    : result.advanceCalculation?.grossAmount != null
+                    ? result.advanceCalculation.grossAmount
                     : result.standardPeriodTotal
                   ).toLocaleString('ja-JP')}
                 </span>
                 <span className="text-sm font-semibold text-on-surface-variant">円</span>
               </div>
-              {result.advanceCalculation && (
+              {result.advanceCalculation?.isDiscountVerified && (
                 <p className="text-[11px] text-emerald-800 dark:text-emerald-300 font-medium flex items-center gap-1">
                   <TrendingDown className="w-3.5 h-3.5" />
-                  <span>Tiết kiệm {result.advanceCalculation.discountAmount.toLocaleString('ja-JP')} 円 ({result.advanceCalculation.savingsPercentage}%)</span>
+                  <span>
+                    {lang === 'ja' ? '割引額' : lang === 'vi' ? 'Tiết kiệm' : 'Discount'}{' '}
+                    {(result.advanceCalculation.discountAmount + (result.advanceCalculation.additionalDiscountAmount || 0)).toLocaleString('ja-JP')} 円 ({result.advanceCalculation.savingsPercentage}%)
+                  </span>
+                </p>
+              )}
+              {result.advanceCalculation && !result.advanceCalculation.isDiscountVerified && (
+                <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium">
+                  {result.advanceCalculation.notice?.[lang] || result.advanceCalculation.notice?.ja}
+                  {result.advanceCalculation.grossAmount == null && (lang === 'ja' ? '（翌年度の保険料が未公表のため2年前納の総額も算出できません）' : lang === 'vi' ? ' (Phí năm sau chưa công bố nên chưa tính được tổng 2 năm.)' : ' (Next fiscal-year premium not yet published, so the 2-year total cannot be computed.)')}
                 </p>
               )}
             </div>

@@ -4,7 +4,7 @@
  *  - Chuyển tab Easy Fill ↔ Bản in A4
  *  - Bộ chọn Zoom (Fit page, Fit width, 100%) & nút tăng giảm zoom
  *  - Điều hướng trang đa kỳ (Page 1/2, < Trước, Sau >)
- *  - Tách biệt rõ ràng 2 hành động: [Tải PDF] và [In]
+ *  - In / Lưu PDF từ bản xem trước HTML (giữ dấu tiếng Việt); [Tải PDF] chỉ hiện khi truyền onDownloadPdf
  *  - Điều khiển Phóng to (12 cột) và Làm lại (Reset)
  */
 
@@ -60,7 +60,7 @@ export default function FormOutputToolbar({
           <div className="text-[10.5px] text-outline flex items-center gap-1.5 flex-wrap">
             <span className="truncate">{formConfig?.standardBasis || formConfig?.legal_basis}</span>
             <span>•</span>
-            <span className="font-mono text-[9.5px] text-emerald-700 dark:text-emerald-400 font-semibold">
+            <span className="text-[9.5px] text-amber-700 dark:text-amber-300 font-semibold">
               {t.editor.verifiedSha}
             </span>
           </div>
@@ -164,17 +164,19 @@ export default function FormOutputToolbar({
               </button>
             </div>
 
-            {/* Nút Tải PDF */}
+            {/* Nút Tải PDF (tùy chọn — mặc định dùng In / Lưu PDF để giữ dấu tiếng Việt) */}
+            {onDownloadPdf && (
             <button
               type="button"
               onClick={onDownloadPdf}
               disabled={isGeneratingPdf}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-surface-container hover:bg-surface-container-high border border-border-subtle text-primary transition-colors cursor-pointer disabled:opacity-50"
-              title="Tải file PDF chính thức đã điền về máy"
+              title="Tải bản nháp PDF"
             >
               <Download size={13} />
               <span>Tải PDF</span>
             </button>
+            )}
 
             {/* Nút In ấn */}
             <button
@@ -182,7 +184,7 @@ export default function FormOutputToolbar({
               onClick={onPrint}
               disabled={isGeneratingPdf}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
-              title="In bản khai A4 qua hộp thoại máy in hệ thống"
+              title={t.editor.printHint}
             >
               <Printer size={13} />
               <span>{t.editor.printBtn}</span>

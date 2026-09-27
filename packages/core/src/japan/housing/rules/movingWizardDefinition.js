@@ -236,9 +236,9 @@ export const MOVING_ACTION_ITEMS = [
     titleJa: 'ガスの開栓・閉栓立ち会い予約',
     titleVi: 'Đặt hẹn nhân viên gas đến kiểm tra mở van (Bắt buộc có mặt)',
     titleEn: 'Gas turn-on appointment booking (Mandatory presence)',
-    descriptionJa: 'ガス開栓は安全点検・点火確認のため本人の立ち会いが法律上必須です。引越し当日の時間帯枠を1週間前までに確保してください。',
+    descriptionJa: 'ガス開栓はガス会社の安全点検・点火確認の手続として本人又は代理人の立ち会いが求められます。引越し当日の時間帯枠を1週間前までに確保してください。',
     descriptionVi: 'Mở ga nhà mới bắt buộc có người ở nhà để nhân viên kiểm tra rò rỉ và đánh lửa. Cần hẹn khung giờ từ 1 tuần trước.',
-    descriptionEn: 'Gas turn-on legally requires in-person presence for leak and safety inspection. Reserve your time slot at least 1 week early.',
+    descriptionEn: 'Gas companies require you (or a representative) to be present for the leak and safety inspection at turn-on. Reserve your time slot at least 1 week early.',
     relatedCapabilityId: 'housing.address.change.check',
     deepLink: {
       toolId: 'address-change-checklist-jp',
@@ -409,8 +409,8 @@ export const MOVING_ACTION_ITEMS = [
     titleJa: '在留カードの住居地届出・裏面記載（外国籍の方）',
     titleVi: 'Đăng ký địa chỉ mới lên mặt sau Thẻ ngoại kiều (Người nước ngoài)',
     titleEn: 'Residence Card (Zairyu) address registration & endorsement',
-    descriptionJa: '出入国管理法第19条の9。新住居地に移転後14日以内に役所窓口へ届出必須。正当な理由なく90日以上届出を怠ると在留資格取消の対象となります。',
-    descriptionVi: 'Điều 19-9 Luật Quản lý Xuất nhập cảnh. Phải trình thẻ tại ủy ban trong 14 ngày để in địa chỉ mới vào mặt sau. Quá 90 ngày có thể bị tước visa.',
+    descriptionJa: '出入国管理法第19条の9。新住居地に移転後14日以内に役所窓口へ届出必須。正当な理由なく90日以上届出を怠ると在留資格取消の対象となります。2026年6月14日以降は、希望すれば同時に「特定在留カード」（マイナンバーカード機能付き）を申請できます。',
+    descriptionVi: 'Điều 19-9 Luật Quản lý Xuất nhập cảnh. Phải trình thẻ tại ủy ban trong 14 ngày để in địa chỉ mới vào mặt sau. Quá 90 ngày không khai báo (không có lý do chính đáng) có thể bị thu hồi tư cách lưu trú. Từ 14/06/2026 có thể xin cùng lúc "特定在留カード" (thẻ cư trú tích hợp My Number) nếu muốn.',
     descriptionEn: 'Immigration Control Act Art. 19-9. Mandatory 14-day limit. Failure to register within 90 days without valid reason can trigger visa revocation.',
     relatedCapabilityId: 'housing.moving.admin.check',
     deepLink: {

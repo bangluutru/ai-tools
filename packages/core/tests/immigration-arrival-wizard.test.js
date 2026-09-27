@@ -178,3 +178,24 @@ test('arrival rules and tasks contain zero pseudo-legal promises or absolute app
     assert.equal(pat.test(serialized), false, `Forbidden certainty pattern detected: ${pat}`);
   }
 });
+
+test('M2: airport part-time permit only for newly arriving students; dependents apply at the regional bureau', () => {
+  const student = evaluateArrivalChecklist({ statusCategory: 'student', needsPartTimeWork: true, entryDate: '2026-10-01', currentDate: '2026-10-01' });
+  assert.ok(student.some((t) => t.id === 'task_part_time_permit'));
+  assert.ok(!student.some((t) => t.id === 'task_part_time_permit_regional'));
+  const dependent = evaluateArrivalChecklist({ statusCategory: 'dependent', needsPartTimeWork: true, entryDate: '2026-10-01', currentDate: '2026-10-01' });
+  assert.ok(!dependent.some((t) => t.id === 'task_part_time_permit'));
+  assert.ok(dependent.some((t) => t.id === 'task_part_time_permit_regional'));
+});
+
+test('LOW: 14-day registration counts from the move-in date (defaults to entry date); deadline day is not overdue', () => {
+  const tasks = evaluateArrivalChecklist({ entryDate: '2026-10-01', moveInDate: '2026-10-05', currentDate: '2026-10-19' });
+  const reg = tasks.find((t) => t.id === 'task_resident_registration');
+  assert.equal(reg.calculatedDeadlineDate, '2026-10-19');
+  assert.equal(reg.daysRemaining, 0);
+  assert.equal(reg.isOverdue, false);
+  const fallback = evaluateArrivalChecklist({ entryDate: '2026-10-01', currentDate: '2026-10-02' });
+  assert.equal(fallback.find((t) => t.id === 'task_resident_registration').calculatedDeadlineDate, '2026-10-15');
+  assert.equal(addDays('2026-12-31', 1), '2027-01-01');
+  assert.equal(calculateDaysRemaining('2026-10-15', '2026-10-16'), -1);
+});

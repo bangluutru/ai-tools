@@ -314,8 +314,9 @@ test('Golden Test 18: Specific Justified Cause (特定理由離職者 - 雇止�
   assert.equal(res.timeline.benefitRestrictionMonths, 0);
 });
 
-test('Golden Test 19: Personal Voluntary Resignation (一般離職者) requires 12 months, 2 months restriction', () => {
+test('Golden Test 19: Personal Voluntary Resignation (一般離職者) requires 12 months, 1 month restriction (separation from 2025-04-01)', () => {
   const res = checkUnemploymentEligibility({
+    separationDate: '2026-09-30',
     reasonId: 'personal_choice',
     totalInsuredMonths: 14,
     isAbleToWorkImmediately: true,
@@ -325,8 +326,9 @@ test('Golden Test 19: Personal Voluntary Resignation (一般離職者) requires 
   assert.equal(res.categoryKey, 'PERSONAL_VOLUNTARY');
   assert.equal(res.requiredInsuredMonths, 12);
   assert.equal(res.timeline.waitingPeriodDays, 7);
-  assert.equal(res.timeline.benefitRestrictionMonths, 2);
+  assert.equal(res.timeline.benefitRestrictionMonths, 1);
   assert.equal(res.timeline.hasBenefitRestriction, true);
+  assert.equal(res.timeline.estimatedWeeksToFirstPayment, 8);
 });
 
 test('Golden Test 20: Personal Voluntary Resignation with under 12 months -> NOT_QUALIFIED', () => {
@@ -366,7 +368,7 @@ test('Golden Test 22: Unable to work due to temporary illness -> ACTION_EXTENSIO
 });
 
 test('Golden Test 23: Low wage worker receives statutory maximum 80% benefit rate', () => {
-  // Lương 150.000 JPY/tháng -> 6 tháng = 900.000 JPY -> Tiền lương ngày = 5.000 JPY (<= 5.280 JPY ngưỡng A)
+  // Lương 150.000 JPY/tháng -> 6 tháng = 900.000 JPY -> Tiền lương ngày = 5.000 JPY (< 5.480 JPY ngưỡng A, R8)
   // Tỷ lệ hưởng luật định = 80% -> Trợ cấp ngày = 4.000 JPY/ngày
   const res = calculateUnemploymentBenefit({
     monthlyWage: 150000,
@@ -384,9 +386,9 @@ test('Golden Test 23: Low wage worker receives statutory maximum 80% benefit rat
 });
 
 test('Golden Test 24: Middle wage worker receives statutory sliding scale benefit rate (50%〜80%)', () => {
-  // Lương 300.000 JPY/tháng -> 6 tháng = 1.800.000 JPY -> Tiền lương ngày = 10.000 JPY (giữa 5.280 và 12.980)
-  // Công thức: 0.8 - (0.3 * (10000 - 5280) / (12980 - 5280)) = 0.8 - (0.3 * 4720 / 7700) = 0.8 - 0.18389 = 0.6161
-  // Trợ cấp ngày = Math.floor(10000 * 0.6161) = 6.161 JPY
+  // Lương 300.000 JPY/tháng -> 6 tháng = 1.800.000 JPY -> Tiền lương ngày = 10.000 JPY (giữa A=5.480 và B=13.490, R8)
+  // Công thức MHLW: y = 0.8w − 0.3·((w − 5480)/(13490 − 5480))·w = 8000 − 0.3 × 4520/8010 × 10000 = 8000 − 1692.88 = 6307.1
+  // Trợ cấp ngày = 1円未満切捨て = 6.307 JPY
   const res = calculateUnemploymentBenefit({
     monthlyWage: 300000,
     age: 35,
@@ -396,16 +398,16 @@ test('Golden Test 24: Middle wage worker receives statutory sliding scale benefi
   });
 
   assert.equal(res.dailyWage, 10000);
-  assert.equal(res.basicDailyBenefit, 6161);
-  assert.equal(res.effectiveBenefitRatePercent, 61.6);
+  assert.equal(res.basicDailyBenefit, 6307);
+  assert.equal(res.effectiveBenefitRatePercent, 63.1);
   assert.equal(res.prescribedBenefitDays, 180); // 35-44 tuổi, 6 năm tham gia diện công ty = 180 ngày
-  assert.equal(res.totalBenefitAmount, 6161 * 180);
+  assert.equal(res.totalBenefitAmount, 6307 * 180);
 });
 
 test('Golden Test 25: High wage worker capped at statutory maximum benefit amount', () => {
   // Lương 800.000 JPY/tháng -> 6 tháng = 4.800.000 JPY -> Tiền lương ngày tính thô = 26.666 JPY
-  // Tuổi 35 (nhóm age_30_44) -> Trần lương ngày = 15.940 JPY (kỳ 2026_08)
-  // Trần trợ cấp ngày = 7.970 JPY
+  // Tuổi 35 (nhóm age_30_44) -> Trần lương ngày = 16.540 JPY (kỳ 2026_08, MHLW R8)
+  // Trần trợ cấp ngày = 8.270 JPY
   const res = calculateUnemploymentBenefit({
     monthlyWage: 800000,
     age: 35,
@@ -414,16 +416,16 @@ test('Golden Test 25: High wage worker capped at statutory maximum benefit amoun
     targetDate: '2026-09-01',
   });
 
-  assert.equal(res.dailyWage, 15940);
-  assert.equal(res.basicDailyBenefit, 7970);
+  assert.equal(res.dailyWage, 16540);
+  assert.equal(res.basicDailyBenefit, 8270);
   assert.equal(res.isCapped, true);
   assert.equal(res.prescribedBenefitDays, 120); // Tự nguyện, 12 năm = 120 ngày
-  assert.equal(res.totalBenefitAmount, 7970 * 120);
+  assert.equal(res.totalBenefitAmount, 8270 * 120);
 });
 
 test('Golden Test 26: Minimum floor protection prevents benefits below statutory minimum', () => {
-  // Lương thấp bất thường 50.000 JPY/tháng -> Tiền lương ngày tính thô = 1.666 JPY (< sàn 2.869 JPY)
-  // Sàn bảo hộ tối thiểu = 2.295 JPY/ngày
+  // Lương thấp bất thường 50.000 JPY/tháng -> Tiền lương ngày tính thô = 1.666 JPY (< sàn 3.203 JPY, R8)
+  // Sàn bảo hộ tối thiểu = 2.562 JPY/ngày
   const res = calculateUnemploymentBenefit({
     monthlyWage: 50000,
     age: 22,
@@ -432,13 +434,13 @@ test('Golden Test 26: Minimum floor protection prevents benefits below statutory
     targetDate: '2026-09-01',
   });
 
-  assert.equal(res.dailyWage, 2869);
-  assert.equal(res.basicDailyBenefit, 2295);
+  assert.equal(res.dailyWage, 3203);
+  assert.equal(res.basicDailyBenefit, 2562);
   assert.equal(res.isFloored, true);
 });
 
 test('Golden Test 27: Dual effective period resolution (pre vs post 2026-08-01 MHLW revisions)', () => {
-  // Kỳ trước 01/08/2026 (VD: 2026-05-01) -> Trần nhóm 30-44 tuổi là 7.910 JPY
+  // Kỳ trước 01/08/2026 (VD: 2026-05-01) -> Trần nhóm 30-44 tuổi là 8.055 JPY (R7)
   const resOld = calculateUnemploymentBenefit({
     monthlyWage: 800000,
     age: 35,
@@ -446,9 +448,9 @@ test('Golden Test 27: Dual effective period resolution (pre vs post 2026-08-01 M
     targetDate: '2026-05-01',
   });
   assert.equal(resOld.effectivePeriod.id, '2025_08');
-  assert.equal(resOld.basicDailyBenefit, 7910);
+  assert.equal(resOld.basicDailyBenefit, 8055);
 
-  // Kỳ sau 01/08/2026 (VD: 2026-09-01) -> Trần nhóm 30-44 tuổi là 7.970 JPY
+  // Kỳ sau 01/08/2026 (VD: 2026-09-01) -> Trần nhóm 30-44 tuổi là 8.270 JPY (R8)
   const resNew = calculateUnemploymentBenefit({
     monthlyWage: 800000,
     age: 35,
@@ -456,7 +458,7 @@ test('Golden Test 27: Dual effective period resolution (pre vs post 2026-08-01 M
     targetDate: '2026-09-01',
   });
   assert.equal(resNew.effectivePeriod.id, '2026_08');
-  assert.equal(resNew.basicDailyBenefit, 7970);
+  assert.equal(resNew.basicDailyBenefit, 8270);
 });
 
 test('Golden Test 28: Prescribed duration for Type A Company Cause (Age 48, 22 years insured -> 330 days)', () => {
@@ -526,7 +528,7 @@ test('Golden Test 34: Health Insurance recommendation triage (Dependent vs NHI I
   });
   assert.equal(adviceLowIncome.recommendedOption, 'dependent');
 
-  // TH2: Thôi việc vì lý do công ty (sa thải/phá sản) -> Khuyên BHYT Quốc dân vì được giảm tới 70% phí
+  // TH2: Thôi việc vì lý do công ty (sa thải/phá sản) -> Khuyên BHYT Quốc dân (給与所得 năm trước tính 30/100)
   const adviceCompany = evaluateHealthInsuranceAdvice({
     annualExpectedIncome: 3500000,
     isCompanySeparation: true,
@@ -567,3 +569,109 @@ test('Golden Test 35: Orchestrator deep links integrity & dynamic checklist pers
 
 
 
+
+// ===== Bổ sung: các lỗi đã sửa (review 2026-09) =====
+
+test('Fix C1/C2: Official MHLW R8 & R7 values per age bracket (incl. 60–64 min() formula, 1円未満切捨て)', () => {
+  const r8 = (monthlyWage, age) => calculateUnemploymentBenefit({ monthlyWage, age, insuredYears: 5, targetDate: '2026-09-01' });
+  const r7 = (monthlyWage, age) => calculateUnemploymentBenefit({ monthlyWage, age, insuredYears: 5, targetDate: '2026-05-01' });
+
+  // Ranh giới B (13,490): 0.8w − 0.3w = 0.5w → 6,745 (khớp bảng MHLW "4,384円～6,745円")
+  assert.equal(r8(13490 * 30, 35).basicDailyBenefit, 6745);
+  // Ranh giới A (5,480): 0.8 × 5,480 = 4,384
+  assert.equal(r8(5480 * 30, 35).basicDailyBenefit, 4384);
+  // Trần theo nhóm tuổi (R8)
+  assert.equal(r8(900000, 25).basicDailyBenefit, 7450);
+  assert.equal(r8(900000, 50).basicDailyBenefit, 9110);
+  assert.equal(r8(900000, 62).basicDailyBenefit, 7830);
+  // 60–64 tuổi tại B60 = 12,120: min(0.45w, 0.05w + 4,848) = 5,454 (khớp bảng MHLW)
+  assert.equal(r8(12120 * 30, 62).basicDailyBenefit, 5454);
+  // 60–64 tuổi, w = 10,000: min(8000 − 0.35×4520/6640×10000 = 5617.4, 500 + 4848 = 5348) = 5,348
+  assert.equal(r8(300000, 62).basicDailyBenefit, 5348);
+  // 60–64 tuổi, w = 15,000 (> B60): 0.45w = 6,750
+  assert.equal(r8(450000, 62).basicDailyBenefit, 6750);
+
+  // R7
+  assert.equal(r7(50000, 22).basicDailyBenefit, 2411);
+  assert.equal(r7(50000, 22).dailyWage, 3014);
+  assert.equal(r7(900000, 25).basicDailyBenefit, 7255);
+  assert.equal(r7(900000, 50).basicDailyBenefit, 8870);
+  assert.equal(r7(900000, 62).basicDailyBenefit, 7623);
+  // R7, 60–64 tuổi tại B60 = 11,800: 0.45 × 11,800 = 5,310 (= mức trần 就業促進手当 "変更前 5,310")
+  assert.equal(r7(11800 * 30, 62).basicDailyBenefit, 5310);
+  // R7 30–44 tuổi tại B = 13,140: 6,570 (= "変更前 6,570")
+  assert.equal(r7(13140 * 30, 35).basicDailyBenefit, 6570);
+});
+
+test('Fix L3/L4: insuredYears 0 is honored; age 65+ gets 高年齢求職者給付金 (30 / 50 days, under-30 caps)', () => {
+  const senior0 = calculateUnemploymentBenefit({ monthlyWage: 300000, age: 67, insuredYears: 0, targetDate: '2026-09-01' });
+  assert.equal(senior0.isSeniorJobSeeker, true);
+  assert.equal(senior0.insuredYears, 0);
+  assert.equal(senior0.prescribedBenefitDays, 30);
+  assert.equal(senior0.totalBenefitAmount, 6307 * 30);
+
+  const senior1 = calculateUnemploymentBenefit({ monthlyWage: 900000, age: 70, insuredYears: 3, targetDate: '2026-09-01' });
+  assert.equal(senior1.prescribedBenefitDays, 50);
+  assert.equal(senior1.basicDailyBenefit, 7450);
+});
+
+test('Fix C3: 給付制限 by separation date, repeated resignations and education training', () => {
+  const base = { reasonId: 'personal_choice', totalInsuredMonths: 24 };
+  assert.equal(checkUnemploymentEligibility({ ...base, separationDate: '2025-03-31' }).timeline.benefitRestrictionMonths, 2);
+  assert.equal(checkUnemploymentEligibility({ ...base, separationDate: '2025-04-01' }).timeline.benefitRestrictionMonths, 1);
+  assert.equal(checkUnemploymentEligibility({
+    ...base, separationDate: '2026-09-30', hasTwoPlusPriorVoluntarySeparationsIn5Years: true,
+  }).timeline.benefitRestrictionMonths, 3);
+  const trained = checkUnemploymentEligibility({ ...base, separationDate: '2026-09-30', hasQualifyingEducationTraining: true });
+  assert.equal(trained.timeline.benefitRestrictionMonths, 0);
+  assert.equal(trained.timeline.hasBenefitRestriction, false);
+  assert.equal(trained.timeline.estimatedWeeksToFirstPayment, 4);
+  // 重責解雇 vẫn 3 tháng, không bị ảnh hưởng bởi 教育訓練
+  assert.equal(checkUnemploymentEligibility({
+    reasonId: 'disciplinary_dismissal', totalInsuredMonths: 24, separationDate: '2026-09-30', hasQualifyingEducationTraining: true,
+  }).timeline.benefitRestrictionMonths, 3);
+});
+
+test('Fix C6/M10: excluded allowances only in monthly mode; overtime auto-split at 60h', () => {
+  const hourly = calculateOvertimePay({ wageType: 'hourly', baseWage: 1500, excludedAllowances: 20000, normalOvertimeHours: 10 });
+  assert.equal(hourly.baseHourlyWage, 1500);
+  assert.equal(hourly.totalOvertimePay, 18750);
+
+  const daily = calculateBaseHourlyWage({ wageType: 'daily', baseWage: 12000, excludedAllowances: 20000, dailyScheduledHours: 8 });
+  assert.equal(daily.baseHourlyWage, 1500);
+
+  const split = calculateOvertimePay({ wageType: 'hourly', baseWage: 2000, normalOvertimeHours: 70 });
+  assert.equal(split.breakdown.normalOvertime.hours, 60);
+  assert.equal(split.breakdown.overtimeAbove60h.hours, 10);
+  assert.equal(split.totalOvertimePay, 180000);
+});
+
+test('Fix M5: paid-leave grant date clamps to month end (民法143条) and deadlines are grant + 1y/2y − 1 day', () => {
+  const res = calculatePaidLeaveEntitlement({ hireDate: '2025-08-31', asOfDate: '2026-03-01', weeklyHours: 40, weeklyDays: 5 });
+  assert.equal(res.currentGrantDays, 10);
+  assert.equal(res.currentMilestone.grantDate, '2026-03-01');
+  assert.equal(res.currentMilestone.expiryDate, '2028-02-29');
+  assert.equal(res.mandatory5Days.deadlineDate, '2027-02-28');
+
+  const before = calculatePaidLeaveEntitlement({ hireDate: '2025-08-31', asOfDate: '2026-02-28', weeklyHours: 40, weeklyDays: 5 });
+  assert.equal(before.currentGrantDays, 0);
+
+  const april = calculatePaidLeaveEntitlement({ hireDate: '2025-04-01', asOfDate: '2025-10-01', weeklyHours: 40, weeklyDays: 5 });
+  assert.equal(april.currentMilestone.grantDate, '2025-10-01');
+  assert.equal(april.mandatory5Days.deadlineDate, '2026-09-30');
+  assert.equal(april.currentMilestone.expiryDate, '2027-09-30');
+});
+
+test('Fix H4/H5/M8: no fake Hello Work deadline; dependent warning; NHI reduction for 雇止め', () => {
+  const plan = generateLeavingJobPlan({ resignationDate: '2026-10-31', separationType: 'contract_expiry' });
+  const hw = plan.checklist.find((i) => i.id === 'hellowork_unemployment_claim');
+  assert.equal(hw.deadlineDate, '');
+  assert.equal(plan.statutoryDeadlines.unemploymentBenefitPeriodEnd, '2027-10-31');
+  assert.equal(plan.healthInsuranceAdvice.recommendedOption, 'national_health_insurance');
+  assert.match(plan.healthInsuranceAdvice.recommendationReasonJa, /100分の30/);
+
+  const dep = evaluateHealthInsuranceAdvice({ annualExpectedIncome: 1000000 });
+  assert.equal(dep.warnings[0].code, 'DEPENDENT_BLOCKED_WHILE_RECEIVING_BENEFIT');
+  assert.equal(dep.warnings[0].dailyLimit, 3612);
+  assert.equal(evaluateHealthInsuranceAdvice({ annualExpectedIncome: 1500000, isSeniorOrDisabled: true }).warnings[0].dailyLimit, 5000);
+});

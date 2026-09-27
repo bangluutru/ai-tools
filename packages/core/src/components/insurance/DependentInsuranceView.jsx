@@ -27,12 +27,12 @@ const I18N = {
   ja: {
     badge: '全国健康保険協会（協会けんぽ）被扶養者認定基準',
     title: '社会保険の扶養判定（健康保険・被扶養者）',
-    subtitle: '健康保険の被扶養者（保険料自己負担ゼロ）に該当するかを、親族範囲・同居別居・見込み年収130万/180万円・主たる生計維持要件に基づき精密判定します。',
+    subtitle: '健康保険の被扶養者（保険料自己負担ゼロ）に該当するかを、親族範囲・同居別居・見込み年収130万円（19〜22歳の子等は150万円、60歳以上・障害者は180万円）・主たる生計維持要件に基づき精密判定します。',
     taxDistinctionAlert: '【税法上の扶養との違い】このツールは社会保険（健康保険・国民年金第3号）専用の判定です。所得税や住民税の扶養控除（配偶者控除・扶養控除）の試算は「Japan Tax Simulator」をご利用ください。',
     openTaxTool: 'Japan Tax を開く',
     inputTitle: '被扶養者（扶養に入りたい方）の状況',
     relationship: '被保険者（本人）との続柄',
-    dependentAge: '被扶養者の年齢',
+    dependentAge: '被扶養者の年齢（認定日の属する年の12月31日時点）',
     isDisabled: '障害厚生年金受給要件に該当する障害の有無',
     disabledHint: '※ 60歳以上または障害者の場合、収入上限が180万円未満に緩和されます。',
     cohabitation: '居住形態（生計関係）',
@@ -48,7 +48,7 @@ const I18N = {
     residesInJapan: '日本国内に住民票がある',
     residenceException: '海外在住の場合の例外事由',
     overtimeProof: '事業主の証明書（一時的な増収の枠組み）あり',
-    overtimeProofHint: '※ 繁忙期等の残業による一時的な収入変動（最大2年間）を事業主が証明する場合、130万円を超えても扶養に残れる特例があります。',
+    overtimeProofHint: '※ 繁忙期等の残業による一時的な収入変動（最大2年間）を事業主が証明する場合、年収基準を超えても扶養に残れる場合があります（上限額の定めなし・原則連続2回まで）。',
     resultTitle: '判定結果サマリー',
     statusEligible: '被扶養者として認定される可能性が高い',
     statusIneligible: '現行要件では被扶養者に認定されない可能性が高い',
@@ -62,12 +62,12 @@ const I18N = {
   vi: {
     badge: 'Chuẩn Thẩm Định BHYT Toàn Quốc (全国健康保険協会 / 協会けんぽ)',
     title: 'Kiểm Tra Điều Kiện Người Phụ Thuộc BHXH (被扶養者)',
-    subtitle: 'Chẩn đoán điều kiện làm người phụ thuộc BHYT công ty (không phải đóng phí BHYT & Hưu trí Quốc dân) theo phạm vi thân nhân 3 đời, sống chung/riêng, trần thu nhập 130 vạn / 180 vạn và tỷ lệ chu cấp.',
+    subtitle: 'Chẩn đoán điều kiện làm người phụ thuộc BHYT công ty (không phải đóng phí BHYT & Hưu trí Quốc dân) theo phạm vi thân nhân 3 đời, sống chung/riêng, trần thu nhập 130 vạn (19〜22 tuổi không phải vợ/chồng: 150 vạn; từ 60 tuổi/khuyết tật: 180 vạn) và tỷ lệ chu cấp.',
     taxDistinctionAlert: '【LƯU Ý QUAN TRỌNG: PHÂN BIỆT VỚI THUẾ】Công cụ này CHỈ chẩn đoán người phụ thuộc BẢO HIỂM XÃ HỘI (BHYT & Hưu trí Quốc dân số 3), HOÀN TOÀN KHÁC với Giảm trừ gia cảnh thuế thu nhập cá nhân (税法上の扶養). Để tính thuế, vui lòng mở "Japan Tax Simulator".',
     openTaxTool: 'Mở Japan Tax Simulator',
     inputTitle: 'Thông Tin Người Phụ Thuộc (Người muốn vào diện bảo hiểm)',
     relationship: 'Mối quan hệ với người bảo hiểm chính (続柄)',
-    dependentAge: 'Tuổi của người phụ thuộc',
+    dependentAge: 'Tuổi của người phụ thuộc (tính tại 31/12 của năm công nhận)',
     isDisabled: 'Là người khuyết tật (thuộc điều kiện nhận trợ cấp khuyết tật)',
     disabledHint: '※ Người từ 60 tuổi trở lên hoặc khuyết tật được nâng trần thu nhập lên dưới 180 vạn Yên/năm.',
     cohabitation: 'Hình thức cư trú & sinh hoạt',
@@ -83,7 +83,7 @@ const I18N = {
     residesInJapan: 'Có đăng ký sổ thường trú tại Nhật Bản',
     residenceException: 'Trường hợp ngoại lệ nếu sống ở nước ngoài',
     overtimeProof: 'Có văn bản xác nhận của công ty về việc tăng thu nhập tạm thời',
-    overtimeProofHint: '※ Gói hỗ trợ bức tường thu nhập: nếu tăng ca tạm thời khiến thu nhập vượt 130 vạn nhưng có chứng nhận của chủ DN thì vẫn được giữ bảo hiểm tối đa 2 năm liên tiếp.',
+    overtimeProofHint: '※ Gói hỗ trợ bức tường thu nhập: nếu tăng ca tạm thời khiến thu nhập vượt trần nhưng có chứng nhận của chủ DN thì có thể vẫn được giữ tư cách phụ thuộc (không có mức trần cố định, nguyên tắc tối đa 2 lần liên tiếp).',
     resultTitle: 'Kết Quả Chẩn Đoán',
     statusEligible: 'Khả Năng Cao Đủ Điều Kiện Làm Người Phụ Thuộc',
     statusIneligible: 'Khả Năng Cao Chưa Đủ Điều Kiện',
@@ -97,12 +97,12 @@ const I18N = {
   en: {
     badge: 'Kyokai Kenpo Dependent Health Insurance Certification Criteria',
     title: 'Social Insurance Dependent Checker (被扶養者)',
-    subtitle: 'Evaluate whether a family member qualifies as a dependent under company health insurance (0 JPY premium contribution) based on statutory kinship, cohabitation, future income ceilings (1.3M/1.8M JPY), and primary financial support tests.',
+    subtitle: 'Evaluate whether a family member qualifies as a dependent under company health insurance (0 JPY premium contribution) based on statutory kinship, cohabitation, future income ceilings (1.3M; 1.5M for non-spouse dependents aged 19-22; 1.8M for 60+/disabled), and primary financial support tests.',
     taxDistinctionAlert: '[CRITICAL DISTINCTION] This evaluation is strictly for SOCIAL INSURANCE (Health Insurance & Pension Dependent) and NOT for Income Tax dependent deductions. To simulate tax dependents, please open "Japan Tax Simulator".',
     openTaxTool: 'Open Japan Tax Simulator',
     inputTitle: 'Dependent Information',
     relationship: 'Relationship to Primary Insured Person',
-    dependentAge: 'Dependent Age',
+    dependentAge: 'Dependent age (as of 31 Dec of the certification year)',
     isDisabled: 'Has statutory disability certification',
     disabledHint: '※ The annual income ceiling is raised to < 1.8M JPY for seniors aged 60+ or individuals with disabilities.',
     cohabitation: 'Living Arrangement',
@@ -118,7 +118,7 @@ const I18N = {
     residesInJapan: 'Has registered address in Japan',
     residenceException: 'Statutory exception if residing abroad',
     overtimeProof: 'Has employer certification for temporary overtime surge',
-    overtimeProofHint: '※ Income barrier relief package: If overtime causes income to temporarily exceed 1.3M JPY, dependent status can be retained up to 2 consecutive years with employer proof.',
+    overtimeProofHint: '※ Income barrier relief package: If overtime temporarily pushes income over the ceiling, dependent status may be retained with employer proof (no fixed upper cap; in principle up to 2 consecutive times).',
     resultTitle: 'Evaluation Summary',
     statusEligible: 'High Likelihood of Meeting Dependent Eligibility',
     statusIneligible: 'Likely Ineligible Under Statutory Criteria',
@@ -199,6 +199,13 @@ export function DependentInsuranceView({ lang = 'ja' }) {
       badgeBg: 'bg-rose-800 text-white dark:bg-rose-700',
       borderAccent: 'border-l-4 border-l-rose-700',
       title: t.statusIneligible
+    },
+    insufficient_info: {
+      bg: 'bg-sky-500/10 border-sky-500/30 text-sky-900 dark:text-sky-200',
+      icon: AlertTriangle,
+      badgeBg: 'bg-sky-800 text-white dark:bg-sky-700',
+      borderAccent: 'border-l-4 border-l-sky-700',
+      title: result.message?.[lang] || result.message?.ja || ''
     },
     case_dependent: {
       bg: 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200',
@@ -476,6 +483,8 @@ export function DependentInsuranceView({ lang = 'ja' }) {
                     ? 'ĐỦ ĐIỀU KIỆN'
                     : result.status === 'likely_ineligible'
                     ? 'KHÔNG ĐỦ ĐIỀU KIỆN'
+                    : result.status === 'insufficient_info'
+                    ? 'THIẾU THÔNG TIN'
                     : 'CẦN THẨM ĐỊNH'}
                 </span>
                 <h3 className="text-lg sm:text-xl font-extrabold text-on-surface">
@@ -507,12 +516,15 @@ export function DependentInsuranceView({ lang = 'ja' }) {
               {result.checks.map((c) => {
                 const isPass = c.status === 'pass';
                 const isWarn = c.status === 'warning';
+                const isInfo = c.status === 'info';
                 return (
                   <div
                     key={c.id}
                     className={`p-4 rounded-xl border text-xs space-y-1.5 transition-colors ${
                       isPass
                         ? 'bg-emerald-500/5 border-emerald-500/20'
+                        : isInfo
+                        ? 'bg-sky-500/5 border-sky-500/20'
                         : isWarn
                         ? 'bg-amber-500/5 border-amber-500/20'
                         : 'bg-rose-500/5 border-rose-500/20'
@@ -522,8 +534,8 @@ export function DependentInsuranceView({ lang = 'ja' }) {
                       <span className="font-bold text-on-surface text-sm flex items-center gap-2">
                         {isPass ? (
                           <CheckCircle2 className="w-4 h-4 text-emerald-800 dark:text-emerald-300 shrink-0" />
-                        ) : isWarn ? (
-                          <AlertTriangle className="w-4 h-4 text-amber-800 dark:text-amber-300 shrink-0" />
+                        ) : isWarn || isInfo ? (
+                          <AlertTriangle className={`w-4 h-4 shrink-0 ${isInfo ? 'text-sky-800 dark:text-sky-300' : 'text-amber-800 dark:text-amber-300'}`} />
                         ) : (
                           <XCircle className="w-4 h-4 text-rose-700 dark:text-rose-300 shrink-0" />
                         )}
@@ -533,12 +545,14 @@ export function DependentInsuranceView({ lang = 'ja' }) {
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           isPass
                             ? 'bg-emerald-800 text-white dark:bg-emerald-700'
+                            : isInfo
+                            ? 'bg-sky-800 text-white dark:bg-sky-700'
                             : isWarn
                             ? 'bg-amber-800 text-white dark:bg-amber-700'
                             : 'bg-rose-700 text-white dark:bg-rose-800'
                         }`}
                       >
-                        {isPass ? 'PASS' : isWarn ? 'CHECK' : 'FAIL'}
+                        {isPass ? 'PASS' : isInfo ? 'INFO' : isWarn ? 'CHECK' : 'FAIL'}
                       </span>
                     </div>
                     <p className="text-on-surface-variant text-[12px] leading-relaxed pl-6">

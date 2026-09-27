@@ -212,11 +212,12 @@ export const CHANNEL_METADATA = {
       requiresPassport: true,
       requiresResidenceCard: true,
     },
-    typicalFeeJpy: 4000,
+    // Nguồn: https://www.moj.go.jp/isa/01_00644.html — phí phụ thuộc ngày tiếp nhận (xem registry/immigrationFees.js)
+    typicalFeeJpy: 6000,
     feeNoteI18n: {
-      ja: '申請自体は無料。許可時に収入印紙で納付（更新4,000円〜）',
-      vi: 'Nộp đơn miễn phí. Nộp lệ phí bằng tem Shūnyū Inshi khi nhận kết quả',
-      en: 'Application submission is free. Fee paid via revenue stamps upon approval',
+      ja: '申請自体は無料。許可時に納付。9/30までの受付: 変更・更新 窓口6,000円/オンライン5,500円。令和8年10月1日以降の受付: 在留期間に応じ10,000〜75,000円（窓口）。',
+      vi: 'Nộp đơn miễn phí, nộp lệ phí khi nhận kết quả. Hồ sơ tiếp nhận đến 30/09/2026: đổi/gia hạn 6,000円 tại quầy, 5,500円 trực tuyến. Từ 01/10/2026: 10,000–75,000円 (tại quầy) tùy thời hạn được cấp.',
+      en: 'Free to apply; fee paid upon approval. Accepted by 2026-09-30: 6,000 JPY counter / 5,500 online. From 2026-10-01: 10,000–75,000 JPY (counter) depending on period granted.',
     },
     iconName: 'FileCheck2',
   },

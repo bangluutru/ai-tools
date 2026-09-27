@@ -10,6 +10,7 @@
  * 5. Documents (Official certificates and administrative documents)
  */
 
+import { CONSULAR_PROCEDURES } from '../../consular/procedures/index.js';
 import { getAllCapabilities } from '../capabilityGraph/capabilityResolver.js';
 import { getAllLifeEvents } from '../lifeEvents/lifeEventRegistry.js';
 import { CANONICAL_PROCEDURES } from '../../documents/registry/procedureRegistry.js';
@@ -605,6 +606,38 @@ export const CANONICAL_TOOLS = [
     aliases: ['navigator', 'life navigator', 'dieu phoi cuoc song'],
     link: '#/tools/japan-life-navigator',
   },
+  {
+    id: 'vietnam-consular-jp',
+    title: {
+      vi: 'Thủ tục Lãnh sự Việt Nam tại Nhật Bản',
+      ja: '在日ベトナム領事手続きガイド',
+      en: 'Vietnam Consular Procedures in Japan',
+    },
+    description: {
+      vi: 'Hộ chiếu, khai sinh cho con, kết hôn/ly hôn, Apostille, chứng thực giấy ủy quyền, lý lịch tư pháp — checklist theo trang ĐSQ/TLSQ (công cụ không chính thức)',
+      ja: 'パスポート・出生登録・婚姻・アポスティーユ・委任状認証など在日ベトナム大使館の手続き案内（非公式）',
+      en: 'Passport, birth registration, marriage, Apostille, power of attorney — checklists from Embassy pages (unofficial)',
+    },
+    category: 'consular',
+    keywords: ['ho chieu', 'passport', 'パスポート', '旅券', 'dai su quan', 'lanh su', 'dsq', 'tlsq', 'khai sinh', 'ket hon', 'ly hon', 'apostille', 'uy quyen', 'ly lich tu phap', '大使館', '領事'],
+    aliases: ['lam ho chieu', 'doi ho chieu', 'thu tuc lanh su', 'dai su quan viet nam'],
+    link: '#/tools/vietnam-consular-jp',
+  },
+];
+
+// Các thủ tục lãnh sự chính được đưa vào chỉ mục (link về công cụ vietnam-consular-jp)
+const CONSULAR_INDEXED_PROCEDURE_IDS = [
+  'vn_passport_renewal',
+  'vn_passport_lost',
+  'vn_passport_child',
+  'vn_birth_registration',
+  'vn_marriage_transcription',
+  'vn_marital_status_certificate',
+  'vn_divorce_recording',
+  'vn_consular_legalization_jp_docs',
+  'vn_consular_certification_vn_docs',
+  'vn_signature_authentication',
+  'vn_criminal_record_support',
 ];
 
 /**
@@ -722,6 +755,23 @@ export function buildUnifiedSearchIndex(options = {}) {
         statutoryDeadline: proc.statutoryDeadlineI18n,
         documentRequirements: proc.documentRequirementIds || [],
       },
+    });
+  }
+
+  // 4b. Entities: CONSULAR PROCEDURES (ĐSQ/TLSQ Việt Nam)
+  for (const procId of CONSULAR_INDEXED_PROCEDURE_IDS) {
+    const proc = CONSULAR_PROCEDURES.find((p) => p.id === procId);
+    if (!proc) continue;
+    index.push({
+      entityType: ENTITY_TYPES.PROCEDURE,
+      id: proc.id,
+      title: proc.title,
+      description: { vi: proc.summary, ja: proc.title?.ja || '', en: proc.title?.en || '' },
+      category: 'consular',
+      keywords: [proc.id, ...(proc.aliases || [])],
+      aliases: proc.aliases || [],
+      link: `#/tools/vietnam-consular-jp?procedureId=${proc.id}`,
+      meta: { consularProcedureId: proc.id, toolId: 'vietnam-consular-jp', status: proc.status },
     });
   }
 

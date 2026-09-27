@@ -117,20 +117,38 @@ export default function ConsularHeader({
         </div>
       </div>
 
+      {!activeOffice && (
+        <div className="text-xs bg-amber-500/10 border border-amber-500/30 px-3 py-2 rounded-xl text-amber-800 dark:text-amber-200">
+          {t.header.selectPrefectureFirst}
+        </div>
+      )}
+
       {/* Hiển thị cơ quan thẩm quyền tương ứng với Tỉnh thành đã chọn */}
       {activeOffice && (
         <div className="flex items-center justify-between gap-3 text-xs bg-primary/5 dark:bg-primary/10 border border-primary/20 px-3 py-2 rounded-xl text-primary flex-wrap">
           <div className="flex items-center gap-2">
             <Globe size={14} className="shrink-0" />
             <span>
-              {t.header.jurisdictionNotice} <strong>{officeName}</strong> ({activeOffice.city})
+              {t.header.jurisdictionNotice} <strong>{officeName}</strong> {activeOffice.city ? `(${activeOffice.city})` : ''}
             </span>
           </div>
           <div className="text-[11px] text-on-surface-variant">
-            {t.header.hotline} <span className="font-mono font-semibold">{activeOffice.hotline}</span> | {t.header.workingHours} {activeOffice.workingHours.submission}
+            {t.header.hotline} <span className="font-mono font-semibold">{activeOffice.procedurePhone || '—'}</span> | {t.header.workingHours} {activeOffice.workingHours.submission}
+            {activeOffice.citizenProtectionHotline && (
+              <>
+                {' '}| {t.header.citizenProtectionHotline}{' '}
+                <span className="font-mono font-semibold">{activeOffice.citizenProtectionHotline}</span>
+              </>
+            )}
           </div>
+          {activeOffice.jurisdictionNote && (
+            <div className="w-full text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+              {activeOffice.jurisdictionNote}
+            </div>
+          )}
         </div>
       )}
+      <p className="text-[10.5px] text-outline leading-relaxed">{t.header.disclaimer}</p>
     </header>
   );
 }

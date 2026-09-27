@@ -15,6 +15,31 @@ import {
   DEPENDENT_WORK_PERMIT_RULES,
 } from './familyRules.js';
 import { getStatusChangeFeeSchedule } from '../statusChange/statusChangeRules.js';
+import {
+  parseLocalDate,
+  formatLocalDate,
+  addDaysLocal,
+  diffCalendarDays,
+  resolveCurrentDate,
+  todayLocalISO,
+} from '../shared/localDate.js';
+
+/**
+ * Người bảo lãnh là công dân Nhật hoặc người Vĩnh trú: vợ/chồng/con KHÔNG dùng 家族滞在
+ * mà dùng tư cách thân phận (日本人の配偶者等 / 永住者の配偶者等 / 定住者...).
+ */
+const STATUS_BASED_SPONSORS = {
+  japanese_national: {
+    targetStatus_ja: '日本人の配偶者等',
+    targetStatus_vn: 'Vợ/chồng hoặc con của người Nhật (日本人の配偶者等)',
+    targetStatus_en: 'Spouse or Child of Japanese National',
+  },
+  permanent_resident: {
+    targetStatus_ja: '永住者の配偶者等（日本で出生し引き続き在留する子を含む。それ以外の子は「定住者」等）',
+    targetStatus_vn: 'Vợ/chồng hoặc con của người Vĩnh trú (永住者の配偶者等 — con sinh ra tại Nhật và ở liên tục; con sinh ở nước ngoài thường xét diện 定住者)',
+    targetStatus_en: 'Spouse or Child of Permanent Resident (children born abroad are usually considered under Long-Term Resident)',
+  },
+};
 
 /**
  * Đánh giá điều kiện bảo lãnh người thân sang Nhật Bản
@@ -30,6 +55,9 @@ import { getStatusChangeFeeSchedule } from '../statusChange/statusChangeRules.js
  * @param {string} [input.applicationDate] - Ngày dự kiến nộp đơn (YYYY-MM-DD)
  * @param {string} [input.childBirthDate] - Ngày sinh của trẻ (nếu sinh tại Nhật Bản)
  * @param {boolean} [input.intendsToWorkPartTime] - Người thân có dự định đi làm thêm không
+ * @param {string} [input.currentDate] - Ngày đối chiếu "hôm nay" (YYYY-MM-DD) — dùng cho test
+ * @param {'counter'|'online'} [input.filingMethod='counter']
+ * @param {string} [input.expectedPeriod='1y'] - Bậc thời hạn dự kiến được cấp (ảnh hưởng phí từ 01/10/2026)
  * @returns {Object} Kết quả đánh giá pháp lý và danh mục hướng dẫn
  */
 export function evaluateFamilyImmigration(input = {}) {
@@ -40,9 +68,12 @@ export function evaluateFamilyImmigration(input = {}) {
     dependentCount = 1,
     sponsorTaxCompliant = true,
     currentLocation = 'overseas',
-    applicationDate = new Date().toISOString().slice(0, 10),
+    applicationDate = todayLocalISO(),
     childBirthDate = null,
-    intendsToWorkPartTime = false
+    intendsToWorkPartTime = false,
+    currentDate,
+    filingMethod = 'counter',
+    expectedPeriod,
   } = input;
 
   const warnings = [];
@@ -96,23 +127,42 @@ export function evaluateFamilyImmigration(input = {}) {
   const isSponsorBarred = SPONSOR_STATUS_ELIGIBILITY.BARRED_STATUSES.includes(sponsorStatusId);
   const isSponsorAllowed = SPONSOR_STATUS_ELIGIBILITY.ALLOWED_STATUSES.includes(sponsorStatusId);
 
+  const statusBasedSponsor = STATUS_BASED_SPONSORS[sponsorStatusId] || null;
+  const sponsorEligible = !isSponsorBarred && isSponsorAllowed;
+
   prerequisites.push({
     id: 'sponsor_status_eligibility',
     title_ja: '扶養者（スポンサー）の在留資格適格性',
     title_vn: 'Tư cách lưu trú của người bảo lãnh cho phép đưa gia đình sang',
     title_en: 'Sponsor residence status eligibility to bring dependents',
-    met: !isSponsorBarred && isSponsorAllowed,
+    met: sponsorEligible,
     required: true,
     guidance_ja: isSponsorBarred
       ? '特定技能1号および技能実習は法令上、家族の帯同が認められていません（特定技能2号への移行等が必要です）。'
-      : '就労ビザ（技術・人文知識・国際業務等）や高度専門職は家族の帯同が認められています。',
+      : statusBasedSponsor
+        ? `扶養者が日本人・永住者の場合、配偶者・子は「家族滞在」ではなく「${statusBasedSponsor.targetStatus_ja}」で申請します。`
+        : isSponsorAllowed
+          ? '就労ビザ（技術・人文知識・国際業務等）や高度専門職は家族の帯同が認められています。'
+          : '選択された扶養者の在留資格では「家族滞在」の対象か確認できません。出入国在留管理庁の公式情報で確認してください。',
     guidance_vn: isSponsorBarred
       ? 'Visa Kỹ năng đặc định số 1 (特定技能1号) và Thực tập sinh (技能実習) BỊ CẤM BẢO LÃNH GIA ĐÌNH theo luật. Muốn bảo lãnh bạn phải nâng cấp lên 特定技能2号 hoặc visa 技人国.'
-      : 'Các tư cách lao động chuyên môn (Kỹ thuật/Nhân văn/Quốc tế, Quản lý, v.v.) được quyền bảo lãnh gia đình.',
+      : statusBasedSponsor
+        ? `Người bảo lãnh là người Nhật/người Vĩnh trú: vợ/chồng và con KHÔNG xin 家族滞在 mà xin tư cách "${statusBasedSponsor.targetStatus_vn}".`
+        : isSponsorAllowed
+          ? 'Các tư cách lao động chuyên môn (Kỹ thuật/Nhân văn/Quốc tế, Quản lý, v.v.) được quyền bảo lãnh gia đình.'
+          : 'Không xác định được tư cách của người bảo lãnh có thuộc diện bảo lãnh 家族滞在 hay không. Hãy kiểm tra thông tin chính thức của Cục XNC.',
     guidance_en: isSponsorBarred
       ? 'Specified Skilled Worker (i) and Technical Interns are legally prohibited from bringing dependents (requires transition to SSW ii).'
-      : 'Professional work statuses (Engineer/Specialist, Manager, etc.) are entitled to sponsor dependents.'
+      : statusBasedSponsor
+        ? `When the sponsor is a Japanese national or Permanent Resident, the spouse/child applies for "${statusBasedSponsor.targetStatus_en}", not Dependent.`
+        : isSponsorAllowed
+          ? 'Professional work statuses (Engineer/Specialist, Manager, etc.) are entitled to sponsor dependents.'
+          : 'Could not confirm that this sponsor status can sponsor Dependent status. Please check official ISA information.'
   });
+
+  if (!isSponsorBarred && !sponsorEligible && readinessStatus === 'ready') {
+    readinessStatus = 'missing_requirements';
+  }
 
   if (isSponsorBarred) {
     readinessStatus = 'ineligible';
@@ -128,6 +178,19 @@ export function evaluateFamilyImmigration(input = {}) {
     });
   }
 
+  if (statusBasedSponsor) {
+    warnings.push({
+      code: 'USE_STATUS_BASED_VISA_NOT_DEPENDENT',
+      severity: 'warning',
+      title_ja: `日本人・永住者の家族は「家族滞在」ではなく「${statusBasedSponsor.targetStatus_ja}」です`,
+      title_vn: `Gia đình người Nhật / người Vĩnh trú không xin 家族滞在 — cần xin "${statusBasedSponsor.targetStatus_vn}"`,
+      title_en: `Family of Japanese/PR: apply for "${statusBasedSponsor.targetStatus_en}", not Dependent`,
+      message_ja: '「家族滞在」は就労系等の在留資格を持つ外国人の扶養家族のための在留資格です。日本人・永住者の配偶者や子は身分系在留資格の要件（婚姻の実態、身元保証、生計等）で審査されます。',
+      message_vn: 'Tư cách 家族滞在 chỉ dành cho người phụ thuộc của người nước ngoài có visa lao động/du học... Vợ/chồng, con của người Nhật hoặc người Vĩnh trú được xét theo tư cách thân phận (điều kiện: hôn nhân thực tế, người bảo lãnh, khả năng kinh tế…). Hãy dùng công cụ Hướng dẫn đổi tư cách lưu trú để xem điều kiện.',
+      message_en: 'Dependent status is for family of foreign nationals holding work/study statuses. Spouses/children of Japanese nationals or PRs are examined under status-based categories (genuine marriage, guarantor, livelihood).'
+    });
+  }
+
   // 3. Đánh giá Năng lực Tài chính của Người bảo lãnh (Financial Capacity)
   const count = Math.max(1, Number(dependentCount) || 1);
   const benchmarkIncome = SPONSOR_FINANCIAL_BENCHMARKS.BASE_ANNUAL_INCOME_ONE_DEPENDENT +
@@ -137,14 +200,14 @@ export function evaluateFamilyImmigration(input = {}) {
 
   prerequisites.push({
     id: 'sponsor_income_benchmark',
-    title_ja: `扶養能力の立証（目安年収: ${benchmarkIncome.toLocaleString()}円程度以上）`,
-    title_vn: `Năng lực chu cấp kinh tế độc lập (Mức thu nhập khuyến nghị từ: ${benchmarkIncome.toLocaleString()} JPY/năm)`,
-    title_en: `Demonstrated financial support capacity (Income benchmark: ${benchmarkIncome.toLocaleString()} JPY/yr)`,
+    title_ja: `扶養能力の立証（実務上の目安年収: ${benchmarkIncome.toLocaleString()}円程度・公表基準ではありません）`,
+    title_vn: `Năng lực chu cấp kinh tế (mốc ước tính thực tế: ${benchmarkIncome.toLocaleString()} JPY/năm — không phải tiêu chuẩn chính thức)`,
+    title_en: `Demonstrated financial support capacity (practitioner estimate: ${benchmarkIncome.toLocaleString()} JPY/yr, not an official standard)`,
     met: hasSufficientIncome,
     required: true,
-    guidance_ja: `扶養者1人につき約250万円、追加扶養1人ごとに約60万円が生活維持能力の審査目安となります。直近の住民税課税・納税証明書で審査されます。`,
-    guidance_vn: `Mức ước tính chuẩn của Cục Nhập cảnh là khoảng 2.500.000 JPY cho 1 người phụ thuộc, thêm khoảng 600.000 JPY cho mỗi người tiếp theo. Căn cứ trên Giấy chứng nhận thuế cư trú (課税証明書).`,
-    guidance_en: `Standard immigration benchmark is approx. 2.5M JPY for 1 dependent plus 600k JPY per additional dependent, verified via municipal tax certificates.`
+    guidance_ja: `扶養者1人につき約250万円＋追加1人ごとに約60万円という数値は実務家による経験則（目安）であり、出入国在留管理庁が公表した基準ではありません。実際には直近の住民税課税・納税証明書等で世帯の生計維持能力が総合的に審査されます。`,
+    guidance_vn: `Mốc khoảng 2.500.000 JPY cho 1 người phụ thuộc + khoảng 600.000 JPY cho mỗi người tiếp theo chỉ là ƯỚC TÍNH THEO KINH NGHIỆM của các văn phòng hành chính (gyoseishoshi), KHÔNG phải tiêu chuẩn công bố của Cục XNC. Cục xét tổng thể khả năng nuôi gia đình dựa trên Giấy chứng nhận thuế cư trú (課税・納税証明書) và các giấy tờ khác.`,
+    guidance_en: `The ~2.5M JPY for 1 dependent plus ~600k JPY per additional dependent figure is a practitioner rule of thumb, not a published ISA standard. ISA assesses household livelihood holistically using municipal tax certificates and other evidence.`
   });
 
   if (!hasSufficientIncome && readinessStatus === 'ready') {
@@ -153,7 +216,7 @@ export function evaluateFamilyImmigration(input = {}) {
       code: 'LOW_SPONSOR_INCOME',
       severity: 'warning',
       title_ja: '扶養能力に関する審査リスク（推奨目安年収を下回っています）',
-      title_vn: 'Thu nhập của người bảo lãnh thấp hơn ngưỡng tiêu chuẩn khuyến nghị',
+      title_vn: 'Thu nhập của người bảo lãnh thấp hơn mốc ước tính thực tế',
       title_en: 'Sponsor income is below the recommended immigration benchmark',
       message_ja: `現在の申告年収（${sponsorAnnualIncome.toLocaleString()}円）は扶養対象${count}名の目安（${benchmarkIncome.toLocaleString()}円）を下回っています。預金残高証明書等の追加疎明資料を提出しない場合、生計維持困難として不許可となるリスクがあります。`,
       message_vn: `Mức thu nhập ${sponsorAnnualIncome.toLocaleString()} JPY hiện tại thấp hơn ngưỡng khuyến nghị cho ${count} người phụ thuộc (${benchmarkIncome.toLocaleString()} JPY). Cần nộp bổ sung Giấy xác nhận số dư tài khoản tiết kiệm ngân hàng để hỗ trợ hồ sơ.`,
@@ -197,42 +260,66 @@ export function evaluateFamilyImmigration(input = {}) {
     procedureInfo = FAMILY_APPLICATION_PROCEDURES.CHILD_BORN_IN_JAPAN;
     feeSchedule = { amount: 0, currency: 'JPY', paymentMethod: 'なし（無料）' };
 
-    if (childBirthDate) {
-      const birth = new Date(childBirthDate);
-      const filingDeadline = new Date(birth);
-      filingDeadline.setDate(filingDeadline.getDate() + 30);
-
-      const maxStayLimit = new Date(birth);
-      maxStayLimit.setDate(maxStayLimit.getDate() + 60);
+    const birth = parseLocalDate(childBirthDate);
+    if (birth) {
+      // 入管法第22条の2: 出生の日から60日を超えて在留しようとする場合、出生の日から30日以内に在留資格取得許可申請
+      const filingDeadline = addDaysLocal(birth, 30);
+      const maxStayLimit = addDaysLocal(birth, 60);
+      const today = resolveCurrentDate(currentDate);
+      const daysToFiling = diffCalendarDays(today, filingDeadline);
+      const daysToMaxStay = diffCalendarDays(today, maxStayLimit);
 
       newbornDeadlines = {
-        childBirthDate,
-        filingDeadline30Days: filingDeadline.toISOString().slice(0, 10),
-        maxStayLimit60Days: maxStayLimit.toISOString().slice(0, 10),
+        childBirthDate: formatLocalDate(birth),
+        filingDeadline30Days: formatLocalDate(filingDeadline),
+        maxStayLimit60Days: formatLocalDate(maxStayLimit),
+        daysRemainingToFile: daysToFiling,
         statutoryBasis: '出入国管理及び難民認定法第22条の2'
       };
 
-      const today = new Date();
-      if (today > maxStayLimit) {
+      if (daysToMaxStay < 0) {
         warnings.push({
           code: 'NEWBORN_OVER_60_DAYS',
           severity: 'danger',
           title_ja: '出生後60日を超過しています（不法滞在リスク）',
           title_vn: 'Đã quá 60 ngày kể từ ngày sinh của trẻ: Nguy cơ vi phạm cư trú bất hợp pháp',
           title_en: 'Over 60 days since birth: High risk of unlawful residence',
-          message_ja: '入管法第22条の2の特例期間（60日）を経過しています。速やかに入管に出頭し手続を行ってください。',
-          message_vn: 'Trẻ đã ở quá thời hạn 60 ngày miễn thị thực sau sinh. Cần đến ngay Cục Nhập cảnh trình báo và làm thủ tục cấp phép cư trú.',
-          message_en: 'The 60-day exemption period under Art. 22-2 has lapsed. Report to immigration authorities immediately.'
+          message_ja: '入管法第22条の2の期間（60日）を経過しています。速やかに入管に出頭し手続を行ってください。',
+          message_vn: 'Trẻ đã ở quá thời hạn 60 ngày sau sinh mà chưa có tư cách lưu trú. Cần đến ngay Cục Nhập cảnh trình báo và làm thủ tục.',
+          message_en: 'The 60-day period under Art. 22-2 has lapsed. Report to immigration authorities immediately.'
+        });
+      } else if (daysToFiling < 0) {
+        warnings.push({
+          code: 'NEWBORN_FILING_DEADLINE_PASSED',
+          severity: 'danger',
+          title_ja: '出生後30日の申請期限を過ぎています',
+          title_vn: 'Đã quá hạn 30 ngày kể từ ngày sinh để nộp đơn xin tư cách lưu trú cho trẻ',
+          title_en: 'The 30-day filing deadline after birth has passed',
+          message_ja: `在留資格取得許可申請は出生の日から30日以内（${formatLocalDate(filingDeadline)}まで）に行う必要がありました。60日（${formatLocalDate(maxStayLimit)}）を超えて在留する予定であれば、直ちに入管へ申請・相談してください。`,
+          message_vn: `Đơn xin cấp tư cách lưu trú cho trẻ phải nộp trong vòng 30 ngày kể từ ngày sinh (hạn: ${formatLocalDate(filingDeadline)}). Nếu trẻ sẽ ở Nhật quá 60 ngày (sau ${formatLocalDate(maxStayLimit)}), hãy đến Cục XNC nộp đơn và giải trình NGAY.`,
+          message_en: `The acquisition application was due within 30 days of birth (${formatLocalDate(filingDeadline)}). If the child will stay beyond 60 days (${formatLocalDate(maxStayLimit)}), apply and consult ISA immediately.`
+        });
+      } else if (daysToFiling <= 7) {
+        warnings.push({
+          code: 'NEWBORN_FILING_DEADLINE_APPROACHING',
+          severity: 'warning',
+          title_ja: `在留資格取得許可申請の期限まであと${daysToFiling}日です`,
+          title_vn: `Chỉ còn ${daysToFiling} ngày để nộp đơn xin tư cách lưu trú cho trẻ`,
+          title_en: `${daysToFiling} day(s) left to file the newborn status acquisition`,
+          message_ja: `期限：${formatLocalDate(filingDeadline)}（出生の日から30日以内）。`,
+          message_vn: `Hạn chót: ${formatLocalDate(filingDeadline)} (trong vòng 30 ngày kể từ ngày sinh).`,
+          message_en: `Deadline: ${formatLocalDate(filingDeadline)} (within 30 days of birth).`
         });
       }
     }
   } else if (currentLocation === 'in_japan') {
     procedureInfo = FAMILY_APPLICATION_PROCEDURES.STATUS_CHANGE;
-    const changeFee = getStatusChangeFeeSchedule(applicationDate);
+    const changeFee = getStatusChangeFeeSchedule(applicationDate, { method: filingMethod, expectedPeriod });
     feeSchedule = {
+      ...changeFee,
       amount: changeFee.amount,
       currency: 'JPY',
-      paymentMethod: '収入印紙 (Revenue Stamp)',
+      paymentMethod: changeFee.paymentMethod_ja,
       statutoryBasis: changeFee.statutoryBasis
     };
   }

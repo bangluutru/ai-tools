@@ -33,8 +33,13 @@ export const INDUSTRY_CATEGORIES = Object.freeze({
       totalRate: 0.0135,
     },
     rates2025: {
-      employeeRate: 0.006, // 6/1000
-      employerRate: 0.0095, // 9.5/1000
+      employeeRate: 0.0055, // 5.5/1000 (令和7年度)
+      employerRate: 0.009, // 9/1000
+      totalRate: 0.0145,
+    },
+    rates2024: {
+      employeeRate: 0.006, // 6/1000 (令和6年度)
+      employerRate: 0.0095,
       totalRate: 0.0155,
     },
   },
@@ -49,7 +54,12 @@ export const INDUSTRY_CATEGORIES = Object.freeze({
       totalRate: 0.0155,
     },
     rates2025: {
-      employeeRate: 0.007,
+      employeeRate: 0.0065, // 6.5/1000 (令和7年度)
+      employerRate: 0.01, // 10/1000
+      totalRate: 0.0165,
+    },
+    rates2024: {
+      employeeRate: 0.007, // 令和6年度
       employerRate: 0.0105,
       totalRate: 0.0175,
     },
@@ -65,7 +75,12 @@ export const INDUSTRY_CATEGORIES = Object.freeze({
       totalRate: 0.0165,
     },
     rates2025: {
-      employeeRate: 0.007,
+      employeeRate: 0.0065, // 6.5/1000 (令和7年度)
+      employerRate: 0.011, // 11/1000
+      totalRate: 0.0175,
+    },
+    rates2024: {
+      employeeRate: 0.007, // 令和6年度
       employerRate: 0.0115,
       totalRate: 0.0185,
     },
@@ -91,6 +106,8 @@ export function resolveEmploymentInsuranceRate(industryId = 'general', applicabl
     isVerifiedPeriod = false;
     periodNotice = 'Employment insurance rates for FY2027 onwards are not yet published. Using FY2026 baseline with unverified flag.';
     rates = ind.rates2026;
+  } else if (dateStr < '2025-04-01') {
+    rates = ind.rates2024;
   } else if (dateStr < '2026-04-01') {
     rates = ind.rates2025;
   }

@@ -7,54 +7,48 @@
 
 import { defineRuleMetadata } from '../../../regulatory/ruleMetadata.js';
 import { JAPAN_JURISDICTION } from '../../../regulatory/jurisdiction.js';
+import { getResidencePermitFee } from '../shared/immigrationFeeTable.js';
+import { parseLocalDate, formatLocalDate, todayLocalISO } from '../shared/localDate.js';
 
 export const RENEWAL_SOURCES = {
   IMMIGRATION_ACT_ART21: 'isa-act-art21',
   RENEWAL_FEE_ORDER: 'isa-fee-table',
-  TOKUREI_KIKAN: 'isa-act-art20-para5',
+  TOKUREI_KIKAN: 'isa-act-art20-para5', // Điều 20 Khoản 6 (特例期間); id giữ nguyên vì là khóa trong sourceRegistry
   PHOTO_SPEC: 'isa-photo-guidelines',
   RENEWAL_DOCUMENTS: 'isa-renewal-doc-requirements',
 };
 
 /**
- * Metadata cho quy tắc lệ phí gia hạn
- * Lệ phí thay đổi từ 4.000 JPY lên 6.000 JPY áp dụng theo ngày nộp hồ sơ (applicationDate) từ 2026-10-01.
+ * Metadata cho quy tắc lệ phí gia hạn.
+ * Hồ sơ tiếp nhận đến 30/09/2026: 6.000 JPY (quầy) / 5.500 JPY (online).
+ * Hồ sơ tiếp nhận từ 01/10/2026: 10.000 – 75.000 JPY (quầy) theo thời hạn được cấp — xem shared/immigrationFeeTable.js.
  */
 export const RENEWAL_FEE_RULE = defineRuleMetadata({
   id: 'jp-imm-renewal-fee-2026',
   jurisdiction: JAPAN_JURISDICTION,
   sourceId: 'isa-fee-table',
-  effectiveFrom: '1990-06-01',
-  applicablePeriod: { type: 'calendar-year', from: 1990, to: 2099 },
-  version: '2026.1',
-  lastVerifiedAt: '2026-09-11',
+  effectiveFrom: '2026-10-01',
+  applicablePeriod: { type: 'calendar-year', from: 2025, to: 2099 },
+  version: '2026.2',
+  lastVerifiedAt: '2026-09-27',
   status: 'verified',
   effectiveBy: 'applicationDate',
   ruleNature: 'deterministic',
-  notes: 'Lệ phí nộp bằng tem doanh thu (収入印紙) khi nhận kết quả cấp phép mới. Mức phí xác định theo ngày nộp đơn.',
+  notes: 'Mức phí xác định theo NGÀY TIẾP NHẬN hồ sơ; từ 01/10/2026 phụ thuộc thời hạn lưu trú được cấp. Nộp tại quầy: tem 収入印紙; online (từ 01/10/2026): combini/ngân hàng + phí thanh toán.',
 });
 
 /**
- * Tính toán mức lệ phí gia hạn cư trú dựa trên ngày nộp hồ sơ.
- * @param {string|Date} applicationDate - Ngày nộp hồ sơ
- * @returns {{ amount: number, currency: string, payableOn: string, effectivePeriod: string, legalBasis: string }}
+ * Tính lệ phí gia hạn theo ngày tiếp nhận hồ sơ.
+ * @param {string|Date} [applicationDate] - Ngày Cục XNC tiếp nhận hồ sơ
+ * @param {{ method?: 'counter'|'online', expectedPeriod?: string }} [options]
  */
-export function getRenewalFee(applicationDate = new Date()) {
-  const appDate = applicationDate instanceof Date ? applicationDate : new Date(applicationDate);
-  const cutoff = new Date('2026-10-01T00:00:00+09:00');
-
-  const isPost2026Revision = appDate >= cutoff;
-  const amount = isPost2026Revision ? 6000 : 4000;
-
-  return {
-    amount,
-    currency: 'JPY',
-    payableOn: 'issuance', // Nộp khi nhận kết quả cho phép, nộp đơn ban đầu không mất phí
-    effectivePeriod: isPost2026Revision ? '2026-10-01~' : '~2026-09-30',
-    legalBasis: isPost2026Revision
-      ? '出入国管理及び難民認定法関係手数料令（2026年10月1日施行：6,000円）'
-      : '出入国管理及び難民認定法関係手数料令（現行：4,000円）',
-  };
+export function getRenewalFee(applicationDate, options = {}) {
+  return getResidencePermitFee({
+    procedure: 'renewal',
+    acceptanceDate: applicationDate,
+    method: options.method,
+    expectedPeriod: options.expectedPeriod,
+  });
 }
 
 /**
@@ -83,11 +77,9 @@ export const PHOTO_REQUIREMENT_RULE = defineRuleMetadata({
  * @param {string|Date} applicationDate - Ngày nộp đơn
  * @returns {{ required: boolean, reason_ja: string, reason_en: string, reason_vi: string }}
  */
-export function checkPhotoRequired(age, applicationDate = new Date()) {
-  const appDate = applicationDate instanceof Date ? applicationDate : new Date(applicationDate);
-  const photoReformCutoff = new Date('2026-06-14T00:00:00+09:00');
-
-  const isPostReform = appDate >= photoReformCutoff;
+export function checkPhotoRequired(age, applicationDate) {
+  const appISO = formatLocalDate(parseLocalDate(applicationDate) || parseLocalDate(todayLocalISO()));
+  const isPostReform = appISO >= '2026-06-14';
 
   if (isPostReform) {
     if (age < 1) {
@@ -166,7 +158,7 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'Cơ sở chụp ảnh / Tự chụp đúng tiêu chuẩn',
       required: true,
       validityPeriodMonths: 3,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/photo_info_00002.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-3.html',
     },
     {
       id: 'doc-passport-card-presentation',
@@ -188,7 +180,7 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'Doanh nghiệp đang làm việc',
       required: true,
       validityPeriodMonths: 12,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri07_00095.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/gijinkoku.html',
     },
     {
       id: 'doc-resident-tax-cert',
@@ -199,7 +191,7 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'UBND quận/thị xã (市区町村役所)',
       required: true,
       validityPeriodMonths: 3,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri07_00095.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/gijinkoku.html',
     },
     {
       id: 'doc-statutory-statement',
@@ -212,7 +204,7 @@ export const STATUS_DOCUMENTS_CATALOG = {
       conditional: true,
       conditionDescription: 'Miễn nộp nếu công ty thuộc Category 1 (doanh nghiệp niêm yết)',
       validityPeriodMonths: 12,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri07_00095.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/gijinkoku.html',
     },
   ],
   'dependent': [
@@ -236,7 +228,18 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'Tự chuẩn bị theo quy cách',
       required: true,
       validityPeriodMonths: 3,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/photo_info_00002.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-3.html',
+    },
+    {
+      id: 'doc-passport-card-dep',
+      name_ja: 'パスポート及び在留カード（原本提示）',
+      name_en: 'Passport and Residence Card (Presentation of originals)',
+      name_vi: 'Hộ chiếu và Thẻ cư trú hiện tại (Xuất trình bản gốc)',
+      purpose: 'Xác thực nhân thân',
+      issuer: 'Chính phủ nước sở tại & Cục XNC Nhật',
+      required: true,
+      validityPeriodMonths: null,
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/dependent.html',
     },
     {
       id: 'doc-relationship-proof',
@@ -247,7 +250,7 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'Cơ quan hộ tịch sở tại kèm bản dịch',
       required: true,
       validityPeriodMonths: null,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri07_00097.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/dependent.html',
     },
     {
       id: 'doc-supporter-card-passport',
@@ -258,7 +261,7 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'Người bảo lãnh cung cấp',
       required: true,
       validityPeriodMonths: null,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri07_00097.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/dependent.html',
     },
     {
       id: 'doc-supporter-employment-cert',
@@ -269,7 +272,7 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'Doanh nghiệp người bảo lãnh công tác',
       required: true,
       validityPeriodMonths: 3,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri07_00097.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/dependent.html',
     },
     {
       id: 'doc-supporter-tax-cert',
@@ -280,7 +283,7 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'UBND quận/huyện nơi người bảo lãnh cư trú',
       required: true,
       validityPeriodMonths: 3,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri07_00097.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/dependent.html',
     },
   ],
   'student': [
@@ -294,6 +297,28 @@ export const STATUS_DOCUMENTS_CATALOG = {
       required: true,
       validityPeriodMonths: null,
       officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-3-1.html',
+    },
+    {
+      id: 'doc-photo-stu',
+      name_ja: '写真（縦4cm×横3cm、無帽・無背景・3か月以内撮影）',
+      name_en: 'Photograph (4cm x 3cm, taken within 3 months, plain background)',
+      name_vi: 'Ảnh thẻ (4cm x 3cm, chụp trong 3 tháng, nền trơn, không đội mũ)',
+      purpose: 'Nhận diện và in lên thẻ cư trú mới',
+      issuer: 'Tự chuẩn bị theo quy cách',
+      required: true,
+      validityPeriodMonths: 3,
+      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-3.html',
+    },
+    {
+      id: 'doc-passport-card-stu',
+      name_ja: 'パスポート及び在留カード（原本提示）',
+      name_en: 'Passport and Residence Card (Presentation of originals)',
+      name_vi: 'Hộ chiếu và Thẻ cư trú hiện tại (Xuất trình bản gốc)',
+      purpose: 'Xác thực nhân thân',
+      issuer: 'Chính phủ nước sở tại & Cục XNC Nhật',
+      required: true,
+      validityPeriodMonths: null,
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/student.html',
     },
     {
       id: 'doc-enrollment-cert',
@@ -342,6 +367,28 @@ export const STATUS_DOCUMENTS_CATALOG = {
       officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-3-1.html',
     },
     {
+      id: 'doc-photo-spouse',
+      name_ja: '写真（縦4cm×横3cm、無帽・無背景・3か月以内撮影）',
+      name_en: 'Photograph (4cm x 3cm, taken within 3 months, plain background)',
+      name_vi: 'Ảnh thẻ (4cm x 3cm, chụp trong 3 tháng, nền trơn, không đội mũ)',
+      purpose: 'Nhận diện và in lên thẻ cư trú mới',
+      issuer: 'Tự chuẩn bị theo quy cách',
+      required: true,
+      validityPeriodMonths: 3,
+      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-3.html',
+    },
+    {
+      id: 'doc-passport-card-spouse',
+      name_ja: 'パスポート及び在留カード（原本提示）',
+      name_en: 'Passport and Residence Card (Presentation of originals)',
+      name_vi: 'Hộ chiếu và Thẻ cư trú hiện tại (Xuất trình bản gốc)',
+      purpose: 'Xác thực nhân thân',
+      issuer: 'Chính phủ nước sở tại & Cục XNC Nhật',
+      required: true,
+      validityPeriodMonths: null,
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/spouseorchildofjapanese.html',
+    },
+    {
       id: 'doc-koseki-tohon',
       name_ja: '配偶者（日本人）の戸籍謄本（全部事項証明書、3か月以内発行）',
       name_en: 'Family Register of Japanese Spouse (Koseki Tohon, issued within 3 months)',
@@ -350,7 +397,7 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'UBND nơi đặt hộ tịch gốc (本籍地役所)',
       required: true,
       validityPeriodMonths: 3,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri07_00024.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/spouseorchildofjapanese.html',
     },
     {
       id: 'doc-juminhyo',
@@ -361,7 +408,7 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'UBND quận/huyện nơi cư trú',
       required: true,
       validityPeriodMonths: 3,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri07_00024.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/spouseorchildofjapanese.html',
     },
     {
       id: 'doc-guarantor-letter',
@@ -372,7 +419,7 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'Người bảo lãnh (Mẫu ISA)',
       required: true,
       validityPeriodMonths: null,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri07_00024.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/spouseorchildofjapanese.html',
     },
     {
       id: 'doc-spouse-tax-cert',
@@ -383,10 +430,50 @@ export const STATUS_DOCUMENTS_CATALOG = {
       issuer: 'UBND quận/thị xã',
       required: true,
       validityPeriodMonths: 3,
-      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/nyuukokukanri07_00024.html',
+      officialUrl: 'https://www.moj.go.jp/isa/applications/status/spouseorchildofjapanese.html',
     },
   ],
 };
+
+/**
+ * Giấy tờ chung cho mọi tư cách (dùng khi công cụ chưa mô hình hóa danh mục riêng).
+ * KHÔNG thay thế danh mục riêng theo tư cách — engine sẽ kèm cảnh báo DOCUMENTS_NOT_MODELED.
+ */
+export const GENERIC_RENEWAL_DOCUMENTS = [
+  {
+    id: 'doc-application-form-generic',
+    name_ja: '在留期間更新許可申請書（在留資格に応じた様式 1通）',
+    name_en: 'Application for Extension of Period of Stay (form for your status, 1 copy)',
+    name_vi: 'Đơn xin gia hạn thời hạn lưu trú (mẫu theo đúng tư cách, 1 bản)',
+    purpose: 'Đơn hành chính theo mẫu của ISA',
+    issuer: 'ISA (Cục Quản lý Xuất nhập cảnh)',
+    required: true,
+    validityPeriodMonths: null,
+    officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-3.html',
+  },
+    {
+      id: 'doc-photo-generic',
+      name_ja: '写真（縦4cm×横3cm、無帽・無背景・3か月以内撮影）',
+      name_en: 'Photograph (4cm x 3cm, taken within 3 months, plain background)',
+      name_vi: 'Ảnh thẻ (4cm x 3cm, chụp trong 3 tháng, nền trơn, không đội mũ)',
+      purpose: 'Nhận diện và in lên thẻ cư trú mới',
+      issuer: 'Tự chuẩn bị theo quy cách',
+      required: true,
+      validityPeriodMonths: 3,
+      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-3.html',
+    },
+    {
+      id: 'doc-passport-card-generic',
+      name_ja: 'パスポート及び在留カード（原本提示）',
+      name_en: 'Passport and Residence Card (Presentation of originals)',
+      name_vi: 'Hộ chiếu và Thẻ cư trú hiện tại (Xuất trình bản gốc)',
+      purpose: 'Xác thực nhân thân',
+      issuer: 'Chính phủ nước sở tại & Cục XNC Nhật',
+      required: true,
+      validityPeriodMonths: null,
+      officialUrl: 'https://www.moj.go.jp/isa/applications/procedures/16-3.html',
+    },
+];
 
 // Canonical status ID aliases
 STATUS_DOCUMENTS_CATALOG['engineer-humanities-international'] = STATUS_DOCUMENTS_CATALOG['engineer-specialist'];

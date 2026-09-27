@@ -1,4 +1,5 @@
 import React from 'react';
+import { resolveLayout, DEFAULT_LAYOUT_CONFIG } from '../../lib/editor-studio/layoutPresets';
 
 // Renders individual blocks based on the schema type
 const BlockRenderer = ({ block }) => {
@@ -6,12 +7,12 @@ const BlockRenderer = ({ block }) => {
         case 'heading': {
             const Tag = `h${block.level}`;
             const sizeClasses = {
-                1: 'text-2xl font-black mt-6 mb-4 text-slate-800',
-                2: 'text-xl font-bold mt-5 mb-3 text-slate-800',
-                3: 'text-lg font-bold mt-4 mb-2 text-slate-800',
-                4: 'text-base font-bold mt-3 mb-2 text-slate-800',
-                5: 'text-sm font-bold mt-2 mb-1 text-slate-700',
-                6: 'text-sm font-semibold mt-2 mb-1 text-slate-600',
+                1: 'text-[1.4em] font-black mt-6 mb-4 text-slate-800',
+                2: 'text-[1.25em] font-bold mt-5 mb-3 text-slate-800',
+                3: 'text-[1.1em] font-bold mt-4 mb-2 text-slate-800',
+                4: 'text-[1em] font-bold mt-3 mb-2 text-slate-800',
+                5: 'text-[1em] font-bold mt-2 mb-1 text-slate-700',
+                6: 'text-[1em] font-semibold mt-2 mb-1 text-slate-600',
             };
             return <Tag className={sizeClasses[block.level]}>{block.text}</Tag>;
         }
@@ -78,7 +79,7 @@ const BlockRenderer = ({ block }) => {
             );
 
         case 'page_break':
-            return <div className="hidden print:block" style={{ pageBreakAfter: 'always' }} />;
+            return <div style={{ breakAfter: 'page', pageBreakAfter: 'always' }} />;
 
         case 'date_field':
             return (
@@ -99,64 +100,61 @@ const BlockRenderer = ({ block }) => {
     }
 };
 
-export default function DocStudioPreview({ schema, layoutConfig }) {
-    const config = layoutConfig || {
-        fontFamily: 'font-sans',
-        fontSize: 'text-sm',
-        lineSpacing: 'leading-relaxed',
-        margins: 'p-[2.5cm]',
-        headerOptions: { enabled: false, text: '' },
-        footerOptions: { enabled: false, pageNumbers: true }
+export default function DocStudioPreview({ schema, layoutConfig, printMode = false }) {
+    const layout = resolveLayout(layoutConfig || DEFAULT_LAYOUT_CONFIG);
+    const { marginsMm: m } = layout;
+    const pageStyle = {
+        fontFamily: layout.fontCss,
+        fontSize: `${layout.sizePt}pt`,
+        lineHeight: layout.lineRatio,
+        // On screen the page padding shows the margins; when printing, @page carries them.
+        padding: printMode ? 0 : `${m.top}mm ${m.right}mm ${m.bottom}mm ${m.left}mm`,
     };
 
     if (!schema || !schema.sections || schema.sections.length === 0) {
         return (
-            <div className={`bg-white w-full max-w-[210mm] min-h-[297mm] shadow-[0_0_15px_rgba(0,0,0,0.1)] flex flex-col items-center justify-center ${config.margins}`}>
+            <div style={pageStyle} className="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-[0_0_15px_rgba(0,0,0,0.1)] flex flex-col items-center justify-center">
                 <p className="text-slate-400 text-center italic">Document preview will appear here.</p>
             </div>
         );
     }
 
-    const containerClasses = `bg-white w-full max-w-[210mm] min-h-[297mm] shadow-[0_0_15px_rgba(0,0,0,0.1)] mx-auto transition-all print:shadow-none print:p-0 relative flex flex-col ${config.fontFamily} ${config.fontSize} ${config.lineSpacing} ${config.margins}`;
-    const marginSize = config.margins.match(/\[(.*?)\]/)?.[1] || '2.5cm';
+    const containerClasses = printMode
+        ? 'ds-print-document bg-white w-full text-black relative flex flex-col'
+        : 'bg-white w-full max-w-[210mm] min-h-[297mm] shadow-[0_0_15px_rgba(0,0,0,0.1)] mx-auto transition-all relative flex flex-col';
 
     return (
-        <div className={containerClasses}>
-            <style>{`
-                @media print {
-                    @page { margin: ${marginSize} !important; }
-                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                }
-            `}</style>
-
+        <div className={containerClasses} style={pageStyle}>
             {/* Header Rendering */}
-            {config.headerOptions.enabled && (
-                <div className="absolute top-4 left-0 w-full text-center print:fixed print:top-4 opacity-50 text-[0.8em] uppercase tracking-widest font-bold">
-                    {config.headerOptions.text}
+            {layout.headerOptions.enabled && (
+                <div className={`${printMode ? 'text-center mb-4' : 'absolute top-4 left-0 w-full text-center'} opacity-50 text-[0.8em] uppercase tracking-widest font-bold`}>
+                    {layout.headerOptions.text}
                 </div>
             )}
 
             <div className="flex-1 flex flex-col relative z-0">
                 {schema.sections.map((section, idx) => (
-                    <div key={section.id} className="mb-8 flex-1">
-                        {section.title && <h1 className="text-3xl font-black mb-6 text-slate-900">{section.title}</h1>}
+                    <div
+                        key={section.id}
+                        className="mb-8 flex-1"
+                        style={printMode && idx > 0 ? { breakBefore: 'page', pageBreakBefore: 'always' } : undefined}
+                    >
+                        {section.title && <h1 className="text-[1.6em] font-black mb-6 text-slate-900">{section.title}</h1>}
                         {section.blocks.map(block => (
                             <BlockRenderer key={block.id} block={block} />
                         ))}
 
-                        {idx < schema.sections.length - 1 && (
-                            <div className="page-break-indicator border-t-2 border-dashed border-slate-300 my-8 print:hidden" />
+                        {!printMode && idx < schema.sections.length - 1 && (
+                            <div className="page-break-indicator border-t-2 border-dashed border-slate-300 my-8" />
                         )}
                     </div>
                 ))}
             </div>
 
-            {/* Footer Rendering */}
-            {config.footerOptions.enabled && (
-                <div className="absolute bottom-4 left-0 w-full flex justify-center items-center print:fixed print:bottom-4 opacity-50 text-[0.8em]">
-                    {config.footerOptions.pageNumbers && (
-                        <span>- 1 -</span> // For HTML preview we mock page 1. Print adds native headers/footers usually, or CSS counters.
-                    )}
+            {/* Footer Rendering (screen preview only shows page 1; browser print numbers pages itself if enabled) */}
+            {!printMode && layout.footerOptions.enabled && (
+                <div className="absolute bottom-4 left-0 w-full flex justify-center items-center opacity-50 text-[0.8em]">
+                    {layout.footerOptions.pageNumbers && <span>- 1 -</span>}
                 </div>
             )}
         </div>

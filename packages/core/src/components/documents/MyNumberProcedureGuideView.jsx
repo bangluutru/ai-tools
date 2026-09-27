@@ -28,6 +28,15 @@ import {
   getMyNumberProcedureGuidance,
 } from '../../documents/mynumber/mynumberGuideEngine.js';
 
+// Chọn bản dịch theo ngôn ngữ; nếu không có bản dịch dùng tiếng Nhật gốc.
+function pickI18n(proc, base, lang) {
+  const i18n = proc?.[`${base}I18n`];
+  if (lang === 'ja') return proc?.[`${base}Ja`] ?? i18n?.ja ?? null;
+  return i18n?.[lang] ?? i18n?.vi ?? proc?.[`${base}Ja`] ?? null;
+}
+
+const INFO_BOX = 'p-4 rounded-xl bg-surface border border-outline-variant/60 text-xs text-on-surface leading-relaxed';
+
 export function MyNumberProcedureGuideView({ lang = 'vi' }) {
   const allProcedures = useMemo(() => getAllMyNumberProcedures(), []);
   const [activeProcedureId, setActiveProcedureId] = useState(
@@ -248,15 +257,46 @@ export function MyNumberProcedureGuideView({ lang = 'vi' }) {
             {/* Invalidation warning for address change */}
             {selectedProcedure.invalidationWarningJa && (
               <div className="p-4 rounded-xl bg-warning/10 border border-warning/30 text-xs text-warning-strong font-medium leading-relaxed">
-                {selectedProcedure.invalidationWarningJa}
+                {pickI18n(selectedProcedure, 'invalidationWarning', lang)}
+              </div>
+            )}
+
+            {/* Statutory deadline (14 ngày) */}
+            {selectedProcedure.statutoryDeadlineJa && (
+              <div className="p-4 rounded-xl bg-error/10 border border-error/30 text-xs text-error font-semibold leading-relaxed">
+                ⏰ {pickI18n(selectedProcedure, 'statutoryDeadline', lang)}
               </div>
             )}
 
             {/* Grace period rule */}
             {selectedProcedure.gracePeriodRuleJa && (
               <div className="p-4 rounded-xl bg-primary/10 border border-primary/25 text-xs text-primary font-medium leading-relaxed">
-                {selectedProcedure.gracePeriodRuleJa}
+                {pickI18n(selectedProcedure, 'gracePeriodRule', lang)}
               </div>
+            )}
+
+            {/* Specified residence card note */}
+            {selectedProcedure.tokuteiNoteI18n && (
+              <div className={INFO_BOX}>
+                {selectedProcedure.tokuteiNoteI18n[lang] || selectedProcedure.tokuteiNoteI18n.vi}
+              </div>
+            )}
+
+            {/* Hotline (mất thẻ) */}
+            {selectedProcedure.hotlineI18n && (
+              <div className="p-4 rounded-xl bg-error/10 border border-error/30 text-xs text-error font-bold leading-relaxed">
+                ☎ {selectedProcedure.hotlineI18n[lang] || selectedProcedure.hotlineI18n.vi}
+              </div>
+            )}
+
+            {/* Details (gia hạn chứng thư điện tử, thẻ đặc định) */}
+            {selectedProcedure.detailsJa && (
+              <div className={INFO_BOX}>{pickI18n(selectedProcedure, 'details', lang)}</div>
+            )}
+
+            {/* Lockout details */}
+            {selectedProcedure.lockoutDetailsJa && (
+              <div className={INFO_BOX}>{pickI18n(selectedProcedure, 'lockoutDetails', lang)}</div>
             )}
 
             {/* Required items */}
@@ -288,7 +328,7 @@ export function MyNumberProcedureGuideView({ lang = 'vi' }) {
                   {t.actionPlanHeading[lang] || t.actionPlanHeading.vi}:
                 </h4>
                 <div className="space-y-2">
-                  {selectedProcedure.stepsJa.map((stepText, idx) => (
+                  {(pickI18n(selectedProcedure, 'steps', lang) || selectedProcedure.stepsJa).map((stepText, idx) => (
                     <div
                       key={idx}
                       className="bg-surface p-3.5 rounded-xl border border-outline-variant/60 flex items-start gap-3"
@@ -308,8 +348,10 @@ export function MyNumberProcedureGuideView({ lang = 'vi' }) {
             {/* Recovery Channels for PIN */}
             {selectedProcedure.recoveryChannelsJa && (
               <div className="space-y-2 pt-4 border-t border-outline-variant/60 text-xs">
-                <h4 className="font-bold text-on-surface">Kênh thực hiện đặt lại mã PIN:</h4>
-                {selectedProcedure.recoveryChannelsJa.map((ch, idx) => (
+                <h4 className="font-bold text-on-surface">
+                  {lang === 'ja' ? '暗証番号の再設定方法:' : lang === 'en' ? 'Where to reset your PIN:' : 'Kênh thực hiện đặt lại mã PIN:'}
+                </h4>
+                {(pickI18n(selectedProcedure, 'recoveryChannels', lang) || selectedProcedure.recoveryChannelsJa).map((ch, idx) => (
                   <p key={idx} className="bg-surface p-3 rounded-lg border border-outline-variant/60 text-on-surface-variant">
                     {ch}
                   </p>
@@ -323,16 +365,36 @@ export function MyNumberProcedureGuideView({ lang = 'vi' }) {
                 <div className="bg-surface p-4 rounded-xl border border-outline-variant/60 space-y-1">
                   <span className="font-bold text-primary">Android</span>
                   <p className="text-on-surface-variant leading-relaxed">
-                    {selectedProcedure.platformDifferencesJa.android}
+                    {(pickI18n(selectedProcedure, 'platformDifferences', lang) || selectedProcedure.platformDifferencesJa).android}
                   </p>
                 </div>
                 <div className="bg-surface p-4 rounded-xl border border-outline-variant/60 space-y-1">
                   <span className="font-bold text-primary">iPhone (iOS)</span>
                   <p className="text-on-surface-variant leading-relaxed">
-                    {selectedProcedure.platformDifferencesJa.iphone}
+                    {(pickI18n(selectedProcedure, 'platformDifferences', lang) || selectedProcedure.platformDifferencesJa).iphone}
                   </p>
                 </div>
               </div>
+            )}
+
+            {selectedProcedure.caveatJa && (
+              <div className={INFO_BOX}>{pickI18n(selectedProcedure, 'caveat', lang)}</div>
+            )}
+
+            {/* Reissue fee */}
+            {selectedProcedure.reissueFeeNoteJa && (
+              <div className={INFO_BOX}>💴 {pickI18n(selectedProcedure, 'reissueFeeNote', lang)}</div>
+            )}
+
+            {selectedProcedure.sourceUrl && (
+              <a
+                href={selectedProcedure.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline"
+              >
+                Nguồn chính thức: {selectedProcedure.sourceUrl}
+              </a>
             )}
           </section>
         )}

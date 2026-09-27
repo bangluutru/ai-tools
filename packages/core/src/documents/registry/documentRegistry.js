@@ -165,7 +165,7 @@ export const CANONICAL_DOCUMENTS = {
     canonicalNameJa: '住民税課税証明書（非課税証明書）',
     nameI18n: {
       ja: '住民税課税証明書（非課税証明書）',
-      vi: 'Giấy chứng nhận tính thuế cư trú (Chứng nhận đóng thuế)',
+      vi: 'Giấy chứng nhận thu nhập & thuế cư trú',
       en: 'Inhabitant Tax Taxation Certificate (Certificate of Tax Assessment)',
     },
     aliases: [

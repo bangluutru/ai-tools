@@ -4,6 +4,7 @@
  */
 
 import { CANONICAL_PROCEDURES } from '../registry/procedureRegistry.js';
+import { foldText, minSubstringLength } from '../search/textFold.js';
 import { CANONICAL_REQUIREMENTS, REQUIREMENT_NECESSITY } from '../requirements/requirementRegistry.js';
 import { getDocumentById } from './documentResolver.js';
 
@@ -32,8 +33,8 @@ export function getAllProcedures() {
  */
 export function findProceduresByQuery(query) {
   if (!query || typeof query !== 'string') return [];
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) return [];
+  const normalized = foldText(query);
+  if (!normalized || normalized.length < minSubstringLength(normalized)) return [];
 
   const results = [];
 
@@ -41,11 +42,11 @@ export function findProceduresByQuery(query) {
     let score = 0;
 
     if (proc.id.toLowerCase() === normalized) score += 100;
-    if (proc.titleJa.toLowerCase().includes(normalized)) score += 50;
+    if (foldText(proc.titleJa).includes(normalized)) score += 50;
 
     if (Array.isArray(proc.aliases)) {
       for (const alias of proc.aliases) {
-        if (alias.toLowerCase().includes(normalized)) {
+        if (foldText(alias).includes(normalized)) {
           score += 40;
           break;
         }
@@ -53,8 +54,8 @@ export function findProceduresByQuery(query) {
     }
 
     if (proc.titleI18n) {
-      if (proc.titleI18n.vi && proc.titleI18n.vi.toLowerCase().includes(normalized)) score += 30;
-      if (proc.titleI18n.en && proc.titleI18n.en.toLowerCase().includes(normalized)) score += 30;
+      if (proc.titleI18n.vi && foldText(proc.titleI18n.vi).includes(normalized)) score += 30;
+      if (proc.titleI18n.en && foldText(proc.titleI18n.en).includes(normalized)) score += 30;
     }
 
     if (score > 0) results.push({ proc, score });
@@ -156,8 +157,8 @@ export function validateDocumentFreshness(requirement, issueDate, referenceDate 
     };
   }
 
-  const issued = new Date(issueDate);
-  if (isNaN(issued.getTime())) {
+  const issued = toLocalDateParts(issueDate);
+  if (!issued) {
     return {
       isValid: false,
       reason: 'invalid_issue_date',
@@ -165,10 +166,12 @@ export function validateDocumentFreshness(requirement, issueDate, referenceDate 
     };
   }
 
-  const ref = new Date(referenceDate);
+  const ref = toLocalDateParts(referenceDate) || toLocalDateParts(new Date());
+  const issuedKey = dateKey(issued);
+  const refKey = dateKey(ref);
 
   // Future date check
-  if (issued.getTime() > ref.getTime()) {
+  if (issuedKey > refKey) {
     return {
       isValid: false,
       reason: 'future_issue_date',
@@ -176,23 +179,66 @@ export function validateDocumentFreshness(requirement, issueDate, referenceDate 
     };
   }
 
-  // Calculate approximate months elapsed
-  const yearDiff = ref.getFullYear() - issued.getFullYear();
-  const monthDiff = ref.getMonth() - issued.getMonth();
-  const dayDiff = ref.getDate() - issued.getDate();
+  // Hạn hiệu lực = ngày cấp + maxAgeMonths (theo lịch địa phương, kẹp ngày cuối tháng:
+  // 2026-11-30 + 3 tháng = 2027-02-28). Hợp lệ khi ngày tham chiếu <= ngày hết hạn.
+  const expiry = addMonthsClamped(issued, requirement.maxAgeMonths);
+  const isValid = refKey <= dateKey(expiry);
 
-  let elapsedMonths = yearDiff * 12 + monthDiff;
-  if (dayDiff < 0) {
-    elapsedMonths -= 0.5;
-  }
-
+  // Tuổi giấy tờ (tháng, xấp xỉ 1 chữ số thập phân) — chỉ để hiển thị.
+  let elapsedMonths = (ref.y - issued.y) * 12 + (ref.m - issued.m);
+  if (ref.d < issued.d) elapsedMonths -= 0.5;
   const roundedAge = Math.max(0, Math.round(elapsedMonths * 10) / 10);
-  const isValid = roundedAge <= requirement.maxAgeMonths;
 
   return {
     isValid,
     reason: isValid ? 'fresh' : 'expired',
     ageMonths: roundedAge,
     maxAgeMonths: requirement.maxAgeMonths,
+    expiresOn: formatDateParts(expiry),
   };
+}
+
+const ISO_DATE_RE = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
+
+function daysInMonth(y, m) {
+  return new Date(Date.UTC(y, m, 0)).getUTCDate();
+}
+
+/**
+ * Chuyển 'YYYY-MM-DD' hoặc Date thành {y, m, d} theo lịch địa phương (không lệch múi giờ).
+ * 'YYYY-MM-DD' được đọc nguyên văn (không qua new Date() vốn parse theo UTC).
+ */
+function toLocalDateParts(value) {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null;
+    return { y: value.getFullYear(), m: value.getMonth() + 1, d: value.getDate() };
+  }
+  if (typeof value === 'string') {
+    const match = ISO_DATE_RE.exec(value.trim().slice(0, 10));
+    if (match) {
+      const y = Number(match[1]);
+      const m = Number(match[2]);
+      const d = Number(match[3]);
+      if (m < 1 || m > 12 || d < 1 || d > daysInMonth(y, m)) return null;
+      return { y, m, d };
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : toLocalDateParts(parsed);
+  }
+  return null;
+}
+
+function addMonthsClamped({ y, m, d }, months) {
+  const total = y * 12 + (m - 1) + Math.trunc(Number(months) || 0);
+  const ny = Math.floor(total / 12);
+  const nm = (total % 12) + 1;
+  return { y: ny, m: nm, d: Math.min(d, daysInMonth(ny, nm)) };
+}
+
+function dateKey({ y, m, d }) {
+  return y * 10000 + m * 100 + d;
+}
+
+function formatDateParts({ y, m, d }) {
+  return `${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }

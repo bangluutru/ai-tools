@@ -105,7 +105,8 @@ test('evaluateDepartureChecklist branches correctly for permanent departure with
   assert.equal(pensionTask.pensionMonths, 72);
   assert.equal(pensionTask.cappedMonths, 60);
   assert.equal(pensionTask.isCappedAt60, true);
-  assert.equal(pensionTask.calculatedDeadlineDate, '2028-09-30'); // 2026-10-01 + 730 days
+  // 2 năm theo lịch kể từ ngày không còn địa chỉ tại Nhật (không phải +730 ngày; 2028 là năm nhuận)
+  assert.equal(pensionTask.calculatedDeadlineDate, '2028-10-01');
 });
 
 test('evaluateDepartureChecklist excludes pension tasks if contribution < 6 months', () => {

@@ -77,6 +77,24 @@ export const CHILDCARE_BENEFIT_SCHEMES = Object.freeze({
 });
 
 /**
+ * 出生後休業支援給付金: 「配偶者の育児休業を要件としない場合」(7 trường hợp theo MHLW)
+ * ① 配偶者がいない ② 配偶者が子と法律上の親子関係がない ③ 配偶者から暴力を受け別居中
+ * ④ 配偶者が無業者 ⑤ 配偶者が自営業者・フリーランス等（雇用される労働者でない）
+ * ⑥ 配偶者が産後休業中 ⑦ ①〜⑥以外の理由で配偶者が育児休業をすることができない（雇用保険被保険者でない等）
+ * 'spouse_incapacitated' giữ lại để tương thích ngược (thuộc nhóm ⑦).
+ */
+export const SPOUSE_EXCEPTION_TYPES = Object.freeze([
+  'single_parent',
+  'no_legal_parent_relation',
+  'domestic_violence_separation',
+  'spouse_unemployed',
+  'spouse_self_employed',
+  'spouse_on_postnatal_leave',
+  'spouse_cannot_take_leave',
+  'spouse_incapacitated',
+]);
+
+/**
  * Danh sách nguồn pháp quy tham chiếu
  */
 export const CHILDCARE_LEAVE_SOURCES = Object.freeze([

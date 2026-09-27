@@ -4,6 +4,8 @@
  * Tuân thủ đầy đủ quy tắc tính toán và làm tròn theo Luật Quản lý thuế Quốc gia (国税通則法第118条・第119条).
  */
 
+import { calculatePersonalDeductions } from './personalDeductionEngine.js';
+
 /**
  * Làm tròn thu nhập chịu thuế xuống bội số 1,000 yên (国税通則法第118条)
  */
@@ -13,12 +15,12 @@ export function roundTaxableIncome(amount) {
 }
 
 /**
- * Làm tròn số tiền thuế phải nộp xuống bội số 100 yên (国税通則法第119条)
- * Nếu số thuế dưới 1,000 yên thì được miễn nộp (bằng 0).
+ * Làm tròn số tiền thuế phải nộp xuống bội số 100 yên (国税通則法第119条 / 地方税法第20条の4の2).
+ * Số thuế dưới 100 yên được làm tròn thành 0 (không có quy tắc miễn khi dưới 1,000 yên).
  */
 export function roundFinalTaxAmount(amount) {
-  if (!amount || amount < 1000) return 0;
-  return Math.floor(amount / 100) * 100;
+  const value = Math.max(0, Number(amount) || 0);
+  return Math.floor(value / 100) * 100;
 }
 
 /**
@@ -35,6 +37,11 @@ export function roundFinalTaxAmount(amount) {
  * @param {number} [params.idecoMonthly=0] - Tiền đóng iDeCo hàng tháng
  * @param {number} [params.dependentsCount=0] - Số người phụ thuộc chung
  * @param {boolean} [params.hasSpouse=false] - Có vợ/chồng được giảm trừ
+ * @param {number} [params.spouseIncome=0] - 合計所得金額 của vợ/chồng
+ * @param {boolean} [params.spouseIsElderly=false]
+ * @param {number} [params.specificDependentsCount=0] - 特定扶養 (19〜22歳)
+ * @param {number} [params.elderlyDependentsCount=0] - 老人扶養 (70歳以上, không sống chung)
+ * @param {number} [params.cohabitingElderlyParentsCount=0] - 同居老親等
  * @returns {object} Kết quả tính toán kèm diễn giải từng bước
  */
 export function calculateIncomeTax({
@@ -49,6 +56,11 @@ export function calculateIncomeTax({
   idecoMonthly = 0,
   dependentsCount = 0,
   hasSpouse = false,
+  spouseIncome = 0,
+  spouseIsElderly = false,
+  specificDependentsCount = 0,
+  elderlyDependentsCount = 0,
+  cohabitingElderlyParentsCount = 0,
 }) {
   const safeSalary = Math.max(0, Number(salary) || 0);
   const safeBizRev = Math.max(0, Number(businessRevenue) || 0);
@@ -57,7 +69,6 @@ export function calculateIncomeTax({
   const safeSideExp = Math.max(0, Number(sideIncomeExpenses) || 0);
   const safeShaho = Math.max(0, Number(socialInsurancePaid) || 0);
   const safeIdeco = Math.max(0, Number(idecoMonthly) || 0) * 12;
-  const safeDeps = Math.max(0, Number(dependentsCount) || 0);
 
   // 1. 給与所得控除 (Khấu trừ tiền lương)
   const employmentDeduction = safeSalary > 0
@@ -95,9 +106,21 @@ export function calculateIncomeTax({
     }
   }
 
-  // 6. Các khoản khấu trừ khác
-  const spouseDeduction = hasSpouse ? rules.incomeTax.deductions.spouseStandard : 0;
-  const dependentDeduction = safeDeps * rules.incomeTax.deductions.dependentGeneral;
+  // 6. 人的控除 (配偶者控除・配偶者特別控除・扶養控除)
+  const personal = calculatePersonalDeductions({
+    deductionRules: rules.incomeTax.deductions,
+    taxpayerTotalIncome: totalGrossIncome,
+    hasSpouse,
+    spouseIncome,
+    spouseIsElderly,
+    dependentsCount,
+    specificDependentsCount,
+    elderlyDependentsCount,
+    cohabitingElderlyParentsCount,
+    taxType: 'income',
+  });
+  const spouseDeduction = personal.spouse;
+  const dependentDeduction = personal.dependents;
   const totalIncomeDeductions =
     basicDeduction +
     safeShaho +
@@ -117,22 +140,21 @@ export function calculateIncomeTax({
     for (const b of rules.incomeTax.brackets) {
       if (taxableIncome <= b.limit) {
         appliedBracket = b;
-        baseIncomeTaxBeforeRounding = Math.max(0, Math.floor(taxableIncome * b.rate - b.deduction));
+        baseIncomeTaxBeforeRounding = Math.max(0, Math.floor(taxableIncome * b.rate - b.deduction + 1e-6));
         break;
       }
     }
   }
 
-  // 9. Làm tròn thuế cơ sở (国税通則法第119条: làm tròn xuống bội số 100円)
-  const baseIncomeTax = roundFinalTaxAmount(baseIncomeTaxBeforeRounding);
+  // 9. 基準所得税額 (1円未満切捨て — không làm tròn 100円 riêng)
+  const baseIncomeTax = baseIncomeTaxBeforeRounding;
 
-  // 10. Thuế tái thiết 復興特別所得税 (2.1% của thuế thu nhập cơ sở)
-  // Tính trên số thuế cơ sở trước khi làm tròn hoặc sau làm tròn theo thông tư NTA
-  const rawReconstruction = baseIncomeTax * rules.incomeTax.reconstructionTaxRate;
-  const reconstructionTax = baseIncomeTax > 0 ? Math.floor(rawReconstruction) : 0;
+  // 10. 復興特別所得税 = 基準所得税額 × 2.1% (1円未満切捨て)
+  const reconstructionTax = Math.floor(baseIncomeTax * rules.incomeTax.reconstructionTaxRate);
 
-  // 11. Tổng thuế thu nhập thực tế
-  const totalIncomeTax = baseIncomeTax + reconstructionTax;
+  // 11. 申告納税額 = (所得税 + 復興特別所得税) の合計を100円未満切捨て (国税通則法第119条)
+  const totalIncomeTax = roundFinalTaxAmount(baseIncomeTax + reconstructionTax);
+  const roundingAdjustment = totalIncomeTax - baseIncomeTax - reconstructionTax;
 
   return {
     salary: safeSalary,
@@ -151,7 +173,9 @@ export function calculateIncomeTax({
       socialInsurance: safeShaho,
       ideco: safeIdeco,
       spouse: spouseDeduction,
+      spouseType: personal.spouseType,
       dependents: dependentDeduction,
+      dependentCounts: personal.dependentCounts,
       total: totalIncomeDeductions,
     },
     rawTaxableIncome,
@@ -162,6 +186,8 @@ export function calculateIncomeTax({
     },
     baseIncomeTax,
     reconstructionTax,
+    roundingAdjustment,
     totalIncomeTax,
+    marginalRate: taxableIncome > 0 ? appliedBracket.rate : 0,
   };
 }

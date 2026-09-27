@@ -5,7 +5,7 @@
  * Căn cứ:
  * - 健康保険法第102条（出産手当金）
  * - 健康保険法第104条（退職後の継続給付）
- * - 協会けんぽ業務規程（12ヶ月未満の平均標準報酬月額上限 300,000円ルール、一部給与支給時の差額支給）
+ * - 協会けんぽ業務規程（12ヶ月未満の平均標準報酬月額上限: 支給開始日 2025-04-01 以降 320,000円 / それ以前 300,000円、一部給与支給時の差額支給）
  */
 
 import {
@@ -13,31 +13,28 @@ import {
   MATERNITY_ALLOWANCE_SOURCES,
 } from '../rules/maternityAllowanceRules.js';
 import { lookupKenpoGrade } from '../../insurance/engines/standardRemunerationEngine.js';
+import { addDaysISO, diffDaysISO, isValidISODate } from '../../employment/localDate.js';
 
 /**
- * Cộng thêm số ngày vào chuỗi ngày 'YYYY-MM-DD'
+ * Cộng thêm số ngày vào chuỗi ngày 'YYYY-MM-DD' (theo lịch, không phụ thuộc múi giờ)
  * @param {string} dateStr
  * @param {number} days
  * @returns {string}
  */
 export function addDays(dateStr, days) {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
+  if (!isValidISODate(dateStr)) return dateStr;
+  return addDaysISO(dateStr, days);
 }
 
 /**
- * Trừ đi số ngày từ chuỗi ngày 'YYYY-MM-DD'
+ * Trừ đi số ngày từ chuỗi ngày 'YYYY-MM-DD' (theo lịch, không phụ thuộc múi giờ)
  * @param {string} dateStr
  * @param {number} days
  * @returns {string}
  */
 export function subtractDays(dateStr, days) {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  d.setDate(d.getDate() - days);
-  return d.toISOString().split('T')[0];
+  if (!isValidISODate(dateStr)) return dateStr;
+  return addDaysISO(dateStr, -days);
 }
 
 /**
@@ -47,11 +44,42 @@ export function subtractDays(dateStr, days) {
  * @returns {number}
  */
 export function diffInDays(date1Str, date2Str) {
-  const d1 = new Date(date1Str);
-  const d2 = new Date(date2Str);
-  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
-  const diffTime = d2.getTime() - d1.getTime();
-  return Math.round(diffTime / (1000 * 60 * 60 * 24));
+  if (!isValidISODate(date1Str) || !isValidISODate(date2Str)) return 0;
+  return diffDaysISO(date1Str, date2Str);
+}
+
+/**
+ * Mức bình quân 標準報酬月額 toàn hiệp hội 協会けんぽ dùng khi tham gia dưới 12 tháng, theo 支給開始日.
+ * @param {string} benefitStartDate - YYYY-MM-DD
+ * @returns {number}
+ */
+export function resolveKyokaiKenpoAverageCap(benefitStartDate) {
+  const {
+    KYOKAI_KENPO_AVERAGE_STANDARD_MONTHLY,
+    KYOKAI_KENPO_AVERAGE_STANDARD_MONTHLY_BEFORE_2025_04,
+    KYOKAI_KENPO_AVERAGE_EFFECTIVE_FROM,
+  } = MATERNITY_STATUTORY_CONSTANTS;
+  if (isValidISODate(benefitStartDate) && benefitStartDate < KYOKAI_KENPO_AVERAGE_EFFECTIVE_FROM) {
+    return KYOKAI_KENPO_AVERAGE_STANDARD_MONTHLY_BEFORE_2025_04;
+  }
+  return KYOKAI_KENPO_AVERAGE_STANDARD_MONTHLY;
+}
+
+/**
+ * Tính 出産手当金 日額 theo đúng quy tắc làm tròn của 協会けんぽ:
+ * (tổng 標準報酬月額 ÷ số tháng) ÷ 30 → làm tròn đến 10円 (5円以上切上げ), × 2/3 → làm tròn 1円 (50銭以上切上げ).
+ * Dùng số học nguyên để tránh sai số dấu phẩy động.
+ * @param {number} totalRemuneration - Tổng 標準報酬月額 của các tháng
+ * @param {number} [months=1] - Số tháng
+ * @returns {{ dailyBase: number, dailyBenefit: number }}
+ */
+export function computeMaternityDailyAmount(totalRemuneration, months = 1) {
+  const total = Math.max(0, Math.round(Number(totalRemuneration) || 0));
+  const n = Math.max(1, Math.floor(Number(months) || 1));
+  const unit = n * 30 * 10; // chia cho n tháng, 30 ngày, đơn vị 10円
+  const dailyBase = Math.floor((2 * total + unit) / (2 * unit)) * 10;
+  const dailyBenefit = Math.floor((4 * dailyBase + 3) / 6); // round(dailyBase × 2/3)
+  return { dailyBase, dailyBenefit };
 }
 
 /**
@@ -70,6 +98,8 @@ export function diffInDays(date1Str, date2Str) {
  * @param {boolean} [params.isLeavingJob=false] - Trường hợp nghỉ việc / mất tư cách
  * @param {number} [params.continuousInsuredYearsBeforeLeaving=0] - Số năm đóng BHYT liên tục trước khi nghỉ việc
  * @param {boolean} [params.workedOnRetirementDate=false] - Có đi làm và nhận lương vào ngày nghỉ việc chính thức không
+ * @param {string} [params.retirementDate] - Ngày nghỉ việc (YYYY-MM-DD). Để nhận tiếp sau khi nghỉ, ngày này phải nằm
+ *   trong kỳ 出産手当金 (từ 42 ngày — đa thai 98 ngày — trước ngày dự sinh trở đi)
  * @returns {Object}
  */
 export function calculateMaternityAllowance({
@@ -86,6 +116,7 @@ export function calculateMaternityAllowance({
   isLeavingJob = false,
   continuousInsuredYearsBeforeLeaving = 0,
   workedOnRetirementDate = false,
+  retirementDate = null,
 } = {}) {
   const actualDate = actualBirthDate || expectedBirthDate;
   const salary = Math.max(0, Number(monthlySalary) || 0);
@@ -104,40 +135,6 @@ export function calculateMaternityAllowance({
       financials: null,
       regulatorySources: MATERNITY_ALLOWANCE_SOURCES,
     };
-  }
-
-  // Kiểm tra trường hợp nghỉ việc (健康保険法第104条: 資格喪失後の継続給付)
-  let isRetirementContinuation = false;
-  if (isLeavingJob) {
-    if (continuousInsuredYearsBeforeLeaving < 1) {
-      return {
-        isEligible: false,
-        ineligibleReasonCode: 'RETIREMENT_TENURE_TOO_SHORT',
-        ineligibleReasonJa: '退職後に継続給付を受けるには、退職日までに継続して1年以上の被保険者期間が必要です（健康保険法第104条）。',
-        ineligibleReasonVi: 'Để tiếp tục nhận trợ cấp thai sản sau khi thôi việc, bạn phải tham gia BHYT công ty liên tục từ 1 năm trở lên trước ngày nghỉ việc.',
-        ineligibleReasonEn: 'Continuing maternity benefits after leaving employment requires at least 1 continuous year of health insurance coverage prior to separation (Health Insurance Act Art. 104).',
-        eligiblePeriod: null,
-        daysBreakdown: null,
-        financials: null,
-        regulatorySources: MATERNITY_ALLOWANCE_SOURCES,
-      };
-    }
-
-    if (workedOnRetirementDate) {
-      return {
-        isEligible: false,
-        ineligibleReasonCode: 'RETIREMENT_WORKED_LAST_DAY',
-        ineligibleReasonJa: '退職日当日に出勤して給与が発生した場合、「退職時に出産手当金を受けているか、受ける権利がある状態」を満たさないため、資格喪失後の給付資格を失います。',
-        ineligibleReasonVi: 'Nếu vào ngày nghỉ việc chính thức bạn vẫn đi làm và nhận lương, bạn sẽ không đáp ứng điều kiện "đang nghỉ việc không hưởng lương để sinh con" và bị mất quyền nhận tiếp trợ cấp sau khi nghỉ việc.',
-        ineligibleReasonEn: 'Working and receiving wages on your official retirement date disqualifies you from post-separation continuous maternity benefits.',
-        eligiblePeriod: null,
-        daysBreakdown: null,
-        financials: null,
-        regulatorySources: MATERNITY_ALLOWANCE_SOURCES,
-      };
-    }
-
-    isRetirementContinuation = true;
   }
 
   // 2. Tính toán số ngày và thời gian thụ hưởng (Period & Days Calculation)
@@ -171,6 +168,55 @@ export function calculateMaternityAllowance({
   const leaveStartDate = subtractDays(expectedBirthDate, basePrenatalDays - 1);
   const leaveEndDate = addDays(actualDate, postnatalDays);
 
+  // Kiểm tra trường hợp nghỉ việc (健康保険法第104条: 資格喪失後の継続給付)
+  let isRetirementContinuation = false;
+  if (isLeavingJob) {
+    if (continuousInsuredYearsBeforeLeaving < 1) {
+      return {
+        isEligible: false,
+        ineligibleReasonCode: 'RETIREMENT_TENURE_TOO_SHORT',
+        ineligibleReasonJa: '退職後に継続給付を受けるには、退職日までに継続して1年以上の被保険者期間が必要です（健康保険法第104条）。',
+        ineligibleReasonVi: 'Để tiếp tục nhận trợ cấp thai sản sau khi thôi việc, bạn phải tham gia BHYT công ty liên tục từ 1 năm trở lên trước ngày nghỉ việc.',
+        ineligibleReasonEn: 'Continuing maternity benefits after leaving employment requires at least 1 continuous year of health insurance coverage prior to separation (Health Insurance Act Art. 104).',
+        eligiblePeriod: null,
+        daysBreakdown: null,
+        financials: null,
+        regulatorySources: MATERNITY_ALLOWANCE_SOURCES,
+      };
+    }
+
+    if (workedOnRetirementDate) {
+      return {
+        isEligible: false,
+        ineligibleReasonCode: 'RETIREMENT_WORKED_LAST_DAY',
+        ineligibleReasonJa: '退職日当日に出勤して給与が発生した場合、「退職時に出産手当金を受けているか、受ける権利がある状態」を満たさないため、資格喪失後の給付資格を失います。',
+        ineligibleReasonVi: 'Nếu vào ngày nghỉ việc chính thức bạn vẫn đi làm và nhận lương, bạn sẽ không đáp ứng điều kiện "đang nghỉ việc không hưởng lương để sinh con" và bị mất quyền nhận tiếp trợ cấp sau khi nghỉ việc.',
+        ineligibleReasonEn: 'Working and receiving wages on your official retirement date disqualifies you from post-separation continuous maternity benefits.',
+        eligiblePeriod: null,
+        daysBreakdown: null,
+        financials: null,
+        regulatorySources: MATERNITY_ALLOWANCE_SOURCES,
+      };
+    }
+
+    // Ngày nghỉ việc (= ngày trước ngày mất tư cách) phải nằm trong kỳ 出産手当金
+    if (isValidISODate(retirementDate) && retirementDate < leaveStartDate) {
+      return {
+        isEligible: false,
+        ineligibleReasonCode: 'RETIREMENT_BEFORE_MATERNITY_PERIOD',
+        ineligibleReasonJa: `退職日（${retirementDate}）が出産手当金の支給期間（出産予定日以前${basePrenatalDays}日：${leaveStartDate}〜）より前のため、退職日に出産手当金を受けられる状態になく、資格喪失後の継続給付は受けられません。`,
+        ineligibleReasonVi: `Ngày nghỉ việc (${retirementDate}) nằm TRƯỚC kỳ hưởng trợ cấp thai sản (bắt đầu từ ${leaveStartDate}, tức ${basePrenatalDays} ngày trước ngày dự sinh) nên vào ngày nghỉ việc bạn chưa ở trạng thái được hưởng 出産手当金 → không được nhận tiếp sau khi nghỉ việc. Muốn nhận, ngày nghỉ việc phải từ ${leaveStartDate} trở đi.`,
+        ineligibleReasonEn: `Your retirement date (${retirementDate}) is before the maternity allowance period starts (${leaveStartDate}, ${basePrenatalDays} days before the due date), so you are not eligible for post-separation continuation.`,
+        eligiblePeriod: null,
+        daysBreakdown: null,
+        financials: null,
+        regulatorySources: MATERNITY_ALLOWANCE_SOURCES,
+      };
+    }
+
+    isRetirementContinuation = true;
+  }
+
   // 3. Xác định mức thù lao chuẩn bình quân (Average Standard Monthly Remuneration)
   let standardMonthlyRemuneration = 0;
   let calculationBasisType = 'standard_lookup';
@@ -202,7 +248,7 @@ export function calculateMaternityAllowance({
     }
 
     if (insurerType === 'kyokai_kenpo') {
-      const associationAvg = MATERNITY_STATUTORY_CONSTANTS.KYOKAI_KENPO_AVERAGE_STANDARD_MONTHLY; // 300,000円
+      const associationAvg = resolveKyokaiKenpoAverageCap(leaveStartDate); // 320,000円 (支給開始日 2025-04-01〜) / 300,000円
       if (actualAverage > associationAvg) {
         standardMonthlyRemuneration = associationAvg;
         isCappedByAssociationLimit = true;
@@ -233,10 +279,10 @@ export function calculateMaternityAllowance({
   }
 
   // 4. Tính toán số tiền theo ngày và tổng mức trợ cấp (Daily & Total Benefit)
-  // Công thức: 標準報酬月額 ÷ 30 × 2/3 (四捨五入)
-  const rawDailyAmount = (standardMonthlyRemuneration / MATERNITY_STATUTORY_CONSTANTS.DAYS_PER_MONTH_DIVISOR) *
-    (MATERNITY_STATUTORY_CONSTANTS.BENEFIT_RATE_NUMERATOR / MATERNITY_STATUTORY_CONSTANTS.BENEFIT_RATE_DENOMINATOR);
-  const standardDailyBenefit = Math.round(rawDailyAmount);
+  // Công thức: 標準報酬月額(平均) ÷ 30 → 10円未満四捨五入; × 2/3 → 1円未満四捨五入
+  const { dailyBase: dailyRemunerationBase, dailyBenefit: standardDailyBenefit } = calculationBasisType === '12_months_history'
+    ? computeMaternityDailyAmount(remunerationHistory.slice(-12).reduce((a, b) => a + Number(b || 0), 0), 12)
+    : computeMaternityDailyAmount(standardMonthlyRemuneration, 1);
 
   // Khấu trừ nếu công ty có trả lương trong thời gian nghỉ
   let netDailyBenefit = standardDailyBenefit;
@@ -283,6 +329,7 @@ export function calculateMaternityAllowance({
     financials: {
       monthlySalary: salary,
       standardMonthlyRemuneration,
+      dailyRemunerationBase,
       isCappedByAssociationLimit,
       calculationBasisType,
       standardDailyBenefit,

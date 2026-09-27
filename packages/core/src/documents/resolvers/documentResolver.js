@@ -4,6 +4,7 @@
  */
 
 import { CANONICAL_DOCUMENTS, SENSITIVITY_TIERS } from '../registry/documentRegistry.js';
+import { foldText, minSubstringLength } from '../search/textFold.js';
 
 /**
  * Get a canonical document by its unique ID.
@@ -50,8 +51,9 @@ export function getDocumentsByIssuer(issuerType) {
  */
 export function findDocumentsByQuery(query) {
   if (!query || typeof query !== 'string') return [];
-  const normalized = query.trim().toLowerCase();
+  const normalized = foldText(query);
   if (!normalized) return [];
+  if (normalized.length < minSubstringLength(normalized)) return [];
 
   const results = [];
 
@@ -64,20 +66,25 @@ export function findDocumentsByQuery(query) {
     }
 
     // 2. Exact or partial canonical Japanese name
-    if (doc.canonicalNameJa.toLowerCase() === normalized) {
+    const nameJa = foldText(doc.canonicalNameJa);
+    if (nameJa === normalized) {
       score += 80;
-    } else if (doc.canonicalNameJa.toLowerCase().includes(normalized)) {
+    } else if (nameJa.includes(normalized)) {
       score += 40;
     }
 
-    // 3. Aliases matching
+    // 3. Aliases matching (bỏ dấu, an toàn NFC/NFD)
     if (Array.isArray(doc.aliases)) {
       for (const alias of doc.aliases) {
-        const aliasLower = alias.toLowerCase();
-        if (aliasLower === normalized) {
+        const aliasFolded = foldText(alias);
+        if (!aliasFolded) continue;
+        if (aliasFolded === normalized) {
           score += 60;
           break;
-        } else if (aliasLower.includes(normalized) || normalized.includes(aliasLower)) {
+        } else if (
+          aliasFolded.includes(normalized) ||
+          (aliasFolded.length >= 2 && normalized.includes(aliasFolded))
+        ) {
           score += 25;
           break;
         }
@@ -86,14 +93,10 @@ export function findDocumentsByQuery(query) {
 
     // 4. Multilingual names
     if (doc.nameI18n) {
-      if (doc.nameI18n.vi && doc.nameI18n.vi.toLowerCase().includes(normalized)) {
-        score += 30;
-      }
-      if (doc.nameI18n.en && doc.nameI18n.en.toLowerCase().includes(normalized)) {
-        score += 30;
-      }
-      if (doc.nameI18n.ja && doc.nameI18n.ja.toLowerCase().includes(normalized)) {
-        score += 30;
+      for (const lang of ['vi', 'en', 'ja']) {
+        if (doc.nameI18n[lang] && foldText(doc.nameI18n[lang]).includes(normalized)) {
+          score += 30;
+        }
       }
     }
 

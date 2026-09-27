@@ -233,9 +233,10 @@ describe('Phase 8: Document & Procedure Foundation', () => {
   // 5. Locality & Acquisition Resolution
   // =========================================================================
   describe('Locality Registry & Acquisition Guidance', () => {
-    it('resolves Tier 1 verified municipality (Shinjuku City)', () => {
+    it('resolves verified municipality (Shinjuku City — 戸籍 konbini chưa xác nhận nên TIER_2)', () => {
       const locality = resolveLocality('131041');
-      assert.strictEqual(locality.tier, LOCALITY_TIERS.TIER_1_VERIFIED);
+      assert.strictEqual(locality.tier, LOCALITY_TIERS.TIER_2_PARTIAL);
+      assert.ok(locality.verifiedAt);
       assert.strictEqual(locality.isFallback, false);
       assert.strictEqual(locality.nameJa, '東京都新宿区');
       assert.strictEqual(locality.fees.residentRecord.konbini, 200); // 100 JPY discount

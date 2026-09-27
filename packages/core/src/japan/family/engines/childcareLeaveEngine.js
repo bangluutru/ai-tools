@@ -9,7 +9,11 @@ import {
   ELIGIBILITY_STATUS,
   CHILDCARE_BENEFIT_SCHEMES,
   CHILDCARE_LEAVE_SOURCES,
+  SPOUSE_EXCEPTION_TYPES,
 } from '../rules/childcareLeaveRules.js';
+
+/** 出生時育児休業: trong vòng 8 tuần (56 ngày) sau khi sinh (子の出生日から8週間を経過する日の翌日まで) */
+const POST_BIRTH_WINDOW_DAYS = 56;
 
 /**
  * Đánh giá tính đủ điều kiện Nghỉ chăm con và các khoản trợ cấp BHTN
@@ -20,13 +24,15 @@ import {
  * @param {boolean} [params.isEnrolledEmploymentInsurance=true] - Có tham gia Bảo hiểm Thất nghiệp (雇用保険)
  * @param {number} [params.employmentInsuranceMonthsInPast2Years=12] - Số tháng đóng BHTN có >=11 ngày làm việc trong 2 năm qua
  * @param {number} [params.childAgeMonths=1] - Số tháng tuổi của trẻ
+ * @param {number} [params.childAgeDays] - Số ngày tuổi của trẻ (ngày sinh = 0). Nếu có, dùng để xét mốc 8 tuần (≤ 56 ngày) chính xác
  * @param {boolean} [params.isDaycareRejected=false] - Trượt nhà trẻ công lập khi con tròn 1 tuổi hoặc 1.5 tuổi
  * @param {boolean} [params.isRequestingPostBirthPapaIkukyu=false] - Có xin nghỉ chăm con sau sinh (産後パパ育休 trong 8 tuần đầu)
  * @param {number} [params.postBirthLeaveDays=14] - Số ngày dự định nghỉ trong giai đoạn sau sinh
  * @param {Object} [params.spouseStatus] - Tình trạng của vợ/chồng
  * @param {boolean} [params.spouseStatus.takesQualifyingLeave=false] - Vợ/chồng cũng nghỉ từ 14 ngày trở lên
  * @param {boolean} [params.spouseStatus.isException=false] - Thuộc diện ngoại lệ (mẹ/bố đơn thân, vợ/chồng không đi làm, ốm nặng)
- * @param {'single_parent' | 'spouse_unemployed' | 'spouse_incapacitated' | 'none'} [params.spouseStatus.exceptionType='none']
+ * @param {string} [params.spouseStatus.exceptionType] - Một trong SPOUSE_EXCEPTION_TYPES hoặc 'none'.
+ *   Nếu bỏ trống: bố có con trong 8 tuần sau sinh → mặc định 'spouse_on_postnatal_leave' (vợ đang 産後休業).
  * @param {boolean} [params.isShortTimeWork=false] - Đi làm lại và rút ngắn thời gian làm việc (nuôi con dưới 2 tuổi)
  * @param {boolean} [params.isReturningToWork=false] - Đang chuẩn bị đi làm lại
  * @returns {Object}
@@ -38,6 +44,7 @@ export function checkChildcareLeaveEligibility({
   isEnrolledEmploymentInsurance = true,
   employmentInsuranceMonthsInPast2Years = 12,
   childAgeMonths = 1,
+  childAgeDays,
   isDaycareRejected = false,
   isRequestingPostBirthPapaIkukyu = false,
   postBirthLeaveDays = 14,
@@ -46,14 +53,21 @@ export function checkChildcareLeaveEligibility({
   isReturningToWork = false,
 } = {}) {
   const ageMonths = Math.max(0, Number(childAgeMonths) || 0);
+  const hasAgeDays = childAgeDays !== undefined && childAgeDays !== null && childAgeDays !== ''
+    && Number.isFinite(Number(childAgeDays));
+  // Nếu chỉ có số tháng: quy đổi xấp xỉ (1 tháng ≈ 30.44 ngày) – tháng thứ 2 trở đi (≥ 61 ngày) đã quá 8 tuần
+  const ageDays = hasAgeDays ? Math.max(0, Math.floor(Number(childAgeDays))) : Math.floor(ageMonths * 30.44);
+  const isWithinPostBirthWindow = ageDays <= POST_BIRTH_WINDOW_DAYS;
   const insuredMonths = Math.max(0, Number(employmentInsuranceMonthsInPast2Years) || 0);
   const leaveDays = Math.max(0, Number(postBirthLeaveDays) || 0);
 
   const {
     takesQualifyingLeave = false,
     isException = false,
-    exceptionType = 'none'
   } = spouseStatus;
+  // Mặc định: bố xin nghỉ trong 8 tuần sau sinh → vợ (người vừa sinh) đang 産後休業 = ngoại lệ ⑥
+  const exceptionType = spouseStatus.exceptionType
+    ?? (userRole === 'father' && isWithinPostBirthWindow ? 'spouse_on_postnatal_leave' : 'none');
 
   // 1. ĐÁNH GIÁ QUYỀN NGHỈ PHÉP CHĂM CON THEO LUẬT LAO ĐỘNG (育児休業の取得権利)
   // Căn cứ: 育児・介護休業法第2条・第5条
@@ -163,10 +177,10 @@ export function checkChildcareLeaveEligibility({
     postBirthPapaBenefit.reasonJa = '実母の産後8週間は労働基準法第65条の産後休業（健康保険の出産手当金）の対象となるため、出生時育児休業（産後パパ育休）は対象外です。';
     postBirthPapaBenefit.reasonVi = 'Mẹ ruột trong 8 tuần đầu sau sinh nghỉ chế độ thai sản của Luật Tiêu chuẩn Lao động (nhận Trợ cấp thai sản BHYT), không dùng chế độ này.';
     postBirthPapaBenefit.reasonEn = 'Mothers in the first 8 weeks are covered by Health Insurance maternity leave allowance, not Papa Ikukyu.';
-  } else if (ageMonths > 2) {
+  } else if (!isWithinPostBirthWindow) {
     postBirthPapaBenefit.status = ELIGIBILITY_STATUS.NOT_APPLICABLE;
-    postBirthPapaBenefit.reasonJa = '子の生後8週間（約2ヶ月）を経過しているため、出生時育児休業の対象期間を終了しています。通常の育児休業給付金をご検討ください。';
-    postBirthPapaBenefit.reasonVi = 'Trẻ đã qua 8 tuần tuổi (khoảng 2 tháng), đã hết thời hạn xin nghỉ sau sinh của bố. Hãy xem xét chế độ Nghỉ chăm con thông thường.';
+    postBirthPapaBenefit.reasonJa = '子の出生後8週間（56日）を経過しているため、出生時育児休業の対象期間を終了しています。通常の育児休業給付金をご検討ください。';
+    postBirthPapaBenefit.reasonVi = 'Trẻ đã qua 8 tuần (56 ngày) sau sinh, đã hết thời hạn nghỉ chăm con sau sinh (産後パパ育休). Hãy xem xét chế độ Nghỉ chăm con thông thường.';
     postBirthPapaBenefit.reasonEn = 'The child is beyond 8 weeks post-birth; standard childcare leave applies instead.';
   } else if (!isInsuredQualified) {
     postBirthPapaBenefit.status = ELIGIBILITY_STATUS.LIKELY_NOT_ELIGIBLE;
@@ -194,7 +208,7 @@ export function checkChildcareLeaveEligibility({
     postBirthSupportBonus.reasonJa = '雇用保険の被保険者要件を満たしていないため対象外です。';
     postBirthSupportBonus.reasonVi = 'Không đủ điều kiện bảo hiểm thất nghiệp.';
     postBirthSupportBonus.reasonEn = 'Employment insurance prerequisite not met.';
-  } else if (ageMonths > 2 && !isRequestingPostBirthPapaIkukyu && userRole === 'father') {
+  } else if (!isWithinPostBirthWindow && !isRequestingPostBirthPapaIkukyu && userRole === 'father') {
     postBirthSupportBonus.status = ELIGIBILITY_STATUS.NOT_APPLICABLE;
     postBirthSupportBonus.reasonJa = '対象となる出生直後の休業期間（生後8週間以内等）を経過しています。';
     postBirthSupportBonus.reasonVi = 'Đã qua khoảng thời gian sau sinh quy định.';
@@ -206,23 +220,23 @@ export function checkChildcareLeaveEligibility({
     postBirthSupportBonus.reasonEn = `Requires employee to take at least 14 days qualifying leave (currently ${leaveDays} days).`;
   } else {
     // Kiểm tra điều kiện phối ngẫu (Spouse condition)
-    const hasSpouseException = isException || ['single_parent', 'spouse_unemployed', 'spouse_incapacitated'].includes(exceptionType);
+    const hasSpouseException = isException || SPOUSE_EXCEPTION_TYPES.includes(exceptionType);
 
     if (takesQualifyingLeave || hasSpouseException) {
       postBirthSupportBonus.status = ELIGIBILITY_STATUS.LIKELY_ELIGIBLE;
       postBirthSupportBonus.reasonJa = hasSpouseException
-        ? '配偶者例外要件（ひとり親・専業等）を満たしているため、本人の14日以上休業により13％加算（計80％）の受給可能性が高いです。'
+        ? '配偶者の育児休業を要件としない場合（配偶者がいない・無業者・自営業等・産後休業中など）に該当するため、本人の14日以上休業により13％加算（計80％）の受給可能性が高いです。'
         : '夫婦ともに14日以上の休業を取得するため、最大28日間にわたり13％加算（計80％手取り相当）の受給要件を満たしています。';
       postBirthSupportBonus.reasonVi = hasSpouseException
-        ? 'Đáp ứng trường hợp ngoại lệ người phối ngẫu (đơn thân/nội trợ), được hưởng mức hỗ trợ thêm 13% (tổng 80% lương ngày).'
+        ? 'Thuộc trường hợp không cần vợ/chồng nghỉ (không có vợ/chồng, vợ/chồng không đi làm, tự kinh doanh/freelance, đang nghỉ sau sinh 産後休業...), được hưởng thêm 13% (tổng 80% lương ngày).'
         : 'Cả hai vợ chồng cùng nghỉ từ 14 ngày trở lên, đủ điều kiện hưởng thêm 13% ngày lương (tổng 80% lương ngày).';
       postBirthSupportBonus.reasonEn = hasSpouseException
         ? 'Eligible via spouse exception: 13% wage base bonus applied (total 80% daily wage base).'
         : 'Both parents take 14+ days qualifying leave: eligible for 13% bonus up to 28 days.';
     } else {
       postBirthSupportBonus.status = ELIGIBILITY_STATUS.NEEDS_CONFIRMATION;
-      postBirthSupportBonus.reasonJa = '配偶者も出生直後に14日以上の育休を取得するか、ひとり親・無業者等の例外事由に該当することの確認が必要です。';
-      postBirthSupportBonus.reasonVi = 'Cần xác nhận xem vợ/chồng có nghỉ từ 14 ngày trở lên không, hoặc bạn có thuộc diện ngoại lệ (mẹ/bố đơn thân, vợ/chồng không đi làm) tại Hello Work.';
+      postBirthSupportBonus.reasonJa = '配偶者も出生直後に14日以上の育休を取得するか、「配偶者の育児休業を要件としない場合」（配偶者がいない、法律上の親子関係がない、配偶者からの暴力で別居中、配偶者が無業者、配偶者が自営業・フリーランス、配偶者が産後休業中、その他配偶者が育休を取得できない場合）に該当することの確認が必要です。';
+      postBirthSupportBonus.reasonVi = 'Cần xác nhận vợ/chồng có nghỉ từ 14 ngày trở lên không, hoặc có thuộc 1 trong 7 trường hợp ngoại lệ không (không có vợ/chồng; vợ/chồng không có quan hệ cha/mẹ pháp lý với con; bị bạo lực và sống ly thân; vợ/chồng không đi làm; vợ/chồng tự kinh doanh/freelance; vợ/chồng đang nghỉ sau sinh 産後休業; lý do khác khiến vợ/chồng không thể nghỉ chăm con).';
       postBirthSupportBonus.reasonEn = 'Requires confirmation whether spouse takes 14+ days leave or meets statutory exception criteria.';
     }
   }
@@ -248,8 +262,8 @@ export function checkChildcareLeaveEligibility({
     shortTimeWorkBenefit.reasonEn = 'Ineligible due to insufficient employment insurance history.';
   } else if (isShortTimeWork || isReturningToWork) {
     shortTimeWorkBenefit.status = ELIGIBILITY_STATUS.LIKELY_ELIGIBLE;
-    shortTimeWorkBenefit.reasonJa = '2歳未満の子を養育するために復職・短時間勤務を行い、賃金が低下した場合に給付金（原則10％）の受給対象となります。';
-    shortTimeWorkBenefit.reasonVi = 'Đủ điều kiện nhận trợ cấp làm việc rút ngắn giờ (khoảng 10% lương) khi đi làm lại và nuôi con dưới 2 tuổi.';
+    shortTimeWorkBenefit.reasonJa = '2歳未満の子を養育するために復職・短時間勤務を行い、賃金が低下した場合に給付金（原則、時短中に支払われた賃金の10％）の受給対象となります。';
+    shortTimeWorkBenefit.reasonVi = 'Đủ điều kiện nhận trợ cấp làm việc rút ngắn giờ (thường bằng 10% tiền lương thực nhận khi làm giờ ngắn) khi đi làm lại và nuôi con dưới 2 tuổi.';
     shortTimeWorkBenefit.reasonEn = 'Eligible for short-time work benefit (10% wage replacement) when working reduced hours for child under 2.';
   } else {
     shortTimeWorkBenefit.status = ELIGIBILITY_STATUS.NOT_APPLICABLE;

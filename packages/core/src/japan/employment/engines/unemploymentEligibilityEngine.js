@@ -12,8 +12,46 @@
 import {
   SEPARATION_REASONS,
   ELIGIBILITY_CRITERIA_BY_CATEGORY,
-  UNEMPLOYMENT_ELIGIBILITY_SOURCES
+  UNEMPLOYMENT_ELIGIBILITY_SOURCES,
+  VOLUNTARY_RESTRICTION_RULES
 } from '../rules/unemploymentEligibilityRules.js';
+import { todayLocalISO, isValidISODate } from '../localDate.js';
+
+/**
+ * Xác định số tháng 給付制限 theo ngày nghỉ việc & hoàn cảnh (雇用保険法第33条).
+ * @param {Object} params
+ * @param {string} params.categoryKey - 'COMPANY_CAUSE' | 'SPECIFIC_REASONS' | 'PERSONAL_VOLUNTARY' | 'DISCIPLINARY'
+ * @param {string} [params.separationDate] - Ngày nghỉ việc YYYY-MM-DD (mặc định: hôm nay)
+ * @param {boolean} [params.hasTwoPlusPriorVoluntarySeparationsIn5Years=false] - Trong 5 năm đã ≥2 lần tự ý nghỉ và được 受給資格決定
+ * @param {boolean} [params.hasQualifyingEducationTraining=false] - Có học 教育訓練 đủ điều kiện (1 năm trước khi nghỉ hoặc sau khi nghỉ)
+ * @returns {{ months: number, basis: string, isLiftedByTraining: boolean }}
+ */
+export function resolveBenefitRestrictionMonths({
+  categoryKey,
+  separationDate,
+  hasTwoPlusPriorVoluntarySeparationsIn5Years = false,
+  hasQualifyingEducationTraining = false
+}) {
+  if (categoryKey === 'DISCIPLINARY') {
+    return { months: ELIGIBILITY_CRITERIA_BY_CATEGORY.DISCIPLINARY.benefitRestrictionMonths, basis: 'DISCIPLINARY', isLiftedByTraining: false };
+  }
+  if (categoryKey !== 'PERSONAL_VOLUNTARY') {
+    return { months: 0, basis: 'NONE', isLiftedByTraining: false };
+  }
+
+  const date = isValidISODate(separationDate) ? separationDate : todayLocalISO();
+  const isAfterReform = date >= VOLUNTARY_RESTRICTION_RULES.reformEffectiveDate;
+
+  if (isAfterReform && hasQualifyingEducationTraining) {
+    return { months: 0, basis: 'LIFTED_BY_TRAINING', isLiftedByTraining: true };
+  }
+  if (hasTwoPlusPriorVoluntarySeparationsIn5Years) {
+    return { months: VOLUNTARY_RESTRICTION_RULES.monthsRepeated, basis: 'REPEATED_VOLUNTARY', isLiftedByTraining: false };
+  }
+  return isAfterReform
+    ? { months: VOLUNTARY_RESTRICTION_RULES.monthsFromReform, basis: 'VOLUNTARY_FROM_2025_04', isLiftedByTraining: false }
+    : { months: VOLUNTARY_RESTRICTION_RULES.monthsBeforeReform, basis: 'VOLUNTARY_BEFORE_2025_04', isLiftedByTraining: false };
+}
 
 /**
  * Tra cứu thông tin chi tiết và nhóm pháp lý từ mã lý do thôi việc (reasonId).
@@ -73,6 +111,8 @@ export function classifySeparationReason(reasonId) {
  * @param {boolean} [params.isAbleToWorkImmediately=true] - Khả năng và ý chí đi làm ngay (労働の意思及び能力)
  * @param {boolean} [params.isInabilityTemporary=false] - Không thể đi làm do ốm đau/thai sản/chăm con > 30 ngày
  * @param {number} [params.daysOffUnableToWork=0] - Số ngày nghỉ không lương do ốm đau/tai nạn trong kỳ tính toán
+ * @param {boolean} [params.hasTwoPlusPriorVoluntarySeparationsIn5Years=false] - Trong 5 năm trước đã ≥2 lần tự ý nghỉ việc và được 受給資格決定 (→ 3 tháng)
+ * @param {boolean} [params.hasQualifyingEducationTraining=false] - Có học 教育訓練 đủ điều kiện trong 1 năm trước khi nghỉ hoặc sau khi nghỉ (→ giải trừ)
  * @returns {Object} Kết quả điều kiện, tiến trình nhận tiền, checklist hồ sơ và nguồn luật
  */
 export function checkUnemploymentEligibility({
@@ -81,7 +121,9 @@ export function checkUnemploymentEligibility({
   totalInsuredMonths = 0,
   isAbleToWorkImmediately = true,
   isInabilityTemporary = false,
-  daysOffUnableToWork = 0
+  daysOffUnableToWork = 0,
+  hasTwoPlusPriorVoluntarySeparationsIn5Years = false,
+  hasQualifyingEducationTraining = false
 }) {
   const { categoryKey, reason, criteria } = classifySeparationReason(reasonId);
 
@@ -132,9 +174,34 @@ export function checkUnemploymentEligibility({
 
   // Lịch trình nhận tiền ước tính (Timeline Estimates)
   const waitingPeriodDays = criteria.waitingPeriodDays; // Luôn là 7 ngày
-  const restrictionMonths = criteria.benefitRestrictionMonths; // 0, 2 hoặc 3 tháng
+  const restriction = resolveBenefitRestrictionMonths({
+    categoryKey,
+    separationDate,
+    hasTwoPlusPriorVoluntarySeparationsIn5Years,
+    hasQualifyingEducationTraining
+  });
+  const restrictionMonths = restriction.months; // 0, 1, 2 hoặc 3 tháng
 
+  // Ước tính: ~4 tuần (待期 + lần 認定 đầu) + ~4 tuần cho mỗi tháng 給付制限
   const estimatedFirstPaymentWeeks = restrictionMonths === 0 ? 4 : (restrictionMonths * 4 + 4);
+
+  if (restriction.basis === 'LIFTED_BY_TRAINING') {
+    warnings.push({
+      code: 'RESTRICTION_LIFTED_BY_TRAINING',
+      level: 'info',
+      ja: '離職日前1年以内または離職後に対象の教育訓練を受講した場合、給付制限が解除されます（離職後に受講開始した場合は受講開始日以降が解除）。受講証明書等をハローワークに提出してください。',
+      vi: 'Nếu đã học 教育訓練 đủ điều kiện trong 1 năm trước khi nghỉ hoặc sau khi nghỉ, thời gian hạn chế chi trả được giải trừ (nếu bắt đầu học sau khi nghỉ thì giải trừ từ ngày bắt đầu khóa). Cần nộp giấy chứng nhận học cho Hello Work.',
+      en: 'Qualifying education/training taken within 1 year before separation or after it lifts the benefit restriction (from the course start date if started after separation). Submit proof to Hello Work.'
+    });
+  } else if (restriction.basis === 'REPEATED_VOLUNTARY') {
+    warnings.push({
+      code: 'REPEATED_VOLUNTARY_RESTRICTION',
+      level: 'warning',
+      ja: '離職日から遡って5年間に2回以上、正当な理由のない自己都合退職で受給資格決定を受けているため、給付制限は3ヶ月です。',
+      vi: 'Trong 5 năm trước ngày nghỉ, bạn đã từ 2 lần tự ý nghỉ việc (không lý do chính đáng) và được xác định quyền hưởng, nên thời gian hạn chế chi trả là 3 tháng.',
+      en: 'Two or more prior voluntary resignations with eligibility decisions within the past 5 years: the restriction is 3 months.'
+    });
+  }
 
   // Danh mục giấy tờ cần chuẩn bị nộp cho Hello Work (Checklist)
   const checklist = [
@@ -200,7 +267,9 @@ export function checkUnemploymentEligibility({
     timeline: {
       waitingPeriodDays,
       benefitRestrictionMonths: restrictionMonths,
-      hasBenefitRestriction: criteria.hasBenefitRestriction,
+      restrictionBasis: restriction.basis,
+      isRestrictionLiftedByTraining: restriction.isLiftedByTraining,
+      hasBenefitRestriction: restrictionMonths > 0,
       estimatedWeeksToFirstPayment: estimatedFirstPaymentWeeks,
       summaryJa: restrictionMonths === 0
         ? '7日間の待期期間のみ。給付制限なし（約1ヶ月後に初回の基本手当支給）。'

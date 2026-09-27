@@ -60,12 +60,12 @@ test('Permanent Residence: Holding a 1-year visa is an automatic disqualifier', 
   assert.equal(result.readinessCategory, 'disqualified');
   const visaDim = result.dimensions.find(d => d.id === 'visa_duration');
   assert.equal(visaDim.met, false);
-  const visaWarn = result.warnings.find(w => w.code === 'ONE_YEAR_VISA_DISQUALIFIER');
+  const visaWarn = result.warnings.find(w => w.code === 'VISA_PERIOD_NOT_LONGEST');
   assert.ok(visaWarn, 'Phải có cảnh báo visa 1 năm không đủ điều kiện');
   assert.equal(visaWarn.severity, 'danger');
 });
 
-test('Permanent Residence: Trip abroad exceeding 90 consecutive days flags broken continuity', () => {
+test('Permanent Residence: Long trip abroad is a warning (practitioner estimate), not a hard fail (M5)', () => {
   const result = evaluatePermanentResidenceReadiness({
     routeId: 'standard_10_year',
     yearsContinuousStay: 10,
@@ -74,10 +74,11 @@ test('Permanent Residence: Trip abroad exceeding 90 consecutive days flags broke
   });
 
   const resDim = result.dimensions.find(d => d.id === 'residence_period');
-  assert.equal(resDim.met, false);
+  assert.equal(resDim.met, true, 'Ngưỡng ngày vắng mặt không phải tiêu chuẩn ISA → không đánh trượt');
   const absenceWarn = result.warnings.find(w => w.code === 'PROLONGED_ABSENCE_FROM_JAPAN');
   assert.ok(absenceWarn);
-  assert.equal(absenceWarn.severity, 'danger');
+  assert.equal(absenceWarn.severity, 'warning');
+  assert.equal(result.readinessCategory, 'moderate_readiness');
 });
 
 test('Permanent Residence: Tax delinquency or late pension payments disqualify applicant', () => {
@@ -140,14 +141,15 @@ test('Permanent Residence: Missing Guarantor flags disqualification', () => {
   assert.ok(guarWarn);
 });
 
-test('Permanent Residence: Fee schedule transition on 2026-10-01 (8,000 to 10,000 JPY)', () => {
+test('Permanent Residence: Fee schedule transition on 2026-10-01 (10,000 to 200,000 JPY)', () => {
   const preChange = getPermanentResidenceFeeSchedule('2026-09-30');
   assert.equal(preChange.applicationFee, 0);
-  assert.equal(preChange.grantFee, 8000);
+  assert.equal(preChange.grantFee, 10000);
 
   const postChange = getPermanentResidenceFeeSchedule('2026-10-01');
   assert.equal(postChange.applicationFee, 0);
-  assert.equal(postChange.grantFee, 10000);
+  assert.equal(postChange.grantFee, 200000);
+  assert.equal(postChange.reducedAmount, 20000);
 });
 
 test('Permanent Residence: McLean doctrine disclaimer and 2026 reform notice are always present', () => {
@@ -157,4 +159,20 @@ test('Permanent Residence: McLean doctrine disclaimer and 2026 reform notice are
   assert.ok(discWarn, 'Phải có lưu ý về án lệ McLean');
 
   assert.ok(result.reform2026Notice, 'Phải có thông tin về cải cách thu hồi Vĩnh trú 2026');
+});
+
+test('Permanent Residence: 3-year period treated as longest only until 2027-03-31 (guideline 2026-02-24)', () => {
+  const before = evaluatePermanentResidenceReadiness({ currentVisaPeriodYears: 3, applicationDate: '2027-03-31' });
+  assert.equal(before.dimensions.find((d) => d.id === 'visa_duration').met, true);
+  assert.ok(before.warnings.some((w) => w.code === 'THREE_YEAR_TREATMENT_ENDS_2027_03_31'));
+
+  const after = evaluatePermanentResidenceReadiness({ currentVisaPeriodYears: 3, applicationDate: '2027-04-01' });
+  assert.equal(after.dimensions.find((d) => d.id === 'visa_duration').met, false);
+  assert.equal(after.requiredPeriodYears, 5);
+
+  const fiveYears = evaluatePermanentResidenceReadiness({ currentVisaPeriodYears: 5, applicationDate: '2027-04-01' });
+  assert.equal(fiveYears.dimensions.find((d) => d.id === 'visa_duration').met, true);
+
+  assert.equal(before.reform2026Notice.effectiveFrom, '2027-04-01');
+  assert.equal(before.draftGuidelineNotice.status, 'draft');
 });

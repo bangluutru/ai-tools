@@ -2,7 +2,7 @@
  * @file packages/core/src/components/ScreenRecorderView.jsx
  * ============================================================================
  * Ultra-Lightweight Screen Recorder View Component (MAIS Compliant)
- * 100% Client-Side In-Browser Screen Recording with Zero-RAM Direct Streaming,
+ * Client-side in-browser screen recording with optional direct-to-disk streaming,
  * Audio Mixing (System + Mic), Seekable WebM Duration Fixing, and Instant Preview.
  * ============================================================================
  */
@@ -35,6 +35,7 @@ import {
   AUDIO_SOURCES,
   ScreenRecorderSession,
   isDirectToDiskSupported,
+  getRecorderSupport,
   formatDuration,
   formatFileSize,
 } from '../utils/screen-recorder/recorderEngine.js';
@@ -42,12 +43,12 @@ import {
 const i18n = {
   vi: {
     toolTitle: 'Quay Màn Hình',
-    toolDesc: 'Ghi lại video màn hình, cửa sổ hoặc thẻ trình duyệt kèm âm thanh. Hoạt động 100% trên trình duyệt, không tốn RAM, tối ưu cho máy cấu hình thấp.',
+    toolDesc: 'Ghi lại video màn hình, cửa sổ hoặc thẻ trình duyệt kèm âm thanh. Hoạt động hoàn toàn trên trình duyệt máy tính (Chrome, Edge, Firefox); không hỗ trợ trên điện thoại.',
     privacyBadge: 'Xử lý trực tiếp trên trình duyệt — video không được tải lên máy chủ.',
-    zeroRamBadge: 'Không tốn RAM • Tối ưu máy yếu • 100% Client-Side',
+    zeroRamBadge: 'Có chế độ ghi thẳng ra đĩa (Chrome/Edge) cho video dài',
     presetSection: 'Chất Lượng & Tải Phần Cứng',
     audioSection: 'Nguồn Âm Thanh Ghi Kèm',
-    storageSection: 'Chế Độ Lưu Chống Tràn RAM',
+    storageSection: 'Chế Độ Lưu Tệp',
     audioNone: 'Tắt tiếng (Không âm thanh)',
     audioNoneDesc: 'Chỉ quay hình ảnh màn hình, không thu bất kỳ âm thanh nào.',
     audioSystem: 'Âm thanh hệ thống / tab',
@@ -57,8 +58,8 @@ const i18n = {
     audioBoth: 'Cả hai (Hệ thống + Micro)',
     audioBothDesc: 'Hòa trộn âm thanh máy tính và giọng nói lồng tiếng.',
     directDiskTitle: 'Ghi trực tiếp vào đĩa (Direct-to-Disk Stream)',
-    directDiskDesc: 'Lưu từng giây video trực tiếp vào ổ cứng. RAM tiêu thụ chỉ ~15MB, không sợ sập trình duyệt khi quay lâu.',
-    directDiskNotSupported: 'Trình duyệt hiện tại chưa hỗ trợ File System Access API. Hệ thống sẽ tự động dùng chế độ bộ đệm an toàn.',
+    directDiskDesc: 'Ghi từng giây video thẳng vào tệp trên ổ cứng (Chrome/Edge), nên bộ nhớ không phình theo độ dài video. Nếu tắt, video được giữ trong RAM cho tới khi bạn tải về.',
+    directDiskNotSupported: 'Trình duyệt này chưa hỗ trợ ghi thẳng ra đĩa (File System Access API). Video sẽ được giữ trong RAM cho tới khi tải về — nên quay đoạn ngắn.',
     countdownToggle: 'Đếm ngược 3 giây trước khi quay',
     btnStart: 'Bắt Đầu Quay Màn Hình',
     btnPreparing: 'Đang khởi tạo quyền màn hình...',
@@ -83,15 +84,20 @@ const i18n = {
     errUnknown: 'Đã xảy ra sự cố khi kích hoạt ghi hình. Vui lòng thử lại.',
     countdownReady: 'Chuẩn bị quay sau...',
     btnCancelCountdown: 'Hủy đếm ngược',
+    unsupportedTitle: 'Trình duyệt này không quay màn hình được',
+    unsupportedMobile: 'Điện thoại và máy tính bảng không cho phép trang web quay màn hình. Hãy mở công cụ trên máy tính bằng Chrome, Edge hoặc Firefox.',
+    unsupportedApi: 'Trình duyệt thiếu API quay màn hình (getDisplayMedia) hoặc MediaRecorder. Hãy dùng Chrome, Edge hoặc Firefox bản mới trên máy tính.',
+    unsupportedInsecure: 'Quay màn hình chỉ hoạt động trên kết nối an toàn (HTTPS hoặc localhost).',
+    autoStoppedMsg: 'Đã dừng vì bạn bấm “Dừng chia sẻ” trên trình duyệt — video vẫn được giữ lại bên dưới.',
   },
   en: {
     toolTitle: 'Screen Recorder',
-    toolDesc: 'Record screen, window or browser tab with system & mic audio. 100% client-side, zero RAM bloat, optimized for low-spec devices.',
+    toolDesc: 'Record screen, window or browser tab with system & mic audio. Runs entirely in desktop browsers (Chrome, Edge, Firefox); not supported on phones.',
     privacyBadge: 'Client-side processing — your recordings never leave your device.',
-    zeroRamBadge: 'Zero RAM Bloat • Low-Spec Optimized • 100% In-Browser',
+    zeroRamBadge: 'Direct-to-disk mode (Chrome/Edge) for long recordings',
     presetSection: 'Video Quality & Hardware Load',
     audioSection: 'Audio Capture Source',
-    storageSection: 'Memory & Storage Safety Mode',
+    storageSection: 'Saving Mode',
     audioNone: 'Mute (No Audio)',
     audioNoneDesc: 'Record screen only with no audio input.',
     audioSystem: 'System / Tab Audio',
@@ -100,9 +106,9 @@ const i18n = {
     audioMicDesc: 'Record your voice commentary through microphone.',
     audioBoth: 'Both (System + Mic)',
     audioBothDesc: 'Mix computer audio and your microphone commentary seamlessly.',
-    directDiskTitle: 'Direct-to-Disk Stream (Zero RAM)',
-    directDiskDesc: 'Stream video chunks straight to disk. Consumes only ~15MB RAM regardless of recording length.',
-    directDiskNotSupported: 'File System Access API is not supported in this browser. Safe in-memory buffer will be used automatically.',
+    directDiskTitle: 'Direct-to-Disk Stream',
+    directDiskDesc: 'Writes video chunks straight to a file on disk (Chrome/Edge), so memory does not grow with recording length. When off, the video stays in RAM until you download it.',
+    directDiskNotSupported: 'This browser cannot write directly to disk (File System Access API). The video is kept in RAM until downloaded — prefer short recordings.',
     countdownToggle: '3-second countdown before recording',
     btnStart: 'Start Screen Recording',
     btnPreparing: 'Initializing screen capture...',
@@ -127,15 +133,20 @@ const i18n = {
     errUnknown: 'An error occurred while initializing recorder. Please try again.',
     countdownReady: 'Starting recording in...',
     btnCancelCountdown: 'Cancel',
+    unsupportedTitle: 'Screen recording is not available in this browser',
+    unsupportedMobile: 'Phones and tablets do not allow web pages to record the screen. Open this tool on a computer with Chrome, Edge or Firefox.',
+    unsupportedApi: 'This browser lacks the screen capture API (getDisplayMedia) or MediaRecorder. Use a recent desktop Chrome, Edge or Firefox.',
+    unsupportedInsecure: 'Screen recording only works on a secure connection (HTTPS or localhost).',
+    autoStoppedMsg: 'Stopped because you clicked “Stop sharing” in the browser — your video is kept below.',
   },
   ja: {
     toolTitle: '画面録画',
-    toolDesc: '画面・ウィンドウ・ブラウザタブを音声付きで録画。100%ブラウザ完結、メモリ消費ゼロ、低スペック端末でも超軽量動作。',
+    toolDesc: '画面・ウィンドウ・ブラウザタブを音声付きで録画。PCブラウザ（Chrome・Edge・Firefox）内で完結します。スマートフォンには非対応です。',
     privacyBadge: '100% ブラウザ内処理・録画データは外部サーバーに送信されません。',
-    zeroRamBadge: 'メモリ肥大化ゼロ • 低スペック端末最適化 • 100% クライアント処理',
+    zeroRamBadge: '長時間録画向けのディスク直接保存モード（Chrome/Edge）',
     presetSection: '画質とハードウェア負荷',
     audioSection: '録音ソース',
-    storageSection: 'メモリ安全・保存モード',
+    storageSection: '保存モード',
     audioNone: 'ミュート（音声なし）',
     audioNoneDesc: '画面映像のみを録画し、音声は収録しません。',
     audioSystem: 'システム／タブ音声',
@@ -144,9 +155,9 @@ const i18n = {
     audioMicDesc: 'マイクを使って解説やナレーションを録音します。',
     audioBoth: '両方（システム音＋マイク）',
     audioBothDesc: 'PCの内部音声とマイク音声をミックスして同時収録します。',
-    directDiskTitle: 'ディスク直書き込みストリーム（メモリ消費ゼロ）',
-    directDiskDesc: '動画データをディスクへ直接書き込みます。長時間の録画でもRAM消費は約15MBのみ。',
-    directDiskNotSupported: 'お使いのブラウザはFile System Access APIに対応していません。安全バッファモードで動作します。',
+    directDiskTitle: 'ディスク直接書き込み',
+    directDiskDesc: '動画データをディスク上のファイルへ直接書き込みます（Chrome/Edge）。録画時間に応じてメモリが増えません。オフの場合はダウンロードまでRAMに保持されます。',
+    directDiskNotSupported: 'お使いのブラウザはディスク直接書き込み（File System Access API）に非対応です。動画はダウンロードまでRAMに保持されるため、短めの録画をお勧めします。',
     countdownToggle: '録画開始前の3秒カウントダウン',
     btnStart: '画面録画を開始',
     btnPreparing: '画面共有の権限を待機中...',
@@ -171,6 +182,11 @@ const i18n = {
     errUnknown: '録画の初期化中にエラーが発生しました。もう一度お試しください。',
     countdownReady: '録画開始まで...',
     btnCancelCountdown: 'カウントダウン中止',
+    unsupportedTitle: 'このブラウザでは画面録画を利用できません',
+    unsupportedMobile: 'スマートフォンやタブレットではWebページから画面を録画できません。PCのChrome・Edge・Firefoxでご利用ください。',
+    unsupportedApi: 'このブラウザには画面キャプチャAPI（getDisplayMedia）またはMediaRecorderがありません。PC版の最新Chrome・Edge・Firefoxをご利用ください。',
+    unsupportedInsecure: '画面録画は安全な接続（HTTPSまたはlocalhost）でのみ動作します。',
+    autoStoppedMsg: 'ブラウザの「共有を停止」で録画を終了しました。動画は下に保存されています。',
   },
 };
 
@@ -220,9 +236,13 @@ export default function ScreenRecorderView({ displayLang = 'vi' }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [recordedResult, setRecordedResult] = useState(null);
 
+  const [infoMessage, setInfoMessage] = useState('');
+  const [support] = useState(() => getRecorderSupport());
+
   const sessionRef = useRef(null);
   const countdownTimerRef = useRef(null);
   const videoPreviewRef = useRef(null);
+  const resultUrlRef = useRef('');
 
   // Sync user settings to localStorage
   const updatePreset = (id) => {
@@ -253,12 +273,13 @@ export default function ScreenRecorderView({ displayLang = 'vi' }) {
     } catch {}
   };
 
-  // Cleanup object URLs when component unmounts or new recording starts
+  // Revoke the current preview blob URL (on new recording, record-again and unmount)
   const cleanupPreviewUrl = useCallback(() => {
-    if (recordedResult?.url) {
-      URL.revokeObjectURL(recordedResult.url);
+    if (resultUrlRef.current) {
+      URL.revokeObjectURL(resultUrlRef.current);
+      resultUrlRef.current = '';
     }
-  }, [recordedResult]);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -271,9 +292,30 @@ export default function ScreenRecorderView({ displayLang = 'vi' }) {
     };
   }, [cleanupPreviewUrl]);
 
+  // Single finalize path for both the Stop button and the browser's "Stop sharing" bar
+  const handleFinalized = useCallback((result, session) => {
+    if (sessionRef.current === session) sessionRef.current = null;
+    if (!result) {
+      setRecorderStatus('idle');
+      return;
+    }
+    cleanupPreviewUrl();
+    resultUrlRef.current = result.url || '';
+    setRecordedResult(result);
+    if (result.stoppedBy === 'browser') setInfoMessage(t.autoStoppedMsg);
+    try {
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.7 },
+      });
+    } catch {}
+  }, [cleanupPreviewUrl, t]);
+
   // Actual recording kick-off
   const startActualRecording = useCallback(async () => {
     setErrorMessage('');
+    setInfoMessage('');
     cleanupPreviewUrl();
     setRecordedResult(null);
 
@@ -297,6 +339,7 @@ export default function ScreenRecorderView({ displayLang = 'vi' }) {
         }
         setRecorderStatus('idle');
       },
+      onFinalized: (result) => handleFinalized(result, session),
     });
 
     sessionRef.current = session;
@@ -304,7 +347,7 @@ export default function ScreenRecorderView({ displayLang = 'vi' }) {
     if (!success) {
       sessionRef.current = null;
     }
-  }, [selectedPreset, audioSource, useDirectToDisk, cleanupPreviewUrl, t]);
+  }, [selectedPreset, audioSource, useDirectToDisk, cleanupPreviewUrl, handleFinalized, t]);
 
   // Handle click on "Start Recording" button
   const handleStartClick = () => {
@@ -350,21 +393,10 @@ export default function ScreenRecorderView({ displayLang = 'vi' }) {
     }
   };
 
-  // Stop Recording
-  const handleStop = async () => {
+  // Stop Recording — the result arrives through onFinalized (same path as "Stop sharing")
+  const handleStop = () => {
     if (sessionRef.current) {
-      const result = await sessionRef.current.stop();
-      if (result) {
-        setRecordedResult(result);
-        try {
-          confetti({
-            particleCount: 50,
-            spread: 60,
-            origin: { y: 0.7 },
-          });
-        } catch {}
-      }
-      sessionRef.current = null;
+      sessionRef.current.stop({ reason: 'user' });
     }
   };
 
@@ -376,6 +408,7 @@ export default function ScreenRecorderView({ displayLang = 'vi' }) {
     setElapsedMs(0);
     setRecordedBytes(0);
     setErrorMessage('');
+    setInfoMessage('');
   };
 
   // Download video file
@@ -395,7 +428,15 @@ export default function ScreenRecorderView({ displayLang = 'vi' }) {
   };
 
   const isRecordingOrPaused = recorderStatus === 'recording' || recorderStatus === 'paused';
-  const showMemoryWarning = !useDirectToDisk && recordedBytes > 250 * 1024 * 1024; // >250MB in RAM
+  const directDiskActive = useDirectToDisk && isDirectToDiskSupported();
+  const showMemoryWarning = !directDiskActive && recordedBytes > 250 * 1024 * 1024; // >250MB in RAM
+  const unsupportedMessage = support.supported
+    ? ''
+    : support.reason === 'mobile'
+      ? t.unsupportedMobile
+      : support.reason === 'insecure-context'
+        ? t.unsupportedInsecure
+        : t.unsupportedApi;
 
   return (
     <div className="flex flex-col gap-6 w-full animate-in fade-in duration-300">
@@ -428,6 +469,31 @@ export default function ScreenRecorderView({ displayLang = 'vi' }) {
           </div>
         </div>
       </header>
+
+      {/* UNSUPPORTED BROWSER / DEVICE */}
+      {unsupportedMessage && (
+        <div
+          role="alert"
+          className="p-4 rounded-xl bg-error-container/20 border border-error/30 flex items-start gap-3 text-xs text-on-surface"
+        >
+          <AlertCircle size={18} className="text-error shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold text-error">{t.unsupportedTitle}</p>
+            <p className="text-on-surface-variant mt-0.5">{unsupportedMessage}</p>
+          </div>
+        </div>
+      )}
+
+      {/* INFO BANNER (e.g. stopped from the browser's "Stop sharing" bar) */}
+      {infoMessage && (
+        <div
+          role="status"
+          className="p-3 rounded-xl bg-primary-container/15 border border-primary/30 flex items-start gap-2 text-xs text-on-surface"
+        >
+          <Info size={16} className="text-primary shrink-0 mt-0.5" />
+          <p className="flex-1">{infoMessage}</p>
+        </div>
+      )}
 
       {/* ERROR BANNER */}
       {errorMessage && (
@@ -483,7 +549,7 @@ export default function ScreenRecorderView({ displayLang = 'vi' }) {
                     <span className="text-xs font-bold text-on-surface uppercase tracking-wider">
                       {recorderStatus === 'recording' ? t.recordingActive : t.recordingPaused}
                     </span>
-                    {useDirectToDisk && (
+                    {directDiskActive && (
                       <span className="text-[10px] font-mono font-semibold bg-surface-subtle text-secondary px-2 py-0.5 rounded border border-secondary/40 flex items-center gap-1">
                         <HardDrive size={10} />
                         DIRECT-TO-DISK
@@ -739,7 +805,7 @@ export default function ScreenRecorderView({ displayLang = 'vi' }) {
                   <button
                     type="button"
                     onClick={handleStartClick}
-                    disabled={recorderStatus === 'preparing'}
+                    disabled={recorderStatus === 'preparing' || !support.supported}
                     className="w-full h-13 sm:h-12 px-6 rounded-2xl bg-primary-container text-on-primary-container hover:brightness-105 active:scale-[0.99] text-sm font-bold transition-all shadow-md flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <div className="w-3 h-3 rounded-full bg-error animate-pulse" />

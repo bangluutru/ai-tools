@@ -54,6 +54,7 @@ const TRANSLATIONS = {
     viewByCategory: 'サービス分類別',
     hasDriversLicense: '運転免許証を所持している（警察署・免許センター）',
     hasMyNumberCard: 'マイナンバーカードを所持している（暗証番号更新）',
+    isForeignResident: '外国籍（在留カードを所持している中長期在留者）',
     hasVehicle: '自家用車・バイクを所有している（車検証・車庫証明）',
     hasBicycle: '自転車を所有している（防犯登録の変更・再登録）',
     hasFiberInternet: '固定光回線（自宅インターネット）を契約中',
@@ -79,6 +80,7 @@ const TRANSLATIONS = {
     viewByCategory: 'Theo loại hình dịch vụ',
     hasDriversLicense: 'Có Bằng lái xe Nhật Bản (Đổi tại Đồn Cảnh sát / Trung tâm Bằng lái)',
     hasMyNumberCard: 'Có Thẻ My Number (Cần nhập mã PIN cập nhật chip)',
+    isForeignResident: 'Là người nước ngoài có Thẻ cư trú (在留カード)',
     hasVehicle: 'Có Ô tô hoặc Xe máy (Cần đổi đăng kiểm & Shako Shomei)',
     hasBicycle: 'Có Xe đạp (Cần cập nhật đăng ký chống trộm Bouhan Toroku)',
     hasFiberInternet: 'Đang dùng mạng cáp quang cố định tại nhà (Cần kéo cáp)',
@@ -104,6 +106,7 @@ const TRANSLATIONS = {
     viewByCategory: 'By Service Category',
     hasDriversLicense: 'Hold Japan Driver\'s License (Police Station / License Center)',
     hasMyNumberCard: 'Hold My Number Card (PIN chip renewal required)',
+    isForeignResident: 'Foreign resident holding a Residence Card',
     hasVehicle: 'Own Car or Motorcycle (Inspection cert & parking space cert)',
     hasBicycle: 'Own Bicycle (Anti-theft registration update)',
     hasFiberInternet: 'Contracted Fiber Optic Broadband (Requires installation booking)',
@@ -128,13 +131,14 @@ export default function AddressChangeChecklistView({ lang = 'ja' }) {
   const [moveDate, setMoveDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
-    return d.toISOString().split('T')[0];
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
   const [hasDriversLicense, setHasDriversLicense] = useState(true);
   const [hasMyNumberCard, setHasMyNumberCard] = useState(true);
   const [hasVehicle, setHasVehicle] = useState(false);
   const [hasBicycle, setHasBicycle] = useState(true);
   const [hasFiberInternet, setHasFiberInternet] = useState(true);
+  const [isForeignResident, setIsForeignResident] = useState(true);
 
   // View Mode: 'timing' | 'category'
   const [viewMode, setViewMode] = useState('timing');
@@ -152,6 +156,7 @@ export default function AddressChangeChecklistView({ lang = 'ja' }) {
         hasVehicle,
         hasBicycle,
         hasFiberInternet,
+        isForeignResident,
       },
       checkedMap
     );
@@ -162,6 +167,7 @@ export default function AddressChangeChecklistView({ lang = 'ja' }) {
     hasVehicle,
     hasBicycle,
     hasFiberInternet,
+    isForeignResident,
     checkedMap,
   ]);
 
@@ -237,6 +243,17 @@ export default function AddressChangeChecklistView({ lang = 'ja' }) {
                 className="w-4 h-4 rounded text-primary focus:ring-primary border-border"
               />
               <span className="text-xs font-medium text-foreground">{t.hasDriversLicense}</span>
+            </label>
+
+            {/* Foreign resident (在留カード) */}
+            <label className="flex items-center gap-3 p-3 rounded-xl border border-border bg-surface/40 hover:bg-surface/80 cursor-pointer transition-all">
+              <input
+                type="checkbox"
+                checked={isForeignResident}
+                onChange={(e) => setIsForeignResident(e.target.checked)}
+                className="w-4 h-4 rounded text-primary focus:ring-primary border-border"
+              />
+              <span className="text-xs font-medium text-foreground">{t.isForeignResident}</span>
             </label>
 
             {/* My Number */}

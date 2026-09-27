@@ -31,11 +31,12 @@ import {
   SEPARATION_REASONS,
   ELIGIBILITY_CRITERIA_BY_CATEGORY
 } from '../../japan/employment/index.js';
+import { todayLocalISO } from '../../japan/employment/localDate.js';
 
 const TRANSLATIONS = {
   ja: {
     toolTitle: '失業保険受給資格チェッカー（特定受給資格者・自己都合・給付制限・受給期間延長判定）',
-    toolDesc: '雇用保険法第13条・第23条・第33条に基づき、離職理由ごとの受給要件（被保険者期間6ヶ月/12ヶ月）、給付制限（なし/2ヶ月/3ヶ月）、待期期間、受給期間延長を判定します。',
+    toolDesc: '雇用保険法第13条・第23条・第33条に基づき、離職理由ごとの受給要件（被保険者期間6ヶ月/12ヶ月）、給付制限（なし/1ヶ月/3ヶ月）、待期期間、受給期間延長を判定します。',
     sectionInput: '1. 離職状況・雇用保険加入歴の入力',
     reasonLabel: '離職理由（退職の主たる原因）',
     reasonHint: '※ 離職理由によって必要な加入期間（6ヶ月 vs 12ヶ月）および給付制限期間が大きく異なります。',
@@ -53,6 +54,12 @@ const TRANSLATIONS = {
     daysOffLabel: '療養・休業により賃金支払を受けられなかった日数（任意）',
     daysOffHint: '※ 30日以上賃金を受けられなかった場合、算定対象期間が延長されます。',
     daysUnit: '日',
+    separationDateLabel: '離職日（退職日）',
+    separationDateHint: '※ 2025年4月1日以降の自己都合離職は給付制限が原則1ヶ月（それ以前は2ヶ月）です。',
+    repeatedLabel: '過去5年間に、正当な理由のない自己都合退職で受給資格決定を2回以上受けていますか？',
+    repeatedHint: '※ 該当する場合、給付制限は3ヶ月になります。',
+    trainingLabel: '離職日前1年以内または離職後に、対象の教育訓練（教育訓練給付の対象講座・公共職業訓練等）を受講しましたか？',
+    trainingHint: '※ 受講した場合は給付制限が解除されます（離職後に受講開始した場合は開始日以降）。受講証明の提出が必要です。',
     sectionResult: '2. 受給資格および給付スケジュールの判定結果',
     statusQualified: '基本手当の受給資格を満たしています',
     statusExtension: '受給期間の延長手続き（最大4年）が必要です',
@@ -71,7 +78,7 @@ const TRANSLATIONS = {
     step2Desc: '離職理由にかかわらず全員一律7日間です。この期間中にアルバイトや就労をすると待期が延長されます。',
     step3Title: '給付制限期間の経過',
     step3DescNo: '特定受給資格者または特定理由離職者のため、給付制限はありません。初回認定日後にすぐ支給されます。',
-    step3DescYes: '自己都合退職のため2ヶ月間（または懲戒3ヶ月間）の給付制限があります。その後に支給が開始されます。',
+    step3DescYes: '{months}ヶ月間の給付制限があります（2025年4月1日以降の自己都合離職は原則1ヶ月。過去5年間に2回以上の自己都合離職で受給資格決定を受けた場合・重責解雇は3ヶ月。2025年3月31日以前の離職は2ヶ月）。その後に支給が開始されます。',
     step4Title: '指定口座へ初回の基本手当振込',
     step4Desc: '失業認定を受け、通常認定日から約1週間程度で指定の金融機関口座へ振り込まれます。',
     sectionChecklist: '4. ハローワーク申請時の必要書類チェックリスト',
@@ -81,7 +88,7 @@ const TRANSLATIONS = {
     ctaSimulateBenefit: 'この条件で「失業給付の受給金額・日数シミュレーター」を開く',
     legalNotesTitle: '雇用保険法・ハローワーク取扱要領のポイント',
     legalPoint1Title: '特定受給資格者と特定理由離職者の優遇措置',
-    legalPoint1Body: '倒産・解雇・雇止め・残業過多等による離職は、直前1年間に通算6ヶ月以上の加入で受給可能となり、2ヶ月の給付制限も免除されます。',
+    legalPoint1Body: '倒産・解雇・雇止め・残業過多等による離職は、直前1年間に通算6ヶ月以上の加入で受給可能となり、自己都合退職に課される給付制限（原則1ヶ月）もありません。',
     legalPoint2Title: '離職理由に異議がある場合（判定の不服）',
     legalPoint2Body: '離職票に記載された離職理由が「自己都合」となっていても、残業記録や医師の診断書をハローワークに提出することで「特定理由離職者」に変更認定される場合があります。',
     legalPoint3Title: '受給期間の延長申請（第20条）',
@@ -89,7 +96,7 @@ const TRANSLATIONS = {
   },
   vi: {
     toolTitle: 'Kiểm Tra Điều Kiện Hưởng Trợ Cấp Thất Nghiệp Nhật Bản (受給資格チェッカー)',
-    toolDesc: 'Căn cứ Điều 13, 23, 33 Luật Bảo hiểm Việc làm (雇用保険法), kiểm tra điều kiện thâm niên (6 tháng vs 12 tháng), thời gian hạn chế chi trả (0 vs 2 vs 3 tháng), 7 ngày chờ thụ lý và gia hạn tối đa 4 năm.',
+    toolDesc: 'Căn cứ Điều 13, 23, 33 Luật Bảo hiểm Việc làm (雇用保険法), kiểm tra điều kiện thâm niên (6 tháng vs 12 tháng), thời gian hạn chế chi trả (0 vs 1 vs 3 tháng), 7 ngày chờ thụ lý và gia hạn tối đa 4 năm.',
     sectionInput: '1. Nhập lý do thôi việc & Quá trình tham gia bảo hiểm',
     reasonLabel: 'Lý do thôi việc (Nguyên nhân chính dẫn đến chấm dứt hợp đồng)',
     reasonHint: '※ Lý do thôi việc quyết định trực tiếp số tháng bảo hiểm tối thiểu cần có (6 tháng vs 12 tháng) và thời gian bị giam tiền (給付制限).',
@@ -107,6 +114,12 @@ const TRANSLATIONS = {
     daysOffLabel: 'Số ngày nghỉ không hưởng lương do ốm đau / tai nạn (nếu có)',
     daysOffHint: '※ Nghỉ liên tục từ 30 ngày trở lên sẽ được cộng thêm vào thời kỳ tính toán bảo lưu.',
     daysUnit: 'ngày',
+    separationDateLabel: 'Ngày nghỉ việc (離職日)',
+    separationDateHint: '※ Tự ý nghỉ việc từ 01/04/2025: hạn chế chi trả thường là 1 tháng (trước đó là 2 tháng).',
+    repeatedLabel: 'Trong 5 năm trước, bạn đã từ 2 lần trở lên tự ý nghỉ việc (không có lý do chính đáng) và được Hello Work xác định quyền hưởng (受給資格決定)?',
+    repeatedHint: '※ Nếu có, thời gian hạn chế chi trả là 3 tháng.',
+    trainingLabel: 'Bạn có tham gia khóa 教育訓練 đủ điều kiện (khóa thuộc diện 教育訓練給付, 公共職業訓練...) trong 1 năm trước khi nghỉ hoặc sau khi nghỉ?',
+    trainingHint: '※ Nếu có, hạn chế chi trả được giải trừ (nếu bắt đầu học sau khi nghỉ thì giải trừ từ ngày bắt đầu khóa). Cần nộp giấy chứng nhận học.',
     sectionResult: '2. Kết quả kiểm tra thụ hưởng & Tiến trình nhận trợ cấp',
     statusQualified: 'Bạn ĐỦ ĐIỀU KIỆN nhận trợ cấp thất nghiệp (基本手当)',
     statusExtension: 'Cần làm thủ tục XIN GIA HẠN THỜI HẠN NHẬN TRỢ CẤP (tối đa 4 năm)',
@@ -125,7 +138,7 @@ const TRANSLATIONS = {
     step2Desc: 'Tất cả mọi đối tượng đều phải trải qua 7 ngày này. TUYỆT ĐỐI KHÔNG LÀM THÊM (baito) trong 7 ngày này để tránh bị hủy hiệu lực.',
     step3Title: 'Thời gian hạn chế chi trả (給付制限)',
     step3DescNo: 'Diện công ty sa thải hoặc lý do chính đáng: KHÔNG BỊ HẠN CHẾ. Tiền trợ cấp được tính ngay sau khi kết thúc 7 ngày chờ.',
-    step3DescYes: 'Tự ý nghỉ việc cá nhân: Bị hạn chế chi trả 2 tháng (hoặc 3 tháng nếu bị sa thải kỷ luật). Sau 2 tháng mới bắt đầu được tính tiền.',
+    step3DescYes: 'Bị hạn chế chi trả {months} tháng (tự ý nghỉ từ 01/04/2025: thường 1 tháng; 3 tháng nếu trong 5 năm trước đã ≥2 lần tự ý nghỉ và được xác định quyền hưởng, hoặc bị sa thải kỷ luật; nghỉ trước 01/04/2025: 2 tháng). Hết thời gian này mới bắt đầu được tính tiền.',
     step4Title: 'Nhận tiền chuyển khoản đợt đầu',
     step4Desc: 'Sau buổi chứng nhận thất nghiệp định kỳ, tiền sẽ được chuyển thẳng vào tài khoản ngân hàng của bạn trong khoảng 1 tuần.',
     sectionChecklist: '4. Danh mục giấy tờ cần chuẩn bị nộp Hello Work',
@@ -135,7 +148,7 @@ const TRANSLATIONS = {
     ctaSimulateBenefit: 'Mô phỏng chi tiết Số tiền & Ngày hưởng trợ cấp thất nghiệp',
     legalNotesTitle: 'Quy tắc pháp lý quan trọng cần biết',
     legalPoint1Title: 'Được chuyển đổi từ "Tự ý nghỉ" sang "Lý do đặc định"',
-    legalPoint1Body: 'Dù trên giấy thôi việc công ty ghi là "Tự ý thôi việc" (自己都合), nếu bạn có bằng chứng tăng ca quá mức (thẻ chấm công) hoặc giấy bác sĩ yêu cầu đổi môi trường, Hello Work sẽ đổi sang diện được nhận tiền ngay không bị giam 2 tháng.',
+    legalPoint1Body: 'Dù trên giấy thôi việc công ty ghi là "Tự ý thôi việc" (自己都合), nếu bạn có bằng chứng tăng ca quá mức (thẻ chấm công) hoặc giấy bác sĩ yêu cầu đổi môi trường, Hello Work sẽ đổi sang diện được nhận tiền ngay, không bị hạn chế chi trả (給付制限, thường 1 tháng).',
     legalPoint2Title: 'Cấm làm thêm trong 7 ngày chờ (待期期間)',
     legalPoint2Body: 'Trong 7 ngày chờ đầu tiên sau khi nộp đơn, tuyệt đối không làm bất kỳ công việc phát sinh thù lao nào. Nếu làm việc, 7 ngày chờ sẽ bị dời lại.',
     legalPoint3Title: 'Gia hạn thời hạn nhận trợ cấp tối đa 4 năm (Điều 20)',
@@ -143,7 +156,7 @@ const TRANSLATIONS = {
   },
   en: {
     toolTitle: 'Japan Unemployment Benefits Eligibility Checker (受給資格チェッカー)',
-    toolDesc: 'Statutory eligibility verification under Employment Insurance Act Articles 13, 23 & 33. Verifies insured months (6 vs 12 mos), benefit restriction periods (none vs 2 mos), 7-day standby, and up to 4-year extension.',
+    toolDesc: 'Statutory eligibility verification under Employment Insurance Act Articles 13, 23 & 33. Verifies insured months (6 vs 12 mos), benefit restriction periods (none vs 1 vs 3 mos), 7-day standby, and up to 4-year extension.',
     sectionInput: '1. Separation Reason & Insurance Record',
     reasonLabel: 'Primary Reason for Separation',
     reasonHint: '※ The separation category determines the minimum insured period needed (6 mos vs 12 mos) and whether payment restriction applies.',
@@ -161,6 +174,12 @@ const TRANSLATIONS = {
     daysOffLabel: 'Unpaid days off due to medical leave/injury (Optional)',
     daysOffHint: '※ 30+ consecutive unpaid days extends the statutory reference period.',
     daysUnit: 'days',
+    separationDateLabel: 'Separation Date',
+    separationDateHint: '※ Voluntary resignations on/after 2025-04-01 carry a 1-month restriction (2 months before that).',
+    repeatedLabel: 'In the past 5 years, have you had 2+ voluntary resignations without just cause that received an eligibility decision?',
+    repeatedHint: '※ If yes, the restriction becomes 3 months.',
+    trainingLabel: 'Did you take qualifying education/training (教育訓練給付 courses, public vocational training, etc.) within 1 year before separation or after it?',
+    trainingHint: '※ If yes, the restriction is lifted (from the course start date if started after separation). Proof is required.',
     sectionResult: '2. Eligibility Determination & Payment Timeline',
     statusQualified: 'You are QUALIFIED for Employment Insurance Benefits',
     statusExtension: 'Benefit Period EXTENSION APPLICATION REQUIRED (up to 4 years)',
@@ -179,7 +198,7 @@ const TRANSLATIONS = {
     step2Desc: 'Universal 7-day waiting period. Strict ban on part-time work or side earnings during these 7 days.',
     step3Title: 'Benefit Restriction Period',
     step3DescNo: 'Company-attributable or specific justified reason: 0 restriction months. Eligible immediately after standby.',
-    step3DescYes: 'Voluntary resignation: 2 months restriction period before payment eligibility commences.',
+    step3DescYes: '{months}-month restriction period before payment eligibility commences (voluntary resignation on/after 2025-04-01: normally 1 month; 3 months after 2+ prior voluntary resignations with eligibility decisions within 5 years, or for disciplinary dismissal; separations before 2025-04-01: 2 months).',
     step4Title: 'First Allowance Bank Transfer',
     step4Desc: 'Following your first official unemployment certification day, funds transfer within 1 week.',
     sectionChecklist: '4. Hello Work Application Document Checklist',
@@ -189,7 +208,7 @@ const TRANSLATIONS = {
     ctaSimulateBenefit: 'Calculate Exact Daily Benefit Amount & Total Duration',
     legalNotesTitle: 'Key Statutory Rules to Keep in Mind',
     legalPoint1Title: 'Reclassifying Voluntary Resignation to Type B',
-    legalPoint1Body: 'Even if the employer recorded "voluntary resignation", submitting evidence of chronic overtime or medical advice can reclassify your claim to immediate payout without the 2-month delay.',
+    legalPoint1Body: 'Even if the employer recorded "voluntary resignation", submitting evidence of chronic overtime or medical advice can reclassify your claim to immediate payout without the benefit restriction (normally 1 month).',
     legalPoint2Title: 'Strict Work Prohibition during 7-Day Standby',
     legalPoint2Body: 'Do not perform any paid labor during the initial 7-day standby period; working resets the standby calculation.',
     legalPoint3Title: 'Benefit Extension up to 4 Years (Article 20)',
@@ -206,6 +225,9 @@ export default function UnemploymentEligibilityView({ lang = 'ja' }) {
   const [isAbleToWorkImmediately, setIsAbleToWorkImmediately] = useState(true);
   const [isInabilityTemporary, setIsInabilityTemporary] = useState(true);
   const [daysOffUnableToWork, setDaysOffUnableToWork] = useState(0);
+  const [separationDate, setSeparationDate] = useState(() => todayLocalISO());
+  const [hasRepeatedVoluntary, setHasRepeatedVoluntary] = useState(false);
+  const [hasEducationTraining, setHasEducationTraining] = useState(false);
 
   // User interactive checklist state
   const [checkedDocs, setCheckedDocs] = useState({});
@@ -220,13 +242,16 @@ export default function UnemploymentEligibilityView({ lang = 'ja' }) {
   // Tính toán kết quả điều kiện thông qua Statutory Engine
   const result = useMemo(() => {
     return checkUnemploymentEligibility({
+      separationDate,
       reasonId,
       totalInsuredMonths: Number(totalInsuredMonths) || 0,
       isAbleToWorkImmediately,
       isInabilityTemporary,
-      daysOffUnableToWork: Number(daysOffUnableToWork) || 0
+      daysOffUnableToWork: Number(daysOffUnableToWork) || 0,
+      hasTwoPlusPriorVoluntarySeparationsIn5Years: hasRepeatedVoluntary,
+      hasQualifyingEducationTraining: hasEducationTraining
     });
-  }, [reasonId, totalInsuredMonths, isAbleToWorkImmediately, isInabilityTemporary, daysOffUnableToWork]);
+  }, [separationDate, reasonId, totalInsuredMonths, isAbleToWorkImmediately, isInabilityTemporary, daysOffUnableToWork, hasRepeatedVoluntary, hasEducationTraining]);
 
   return (
     <StandardToolLayout
@@ -311,6 +336,62 @@ export default function UnemploymentEligibilityView({ lang = 'ja' }) {
                 {t.insuredMonthsHint}
               </p>
             </div>
+
+            {/* Separation Date */}
+            <div className="space-y-2">
+              <label
+                htmlFor="separation-date-input"
+                className="block text-sm font-semibold text-on-surface"
+              >
+                {t.separationDateLabel}
+              </label>
+              <input
+                id="separation-date-input"
+                type="date"
+                value={separationDate}
+                onChange={(e) => setSeparationDate(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-outline-variant/50 bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary font-semibold text-sm"
+              />
+              <p className="text-xs text-on-surface-variant">
+                {t.separationDateHint}
+              </p>
+            </div>
+
+            {/* Voluntary-resignation specific options (給付制限 1ヶ月/3ヶ月/解除) */}
+            {result.categoryKey === 'PERSONAL_VOLUNTARY' && (
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-3.5 rounded-xl bg-surface border border-outline-variant/30 flex items-start gap-3">
+                  <input
+                    id="repeated-voluntary-check"
+                    type="checkbox"
+                    checked={hasRepeatedVoluntary}
+                    onChange={(e) => setHasRepeatedVoluntary(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-primary rounded border-outline-variant/50 focus:ring-primary"
+                  />
+                  <div>
+                    <label htmlFor="repeated-voluntary-check" className="text-xs font-bold text-on-surface cursor-pointer">
+                      {t.repeatedLabel}
+                    </label>
+                    <p className="text-[11px] text-on-surface-variant mt-0.5">{t.repeatedHint}</p>
+                  </div>
+                </div>
+                <div className="p-3.5 rounded-xl bg-surface border border-outline-variant/30 flex items-start gap-3">
+                  <input
+                    id="education-training-check"
+                    type="checkbox"
+                    checked={hasEducationTraining}
+                    onChange={(e) => setHasEducationTraining(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-primary rounded border-outline-variant/50 focus:ring-primary"
+                  />
+                  <div>
+                    <label htmlFor="education-training-check" className="text-xs font-bold text-on-surface cursor-pointer">
+                      {t.trainingLabel}
+                    </label>
+                    <p className="text-[11px] text-on-surface-variant mt-0.5">{t.trainingHint}</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Immediate Ability to Work */}
             <div className="space-y-2">
@@ -408,6 +489,11 @@ export default function UnemploymentEligibilityView({ lang = 'ja' }) {
                 <p className="text-xs md:text-sm text-on-surface-variant font-medium">
                   {lang === 'ja' ? result.timeline.summaryJa : result.timeline.summaryVi}
                 </p>
+                {result.warnings.map((w) => (
+                  <p key={w.code} className="text-xs text-on-surface-variant">
+                    ※ {w[lang] || w.ja}
+                  </p>
+                ))}
               </div>
             </div>
           )}
@@ -546,7 +632,9 @@ export default function UnemploymentEligibilityView({ lang = 'ja' }) {
               </div>
               <h3 className="text-sm font-bold text-on-surface">{t.step3Title}</h3>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                {result.timeline.benefitRestrictionMonths === 0 ? t.step3DescNo : t.step3DescYes}
+                {result.timeline.benefitRestrictionMonths === 0
+                  ? t.step3DescNo
+                  : t.step3DescYes.replace('{months}', String(result.timeline.benefitRestrictionMonths))}
               </p>
             </div>
 
