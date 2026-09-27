@@ -15,10 +15,11 @@ const PAGE_FIT_TOLERANCE_PT = 2;
 /** Phần dư mỏng hơn ngần này (px) thì bỏ, không dựng thêm lát. */
 const MIN_SLICE_PX = 1;
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
-import { loadPdfDocument, extractPdfStructuredText } from './pdfHelper.js';
+import { withPdfDocument, extractPdfStructuredText } from './pdfHelper.js';
 
 /**
- * Chuyển đổi tệp Word (.docx) sang PDF giữ nguyên 100% bố cục, hình ảnh, bảng biểu và font chữ Unicode
+ * Chuyển đổi tệp Word (.docx) sang PDF bằng cách dựng trang (docx-preview) rồi chụp ảnh.
+ * Bố cục gần giống bản gốc nhưng chữ trong PDF là ảnh, không bôi đen/tìm kiếm được.
  */
 export async function convertDocxToPdf(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(10);
@@ -282,11 +283,11 @@ export async function convertDocxToPdf(file, _options = {}, onProgress = () => {
  */
 export async function convertPdfToDocx(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(20);
-  const pdfDoc = await loadPdfDocument(file);
-
-  if (onProgress) onProgress(40);
-  const pagesData = await extractPdfStructuredText(pdfDoc, (p) => {
-    if (onProgress) onProgress(40 + Math.round(p * 0.4));
+  const pagesData = await withPdfDocument(file, (pdfDoc) => {
+    if (onProgress) onProgress(40);
+    return extractPdfStructuredText(pdfDoc, (p) => {
+      if (onProgress) onProgress(40 + Math.round(p * 0.4));
+    });
   });
 
   const children = [];
@@ -388,8 +389,7 @@ export async function convertDocxToTxt(file, _options = {}, onProgress = () => {
  */
 export async function convertPdfToTxt(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(20);
-  const pdfDoc = await loadPdfDocument(file);
-  const pagesData = await extractPdfStructuredText(pdfDoc, onProgress);
+  const pagesData = await withPdfDocument(file, (pdfDoc) => extractPdfStructuredText(pdfDoc, onProgress));
 
   let fullText = '';
   for (const page of pagesData) {

@@ -58,8 +58,20 @@ export const CardCanvas = ({
   const [marqueeBox, setMarqueeBox] = useState(null);
 
   // Mouse Down to start moving an element (or multi-selection group)
+  // Pointer events (mouse + touch + pen) with pointer capture so a drag keeps tracking
+  // even when the finger/cursor leaves the element.
+  const capturePointer = (e) => {
+    try {
+      e.currentTarget?.setPointerCapture?.(e.pointerId);
+    } catch {
+      // ignore (e.g. synthetic events without an active pointer)
+    }
+  };
+
   const handleMouseDownOnElement = (el, e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
     e.stopPropagation();
+    capturePointer(e);
     hasMovedRef.current = false;
     const isMultiModifier = e.shiftKey || e.metaKey || e.ctrlKey;
     const isAlreadySelected = effectiveSelectedIds.includes(el.id);
@@ -123,12 +135,15 @@ export const CardCanvas = ({
   // Mouse Down on canvas background to start marquee selection
   const handleCanvasMouseDown = (e) => {
     if (e.target.closest("button, input, select, textarea, [data-handle]")) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
 
     const isMultiModifier = e.shiftKey || e.metaKey || e.ctrlKey;
     if (!isMultiModifier) {
       onSelectElement?.(null);
       onSelectElements?.([]);
     }
+    // On touch screens a background drag scrolls the canvas instead of drawing a marquee
+    if (e.pointerType === "touch") return;
 
     setMarqueeBox({
       startX: e.clientX,
@@ -144,6 +159,11 @@ export const CardCanvas = ({
   const handleStartResize = useCallback(
     (el, handle, e) => {
       e.stopPropagation();
+      try {
+        e.currentTarget?.setPointerCapture?.(e.pointerId);
+      } catch {
+        // ignore
+      }
       hasResizedRef.current = false;
       onSelectElement?.(el.id);
       onSelectElements?.([el.id]);
@@ -316,12 +336,14 @@ export const CardCanvas = ({
     };
 
     if (draggingElId || resizingState || marqueeBox?.active) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener("pointermove", handleMouseMove);
+      window.addEventListener("pointerup", handleMouseUp);
+      window.addEventListener("pointercancel", handleMouseUp);
     }
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("pointermove", handleMouseMove);
+      window.removeEventListener("pointerup", handleMouseUp);
+      window.removeEventListener("pointercancel", handleMouseUp);
     };
   }, [
     draggingElId,
@@ -385,7 +407,7 @@ export const CardCanvas = ({
   return (
     <div
       ref={containerRef}
-      onMouseDown={handleCanvasMouseDown}
+      onPointerDown={handleCanvasMouseDown}
       className="w-full h-full min-h-[520px] bg-surface-canvas overflow-auto flex items-center justify-center p-8 relative select-none"
     >
       {/* 1. TOP FLOATING QUICK-FLIP & UNDO/REDO TOOLBAR */}
@@ -405,7 +427,7 @@ export const CardCanvas = ({
                 ? "text-on-surface hover:bg-surface-container hover:text-primary cursor-pointer shadow-xs"
                 : "text-outline/40 cursor-not-allowed opacity-50"
             }`}
-            title="Hoàn tác (Ctrl/Cmd+Z)"
+            title={`${t("undo")} (Ctrl/Cmd+Z)`}
           >
             <Undo2 className="w-3.5 h-3.5" />
           </button>
@@ -422,7 +444,7 @@ export const CardCanvas = ({
                 ? "text-on-surface hover:bg-surface-container hover:text-primary cursor-pointer shadow-xs"
                 : "text-outline/40 cursor-not-allowed opacity-50"
             }`}
-            title="Làm lại (Ctrl/Cmd+Y)"
+            title={`${t("redo")} (Ctrl/Cmd+Y)`}
           >
             <Redo2 className="w-3.5 h-3.5" />
           </button>
@@ -620,7 +642,7 @@ export const CardCanvas = ({
             return (
               <div
                 key={el.id}
-                onMouseDown={(e) => handleMouseDownOnElement(el, e)}
+                onPointerDown={(e) => handleMouseDownOnElement(el, e)}
               >
                 <ElementRenderer
                   element={el}

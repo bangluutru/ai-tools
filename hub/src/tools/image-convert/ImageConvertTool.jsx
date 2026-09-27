@@ -3,74 +3,76 @@ import confetti from 'canvas-confetti';
 import {
   UploadCloud,
   ImageIcon,
-  Sliders,
-  Sparkles,
   Zap,
   CheckCircle2,
   AlertCircle,
   Archive,
   Download,
-  Trash2,
   RefreshCw,
   Eye,
-  Layers,
   ShieldCheck,
   ChevronRight,
-  Maximize2,
   MoveHorizontal,
+  Loader2,
   X
 } from 'lucide-react';
-import { convertImage, SUPPORTED_TARGET_FORMATS } from '@ai-tools/core/utils/image/converter.js';
+import {
+  convertImage,
+  getEncoderSupport,
+  SUPPORTED_TARGET_FORMATS,
+} from '@ai-tools/core/utils/image/converter.js';
 import { downloadAllAsZip } from '@ai-tools/core/utils/image/zipExporter.js';
+import { formatSizeChange } from '@ai-tools/core/utils/image/formatters.js';
 import { IMAGE_LIMITS, validateImageFiles } from '@ai-tools/core/utils/image/limits.js';
 import { verifyDocumentSignature } from '@ai-tools/core/utils/documentFiles.js';
+import { IMAGE_CONVERT_I18N, fmt } from './i18n.js';
 
-const getFormatLabel = (fmt) => {
-  switch (fmt?.toLowerCase()) {
-    case 'avif':
-      return 'AVIF';
-    case 'jpg':
-    case 'jpeg':
-      return 'JPEG';
-    case 'webp':
-    default:
-      return 'WebP';
-  }
+const getFormatLabel = (format) =>
+  SUPPORTED_TARGET_FORMATS[String(format || '').toLowerCase()]?.label || 'WebP';
+
+const isDone = (item) => item.status === 'completed' || item.status === 'done';
+
+const revokeItemUrls = (item) => {
+  if (!item) return;
+  if (item.outputUrl) URL.revokeObjectURL(item.outputUrl);
+  if (item.webpUrl && item.webpUrl !== item.outputUrl) URL.revokeObjectURL(item.webpUrl);
+  if (item.originalUrl) URL.revokeObjectURL(item.originalUrl);
 };
 
-const getTargetExtension = (fmt) => {
-  switch (fmt?.toLowerCase()) {
-    case 'avif':
-      return '.avif';
-    case 'jpg':
-    case 'jpeg':
-      return '.jpg';
-    case 'webp':
-    default:
-      return '.webp';
-  }
-};
+const resolveMaxWidth = (resizeMode) =>
+  resizeMode === '1920' ? 1920 : resizeMode === '1200' ? 1200 : '';
 
 export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
-  const [settings, setSettings] = useState({
+  const t = IMAGE_CONVERT_I18N[displayLang === 'en' ? 'en' : displayLang === 'ja' ? 'ja' : 'vi'];
+
+  // Định dạng trình duyệt thực sự mã hoá được (Safari không mã hoá WebP qua canvas).
+  const [encoderSupport] = useState(() =>
+    typeof document === 'undefined' ? { webp: true, jpg: true, avif: true } : getEncoderSupport()
+  );
+
+  const [settings, setSettings] = useState(() => ({
     quality: 0.85,
     maxWidth: '',
     maxHeight: '',
     keepAspectRatio: true,
-    targetFormat: 'webp', // webp | avif | jpg
+    targetFormat: encoderSupport.webp ? 'webp' : 'jpg', // webp | avif | jpg
     resizeMode: 'original' // original | 1920 | 1200
-  });
+  }));
 
   const [images, setImages] = useState([]);
   const [selectedImageId, setSelectedImageId] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isZipping, setIsZipping] = useState(false);
   const [splitPos, setSplitPos] = useState(50);
   const [notice, setNotice] = useState('');
   const [progress, setProgress] = useState({ completed: 0, total: 0 });
   const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef(null);
+  // Mỗi lần xoá tất cả / rời trang tăng "thế hệ"; vòng lặp đang chạy thấy lệch thì dừng.
+  const runGenerationRef = useRef(0);
   const cancelRequestedRef = useRef(false);
+  const deletedIdsRef = useRef(new Set());
   const imagesRef = useRef(images);
 
   useEffect(() => {
@@ -78,11 +80,9 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
   }, [images]);
 
   useEffect(() => () => {
-    imagesRef.current.forEach((image) => {
-      if (image.outputUrl) URL.revokeObjectURL(image.outputUrl);
-      if (image.webpUrl && image.webpUrl !== image.outputUrl) URL.revokeObjectURL(image.webpUrl);
-      if (image.originalUrl) URL.revokeObjectURL(image.originalUrl);
-    });
+    cancelRequestedRef.current = true;
+    runGenerationRef.current += 1;
+    imagesRef.current.forEach(revokeItemUrls);
   }, []);
 
   const activeImage = useMemo(() => {
@@ -91,19 +91,17 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
   }, [images, selectedImageId]);
 
   const stats = useMemo(() => {
-    const totalOriginal = images.reduce((acc, cur) => acc + (cur.originalSize || 0), 0);
-    const convertedItems = images.filter(
-      (item) => item.status === 'completed' || item.status === 'done'
-    );
+    // So sánh trên CÙNG một tập tệp: chỉ các tệp đã nén xong.
+    const convertedItems = images.filter(isDone);
+    const totalOriginal = convertedItems.reduce((acc, cur) => acc + (cur.originalSize || 0), 0);
     const totalOutput = convertedItems.reduce(
       (acc, cur) => acc + (cur.outputSize ?? cur.webpSize ?? 0),
       0
     );
-    const savedBytes = convertedItems.length > 0 ? totalOriginal - totalOutput : 0;
+    const savedBytes = totalOriginal - totalOutput;
     const savedPercent =
-      totalOriginal > 0 && convertedItems.length > 0
-        ? Math.round((savedBytes / totalOriginal) * 100)
-        : 0;
+      totalOriginal > 0 ? Math.round((savedBytes / totalOriginal) * 1000) / 10 : 0;
+    const outputFormats = [...new Set(convertedItems.map((item) => item.targetFormat))];
 
     return {
       totalOriginal,
@@ -111,6 +109,7 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
       totalWebp: totalOutput, // backward-compat alias
       savedBytes,
       savedPercent,
+      outputFormats,
       completedCount: convertedItems.length,
       totalCount: images.length,
     };
@@ -123,22 +122,83 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
+  /** Chạy tuần tự danh sách item; bỏ kết quả của item đã bị xoá và thu hồi URL của nó. */
+  const runConversions = async (items, conversionSettings) => {
+    const generation = runGenerationRef.current;
+    cancelRequestedRef.current = false;
+    setIsProcessing(true);
+    setProgress({ completed: 0, total: items.length });
+
+    let successCount = 0;
+    for (const item of items) {
+      if (cancelRequestedRef.current || generation !== runGenerationRef.current) break;
+      if (deletedIdsRef.current.has(item.id) || !item.originalFile) {
+        setProgress((curr) => ({ ...curr, completed: curr.completed + 1 }));
+        continue;
+      }
+      try {
+        const result = await convertImage(item.originalFile, conversionSettings);
+        const stale =
+          generation !== runGenerationRef.current || deletedIdsRef.current.has(item.id);
+        if (stale) {
+          // Kết quả về muộn cho một item đã bị xoá: không giữ URL mồ côi.
+          URL.revokeObjectURL(result.outputUrl);
+          continue;
+        }
+        setImages((prev) =>
+          prev.map((img) => (img.id === item.id ? { ...img, ...result, id: item.id } : img))
+        );
+        successCount++;
+      } catch (err) {
+        if (generation === runGenerationRef.current) {
+          setImages((prev) =>
+            prev.map((img) =>
+              img.id === item.id
+                ? { ...img, status: 'error', errorMessage: err.message || t.convertError }
+                : img
+            )
+          );
+        }
+      }
+      setProgress((current) => ({ ...current, completed: current.completed + 1 }));
+    }
+
+    if (generation === runGenerationRef.current) {
+      setIsProcessing(false);
+      // Item bị dừng giữa chừng không còn "đang nén".
+      setImages((prev) =>
+        prev.map((img) => (img.status === 'processing' ? { ...img, status: 'cancelled' } : img))
+      );
+    }
+
+    if (successCount > 0) {
+      try {
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+      } catch {
+        // decorative
+      }
+    }
+  };
+
+  const buildConversionSettings = (current) => ({
+    ...current,
+    targetFormat: current.targetFormat || 'webp',
+    maxWidth: resolveMaxWidth(current.resizeMode),
+  });
+
   const processFiles = async (fileList, currentSettings = settings) => {
+    if (isProcessing) return;
     const validation = validateImageFiles(fileList, imagesRef.current);
     const problems = validation.rejected.map(({ file, reason }) => `${file.name}: ${reason}`);
 
     const accepted = [];
     for (const file of validation.accepted) {
       if (await verifyDocumentSignature(file)) accepted.push(file);
-      else problems.push(`${file.name}: nội dung không phải ảnh hợp lệ`);
+      else problems.push(`${file.name}: ${t.notImage}`);
     }
 
     setNotice(problems.join(' • '));
     if (accepted.length === 0) return;
-
-    setIsProcessing(true);
-    cancelRequestedRef.current = false;
-    setProgress({ completed: 0, total: accepted.length });
 
     const newItems = accepted.map((file) => ({
       id: crypto.randomUUID(),
@@ -149,150 +209,67 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
       status: 'processing',
     }));
 
-    setImages((prev) => {
-      const updated = [...newItems, ...prev];
-      if (!selectedImageId && newItems.length > 0) {
-        setSelectedImageId(newItems[0].id);
-      }
-      return updated;
-    });
+    setImages((prev) => [...newItems, ...prev]);
+    if (!selectedImageId && newItems.length > 0) setSelectedImageId(newItems[0].id);
 
-    let successCount = 0;
-    for (const item of newItems) {
-      if (cancelRequestedRef.current) break;
-      try {
-        const resizeSettings = {
-          ...currentSettings,
-          targetFormat: currentSettings.targetFormat || 'webp',
-          maxWidth:
-            currentSettings.resizeMode === '1920'
-              ? 1920
-              : currentSettings.resizeMode === '1200'
-              ? 1200
-              : '',
-        };
-        const result = await convertImage(item.originalFile, resizeSettings);
-        setImages((prev) =>
-          prev.map((img) => (img.id === item.id ? { ...img, ...result, id: item.id } : img))
-        );
-        successCount++;
-      } catch (err) {
-        setImages((prev) =>
-          prev.map((img) =>
-            img.id === item.id
-              ? { ...img, status: 'error', errorMessage: err.message || 'Lỗi chuyển đổi' }
-              : img
-          )
-        );
-      }
-      setProgress((current) => ({ ...current, completed: current.completed + 1 }));
-    }
-
-    setIsProcessing(false);
-
-    if (successCount > 0) {
-      try {
-        confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
-      } catch {
-        // decorative
-      }
-    }
+    await runConversions(newItems, buildConversionSettings(currentSettings));
   };
 
   const handleApplyToAll = async () => {
     if (images.length === 0 || isProcessing) return;
-    setIsProcessing(true);
-    cancelRequestedRef.current = false;
-    setProgress({ completed: 0, total: images.length });
+    const targets = imagesRef.current.filter((img) => img.originalFile);
 
-    // Mark all as processing and revoke old output URLs
+    // Thu hồi output cũ trước khi nén lại (ngoài updater để không chạy hai lần).
+    imagesRef.current.forEach((img) => {
+      if (img.outputUrl) URL.revokeObjectURL(img.outputUrl);
+      if (img.webpUrl && img.webpUrl !== img.outputUrl) URL.revokeObjectURL(img.webpUrl);
+    });
     setImages((prev) =>
-      prev.map((img) => {
-        if (img.outputUrl) URL.revokeObjectURL(img.outputUrl);
-        if (img.webpUrl && img.webpUrl !== img.outputUrl) URL.revokeObjectURL(img.webpUrl);
-        return {
-          ...img,
-          status: 'processing',
-          outputUrl: null,
-          webpUrl: null,
-          outputBlob: null,
-          webpBlob: null,
-        };
-      })
+      prev.map((img) => ({
+        ...img,
+        status: 'processing',
+        outputUrl: null,
+        webpUrl: null,
+        outputBlob: null,
+        webpBlob: null,
+        fallbackFrom: null,
+      }))
     );
 
-    const resizeSettings = {
-      ...settings,
-      targetFormat: settings.targetFormat || 'webp',
-      maxWidth:
-        settings.resizeMode === '1920'
-          ? 1920
-          : settings.resizeMode === '1200'
-          ? 1200
-          : '',
-    };
-
-    let successCount = 0;
-    for (const item of imagesRef.current) {
-      if (cancelRequestedRef.current) break;
-      if (!item.originalFile) {
-        setProgress((curr) => ({ ...curr, completed: curr.completed + 1 }));
-        continue;
-      }
-      try {
-        const result = await convertImage(item.originalFile, resizeSettings);
-        setImages((prev) =>
-          prev.map((img) => (img.id === item.id ? { ...img, ...result, id: item.id } : img))
-        );
-        successCount++;
-      } catch (err) {
-        setImages((prev) =>
-          prev.map((img) =>
-            img.id === item.id
-              ? { ...img, status: 'error', errorMessage: err.message || 'Lỗi chuyển đổi' }
-              : img
-          )
-        );
-      }
-      setProgress((curr) => ({ ...curr, completed: curr.completed + 1 }));
-    }
-
-    setIsProcessing(false);
-
-    if (successCount > 0) {
-      try {
-        confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
-      } catch {
-        // decorative
-      }
-    }
+    await runConversions(targets, buildConversionSettings(settings));
   };
 
   const handleDownloadZip = async () => {
-    const ext = getTargetExtension(settings.targetFormat).replace('.', '');
-    await downloadAllAsZip(images, `${ext}-images.zip`);
+    if (isZipping) return;
+    const formats = stats.outputFormats;
+    const label = formats.length === 1 ? SUPPORTED_TARGET_FORMATS[formats[0]]?.ext.replace('.', '') || 'images' : 'images';
+    setIsZipping(true);
+    try {
+      await downloadAllAsZip(images, `${label}-images.zip`);
+    } catch (err) {
+      setNotice(`${t.zipError}${err?.message ? `: ${err.message}` : ''}`);
+    } finally {
+      setIsZipping(false);
+    }
   };
 
   const handleClearAll = () => {
-    images.forEach((img) => {
-      if (img.outputUrl) URL.revokeObjectURL(img.outputUrl);
-      if (img.webpUrl && img.webpUrl !== img.outputUrl) URL.revokeObjectURL(img.webpUrl);
-      if (img.originalUrl) URL.revokeObjectURL(img.originalUrl);
-    });
+    cancelRequestedRef.current = true;
+    runGenerationRef.current += 1;
+    images.forEach(revokeItemUrls);
+    deletedIdsRef.current = new Set();
     setImages([]);
     setSelectedImageId(null);
     setNotice('');
+    setIsProcessing(false);
+    setProgress({ completed: 0, total: 0 });
   };
 
   const handleDeleteItem = (id, e) => {
     if (e) e.stopPropagation();
+    deletedIdsRef.current.add(id);
+    revokeItemUrls(imagesRef.current.find((i) => i.id === id));
     setImages((prev) => {
-      const target = prev.find((i) => i.id === id);
-      if (target) {
-        if (target.outputUrl) URL.revokeObjectURL(target.outputUrl);
-        if (target.webpUrl && target.webpUrl !== target.outputUrl) URL.revokeObjectURL(target.webpUrl);
-        if (target.originalUrl) URL.revokeObjectURL(target.originalUrl);
-      }
       const next = prev.filter((i) => i.id !== id);
       if (selectedImageId === id) {
         setSelectedImageId(next[0]?.id || null);
@@ -304,26 +281,52 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
+    if (isProcessing) return;
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processFiles(Array.from(e.dataTransfer.files));
     }
   };
+
+  const unsupportedFormats = ['webp', 'avif'].filter((f) => !encoderSupport[f]).map(getFormatLabel);
+
+  const formatOptions = [
+    { id: 'webp', name: 'WebP', sub: t.fmtWebpSub },
+    { id: 'avif', name: 'AVIF', sub: t.fmtAvifSub },
+    { id: 'jpg', name: t.fmtJpgName, sub: t.fmtJpgSub },
+  ];
+
+  const activeWarnings = [];
+  if (activeImage && isDone(activeImage)) {
+    if (activeImage.fallbackFrom) {
+      activeWarnings.push(
+        fmt(t.warnFallback, { from: getFormatLabel(activeImage.fallbackFrom), to: getFormatLabel(activeImage.targetFormat) })
+      );
+    }
+    if (activeImage.animatedSourceFlattened) activeWarnings.push(t.warnAnimated);
+    if (activeImage.downscaledForDevice && activeImage.targetDimensions) {
+      activeWarnings.push(
+        fmt(t.warnDownscaled, { w: activeImage.targetDimensions.width, h: activeImage.targetDimensions.height })
+      );
+    }
+  }
+
+  const activeOutputUrl = activeImage?.outputUrl || activeImage?.webpUrl;
+  const activeFormatLabel = activeImage && isDone(activeImage) ? getFormatLabel(activeImage.targetFormat) : getFormatLabel(settings.targetFormat);
+  const outputFormatsLabel = stats.outputFormats.map(getFormatLabel).join(' / ') || getFormatLabel(settings.targetFormat);
 
   return (
     <div className="max-w-[1240px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col text-on-surface">
       {/* 1. Breadcrumb Navigation */}
       <nav className="flex items-center gap-space-2 text-on-surface-variant font-label-md text-label-md mb-space-4">
         <a className="hover:text-primary transition-colors flex items-center gap-1" href="#">
-          <span>Trang chủ</span>
+          <span>{t.home}</span>
         </a>
         <ChevronRight size={14} className="text-outline shrink-0" />
         <a className="hover:text-primary transition-colors" href="#">
-          Hình ảnh & WebP
+          {t.category}
         </a>
         <ChevronRight size={14} className="text-outline shrink-0" />
-        <span className="text-primary font-semibold">
-          {displayLang === 'en' ? 'Multi-Purpose Image Compressor' : displayLang === 'ja' ? '画像圧縮・変換' : 'Nén Ảnh Đa Năng'}
-        </span>
+        <span className="text-primary font-semibold">{t.title}</span>
       </nav>
 
       {/* 2. Tool Header & Privacy Assurance */}
@@ -334,10 +337,10 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
           </div>
           <div className="space-y-1">
             <h1 className="font-headline-lg text-xl sm:text-2xl text-on-surface font-semibold tracking-tight">
-              {displayLang === 'en' ? 'Multi-Purpose Image Compressor' : displayLang === 'ja' ? '画像圧縮・変換' : 'Nén Ảnh Đa Năng'}
+              {t.title}
             </h1>
             <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant max-w-2xl leading-relaxed">
-              Chuyển đổi định dạng PNG, JPG sang WebP thế hệ mới và nén tối ưu dung lượng hàng loạt trực tiếp trong trình duyệt.
+              {t.subtitle}
             </p>
           </div>
         </div>
@@ -345,12 +348,12 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
         {/* Subtle Privacy Note */}
         <div className="z-10 flex items-center gap-1.5 text-xs text-outline shrink-0">
           <ShieldCheck size={15} className="text-secondary shrink-0" />
-          <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
+          <span>{t.privacy}</span>
         </div>
       </section>
 
       {notice && (
-        <div className="mb-space-4 rounded-xl border border-tertiary-container/30 bg-tertiary-container/10 px-4 py-3 text-xs text-tertiary flex items-center gap-2">
+        <div role="alert" className="mb-space-4 rounded-xl border border-tertiary-container/30 bg-tertiary-container/10 px-4 py-3 text-xs text-tertiary flex items-center gap-2">
           <AlertCircle size={16} className="shrink-0" />
           <span>{notice}</span>
         </div>
@@ -367,10 +370,10 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                 <span className="w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center font-label-sm text-label-sm font-bold">
                   1
                 </span>
-                <h2 className="font-title-sm text-title-sm text-on-surface">Tải tệp tin nguồn</h2>
+                <h2 className="font-title-sm text-title-sm text-on-surface">{t.step1}</h2>
               </div>
               <span className="font-label-sm text-label-sm text-on-surface-variant">
-                {images.length} / {IMAGE_LIMITS.maxFiles} tệp đã chọn
+                {fmt(t.filesSelected, { n: images.length, max: IMAGE_LIMITS.maxFiles })}
               </span>
             </div>
 
@@ -380,7 +383,8 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
               type="file"
               accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
               multiple
-              aria-label="Tải ảnh lên"
+              disabled={isProcessing}
+              aria-label={t.uploadAria}
               className="hidden"
               onChange={(e) => {
                 if (e.target.files?.length) processFiles(Array.from(e.target.files));
@@ -388,23 +392,46 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
               }}
             />
             <div
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              role="button"
+              tabIndex={isProcessing ? -1 : 0}
+              aria-disabled={isProcessing}
+              onClick={() => !isProcessing && fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (!isProcessing && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              onDragOver={(e) => { e.preventDefault(); if (!isProcessing) setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
-              className={`bg-surface-subtle border-2 border-dashed rounded-xl p-space-8 text-center cursor-pointer flex flex-col items-center justify-center space-y-space-3 group relative overflow-hidden transition-all ${
-                isDragging ? 'border-primary-container bg-surface-container-high' : 'border-border-subtle hover:bg-surface-container-high hover:border-primary-container/60'
+              className={`bg-surface-subtle border-2 border-dashed rounded-xl p-space-8 text-center flex flex-col items-center justify-center space-y-space-3 group relative overflow-hidden transition-all ${
+                isProcessing
+                  ? 'opacity-60 cursor-not-allowed border-border-subtle'
+                  : isDragging
+                    ? 'cursor-pointer border-primary-container bg-surface-container-high'
+                    : 'cursor-pointer border-border-subtle hover:bg-surface-container-high hover:border-primary-container/60'
               }`}
             >
               <div className="w-12 h-12 rounded-full bg-surface-container border border-border-subtle flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                <UploadCloud size={24} className="text-brand-cyan-bright" />
+                {isProcessing ? (
+                  <Loader2 size={24} className="text-brand-cyan-bright animate-spin" />
+                ) : (
+                  <UploadCloud size={24} className="text-brand-cyan-bright" />
+                )}
               </div>
               <div className="space-y-1">
                 <p className="font-title-sm text-body-md text-on-surface">
-                  Kéo thả ảnh hoặc <span className="text-primary-container hover:underline font-semibold">bấm để chọn file</span>
+                  {isProcessing ? (
+                    t.dropBusy
+                  ) : (
+                    <>
+                      {t.dropTitle} <span className="text-primary-container hover:underline font-semibold">{t.dropAction}</span>
+                    </>
+                  )}
                 </p>
                 <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  Hỗ trợ PNG, JPG, WEBP, AVIF (Tối đa {Math.round(IMAGE_LIMITS.maxFileBytes / 1024 / 1024)}MB/file)
+                  {fmt(t.dropHint, { mb: Math.round(IMAGE_LIMITS.maxFileBytes / 1024 / 1024) })}
                 </p>
               </div>
             </div>
@@ -441,16 +468,21 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                               {formatSize(item.originalSize)}
                             </span>
                             <span className="w-1 h-1 rounded-full bg-outline" />
-                            {item.status === 'completed' || item.status === 'done' ? (
-                              <span className="font-label-sm text-label-sm text-secondary">
-                                {formatSize(item.outputSize ?? item.webpSize)} ({item.savedPercent > 0 ? `-${item.savedPercent}%` : item.savedPercent < 0 ? `+${Math.abs(item.savedPercent)}%` : '0%'})
+                            {isDone(item) ? (
+                              <span className={`font-label-sm text-label-sm ${item.savedPercent < 0 ? 'text-tertiary' : 'text-secondary'}`}>
+                                {getFormatLabel(item.targetFormat)} {formatSize(item.outputSize ?? item.webpSize)} ({formatSizeChange(item.savedPercent)})
+                                {(item.fallbackFrom || item.animatedSourceFlattened || item.downscaledForDevice) && (
+                                  <AlertCircle size={12} className="inline ml-1 text-tertiary align-[-2px]" />
+                                )}
                               </span>
                             ) : item.status === 'processing' ? (
                               <span className="font-label-sm text-label-sm text-brand-cyan-bright animate-pulse">
-                                Đang nén...
+                                {t.compressing}
                               </span>
+                            ) : item.status === 'cancelled' ? (
+                              <span className="font-label-sm text-label-sm text-outline">—</span>
                             ) : (
-                              <span className="font-label-sm text-label-sm text-error">Lỗi</span>
+                              <span className="font-label-sm text-label-sm text-error" title={item.errorMessage}>{t.failed}</span>
                             )}
                           </div>
                         </div>
@@ -459,7 +491,8 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                         type="button"
                         onClick={(e) => handleDeleteItem(item.id, e)}
                         className="p-space-1 text-on-surface-variant hover:text-error transition-colors rounded"
-                        title="Xóa tệp"
+                        title={t.deleteFile}
+                        aria-label={t.deleteFile}
                       >
                         <X size={16} />
                       </button>
@@ -477,57 +510,49 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                 <span className="w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center font-label-sm text-label-sm font-bold">
                   2
                 </span>
-                <h2 className="font-title-sm text-title-sm text-on-surface">Cấu hình nén & Định dạng đích</h2>
+                <h2 className="font-title-sm text-title-sm text-on-surface">{t.step2}</h2>
               </div>
               <span className="font-label-sm text-label-sm text-secondary flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
-                Sẵn sàng
+                {t.ready}
               </span>
             </div>
 
             {/* Target Output Format Toggle */}
             <div className="space-y-space-2">
-              <label className="font-label-md text-label-md text-on-surface-variant uppercase">
-                ĐỊNH DẠNG ĐẦU RA
-              </label>
+              <span className="font-label-md text-label-md text-on-surface-variant uppercase">
+                {t.outputFormat}
+              </span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-2">
-                <button
-                  type="button"
-                  onClick={() => setSettings((s) => ({ ...s, targetFormat: 'webp' }))}
-                  className={`flex flex-col items-center py-space-3 px-space-2 rounded-lg font-title-sm text-body-md transition-all ${
-                    settings.targetFormat === 'webp'
-                      ? 'bg-primary-container text-on-primary-container font-semibold shadow-sm'
-                      : 'bg-surface-subtle hover:bg-surface-container-high text-on-surface'
-                  }`}
-                >
-                  <span>WebP</span>
-                  <span className={`font-label-sm text-[10px] ${settings.targetFormat === 'webp' ? 'text-white font-medium' : 'text-on-surface-variant'}`}>Phổ biến nhất</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSettings((s) => ({ ...s, targetFormat: 'avif' }))}
-                  className={`flex flex-col items-center py-space-3 px-space-2 rounded-lg font-title-sm text-body-md transition-all ${
-                    settings.targetFormat === 'avif'
-                      ? 'bg-primary-container text-on-primary-container font-semibold shadow-sm'
-                      : 'bg-surface-subtle hover:bg-surface-container-high text-on-surface'
-                  }`}
-                >
-                  <span>AVIF</span>
-                  <span className={`font-label-sm text-[10px] ${settings.targetFormat === 'avif' ? 'text-white font-medium' : 'text-on-surface-variant'}`}>Tối đa nén</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSettings((s) => ({ ...s, targetFormat: 'jpg' }))}
-                  className={`flex flex-col items-center py-space-3 px-space-2 rounded-lg font-title-sm text-body-md transition-all ${
-                    settings.targetFormat === 'jpg'
-                      ? 'bg-primary-container text-on-primary-container font-semibold shadow-sm'
-                      : 'bg-surface-subtle hover:bg-surface-container-high text-on-surface'
-                  }`}
-                >
-                  <span>JPEG Tối ưu</span>
-                  <span className={`font-label-sm text-[10px] ${settings.targetFormat === 'jpg' ? 'text-white font-medium' : 'text-on-surface-variant'}`}>Tương thích</span>
-                </button>
+                {formatOptions.map((opt) => {
+                  const supported = encoderSupport[opt.id] !== false;
+                  const selected = settings.targetFormat === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      disabled={!supported}
+                      aria-pressed={selected}
+                      onClick={() => setSettings((s) => ({ ...s, targetFormat: opt.id }))}
+                      className={`flex flex-col items-center py-space-3 px-space-2 rounded-lg font-title-sm text-body-md transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                        selected
+                          ? 'bg-primary-container text-on-primary-container font-semibold shadow-sm'
+                          : 'bg-surface-subtle hover:bg-surface-container-high text-on-surface'
+                      }`}
+                    >
+                      <span>{opt.name}</span>
+                      <span className={`font-label-sm text-[10px] ${selected ? 'text-white font-medium' : 'text-on-surface-variant'}`}>
+                        {supported ? opt.sub : t.fmtUnsupported}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
+              {unsupportedFormats.length > 0 && (
+                <p className="font-body-sm text-[11px] text-tertiary">
+                  {fmt(t.formatUnsupportedNote, { list: unsupportedFormats.join(', ') })}
+                </p>
+              )}
             </div>
 
             {/* Quality Control Slider */}
@@ -535,10 +560,10 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <label htmlFor="quality-slider" className="font-label-md text-label-md text-on-surface-variant uppercase cursor-pointer">
-                    MỨC ĐỘ CHẤT LƯỢNG (QUALITY)
+                    {t.quality}
                   </label>
                   <span className="px-space-1 py-[1px] bg-secondary text-on-secondary font-label-sm text-label-sm font-semibold rounded">
-                    Khuyên Dùng
+                    {t.recommended}
                   </span>
                 </div>
                 <span className="font-label-md text-label-md text-primary font-bold">
@@ -550,83 +575,72 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                 type="range"
                 min="40"
                 max="100"
-                aria-label="Mức độ chất lượng nén ảnh"
+                aria-label={t.qualityAria}
                 value={Math.round(settings.quality * 100)}
                 onChange={(e) => setSettings((s) => ({ ...s, quality: Number(e.target.value) / 100 }))}
                 className="w-full accent-primary-container bg-surface-subtle h-2 rounded-lg cursor-pointer"
               />
               <div className="flex justify-between text-on-surface-variant font-label-sm text-label-sm">
-                <span>Siêu nhẹ (40%)</span>
-                <span>Cân bằng (85%)</span>
-                <span>Không suy hao (100%)</span>
+                <span>{t.qLow}</span>
+                <span>{t.qMid}</span>
+                <span>{t.qHigh}</span>
               </div>
             </div>
 
             {/* Resize Dimension Options */}
             <div className="space-y-space-2">
-              <label className="font-label-md text-label-md text-on-surface-variant uppercase">
-                THAY ĐỔI ĐỘ PHÂN GIẢI (RESIZE)
-              </label>
+              <span className="font-label-md text-label-md text-on-surface-variant uppercase">
+                {t.resize}
+              </span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-2">
-                <label className="flex items-center gap-space-2 p-space-3 bg-surface-subtle border border-border-subtle rounded-lg cursor-pointer hover:bg-surface-container-high transition-colors">
-                  <input
-                    type="radio"
-                    name="resizeMode"
-                    checked={settings.resizeMode === 'original'}
-                    onChange={() => setSettings((s) => ({ ...s, resizeMode: 'original' }))}
-                    className="accent-primary-container"
-                  />
-                  <div className="flex flex-col">
-                    <span className="font-title-sm text-body-md text-on-surface">Gốc</span>
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Giữ nguyên</span>
-                  </div>
-                </label>
-                <label className="flex items-center gap-space-2 p-space-3 bg-surface-subtle border border-border-subtle rounded-lg cursor-pointer hover:bg-surface-container-high transition-colors">
-                  <input
-                    type="radio"
-                    name="resizeMode"
-                    checked={settings.resizeMode === '1920'}
-                    onChange={() => setSettings((s) => ({ ...s, resizeMode: '1920' }))}
-                    className="accent-primary-container"
-                  />
-                  <div className="flex flex-col">
-                    <span className="font-title-sm text-body-md text-on-surface">Full HD</span>
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Tối đa 1920px</span>
-                  </div>
-                </label>
-                <label className="flex items-center gap-space-2 p-space-3 bg-surface-subtle border border-border-subtle rounded-lg cursor-pointer hover:bg-surface-container-high transition-colors">
-                  <input
-                    type="radio"
-                    name="resizeMode"
-                    checked={settings.resizeMode === '1200'}
-                    onChange={() => setSettings((s) => ({ ...s, resizeMode: '1200' }))}
-                    className="accent-primary-container"
-                  />
-                  <div className="flex flex-col">
-                    <span className="font-title-sm text-body-md text-on-surface">Web Content</span>
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">Tối đa 1200px</span>
-                  </div>
-                </label>
+                {[
+                  { id: 'original', name: t.resizeOriginal, sub: t.resizeOriginalSub },
+                  { id: '1920', name: 'Full HD', sub: fmt(t.resizeMax, { n: 1920 }) },
+                  { id: '1200', name: 'Web', sub: fmt(t.resizeMax, { n: 1200 }) },
+                ].map((opt) => (
+                  <label key={opt.id} className="flex items-center gap-space-2 p-space-3 bg-surface-subtle border border-border-subtle rounded-lg cursor-pointer hover:bg-surface-container-high transition-colors">
+                    <input
+                      type="radio"
+                      name="resizeMode"
+                      checked={settings.resizeMode === opt.id}
+                      onChange={() => setSettings((s) => ({ ...s, resizeMode: opt.id }))}
+                      className="accent-primary-container"
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-title-sm text-body-md text-on-surface">{opt.name}</span>
+                      <span className="font-body-sm text-body-sm text-on-surface-variant">{opt.sub}</span>
+                    </div>
+                  </label>
+                ))}
               </div>
             </div>
 
             {/* Primary Action Trigger */}
-            <div className="pt-space-2">
+            <div className="pt-space-2 flex gap-space-2">
               <button
                 type="button"
                 disabled={images.length === 0 || isProcessing}
                 onClick={handleApplyToAll}
-                className="w-full py-space-4 px-space-6 bg-primary-container hover:bg-brand-cyan-bright disabled:opacity-50 disabled:cursor-not-allowed text-on-primary-container font-title-sm text-title-sm font-semibold rounded-xl shadow-lg flex items-center justify-center gap-space-2 transition-all transform active:scale-[0.99] cursor-pointer"
+                className="flex-1 py-space-4 px-space-6 bg-primary-container hover:bg-brand-cyan-bright disabled:opacity-50 disabled:cursor-not-allowed text-on-primary-container font-title-sm text-title-sm font-semibold rounded-xl shadow-lg flex items-center justify-center gap-space-2 transition-all transform active:scale-[0.99] cursor-pointer"
               >
                 <Zap size={20} />
                 <span>
                   {isProcessing
-                    ? `Đang xử lý ${progress.completed}/${progress.total}...`
+                    ? fmt(t.startBusy, { done: progress.completed, total: progress.total })
                     : images.length > 0
-                    ? `Bắt đầu nén ${images.length} ảnh (Áp dụng thiết lập)`
-                    : 'Tải ảnh lên để bắt đầu nén'}
+                    ? fmt(t.startN, { n: images.length })
+                    : t.startEmpty}
                 </span>
               </button>
+              {isProcessing && (
+                <button
+                  type="button"
+                  onClick={() => { cancelRequestedRef.current = true; }}
+                  className="px-space-4 rounded-xl border border-border-subtle bg-surface-subtle hover:bg-surface-container-high text-on-surface font-title-sm text-body-md"
+                >
+                  {t.cancel}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -638,14 +652,14 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Eye size={20} className="text-secondary" />
-                <h2 className="font-title-sm text-title-sm text-on-surface">So sánh chất lượng trực quan</h2>
+                <h2 className="font-title-sm text-title-sm text-on-surface">{t.compareTitle}</h2>
               </div>
-              <span className="font-label-sm text-label-sm text-secondary bg-secondary/10 border border-secondary/20 px-space-2 py-[2px] rounded">
-                1:1 Zoom Pixel
+              <span className="font-label-sm text-label-sm text-on-surface-variant bg-surface-subtle border border-border-subtle px-space-2 py-[2px] rounded">
+                {t.compareBadge}
               </span>
             </div>
 
-            {/* Split Slider Visual Box */}
+            {/* Split Slider Visual Box: hai lớp cùng kích thước, lớp "sau" được cắt bằng clip-path */}
             <div className="relative w-full h-[320px] rounded-xl overflow-hidden select-none bg-surface-subtle border border-border-subtle group">
               {activeImage?.originalUrl ? (
                 <>
@@ -653,32 +667,29 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                   <div
                     className="absolute inset-0 bg-contain bg-no-repeat bg-center"
                     style={{ backgroundImage: `url(${activeImage.originalUrl})` }}
-                  >
-                    <span className="absolute top-3 left-3 bg-surface-container-lowest/90 backdrop-blur-md px-space-2 py-1 rounded font-label-sm text-label-sm text-on-surface border border-border-subtle">
-                      GỐC: {formatSize(activeImage.originalSize)}
-                    </span>
-                  </div>
+                  />
 
-                  {/* After Image Layer (Compressed) */}
+                  {/* After Image Layer (Compressed) — identical box, clipped from the right */}
                   <div
-                    className="absolute inset-y-0 left-0 overflow-hidden"
-                    style={{ width: `${splitPos}%` }}
-                  >
-                    <div
-                      className="w-[600px] h-[320px] max-w-none bg-contain bg-no-repeat bg-center"
-                      style={{
-                        backgroundImage: `url(${activeImage.outputUrl || activeImage.webpUrl || activeImage.originalUrl})`,
-                      }}
-                    >
-                      <span className="absolute top-3 left-3 bg-primary-container text-on-primary-container px-space-2 py-1 rounded font-label-sm text-label-sm font-semibold shadow">
-                        {getFormatLabel(settings.targetFormat)} ({Math.round(settings.quality * 100)}%): {formatSize(activeImage.outputSize ?? activeImage.webpSize ?? activeImage.originalSize)}
-                      </span>
-                    </div>
-                  </div>
+                    className="absolute inset-0 bg-contain bg-no-repeat bg-center"
+                    style={{
+                      backgroundImage: `url(${activeOutputUrl || activeImage.originalUrl})`,
+                      clipPath: `inset(0 ${100 - splitPos}% 0 0)`,
+                    }}
+                  />
+
+                  <span className="absolute top-3 right-3 bg-surface-container-lowest/90 backdrop-blur-md px-space-2 py-1 rounded font-label-sm text-label-sm text-on-surface border border-border-subtle pointer-events-none">
+                    {t.original}: {formatSize(activeImage.originalSize)}
+                  </span>
+                  <span className="absolute top-3 left-3 bg-primary-container text-on-primary-container px-space-2 py-1 rounded font-label-sm text-label-sm font-semibold shadow pointer-events-none">
+                    {activeOutputUrl && isDone(activeImage)
+                      ? `${activeFormatLabel}: ${formatSize(activeImage.outputSize ?? activeImage.webpSize)} (${formatSizeChange(activeImage.savedPercent)})`
+                      : t.processingLayer}
+                  </span>
 
                   {/* Vertical Split Bar with Drag Indicator */}
                   <div
-                    className="absolute top-0 bottom-0 w-[2px] bg-surface-container-lowest shadow-sm cursor-ew-resize flex items-center justify-center pointer-events-none"
+                    className="absolute top-0 bottom-0 w-[2px] -translate-x-1/2 bg-surface-container-lowest shadow-sm flex items-center justify-center pointer-events-none"
                     style={{ left: `${splitPos}%` }}
                   >
                     <div className="w-8 h-8 rounded-full bg-surface-container-lowest text-on-surface border border-border-subtle flex items-center justify-center shadow-xl">
@@ -691,7 +702,7 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                     type="range"
                     min="0"
                     max="100"
-                    aria-label="Thanh trượt so sánh ảnh trước và sau"
+                    aria-label={t.compareAria}
                     value={splitPos}
                     onChange={(e) => setSplitPos(Number(e.target.value))}
                     className="absolute inset-0 opacity-0 cursor-ew-resize w-full h-full z-20"
@@ -700,16 +711,25 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 text-on-surface-variant">
                   <ImageIcon size={48} className="text-outline mb-2 opacity-50" />
-                  <p className="font-title-sm text-body-md text-on-surface">Chưa có ảnh nào được nạp</p>
-                  <p className="font-body-sm text-body-sm text-outline mt-1">
-                    Tải ảnh lên ở cột bên trái để so sánh chi tiết độ nét trước và sau khi nén
-                  </p>
+                  <p className="font-title-sm text-body-md text-on-surface">{t.emptyTitle}</p>
+                  <p className="font-body-sm text-body-sm text-outline mt-1">{t.emptyDesc}</p>
                 </div>
               )}
             </div>
 
+            {activeWarnings.length > 0 && (
+              <ul className="space-y-1 text-xs text-tertiary">
+                {activeWarnings.map((w) => (
+                  <li key={w} className="flex items-start gap-1.5">
+                    <AlertCircle size={14} className="shrink-0 mt-[1px]" />
+                    <span>{w}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
             <p className="font-body-sm text-body-sm text-on-surface-variant text-center">
-              Kéo thanh gạt sang trái/phải để kiểm chứng độ sắc nét vi mô giữa định dạng gốc và {getFormatLabel(settings.targetFormat)}.
+              {fmt(t.compareHint, { fmt: activeFormatLabel })}
             </p>
           </div>
 
@@ -718,49 +738,51 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
             <div className="flex items-center justify-between pb-space-2 border-b border-border-subtle/50">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-secondary" />
-                <h2 className="font-title-sm text-title-sm text-on-surface">Kết quả tối ưu dung lượng</h2>
+                <h2 className="font-title-sm text-title-sm text-on-surface">{t.resultTitle}</h2>
               </div>
               <span className="font-label-sm text-label-sm text-secondary bg-secondary/10 border border-secondary/20 px-space-2 py-[2px] rounded flex items-center gap-1">
-                <CheckCircle2 size={14} /> Hoàn tất {stats.completedCount}/{stats.totalCount}
+                <CheckCircle2 size={14} /> {fmt(t.done, { done: stats.completedCount, total: stats.totalCount })}
               </span>
             </div>
 
             {/* Inline Data Visual Graphic: Savings Ratio Chart */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-4">
               <div className="p-space-3 bg-surface-subtle border border-border-subtle rounded-lg flex flex-col justify-between">
-                <span className="font-label-md text-label-md text-on-surface-variant uppercase">DUNG LƯỢNG GỐC</span>
+                <span className="font-label-md text-label-md text-on-surface-variant uppercase">{t.originalSize}</span>
                 <span className="font-headline-md text-headline-md text-on-surface mt-1">
                   {formatSize(stats.totalOriginal)}
                 </span>
-                <span className="font-label-sm text-label-sm text-outline">{stats.totalCount} tệp tổng cộng</span>
+                <span className="font-label-sm text-label-sm text-outline">{fmt(t.originalSizeSub, { n: stats.completedCount })}</span>
               </div>
               <div className="p-space-3 bg-surface-subtle border border-border-subtle rounded-lg flex flex-col justify-between">
-                <span className="font-label-md text-label-md text-on-surface-variant uppercase">SAU KHI NÉN</span>
+                <span className="font-label-md text-label-md text-on-surface-variant uppercase">{t.outputSize}</span>
                 <span className="font-headline-md text-headline-md text-primary mt-1">
                   {formatSize(stats.totalOutput)}
                 </span>
                 <span className="font-label-sm text-label-sm text-primary">
-                  {getFormatLabel(settings.targetFormat)} Quality {Math.round(settings.quality * 100)}%
+                  {outputFormatsLabel}
                 </span>
               </div>
-              <div className="p-space-3 bg-secondary/10 border border-secondary/20 rounded-lg flex flex-col justify-between">
-                <span className="font-label-md text-label-md text-secondary uppercase">TIẾT KIỆM ĐƯỢC</span>
+              <div className={`p-space-3 rounded-lg flex flex-col justify-between border ${stats.savedBytes < 0 ? 'bg-tertiary/10 border-tertiary/20' : 'bg-secondary/10 border-secondary/20'}`}>
+                <span className={`font-label-md text-label-md uppercase ${stats.savedBytes < 0 ? 'text-tertiary' : 'text-secondary'}`}>{t.savings}</span>
                 <div className="flex items-baseline gap-1 mt-1">
-                  <span className="font-headline-md text-headline-md text-secondary font-bold">
-                    {stats.savedBytes >= 0 ? `-${stats.savedPercent}%` : `+${Math.abs(stats.savedPercent)}%`}
+                  <span className={`font-headline-md text-headline-md font-bold ${stats.savedBytes < 0 ? 'text-tertiary' : 'text-secondary'}`}>
+                    {formatSizeChange(stats.savedPercent)}
                   </span>
-                  <span className="font-label-sm text-label-sm text-secondary">
+                  <span className={`font-label-sm text-label-sm ${stats.savedBytes < 0 ? 'text-tertiary' : 'text-secondary'}`}>
                     ({stats.savedBytes >= 0 ? `-${formatSize(stats.savedBytes)}` : `+${formatSize(Math.abs(stats.savedBytes))}`})
                   </span>
                 </div>
-                <span className="font-label-sm text-label-sm text-secondary">Tốc độ tải web nhanh hơn</span>
+                <span className={`font-label-sm text-label-sm ${stats.savedBytes < 0 ? 'text-tertiary' : 'text-secondary'}`}>
+                  {stats.completedCount === 0 ? '—' : stats.savedBytes < 0 ? t.savingsBigger : t.savingsSmaller}
+                </span>
               </div>
             </div>
 
             {/* Pipeline Execution Track */}
             <div className="space-y-space-1">
               <div className="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
-                <span>Tiến trình hoàn thành</span>
+                <span>{t.progress}</span>
                 <span>
                   {stats.totalCount > 0 ? Math.round((stats.completedCount / stats.totalCount) * 100) : 0}% ({stats.completedCount}/{stats.totalCount})
                 </span>
@@ -779,25 +801,25 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
             <div className="flex flex-col sm:flex-row items-center gap-space-3 pt-space-2">
               <button
                 type="button"
-                disabled={stats.completedCount === 0}
+                disabled={stats.completedCount === 0 || isZipping}
                 onClick={handleDownloadZip}
                 className="w-full sm:flex-1 py-space-3 px-space-4 bg-secondary text-surface-canvas hover:bg-secondary/90 disabled:opacity-40 disabled:cursor-not-allowed font-title-sm text-title-sm font-semibold rounded-lg flex items-center justify-center gap-space-2 shadow-md transition-colors cursor-pointer"
               >
-                <Archive size={20} />
-                <span>Tải về tất cả (.ZIP)</span>
+                {isZipping ? <Loader2 size={20} className="animate-spin" /> : <Archive size={20} />}
+                <span>{isZipping ? t.zipping : t.downloadZip}</span>
               </button>
 
-              {(activeImage?.outputUrl || activeImage?.webpUrl) && (
+              {activeOutputUrl && isDone(activeImage) && (
                 <a
-                  href={activeImage.outputUrl || activeImage.webpUrl}
+                  href={activeOutputUrl}
                   download={
                     activeImage.outputFilename ||
-                    `compressed_${activeImage.originalName.replace(/\.[^/.]+$/, '')}${getTargetExtension(settings.targetFormat)}`
+                    `compressed_${activeImage.originalName.replace(/\.[^/.]+$/, '')}${SUPPORTED_TARGET_FORMATS[activeImage.targetFormat]?.ext || '.webp'}`
                   }
                   className="w-full sm:w-auto py-space-3 px-space-4 bg-surface-subtle hover:bg-surface-container-high border border-border-subtle text-on-surface font-title-sm text-title-sm rounded-lg flex items-center justify-center gap-space-2 transition-colors cursor-pointer"
                 >
                   <Download size={18} />
-                  <span>Tải ảnh ({getFormatLabel(settings.targetFormat)})</span>
+                  <span>{fmt(t.downloadOne, { fmt: activeFormatLabel })}</span>
                 </a>
               )}
 
@@ -806,7 +828,8 @@ export default function ImageConvertTool({ displayLang = 'vi' } = {}) {
                 onClick={handleClearAll}
                 disabled={images.length === 0}
                 className="w-full sm:w-auto p-space-3 bg-surface-subtle hover:bg-surface-container-high border border-border-subtle text-on-surface-variant hover:text-on-surface rounded-lg transition-colors flex items-center justify-center disabled:opacity-30"
-                title="Xóa tất cả / Làm mới"
+                title={t.clearAll}
+                aria-label={t.clearAll}
               >
                 <RefreshCw size={20} />
               </button>

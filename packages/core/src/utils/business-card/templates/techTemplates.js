@@ -1,3 +1,4 @@
+import { QrCodeService } from "../qrGenerator.js";
 export const techInnovatorTemplate = {
   id: "tech-innovator",
   name: "Tech Innovator QR-Connect",
@@ -578,15 +579,7 @@ WEB: ${profile.website || ""}`,
       {
         id: "b-qr",
         type: "qr",
-        data: `BEGIN:VCARD
-VERSION:3.0
-FN:${profile.fullName}
-ORG:${profile.companyName}
-TITLE:${profile.jobTitle}
-TEL:${profile.phone}
-EMAIL:${profile.email}
-URL:${profile.website}
-END:VCARD`,
+        data: QrCodeService.formatVCard(profile),
         qrType: "vcard",
         xMm: (w - 24) / 2,
         yMm: (h - 32) / 2,

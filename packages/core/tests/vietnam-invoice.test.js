@@ -23,11 +23,11 @@ Ký hiệu: 1C26TAA
 Số: 00012345
 Ngày 05 tháng 07 năm 2026
 Tên người bán: CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ MINH ANH
-Mã số thuế: 0101234567
+Mã số thuế: 0101234565
 Địa chỉ: Số 12 phố Lý Thường Kiệt, Hà Nội
 Điện thoại: 024 3456 7890 Số tài khoản: 1234567890123
 Tên người mua: CÔNG TY CỔ PHẦN HUMA
-Mã số thuế: 0108889999
+Mã số thuế: 0108889994
 Địa chỉ: Số 5 Nguyễn Trãi, Hà Nội
 Hình thức thanh toán: CK Số tài khoản 9876543210
 Đồng tiền thanh toán: VND
@@ -47,10 +47,10 @@ Ký hiệu: 2C26TBB
 Số: 45
 Ngày 12 tháng 07 năm 2026
 Tên người bán: HỘ KINH DOANH TRẦN VĂN B
-Mã số thuế: 0109999888
+Mã số thuế: 0109999887
 Địa chỉ: 45 Lê Lợi, Đà Nẵng
 Tên người mua: CÔNG TY CỔ PHẦN HUMA
-Hình thức thanh toán: TM MST: 0108889999
+Hình thức thanh toán: TM MST: 0108889994
 Đồng tiền thanh toán: VND
 STT Tên hàng hóa, dịch vụ Đơn vị tính Số lượng Đơn giá Thành tiền
 1 Dịch vụ ăn uống Lần 1 2.500.000 2.500.000
@@ -69,11 +69,11 @@ Ngày 01 tháng 08 năm 2026
 Tên người bán:
 KHÁCH SẠN MƯỜNG THANH ĐÀ NẴNG
 Mã số thuế:
-0400111222
+0400111226
 Tên người mua:
 CÔNG TY CỔ PHẦN HUMA
 Mã số thuế:
-0108889999
+0108889994
 Tổng tiền chưa có thuế GTGT:
 5.000.000
 Tiền thuế GTGT:
@@ -93,11 +93,11 @@ Ký hiệu (Serial): 1C26TAA
 Số (No.): 00000123
 Ngày (Date) 05 tháng (month) 07 năm (year) 2026
 Đơn vị bán hàng (Seller): CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ MINH ANH
-Mã số thuế (Tax code): 0101234567
+Mã số thuế (Tax code): 0101234565
 Địa chỉ (Address): Số 12 phố Lý Thường Kiệt, Hà Nội
 Họ tên người mua hàng (Buyer): Nguyễn Văn A
 Tên đơn vị (Company): CÔNG TY CỔ PHẦN HUMA
-Mã số thuế (Tax code): 0108889999
+Mã số thuế (Tax code): 0108889994
 Hình thức thanh toán (Payment method): CK
 Cộng tiền hàng (Total amount): 10.000.000
 Thuế suất GTGT (VAT rate): 10% Tiền thuế GTGT (VAT amount): 1.000.000
@@ -115,8 +115,8 @@ test('reads a bilingual invoice where English labels sit in brackets', () => {
   // Bản dịch trong ngoặc không được dính vào giá trị.
   assert.equal(fields.seller, 'CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ MINH ANH');
   assert.equal(fields.amountInWords, 'Mười một triệu đồng chẵn');
-  assert.equal(fields.sellerTax, '0101234567');
-  assert.equal(fields.buyerTax, '0108889999');
+  assert.equal(fields.sellerTax, '0101234565');
+  assert.equal(fields.buyerTax, '0108889994');
   assert.deepEqual(missingInvoiceFields(fields), []);
   assert.deepEqual(validateInvoiceFields(fields), []);
 });
@@ -146,7 +146,7 @@ Ký hiệu: 1C26TAA
 Số: 00000123
 Ngày 05 tháng 07 năm 2026
 Tên người bán: CÔNG TY ABC
-Mã số thuế: 0101234567
+Mã số thuế: 0101234565
 Số tiền viết bằng chữ: Mười một triệu đồng chẵn
 `);
 
@@ -195,9 +195,9 @@ test('rejects strings that do not follow the six-character symbol rule', () => {
 
 
 test('normalises Vietnamese tax codes including 13-digit branch codes', () => {
-  assert.equal(normalizeTaxCode('0101234567'), '0101234567');
-  assert.equal(normalizeTaxCode('MST: 0101234567'), '0101234567');
-  assert.equal(normalizeTaxCode('0101234567-001'), '0101234567-001');
+  assert.equal(normalizeTaxCode('0101234565'), '0101234565');
+  assert.equal(normalizeTaxCode('MST: 0101234565'), '0101234565');
+  assert.equal(normalizeTaxCode('0101234565-001'), '0101234565-001');
   assert.equal(normalizeTaxCode('không có'), '');
 });
 
@@ -222,8 +222,8 @@ test('assigns the first tax code to the seller and the second to the buyer', () 
   const fields = extractInvoiceFields(VAT_INVOICE);
 
   // Cả hai bên đều mang nhãn "Mã số thuế"; thứ tự khối quyết định chủ sở hữu.
-  assert.equal(fields.sellerTax, '0101234567');
-  assert.equal(fields.buyerTax, '0108889999');
+  assert.equal(fields.sellerTax, '0101234565');
+  assert.equal(fields.buyerTax, '0108889994');
 });
 
 
@@ -232,7 +232,7 @@ test('never mistakes Số tài khoản, Số lượng or Mã số thuế for the
 
   assert.equal(fields.invoiceNo, '00012345');
   assert.notEqual(fields.invoiceNo, '1234567890123');
-  assert.notEqual(fields.invoiceNo, '0101234567');
+  assert.notEqual(fields.invoiceNo, '0101234565');
 });
 
 
@@ -241,7 +241,7 @@ test('reads a direct-method sales invoice without inventing VAT', () => {
 
   assert.equal(fields.symbol.formCode, 'BH');
   assert.equal(fields.invoiceNo, '45');
-  assert.equal(fields.sellerTax, '0109999888');
+  assert.equal(fields.sellerTax, '0109999887');
   assert.equal(fields.totalAmount, 2500000);
   assert.equal(fields.vatAmount, 0, 'hóa đơn bán hàng không có thuế GTGT');
   assert.equal(fields.amountInWordsValue, 2500000);
@@ -259,8 +259,8 @@ test('reads a layout where labels and values sit on separate lines', () => {
   assert.equal(fields.invoiceNo, '00000078');
   assert.equal(fields.date, '01/08/2026');
   assert.equal(fields.seller, 'KHÁCH SẠN MƯỜNG THANH ĐÀ NẴNG');
-  assert.equal(fields.sellerTax, '0400111222');
-  assert.equal(fields.buyerTax, '0108889999');
+  assert.equal(fields.sellerTax, '0400111226');
+  assert.equal(fields.buyerTax, '0108889994');
   assert.equal(fields.totalAmount, 5400000);
   assert.deepEqual(validateInvoiceFields(fields), []);
 });
@@ -326,7 +326,7 @@ const SPACED_TICKET = [
   'Tên người bán: CÔNG TY CỔ PHẦN HÀNG KHÔNG VIETJET',
   'Mã số thuế: 0102325399',
   'Tên người mua: CÔNG TY SẢN XUẤT VÀ THƯƠNG MẠI HUMA MEDICAL',
-  'Mã số thuế: 0101234567',
+  'Mã số thuế: 0101234565',
   'STT Tên hàng hóa, dịch vụ Số lượng Đơn giá Thành tiền',
   '1 Vé máy bay HAN-VTE 1 2 859 000 2 859 000',
   'Tổng tiền thanh toán: 2 859 000',
@@ -402,7 +402,7 @@ const AIRLINE_WITH_COLLECTION = [
   'Tên người bán: CÔNG TY CỔ PHẦN HÀNG KHÔNG VIETJET',
   'Mã số thuế: 0102325399',
   'Tên người mua: CÔNG TY CỔ PHẦN GENKI FAMI VIỆT NAM',
-  'Mã số thuế: 0107654321',
+  'Mã số thuế: 0107654326',
   'Tiền trước thuế (Amount before VAT) 3.450.000',
   'Thuế suất (Tax rate) 8%',
   'Tiền thuế GTGT (VAT Amount) 276.000',

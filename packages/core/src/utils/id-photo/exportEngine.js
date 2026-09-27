@@ -1,4 +1,23 @@
 import { jsPDF } from 'jspdf';
+import { setJpegDpi, setPngDpi } from './imageDpi.js';
+
+// Giới hạn diện tích canvas an toàn. iOS Safari giới hạn ~16.7 MP (4096×4096) cho mỗi canvas;
+// A4 @600 DPI = 4961×7016 ≈ 34.8 MP sẽ bị trình duyệt trả về canvas trắng hoặc lỗi.
+export const MAX_SAFE_CANVAS_PIXELS = 16777216;
+
+/**
+ * Chọn DPI khả thi cho tờ in: nếu DPI yêu cầu vượt giới hạn diện tích canvas thì hạ xuống
+ * (ưu tiên 300 DPI), trả về { dpi, downgraded }.
+ */
+export function resolveSheetDpi(paperWidthMm, paperHeightMm, requestedDpi = 300, maxPixels = MAX_SAFE_CANVAS_PIXELS) {
+  const area = (dpi) => mmToPixels(paperWidthMm, dpi) * mmToPixels(paperHeightMm, dpi);
+  if (area(requestedDpi) <= maxPixels) return { dpi: requestedDpi, downgraded: false };
+  for (const dpi of [300, 250, 200, 150]) {
+    if (dpi < requestedDpi && area(dpi) <= maxPixels) return { dpi, downgraded: true };
+  }
+  const dpi = Math.floor(Math.sqrt(maxPixels / ((paperWidthMm / 25.4) * (paperHeightMm / 25.4))));
+  return { dpi, downgraded: true };
+}
 function mmToPixels(mm, dpi = 300) {
   return Math.round(mm / 25.4 * dpi);
 }
@@ -60,6 +79,9 @@ function renderSingleIdPhoto(compositeImage, standard, transform, targetDpi = 30
 function renderPrintSheet(singlePhotoCanvas, tiling, settings, targetDpi = 300) {
   const sheetW = mmToPixels(tiling.paperWidthMm, targetDpi);
   const sheetH = mmToPixels(tiling.paperHeightMm, targetDpi);
+  if (sheetW * sheetH > MAX_SAFE_CANVAS_PIXELS) {
+    throw new Error("CANVAS_TOO_LARGE");
+  }
   const canvas = document.createElement("canvas");
   canvas.width = sheetW;
   canvas.height = sheetH;
@@ -86,16 +108,14 @@ function renderPrintSheet(singlePhotoCanvas, tiling, settings, targetDpi = 300) 
   return canvas;
 }
 async function exportPhotoBlob(canvas, format, dpi = 300) {
-  if (format === "png") {
-    return new Promise((resolve) => {
-      canvas.toBlob((b) => resolve(b), "image/png");
-    });
-  } else {
-    const rawJpg = await new Promise((resolve) => {
-      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.98);
-    });
-    return setJpegDpi(rawJpg, dpi);
+  const mime = format === "png" ? "image/png" : "image/jpeg";
+  const raw = await new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b), mime, format === "png" ? void 0 : 0.98);
+  });
+  if (!raw) {
+    throw new Error("CANVAS_EXPORT_FAILED");
   }
+  return format === "png" ? setPngDpi(raw, dpi) : setJpegDpi(raw, dpi);
 }
 function drawCuttingGuides(ctx, tiling, settings, targetDpi) {
   const lineWidth = Math.max(1, Math.round(targetDpi / 300));
@@ -165,72 +185,6 @@ function applySharpness(ctx, width, height, amount) {
     }
   }
   ctx.putImageData(imgData, 0, 0);
-}
-function setJpegDpi(blob, dpi = 300) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const buffer = reader.result;
-      const view = new DataView(buffer);
-      if (view.getUint16(0) !== 65496) {
-        return resolve(blob);
-      }
-      const bytes = new Uint8Array(buffer);
-      let app0Pos = -1;
-      let offset = 2;
-      while (offset < bytes.length - 1) {
-        if (bytes[offset] === 255 && bytes[offset + 1] === 224) {
-          app0Pos = offset;
-          break;
-        }
-        if (bytes[offset] === 255 && (bytes[offset + 1] === 218 || bytes[offset + 1] === 217)) {
-          break;
-        }
-        offset++;
-      }
-      if (app0Pos !== -1 && app0Pos + 18 <= bytes.length) {
-        bytes[app0Pos + 13] = 1;
-        bytes[app0Pos + 14] = dpi >> 8 & 255;
-        bytes[app0Pos + 15] = dpi & 255;
-        bytes[app0Pos + 16] = dpi >> 8 & 255;
-        bytes[app0Pos + 17] = dpi & 255;
-        return resolve(new Blob([bytes], { type: "image/jpeg" }));
-      }
-      const jfifHeader = new Uint8Array([
-        255,
-        224,
-        0,
-        16,
-        // APP0, length 16
-        74,
-        70,
-        73,
-        70,
-        0,
-        // 'JFIF\0'
-        1,
-        1,
-        // Version 1.1
-        1,
-        // Units: 1 = dots per inch
-        dpi >> 8 & 255,
-        dpi & 255,
-        // Xdensity
-        dpi >> 8 & 255,
-        dpi & 255,
-        // Ydensity
-        0,
-        0
-        // Thumbnail X & Y
-      ]);
-      const newBytes = new Uint8Array(bytes.length + jfifHeader.length);
-      newBytes.set(bytes.subarray(0, 2), 0);
-      newBytes.set(jfifHeader, 2);
-      newBytes.set(bytes.subarray(2), 2 + jfifHeader.length);
-      resolve(new Blob([newBytes], { type: "image/jpeg" }));
-    };
-    reader.readAsArrayBuffer(blob);
-  });
 }
 async function exportSheetPdf(singlePhotoCanvas, tiling, settings) {
   const doc = new jsPDF({
@@ -305,5 +259,6 @@ export {
   mmToPixels,
   renderPrintSheet,
   renderSingleIdPhoto,
-  setJpegDpi
+  setJpegDpi,
+  setPngDpi
 };

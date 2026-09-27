@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import {
   FileText,
@@ -37,22 +37,23 @@ import {
   formatMiB
 } from '@ai-tools/core/utils/documentFiles.js';
 
-let pdfJsPromise;
-const loadPdfJs = () => {
-  if (!pdfJsPromise) {
-    pdfJsPromise = Promise.all([
-      import('pdfjs-dist'),
-      import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
-    ]).then(([pdfjsLib, workerModule]) => {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
-      return pdfjsLib;
-    });
-  }
-  return pdfJsPromise;
-};
+import {
+  createPdfWorker,
+  destroyPdfDocument,
+  encryptedPdfMessage,
+  isEncryptedPdfError,
+  isPdfPasswordError,
+  openPdfDocument,
+} from '@ai-tools/core/utils/pdfjs.js';
+import {
+  buildPdf,
+  ensurePdfName,
+  normalizeRotation,
+  parsePageRanges,
+  rangeLabel,
+} from './pdfToolkitCore.js';
 
-const loadPdfDocument = () => import('pdf-lib').then((m) => m.PDFDocument);
-const loadDegrees = () => import('pdf-lib').then((m) => m.degrees);
+const loadPdfLib = () => import('pdf-lib');
 
 const MODES = [
   { id: 'merge', label: 'Gộp PDF', sub: 'Merge', icon: Combine },
@@ -61,6 +62,8 @@ const MODES = [
 ];
 
 const VALID_MODES = new Set(MODES.map((m) => m.id));
+
+const SPLIT_OUTPUTS = ['ranges', 'single', 'every'];
 
 function detectInitialMode() {
   const hash = window.location.hash || '';
@@ -73,25 +76,111 @@ function detectInitialMode() {
   return 'merge';
 }
 
+const THUMB_SCALE = 0.3;
+
+/** Thumbnail chỉ render khi thẻ trang cuộn vào khung nhìn. */
+function LazyThumbnail({ fileId, pageIndex, pageNumber, rotation, thumbnail, requestThumbnail }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (thumbnail) return undefined;
+    const el = ref.current;
+    if (!el) return undefined;
+    if (typeof IntersectionObserver === 'undefined') {
+      requestThumbnail(fileId, pageIndex);
+      return undefined;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        observer.disconnect();
+        requestThumbnail(fileId, pageIndex);
+      }
+    }, { rootMargin: '300px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fileId, pageIndex, thumbnail, requestThumbnail]);
+
+  return (
+    <div ref={ref} className="w-full h-full">
+      {thumbnail ? (
+        <img
+          src={thumbnail}
+          alt={`Page ${pageNumber}`}
+          draggable={false}
+          className="w-full h-full object-contain transition-transform select-none pointer-events-none"
+          style={{ transform: `rotate(${rotation}deg)` }}
+        />
+      ) : (
+        <div className="h-full flex flex-col justify-center items-center text-outline select-none">
+          <FileText size={28} />
+          <span className="text-[10px] mt-1">Trang {pageNumber}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
-  const [activeMode, setActiveMode] = useState(detectInitialMode);
-  const [files, setFiles] = useState([]); // [{ id, file, name, size, pageCount, arrayBuffer, pages: [{ pageIndex, rotation, thumbnail, isDeleted }] }]
+  const tr = (vi, en, ja) => (displayLang === 'en' ? en : displayLang === 'ja' ? ja : vi);
+  const [activeMode, setActiveModeState] = useState(detectInitialMode);
+  const [files, setFilesState] = useState([]); // [{ id, file, name, size, pageCount, arrayBuffer, pages: [{ id, pageIndex, pageNumber, rotation, isDeleted }] }]
+  const [thumbs, setThumbs] = useState({}); // `${fileId}:${pageIndex}` → dataURL
   const [isProcessing, setIsProcessing] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [notice, setNotice] = useState('');
-  const [outputResult, setOutputResult] = useState(null); // { url, name, size, pageCount, originalSize }
-  const [outputFileName, setOutputFileName] = useState('Tai_Lieu_Tong_Hop_2025.pdf');
+  const [outputResult, setOutputResult] = useState(null); // { url, name, size, pageCount, fileCount, isZip, originalSize }
+  const [outputFileName, setOutputFileName] = useState('Tai_Lieu_Tong_Hop.pdf');
   const [isDragging, setIsDragging] = useState(false);
   const [draggedPage, setDraggedPage] = useState(null); // { fileId, index }
   const [dragOverTarget, setDragOverTarget] = useState(null); // { fileId, index }
 
   // Settings
-  const [keepBookmarks, setKeepBookmarks] = useState(true);
-  const [normalizeA4, setNormalizeA4] = useState(true);
-  const [pageNumbering, setPageNumbering] = useState(false);
-  const [splitRange, setSplitRange] = useState('1-5');
+  const [normalizeA4, setNormalizeA4State] = useState(false);
+  const [pageNumbering, setPageNumberingState] = useState(false);
+  const [splitRange, setSplitRangeState] = useState('1-5');
+  const [splitOutput, setSplitOutputState] = useState('ranges');
+  const [splitFileId, setSplitFileIdState] = useState(null);
 
   const fileInputRef = useRef(null);
+  const docsRef = useRef(new Map()); // fileId → Promise<PDFDocumentProxy>
+  const workerRef = useRef(null); // Promise<PDFWorker>
+  const thumbQueueRef = useRef(Promise.resolve());
+  const thumbPendingRef = useRef(new Set());
+
+  // Mọi thay đổi đầu vào/thiết lập làm kết quả cũ không còn đúng → xóa kết quả.
+  const setFiles = useCallback((updater) => {
+    setFilesState(updater);
+    setOutputResult(null);
+  }, []);
+  const withReset = (setter) => (value) => { setter(value); setOutputResult(null); };
+  const setActiveMode = withReset(setActiveModeState);
+  const setNormalizeA4 = withReset(setNormalizeA4State);
+  const setPageNumbering = withReset(setPageNumberingState);
+  const setSplitRange = withReset(setSplitRangeState);
+  const setSplitOutput = withReset(setSplitOutputState);
+  const setSplitFileId = withReset(setSplitFileIdState);
+
+  const getWorker = useCallback(() => {
+    if (!workerRef.current) workerRef.current = createPdfWorker();
+    return workerRef.current;
+  }, []);
+
+  const releaseDoc = useCallback((fileId) => {
+    const docPromise = docsRef.current.get(fileId);
+    docsRef.current.delete(fileId);
+    if (docPromise) docPromise.then((doc) => destroyPdfDocument(doc)).catch(() => {});
+  }, []);
+
+  // Giải phóng mọi tài liệu pdf.js và worker khi rời công cụ.
+  useEffect(() => {
+    const docs = docsRef.current;
+    return () => {
+      const pending = Array.from(docs.values());
+      docs.clear();
+      Promise.allSettled(pending.map((p) => p.then((doc) => destroyPdfDocument(doc))))
+        .then(() => workerRef.current?.then((w) => w.destroy()))
+        .catch(() => {});
+    };
+  }, []);
 
   // Sync mode to URL query
   useEffect(() => {
@@ -112,9 +201,13 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
     }, 0);
   }, [files]);
 
+  const totalSourcePages = useMemo(() => files.reduce((sum, f) => sum + (f.pageCount || 0), 0), [files]);
+
   const totalSize = useMemo(() => {
     return files.reduce((sum, f) => sum + f.size, 0);
   }, [files]);
+
+  const splitFile = files.find((f) => f.id === splitFileId) || files[0] || null;
 
   const formatSize = (bytes) => {
     if (!bytes && bytes !== 0) return '0 B';
@@ -123,87 +216,107 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
-  // Render thumbnails for all pages (canvas preview for first 30 pages, placeholder for remainder)
-  const renderThumbnails = async (pdfDoc, numPages) => {
-    const pages = [];
-    const maxPreview = Math.min(numPages, 30);
-    for (let i = 1; i <= numPages; i++) {
-      let thumbnail = null;
-      if (i <= maxPreview) {
-        try {
-          const page = await pdfDoc.getPage(i);
-          const viewport = page.getViewport({ scale: 0.3 });
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          await page.render({ canvasContext: ctx, viewport }).promise;
-          thumbnail = canvas.toDataURL('image/jpeg', 0.6);
-        } catch {
-          thumbnail = null;
+  const requestThumbnail = useCallback((fileId, pageIndex) => {
+    const key = `${fileId}:${pageIndex}`;
+    if (thumbPendingRef.current.has(key)) return;
+    thumbPendingRef.current.add(key);
+    // Render tuần tự: nhiều trang cùng lúc làm treo luồng chính.
+    thumbQueueRef.current = thumbQueueRef.current.then(async () => {
+      const docPromise = docsRef.current.get(fileId);
+      if (!docPromise) return;
+      try {
+        const pdf = await docPromise;
+        const page = await pdf.getPage(pageIndex + 1);
+        const viewport = page.getViewport({ scale: THUMB_SCALE });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.floor(viewport.width));
+        canvas.height = Math.max(1, Math.floor(viewport.height));
+        const ctx = canvas.getContext('2d', { alpha: false });
+        // PDF không tô nền: canvas trong suốt → JPEG ra nền đen.
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        page.cleanup();
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        canvas.width = 0;
+        canvas.height = 0;
+        if (docsRef.current.get(fileId) === docPromise) {
+          setThumbs((prev) => ({ ...prev, [key]: dataUrl }));
         }
+      } catch {
+        thumbPendingRef.current.delete(key);
       }
-      pages.push({
-        id: `page-${i}-${Math.random().toString(36).slice(2, 8)}`,
-        pageIndex: i - 1,
-        pageNumber: i,
-        rotation: 0,
-        thumbnail,
-        isDeleted: false,
-      });
-    }
-    return pages;
-  };
+    });
+  }, []);
 
   const handleAddFiles = async (selectedFiles) => {
+    if (isProcessing || isExecuting) return;
     const validation = validateDocumentFiles(selectedFiles, files, PDF_MERGE_LIMITS);
     const problems = validation.rejected.map(({ file, reason }) => `${file.name}: ${reason}`);
 
     const accepted = [];
     for (const f of validation.accepted) {
       if (await verifyDocumentSignature(f)) accepted.push(f);
-      else problems.push(`${f.name}: không phải file PDF hợp lệ`);
+      else problems.push(`${f.name}: ${tr('không phải file PDF hợp lệ', 'not a valid PDF file', '有効なPDFファイルではありません')}`);
     }
 
-    setNotice(problems.join(' • '));
-    if (accepted.length === 0) return;
+    if (accepted.length === 0) {
+      setNotice(problems.join(' • '));
+      return;
+    }
 
     setIsProcessing(true);
     const newItems = [];
+    let runningPages = totalSourcePages;
 
     for (const file of accepted) {
+      const id = crypto.randomUUID();
       try {
         const arrayBuffer = await file.arrayBuffer();
-        const pdfjsLib = await loadPdfJs();
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer.slice(0) });
-        const pdf = await loadingTask.promise;
+        const worker = await getWorker();
+        const docPromise = openPdfDocument(arrayBuffer, { worker });
+        const pdf = await docPromise;
         const pageCount = pdf.numPages;
-        const pages = await renderThumbnails(pdf, pageCount);
+        if (runningPages + pageCount > PDF_MERGE_LIMITS.maxPages) {
+          await destroyPdfDocument(pdf);
+          problems.push(`${file.name}: ${tr(
+            `vượt giới hạn ${PDF_MERGE_LIMITS.maxPages} trang/lần xử lý`,
+            `exceeds the ${PDF_MERGE_LIMITS.maxPages}-page limit per job`,
+            `1回あたり${PDF_MERGE_LIMITS.maxPages}ページの上限を超えています`,
+          )}`);
+          continue;
+        }
+        runningPages += pageCount;
+        docsRef.current.set(id, docPromise);
 
-        newItems.push({
-          id: crypto.randomUUID(),
-          file,
-          name: file.name,
-          size: file.size,
-          pageCount,
-          arrayBuffer,
-          pages,
-        });
+        const pages = Array.from({ length: pageCount }, (_, i) => ({
+          id: `page-${i + 1}-${Math.random().toString(36).slice(2, 8)}`,
+          pageIndex: i,
+          pageNumber: i + 1,
+          rotation: 0,
+          isDeleted: false,
+        }));
+
+        newItems.push({ id, file, name: file.name, size: file.size, pageCount, arrayBuffer, pages });
 
         if (files.length === 0 && newItems.length === 1) {
           const rawName = file.name.replace(/\.[^/.]+$/, '');
           setOutputFileName(activeMode === 'organize' ? `${rawName}_Organized.pdf` : `${rawName}_Processed.pdf`);
         }
       } catch (err) {
-        setNotice(`Không thể đọc file ${file.name}: ${err.message}`);
+        problems.push(isPdfPasswordError(err)
+          ? `${file.name}: ${encryptedPdfMessage(displayLang)}`
+          : `${file.name}: ${tr('không đọc được', 'could not be read', '読み込めません')} (${err.message})`);
       }
     }
 
-    setFiles((prev) => [...prev, ...newItems]);
+    setNotice(problems.join(' • '));
+    if (newItems.length) setFiles((prev) => [...prev, ...newItems]);
     setIsProcessing(false);
   };
 
   const handleRemoveFile = (id) => {
+    releaseDoc(id);
     setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
@@ -220,8 +333,10 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
   };
 
   const handleClearAll = () => {
+    for (const id of Array.from(docsRef.current.keys())) releaseDoc(id);
+    thumbPendingRef.current.clear();
+    setThumbs({});
     setFiles([]);
-    setOutputResult(null);
     setNotice('');
   };
 
@@ -232,7 +347,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
         if (f.id !== fileId) return f;
         const updatedPages = f.pages.map((p) => {
           if (p.pageIndex !== pageIndex) return p;
-          return { ...p, rotation: (p.rotation + 90) % 360 };
+          return { ...p, rotation: normalizeRotation(p.rotation + 90) };
         });
         return { ...f, pages: updatedPages };
       })
@@ -308,7 +423,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
     setFiles((prev) =>
       prev.map((f) => ({
         ...f,
-        pages: f.pages.map((p) => ({ ...p, rotation: (p.rotation + 90) % 360 })),
+        pages: f.pages.map((p) => ({ ...p, rotation: normalizeRotation(p.rotation + 90) })),
       }))
     );
   };
@@ -320,91 +435,126 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
     })));
   };
 
+  /** Danh sách tệp cần xuất: [{ name, pages: [{ sourceKey, pageIndex, rotation }] }]. */
+  const planOutputs = () => {
+    if (activeMode !== 'split') {
+      const pages = files.flatMap((f) => (f.pages || [])
+        .filter((p) => !p.isDeleted)
+        .map((p) => ({ sourceKey: f.id, pageIndex: p.pageIndex, rotation: p.rotation })));
+      return { outputs: [{ name: ensurePdfName(outputFileName), pages }], warnings: [] };
+    }
+
+    const source = splitFile;
+    if (!source) return { outputs: [], warnings: [] };
+    const byNumber = new Map(source.pages.map((p) => [p.pageNumber, p]));
+    const baseName = source.name.replace(/\.[^/.]+$/, '');
+    const warnings = [];
+    let ranges;
+    if (splitOutput === 'every') {
+      ranges = source.pages.slice().sort((a, b) => a.pageNumber - b.pageNumber).map((p) => [p.pageNumber]);
+    } else {
+      const parsed = parsePageRanges(splitRange, source.pageCount);
+      if (parsed.errors.length) {
+        throw new Error(tr(
+          `Dải trang không hợp lệ: ${parsed.errors.filter((e) => e !== 'empty').join(', ') || '(trống)'}. Ví dụ hợp lệ: 1-3, 5, 8- (tệp có ${source.pageCount} trang).`,
+          `Invalid page range: ${parsed.errors.filter((e) => e !== 'empty').join(', ') || '(empty)'}. Valid example: 1-3, 5, 8- (file has ${source.pageCount} pages).`,
+          `ページ範囲が無効です: ${parsed.errors.filter((e) => e !== 'empty').join(', ') || '（空）'}。例: 1-3, 5, 8-（全${source.pageCount}ページ）`,
+        ));
+      }
+      ranges = parsed.ranges;
+    }
+
+    let skipped = 0;
+    const toItems = (numbers) => numbers
+      .map((n) => byNumber.get(n))
+      .filter((p) => {
+        if (p && !p.isDeleted) return true;
+        skipped += 1;
+        return false;
+      })
+      .map((p) => ({ sourceKey: source.id, pageIndex: p.pageIndex, rotation: p.rotation }));
+
+    let outputs;
+    if (splitOutput === 'single') {
+      outputs = [{ name: ensurePdfName(outputFileName), pages: toItems(ranges.flat()) }];
+    } else {
+      outputs = ranges.map((numbers) => ({
+        name: ensurePdfName(`${baseName}_p${rangeLabel(numbers)}`),
+        pages: toItems(numbers),
+      })).filter((o) => o.pages.length > 0);
+    }
+    if (skipped > 0) {
+      warnings.push(tr(
+        `Đã bỏ qua ${skipped} trang bạn đã loại bỏ.`,
+        `Skipped ${skipped} page(s) you removed.`,
+        `削除済みの${skipped}ページをスキップしました。`,
+      ));
+    }
+    return { outputs, warnings };
+  };
+
   // Execute processing according to activeMode
   const handleExecute = async () => {
-    if (files.length === 0 || isExecuting) return;
+    if (files.length === 0 || isExecuting || isProcessing) return;
     setIsExecuting(true);
     setNotice('');
+    setOutputResult(null);
 
     try {
-      const PDFDocument = await loadPdfDocument();
-      const degrees = await loadDegrees();
-      const mergedDoc = await PDFDocument.create();
-
-      let pdfBytes;
-      let resultingPageCount = 0;
-
-      if (activeMode === 'merge' || activeMode === 'organize') {
-        for (const f of files) {
-          const srcDoc = await PDFDocument.load(f.arrayBuffer);
-          const activePages = (f.pages || []).filter((p) => !p.isDeleted);
-          if (activePages.length === 0) continue;
-
-          // BATCH copy all pages at once to preserve shared resources (fonts/images) and prevent file size bloating
-          const targetIndices = activePages.map((p) => p.pageIndex);
-          const copiedPages = await mergedDoc.copyPages(srcDoc, targetIndices);
-
-          for (let idx = 0; idx < copiedPages.length; idx++) {
-            const copiedPage = copiedPages[idx];
-            const pageConfig = activePages[idx];
-            if (pageConfig?.rotation) {
-              const currentRot = copiedPage.getRotation().angle || 0;
-              copiedPage.setRotation(degrees(currentRot + pageConfig.rotation));
-            }
-            mergedDoc.addPage(copiedPage);
-          }
-        }
-        pdfBytes = await mergedDoc.save({ useObjectStreams: true, addDefaultPage: false });
-        resultingPageCount = mergedDoc.getPageCount();
-      } else if (activeMode === 'split') {
-        // Split logic: take pages from first file according to range or split all
-        const firstFile = files[0];
-        if (firstFile) {
-          const srcDoc = await PDFDocument.load(firstFile.arrayBuffer);
-          const totalSrcPages = srcDoc.getPageCount();
-          // parse range e.g. 1-3, 5
-          const indicesToCopy = [];
-          const parts = splitRange.split(',').map((s) => s.trim());
-          for (const part of parts) {
-            if (part.includes('-')) {
-              const [start, end] = part.split('-').map((n) => parseInt(n, 10));
-              if (!isNaN(start) && !isNaN(end)) {
-                for (let i = Math.max(1, start); i <= Math.min(totalSrcPages, end); i++) {
-                  indicesToCopy.push(i - 1);
-                }
-              }
-            } else {
-              const single = parseInt(part, 10);
-              if (!isNaN(single) && single >= 1 && single <= totalSrcPages) {
-                indicesToCopy.push(single - 1);
-              }
-            }
-          }
-
-          const targetIndices = indicesToCopy.length > 0 ? indicesToCopy : [0];
-          const copiedPages = await mergedDoc.copyPages(srcDoc, targetIndices);
-          copiedPages.forEach((page) => mergedDoc.addPage(page));
-        }
-        pdfBytes = await mergedDoc.save({ useObjectStreams: true });
-        resultingPageCount = mergedDoc.getPageCount();
+      const { outputs, warnings } = planOutputs();
+      const nonEmpty = outputs.filter((o) => o.pages.length > 0);
+      if (nonEmpty.length === 0) {
+        throw new Error(tr('Không còn trang nào để xuất.', 'There are no pages left to export.', '出力するページがありません。'));
       }
 
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
+      const PDFLib = await loadPdfLib();
+      const sources = files.map((f) => ({ key: f.id, bytes: f.arrayBuffer }));
+      const built = [];
+      for (const output of nonEmpty) {
+        const { bytes, pageCount } = await buildPdf(PDFLib, sources, output.pages, {
+          normalizeA4,
+          pageNumbering,
+          title: output.name.replace(/\.pdf$/i, ''),
+        });
+        built.push({ name: output.name, bytes, pageCount });
+      }
 
-      if (outputResult?.url) URL.revokeObjectURL(outputResult.url);
+      let blob;
+      let name;
+      if (built.length === 1) {
+        blob = new Blob([built[0].bytes], { type: 'application/pdf' });
+        name = built[0].name;
+      } else {
+        const { default: JSZip } = await import('jszip');
+        const zip = new JSZip();
+        const used = new Set();
+        for (const item of built) {
+          let entry = item.name;
+          let n = 2;
+          while (used.has(entry.toLowerCase())) entry = item.name.replace(/\.pdf$/i, ` (${n++}).pdf`);
+          used.add(entry.toLowerCase());
+          zip.file(entry, item.bytes);
+        }
+        blob = await zip.generateAsync({ type: 'blob' });
+        name = `${(splitFile?.name || 'document').replace(/\.[^/.]+$/, '')}_split.zip`;
+      }
 
       setOutputResult({
-        url,
-        name: outputFileName.endsWith('.pdf') ? outputFileName : `${outputFileName}.pdf`,
+        url: URL.createObjectURL(blob),
+        name,
         size: blob.size,
-        pageCount: resultingPageCount,
-        originalSize: totalSize,
+        pageCount: built.reduce((sum, b) => sum + b.pageCount, 0),
+        fileCount: built.length,
+        isZip: built.length > 1,
+        originalSize: activeMode === 'split' ? (splitFile?.size || 0) : totalSize,
       });
+      if (warnings.length) setNotice(warnings.join(' • '));
 
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.8 } });
     } catch (err) {
-      setNotice(`Lỗi xử lý PDF: ${err.message}`);
+      setNotice(isEncryptedPdfError(err)
+        ? encryptedPdfMessage(displayLang)
+        : `${tr('Lỗi xử lý PDF', 'PDF processing error', 'PDF処理エラー')}: ${err.message}`);
     } finally {
       setIsExecuting(false);
     }
@@ -439,7 +589,11 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 {displayLang === 'en' ? 'PDF Multi-Tool' : displayLang === 'ja' ? '万能PDFツール' : 'Công Cụ PDF Đa Năng'}
               </h1>
               <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-                Gộp nhiều tệp PDF, tách trang lẻ theo dải tùy chọn, nén giảm dung lượng và xoay/sắp xếp thứ tự trang trực tiếp trong trình duyệt.
+                {tr(
+                  'Gộp nhiều tệp PDF, tách trang theo dải tùy chọn, xoay/xóa và sắp xếp thứ tự trang, chuẩn hóa khổ A4 và đánh số trang — trực tiếp trong trình duyệt.',
+                  'Merge PDFs, split pages by custom ranges, rotate/remove and reorder pages, normalize to A4 and add page numbers — right in your browser.',
+                  '複数のPDFの結合、ページ範囲での分割、ページの回転・削除・並べ替え、A4への統一、ページ番号の付与をブラウザ内で行います。',
+                )}
               </p>
             </div>
           </div>
@@ -447,7 +601,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
           {/* Subtle Privacy Note */}
           <div className="self-start lg:self-center flex items-center gap-1.5 text-xs text-outline shrink-0">
             <ShieldCheck size={15} className="text-secondary shrink-0" />
-            <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
+            <span>{tr('Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.', 'Processed in your browser — files are never uploaded.', 'ブラウザ内で処理され、ファイルはアップロードされません。')}</span>
           </div>
         </div>
       </section>
@@ -473,7 +627,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 <h2 className="font-title-sm text-title-sm text-on-surface">Tải Tệp Tin PDF</h2>
               </div>
               <span className="font-label-sm text-label-sm text-outline">
-                Tối đa {PDF_MERGE_LIMITS.maxFiles} tệp / {formatMiB(PDF_MERGE_LIMITS.maxTotalBytes)} MiB
+                Tối đa {PDF_MERGE_LIMITS.maxFiles} tệp / {formatMiB(PDF_MERGE_LIMITS.maxTotalBytes)} MiB / {PDF_MERGE_LIMITS.maxPages} trang
               </span>
             </div>
 
@@ -483,6 +637,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
               type="file"
               accept=".pdf"
               multiple
+              disabled={isProcessing || isExecuting}
               className="hidden"
               onChange={(e) => {
                 if (e.target.files?.length) handleAddFiles(Array.from(e.target.files));
@@ -490,15 +645,27 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
               }}
             />
             <div
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              role="button"
+              tabIndex={isProcessing || isExecuting ? -1 : 0}
+              aria-disabled={isProcessing || isExecuting}
+              onClick={() => { if (!isProcessing && !isExecuting) fileInputRef.current?.click(); }}
+              onKeyDown={(e) => {
+                if ((e.key === 'Enter' || e.key === ' ') && !isProcessing && !isExecuting) {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              onDragOver={(e) => { e.preventDefault(); if (!isProcessing && !isExecuting) setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={(e) => {
                 e.preventDefault();
                 setIsDragging(false);
+                if (isProcessing || isExecuting) return;
                 if (e.dataTransfer.files?.length) handleAddFiles(Array.from(e.dataTransfer.files));
               }}
-              className={`bg-surface-subtle border-2 border-dashed rounded-xl p-space-6 text-center cursor-pointer transition-all group shadow-sm ${
+              className={`bg-surface-subtle border-2 border-dashed rounded-xl p-space-6 text-center transition-all group shadow-sm ${
+                isProcessing || isExecuting ? 'cursor-wait opacity-70' : 'cursor-pointer'
+              } ${
                 isDragging
                   ? 'border-primary-container bg-surface-container-high'
                   : 'border-border-subtle hover:bg-surface-container-high hover:border-primary-container/60'
@@ -523,7 +690,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                     Kéo thả các tệp PDF vào đây hoặc <span className="text-primary-container hover:underline">bấm để chọn tệp</span>
                   </p>
                   <p className="font-body-sm text-body-sm text-outline">
-                    Hỗ trợ định dạng .PDF phiên bản 1.4 - 2.0 (tất cả chuẩn ISO)
+                    {tr('Tệp .PDF không đặt mật khẩu', 'Unprotected .PDF files', 'パスワードなしの .PDF ファイル')}
                   </p>
                 </>
               )}
@@ -650,44 +817,6 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
 
             {/* SETTINGS DETAILS */}
             <div className="space-y-space-4">
-              {activeMode === 'merge' && (
-                <div className="space-y-space-2">
-                  <label className="flex items-center gap-space-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={keepBookmarks}
-                      onChange={(e) => setKeepBookmarks(e.target.checked)}
-                      className="w-4 h-4 rounded bg-surface-subtle text-primary-container focus:ring-0 accent-primary-container"
-                    />
-                    <span className="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">
-                      Duy trì định dạng bookmark & mục lục gốc
-                    </span>
-                  </label>
-                  <label className="flex items-center gap-space-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={normalizeA4}
-                      onChange={(e) => setNormalizeA4(e.target.checked)}
-                      className="w-4 h-4 rounded bg-surface-subtle text-primary-container focus:ring-0 accent-primary-container"
-                    />
-                    <span className="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">
-                      Tự động chuẩn hóa khổ giấy về A4 đồng nhất
-                    </span>
-                  </label>
-                  <label className="flex items-center justify-between p-space-2 bg-surface-subtle border border-border-subtle rounded-lg cursor-pointer">
-                    <span className="font-body-md text-body-md text-on-surface">
-                      Đánh số trang liên tục (Page X of Y)
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={pageNumbering}
-                      onChange={(e) => setPageNumbering(e.target.checked)}
-                      className="w-4 h-4 rounded bg-surface-subtle text-primary-container accent-primary-container"
-                    />
-                  </label>
-                </div>
-              )}
-
               {activeMode === 'split' && (
                 <div className="space-y-space-2">
                   <label className="font-label-sm text-label-sm text-outline uppercase tracking-wider block">
@@ -701,8 +830,39 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                     className="w-full bg-surface-subtle border border-border-subtle rounded-lg px-space-3 py-space-2 font-label-md text-label-md text-on-surface outline-none focus:border-primary-container"
                   />
                   <p className="font-body-sm text-body-sm text-outline">
-                    Nhập dải trang muốn trích xuất từ tệp PDF đầu tiên.
+                    {tr(
+                      'Số trang theo thứ tự gốc (nhãn "Gốc: P.xx"). "8-" là từ trang 8 đến hết. Trang đã xoay/loại bỏ được áp dụng.',
+                      'Original page numbers (the "Gốc: P.xx" label). "8-" means page 8 to the end. Rotations/removals are applied.',
+                      '元のページ番号（「Gốc: P.xx」表示）。「8-」は8ページ目から最後まで。回転・削除が反映されます。',
+                    )}
                   </p>
+                  {files.length > 1 && (
+                    <select
+                      value={splitFile?.id || ''}
+                      onChange={(e) => setSplitFileId(e.target.value)}
+                      aria-label={tr('Tệp cần tách', 'File to split', '分割するファイル')}
+                      className="w-full bg-surface-subtle border border-border-subtle rounded-lg px-space-3 py-space-2 text-on-surface text-body-sm"
+                    >
+                      {files.map((f) => <option key={f.id} value={f.id}>{f.name} ({f.pageCount})</option>)}
+                    </select>
+                  )}
+                  <div className="grid grid-cols-1 gap-1" role="radiogroup" aria-label={tr('Kiểu xuất khi tách', 'Split output', '分割の出力形式')}>
+                    {SPLIT_OUTPUTS.map((opt) => (
+                      <label key={opt} className="flex items-center gap-2 text-body-sm text-on-surface cursor-pointer">
+                        <input
+                          type="radio"
+                          name="split-output"
+                          value={opt}
+                          checked={splitOutput === opt}
+                          onChange={() => setSplitOutput(opt)}
+                          className="accent-primary-container"
+                        />
+                        {opt === 'ranges' && tr('Mỗi dải một tệp PDF (nhiều dải → ZIP)', 'One PDF per range (several ranges → ZIP)', '範囲ごとに1つのPDF（複数ならZIP）')}
+                        {opt === 'single' && tr('Gộp các dải vào một tệp PDF', 'All ranges into one PDF', '全範囲を1つのPDFに')}
+                        {opt === 'every' && tr('Tách mỗi trang thành một tệp (ZIP)', 'Every page as its own PDF (ZIP)', '1ページずつ別PDF（ZIP）')}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -721,19 +881,40 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                     </ul>
                   </div>
 
-                  <label className="flex items-center justify-between p-space-2 bg-surface-subtle border border-border-subtle rounded-lg cursor-pointer">
-                    <span className="font-body-md text-body-md text-on-surface">
-                      Tự động chuẩn hóa khổ giấy về A4 đồng nhất
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={normalizeA4}
-                      onChange={(e) => setNormalizeA4(e.target.checked)}
-                      className="w-4 h-4 rounded bg-surface-subtle text-primary-container accent-primary-container"
-                    />
-                  </label>
                 </div>
               )}
+
+              {/* COMMON OUTPUT OPTIONS (áp dụng cho mọi chế độ) */}
+              <div className="space-y-space-2">
+                <label className="flex items-start gap-space-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={normalizeA4}
+                    onChange={(e) => setNormalizeA4(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 rounded bg-surface-subtle text-primary-container focus:ring-0 accent-primary-container"
+                  />
+                  <span className="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">
+                    {tr('Chuẩn hóa mọi trang về khổ A4 (co giãn vừa khổ, giữ tỉ lệ)', 'Normalize every page to A4 (scaled to fit, aspect kept)', '全ページをA4に統一（縦横比を保って拡縮）')}
+                    <span className="block text-[11px] text-outline">
+                      {tr('Trang ngang dùng A4 ngang. Liên kết/ô biểu mẫu trên trang sẽ không còn tác dụng.', 'Landscape pages use landscape A4. Links/form fields on the page stop working.', '横長ページは横向きA4。ページ上のリンク・フォームは無効になります。')}
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-center gap-space-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={pageNumbering}
+                    onChange={(e) => setPageNumbering(e.target.checked)}
+                    className="w-4 h-4 rounded bg-surface-subtle text-primary-container focus:ring-0 accent-primary-container"
+                  />
+                  <span className="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">
+                    {tr('Đánh số trang liên tục ở chân trang (X / Y)', 'Add continuous page numbers in the footer (X / Y)', 'フッターに通しページ番号（X / Y）を付ける')}
+                  </span>
+                </label>
+                <p className="font-body-sm text-[11px] text-outline">
+                  {tr('Lưu ý: bookmark/mục lục của tệp gốc không được giữ lại trong tệp xuất.', 'Note: bookmarks/outlines of the source files are not kept in the output.', '注: 元ファイルのしおり（目次）は出力に引き継がれません。')}
+                </p>
+              </div>
 
               {/* OUTPUT FILE NAME */}
               <div className="space-y-space-1 pt-space-1">
@@ -755,7 +936,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
             {/* PRIMARY RUN ACTION BUTTON */}
             <button
               type="button"
-              disabled={files.length === 0 || isExecuting}
+              disabled={files.length === 0 || isExecuting || isProcessing}
               onClick={handleExecute}
               className="h-12 w-full bg-primary-container hover:bg-brand-cyan-bright disabled:opacity-50 disabled:cursor-not-allowed text-on-primary-container font-title-sm text-title-sm font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-space-2 mt-space-2 cursor-pointer active:scale-[0.99]"
             >
@@ -768,9 +949,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                     ? `Bắt Đầu Sắp Xếp (${totalPages} Trang)`
                     : activeMode === 'merge'
                     ? (files.length === 1 ? `Lưu & Xuất File (${totalPages} Trang)` : `Bắt Đầu Gộp (${totalPages} Trang)`)
-                    : activeMode === 'split'
-                    ? `Bắt Đầu Tách (${totalPages} Trang)`
-                    : `Bắt Đầu Nén (${totalPages} Trang)`
+                    : `Bắt Đầu Tách (${splitFile?.name || ''})`
                   : 'Tải tệp PDF để bắt đầu'}
               </span>
             </button>
@@ -790,7 +969,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
               </div>
               <div className="flex items-center gap-space-2">
                 <span className="px-space-2 py-[2px] bg-surface-subtle border border-border-subtle text-primary font-label-sm text-label-sm rounded">
-                  {totalPages} Trang • Khổ A4 chuẩn
+                  {totalPages} Trang{normalizeA4 ? ' • Xuất khổ A4' : ''}
                 </span>
               </div>
             </div>
@@ -900,20 +1079,14 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                             } ${isDeleted ? 'opacity-50 grayscale' : ''}`}
                           >
                             <div className="aspect-[3/4] bg-surface-light rounded p-space-2 text-surface-container-lowest flex flex-col justify-between overflow-hidden relative shadow-inner">
-                              {page.thumbnail ? (
-                                <img
-                                  src={page.thumbnail}
-                                  alt={`Page ${page.pageNumber}`}
-                                  draggable={false}
-                                  className="w-full h-full object-contain transition-transform select-none pointer-events-none"
-                                  style={{ transform: `rotate(${page.rotation}deg)` }}
-                                />
-                              ) : (
-                                <div className="h-full flex flex-col justify-center items-center text-outline select-none">
-                                  <FileText size={28} />
-                                  <span className="text-[10px] mt-1">Trang {page.pageNumber}</span>
-                                </div>
-                              )}
+                              <LazyThumbnail
+                                fileId={file.id}
+                                pageIndex={page.pageIndex}
+                                pageNumber={page.pageNumber}
+                                rotation={page.rotation}
+                                thumbnail={thumbs[`${file.id}:${page.pageIndex}`]}
+                                requestThumbnail={requestThumbnail}
+                              />
 
                               {/* Top-left: New order position badge */}
                               <span
@@ -1045,16 +1218,18 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
               <div className="bg-surface-subtle border border-border-subtle p-space-3 rounded-lg flex flex-col gap-1">
                 <span className="font-label-sm text-label-sm text-outline uppercase tracking-wider">Tệp xuất bản</span>
                 <span className="font-title-sm text-title-sm text-on-surface">
-                  {outputResult ? '1 Tệp PDF duy nhất' : `${files.length} Tệp đang chọn`}
+                  {outputResult
+                    ? (outputResult.isZip ? `${outputResult.fileCount} tệp PDF (ZIP)` : '1 tệp PDF')
+                    : `${files.length} Tệp đang chọn`}
                 </span>
-                <span className="font-body-sm text-body-sm text-on-surface-variant">Định dạng PDF-1.7 ISO</span>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">{outputResult?.isZip ? 'Gói .ZIP' : 'Tệp .PDF'}</span>
               </div>
               <div className="bg-surface-subtle border border-border-subtle p-space-3 rounded-lg flex flex-col gap-1">
                 <span className="font-label-sm text-label-sm text-outline uppercase tracking-wider">Tổng số trang</span>
                 <span className="font-title-sm text-title-sm text-brand-cyan-bright">
                   {outputResult ? `${outputResult.pageCount} trang hoàn chỉnh` : `${totalPages} trang`}
                 </span>
-                <span className="font-body-sm text-body-sm text-on-surface-variant">Không mất định dạng font</span>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">{normalizeA4 ? 'Khổ A4' : 'Giữ khổ trang gốc'}</span>
               </div>
               <div className="bg-surface-subtle border border-border-subtle p-space-3 rounded-lg flex flex-col gap-1">
                 <span className="font-label-sm text-label-sm text-outline uppercase tracking-wider">
@@ -1065,15 +1240,9 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 </span>
                 <span className="font-body-sm text-body-sm text-outline">
                   {outputResult ? (
-                    outputResult.size < outputResult.originalSize ? (
-                      <span className="text-secondary font-semibold">
-                        Tiết kiệm {Math.round((1 - outputResult.size / outputResult.originalSize) * 100)}% (Gốc: {formatSize(outputResult.originalSize)})
-                      </span>
-                    ) : (
-                      `Gốc: ${formatSize(outputResult.originalSize)} (Tối ưu)`
-                    )
+                    `Gốc: ${formatSize(outputResult.originalSize)}`
                   ) : (
-                    'In-memory buffer'
+                    'Chưa xuất tệp'
                   )}
                 </span>
               </div>
@@ -1088,12 +1257,12 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                   className="h-12 w-full bg-brand-emerald-deep hover:bg-secondary text-surface-container-lowest font-title-sm text-title-sm font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-space-2 cursor-pointer active:scale-[0.99]"
                 >
                   <Download size={22} />
-                  <span>Tải Tệp PDF Đã Xử Lý (.PDF - {formatSize(outputResult.size)})</span>
+                  <span>{outputResult.isZip ? 'Tải gói ZIP' : 'Tải tệp đã xử lý'} ({outputResult.isZip ? '.ZIP' : '.PDF'} - {formatSize(outputResult.size)})</span>
                 </a>
               ) : (
                 <button
                   type="button"
-                  disabled={files.length === 0 || isExecuting}
+                  disabled={files.length === 0 || isExecuting || isProcessing}
                   onClick={handleExecute}
                   className="h-12 w-full bg-brand-emerald-deep hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed text-surface-container-lowest font-title-sm text-title-sm font-semibold rounded-xl shadow-lg transition-all flex items-center justify-center gap-space-2 cursor-pointer"
                 >
@@ -1105,14 +1274,14 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                       ? `Lưu & Tải File Đã Sắp Xếp (${totalPages} Trang)`
                       : activeMode === 'merge'
                       ? (files.length === 1 ? `Lưu & Tải File (${totalPages} Trang)` : `Bắt Đầu Gộp File (${totalPages} Trang)`)
-                      : 'Bắt Đầu Xử Lý & Chuẩn Bị Tải Về'}
+                      : 'Bắt Đầu Tách & Chuẩn Bị Tải Về'}
                   </span>
                 </button>
               )}
 
               {/* Secondary Actions Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-2">
-                {outputResult && (
+                {outputResult && !outputResult.isZip && (
                   <a
                     href={outputResult.url}
                     target="_blank"

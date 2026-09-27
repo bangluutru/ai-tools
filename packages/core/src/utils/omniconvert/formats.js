@@ -34,6 +34,15 @@ export const FORMAT_DETAILS = {
     color: 'bg-orange-600/20 text-orange-400 border-orange-500/30',
     badgeColor: 'bg-orange-600 text-white'
   },
+  xls: {
+    ext: 'xls',
+    name_vn: 'Excel 97-2003 (.xls)',
+    name_en: 'Excel 97-2003 (.xls)',
+    name_ja: 'Excel 97-2003 (.xls)',
+    category: 'spreadsheet',
+    color: 'bg-emerald-600/20 text-emerald-400 border-emerald-500/30',
+    badgeColor: 'bg-emerald-600 text-white'
+  },
   xlsx: {
     ext: 'xlsx',
     name_vn: 'Excel Bảng Tính (.xlsx)',
@@ -146,7 +155,10 @@ export const FORMAT_DETAILS = {
 
 export const COMPATIBILITY_MATRIX = {
   docx: ['pdf', 'txt', 'md'],
+  // PPTX: chỉ trích xuất chữ của slide (không dựng lại bố cục).
+  pptx: ['txt', 'md'],
   xlsx: ['pdf', 'csv', 'md'],
+  xls: ['pdf', 'csv', 'md'],
   pdf: ['docx', 'xlsx', 'md', 'png', 'jpg', 'webp', 'txt'],
   png: ['pdf', 'jpg', 'webp'],
   jpg: ['pdf', 'png', 'webp'],
@@ -161,7 +173,7 @@ export const COMPATIBILITY_MATRIX = {
 
 export const POPULAR_PRESETS = [
   { id: 'all-to-pdf', label_vn: 'Tất cả ➔ PDF', label_en: 'All ➔ PDF', label_ja: 'すべて ➔ PDF', from: '*', to: 'pdf' },
-  { id: 'pdf-to-office', label_vn: 'PDF ➔ Word/Excel/PPT', label_en: 'PDF ➔ Office', label_ja: 'PDF ➔ Office', from: 'pdf', to: 'docx' },
+  { id: 'pdf-to-office', label_vn: 'PDF ➔ Word/Excel', label_en: 'PDF ➔ Office', label_ja: 'PDF ➔ Office', from: 'pdf', to: 'docx' },
   { id: 'to-markdown', label_vn: 'Tất cả ➔ Markdown (.md)', label_en: 'All ➔ Markdown', label_ja: 'すべて ➔ Markdown', from: '*', to: 'md' },
   { id: 'img-to-pdf', label_vn: 'Gộp ảnh ➔ PDF', label_en: 'Images ➔ PDF', label_ja: '画像結合 ➔ PDF', from: 'image', to: 'pdf' },
   { id: 'pdf-to-img', label_vn: 'PDF ➔ Bộ ảnh (PNG/JPG)', label_en: 'PDF ➔ Images', label_ja: 'PDF ➔ 画像一括', from: 'pdf', to: 'png' },

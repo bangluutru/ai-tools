@@ -255,3 +255,187 @@ test('undo/redo history stack correctly restores previous states across drag-and
 });
 
 
+
+// ---------------------------------------------------------------------------
+// Accuracy review fixes (OCR, print layout, vCard, batch, CSV)
+// ---------------------------------------------------------------------------
+
+const baseProject = (profile = SAMPLE_PROFILES[0].profile, templateId = 'qr-first-connect') => {
+  const tmpl = TEMPLATE_DEFINITIONS.find((t) => t.id === templateId) || TEMPLATE_DEFINITIONS[0];
+  const generated = tmpl.generator(profile, DEFAULT_CARD_DIMENSION, 'horizontal');
+  return {
+    id: 'p1',
+    title: 'Test',
+    dimension: DEFAULT_CARD_DIMENSION,
+    orientation: 'horizontal',
+    isDoubleSided: true,
+    profile,
+    front: generated.front,
+    back: generated.back,
+    templateId: tmpl.id,
+  };
+};
+
+test('vCard: CRLF, escaping, N field and no "undefined" values', () => {
+  const vcard = QrCodeService.formatVCard({
+    fullName: '田中 健二',
+    companyName: 'ACME, Inc; Japan',
+    jobTitle: undefined,
+    phone: undefined,
+    email: 'k@acme.jp',
+    address: '東京都千代田区1-1',
+    postalCode: '〒100-0005',
+  });
+  const lines = vcard.split('\r\n');
+  assert.equal(lines[0], 'BEGIN:VCARD');
+  assert.equal(lines.at(-1), 'END:VCARD');
+  assert.ok(!/\n(?<!\r\n)/.test(vcard.replace(/\r\n/g, '')), 'no bare LF');
+  assert.ok(lines.includes('N:田中;健二;;;'));
+  assert.ok(lines.includes('ORG:ACME\\, Inc\\; Japan'));
+  assert.ok(lines.includes('ADR;TYPE=WORK:;;東京都千代田区1-1;;;100-0005;'));
+  assert.ok(!vcard.includes('undefined'));
+  assert.ok(!vcard.includes('TEL'), 'empty phone must be omitted');
+});
+
+test('templates with vCard QR use the formatter (no TEL:undefined)', () => {
+  const profile = { ...SAMPLE_PROFILES[0].profile, phone: undefined };
+  for (const tmpl of TEMPLATE_DEFINITIONS) {
+    const g = tmpl.generator(profile, DEFAULT_CARD_DIMENSION, 'horizontal');
+    for (const el of [...g.front.elements, ...g.back.elements]) {
+      if (el.type === 'qr' && el.qrType === 'vcard') {
+        assert.ok(!el.data.includes('undefined'), `${tmpl.id} vCard contains undefined`);
+        assert.ok(el.data.includes('\r\n'), `${tmpl.id} vCard must use CRLF`);
+      }
+    }
+  }
+});
+
+test('batch: each employee gets their own vCard QR and contact text', async () => {
+  const { StorageService } = await import('../../../packages/core/src/utils/business-card/storage.js');
+  const master = baseProject();
+  const vcardEl = master.back.elements.find((el) => el.qrType === 'vcard');
+  assert.ok(vcardEl, 'qr-first-connect back must have a vCard QR');
+  const emp = { ...master.profile, fullName: '鈴木 一郎', email: 'i.suzuki@example.jp', mobile: '080-0000-1111', jobTitle: '部長' };
+  const card = StorageService.applyEmployeeProfileToTemplate(master, emp);
+  const qr = card.back.elements.find((el) => el.id === vcardEl.id);
+  assert.ok(qr.data.includes('FN:鈴木 一郎'));
+  assert.ok(qr.data.includes('EMAIL;TYPE=INTERNET,PREF:i.suzuki@example.jp'));
+  assert.ok(!qr.data.includes(master.profile.email), 'master email must not leak into employee vCard');
+  const allText = [...card.front.elements, ...card.back.elements].filter((e) => e.type === 'text').map((e) => e.content).join('\n');
+  assert.ok(!allText.includes(master.profile.email), 'master email must not remain in employee text');
+  assert.ok(allText.includes('i.suzuki@example.jp'));
+});
+
+test('CSV import: quoted fields, header mapping, personal fields not copied from master', async () => {
+  const { StorageService, parseCsv } = await import('../../../packages/core/src/utils/business-card/storage.js');
+  assert.deepEqual(parseCsv('a,"b,c","d""e"\r\nx,"l1\nl2",z\n'), [['a', 'b,c', 'd"e'], ['x', 'l1\nl2', 'z']]);
+  const base = { companyName: 'ACME', fullName: 'Master', email: 'm@acme.jp', mobile: '090', phone: '03-1', jobTitle: 'CEO' };
+  const rows = StorageService.parseEmployeeCsv('﻿氏名,メールアドレス,役職\r\n"鈴木, 一郎",s@acme.jp,部長\r\n佐藤 花子,,\r\n', base);
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].fullName, '鈴木, 一郎');
+  assert.equal(rows[0].email, 's@acme.jp');
+  assert.equal(rows[0].jobTitle, '部長');
+  assert.equal(rows[0].phone, '03-1', 'company phone falls back to master');
+  assert.equal(rows[1].email, '', 'personal email must not be copied from master');
+  assert.equal(rows[1].jobTitle, '');
+  assert.equal(rows[1].mobile, '');
+});
+
+test('CSV decode: falls back to Shift_JIS when UTF-8 yields replacement chars', async () => {
+  const { StorageService } = await import('../../../packages/core/src/utils/business-card/storage.js');
+  const ascii = (s) => [...s].map((c) => c.charCodeAt(0));
+  // "fullName\r\n田中\r\n" encoded in Shift_JIS (田 = 93 63, 中 = 92 86)
+  const bytes = new Uint8Array([...ascii('fullName\r\n'), 0x93, 0x63, 0x92, 0x86, ...ascii('\r\n')]);
+  assert.equal(StorageService.decodeCsvBytes(bytes), 'fullName\r\n田中\r\n');
+  const utf8 = new TextEncoder().encode('fullName\r\n田中\r\n');
+  assert.equal(StorageService.decodeCsvBytes(utf8), 'fullName\r\n田中\r\n');
+});
+
+test('print layout: トンボ sit in an outer margin outside the bleed, bleed-only option is 97×61', async () => {
+  const { computePrintLayout, CROP_MARK_GAP_MM } = await import('../../../packages/core/src/utils/business-card/pdfExporter.js');
+  const project = baseProject();
+  const l = computePrintLayout(project, { mode: 'tonbo' });
+  assert.equal(l.trimW, 91);
+  assert.equal(l.trimH, 55);
+  assert.equal(l.pageW, 91 + 2 * (3 + 10));
+  assert.equal(l.pageH, 55 + 2 * (3 + 10));
+  assert.equal(l.artX, 10);
+  assert.equal(l.trimX, 13);
+  assert.ok(l.marks.length >= 24);
+  const eps = 1e-9;
+  for (const m of l.marks) {
+    // every mark segment is fully outside the bleed box (+gap) and inside the page
+    const outsideX = Math.max(m.x1, m.x2) <= l.artX - CROP_MARK_GAP_MM + eps || Math.min(m.x1, m.x2) >= l.artX + l.artW + CROP_MARK_GAP_MM - eps;
+    const outsideY = Math.max(m.y1, m.y2) <= l.artY - CROP_MARK_GAP_MM + eps || Math.min(m.y1, m.y2) >= l.artY + l.artH + CROP_MARK_GAP_MM - eps;
+    assert.ok(outsideX || outsideY, `mark ${JSON.stringify(m)} intrudes into bleed`);
+    for (const v of [m.x1, m.x2]) assert.ok(v >= -eps && v <= l.pageW + eps);
+    for (const v of [m.y1, m.y2]) assert.ok(v >= -eps && v <= l.pageH + eps);
+  }
+  // trim lines and bleed lines are both marked
+  const verticalXs = new Set(l.marks.filter((m) => m.x1 === m.x2 && m.kind === 'corner').map((m) => m.x1));
+  for (const x of [l.artX, l.trimX, l.trimX + l.trimW, l.artX + l.artW]) assert.ok(verticalXs.has(x));
+
+  const b = computePrintLayout(project, { mode: 'bleed' });
+  assert.equal(b.pageW, 97);
+  assert.equal(b.pageH, 61);
+  assert.equal(b.marks.length, 0);
+  // legacy options map to the new modes
+  assert.equal(computePrintLayout(project, { includeBleed: true, includeCropMarks: true }).mode, 'tonbo');
+  assert.equal(computePrintLayout(project, { includeBleed: false }).mode, 'trim');
+});
+
+test('preflight flags placeholder QR URLs and auto-fix replaces them', () => {
+  assert.equal(QrCodeService.isPlaceholderData('https://tech.sample'), true);
+  assert.equal(QrCodeService.isPlaceholderData('https://yuka.sample/design'), true);
+  assert.equal(QrCodeService.isPlaceholderData('https://www.example-company.co.jp'), false);
+  const profile = { ...SAMPLE_PROFILES[0].profile, website: '' , sns: ''};
+  const project = baseProject(profile, 'tech-innovator');
+  const report = PreflightVerificationService.inspect(project);
+  const issue = report.issues.find((i) => i.ruleCode === 'QR_PLACEHOLDER_URL');
+  assert.ok(issue, 'placeholder QR must be flagged');
+  const fixed = PreflightVerificationService.applyAutoFix(project, issue);
+  const el = fixed[issue.side].elements.find((e) => e.id === issue.elementId);
+  assert.ok(el.data.startsWith('BEGIN:VCARD'));
+});
+
+test('OCR: no hard-coded demo profile, merge never overwrites user fields by default', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../../../packages/core/src/utils/business-card/ocrParser.js', import.meta.url), 'utf8');
+  assert.ok(!src.includes('\\u30B0\\u30ED\\u30FC\\u30D0\\u30EB\\u30A4\\u30CE\\u30D9') && !src.includes('グローバルイノベ'), 'demo company must not be injected');
+  assert.ok(!src.includes('0.94'), 'no fake confidence');
+  assert.ok(src.includes("import(\"tesseract.js\")"), 'tesseract.js must be lazily imported');
+  const { BusinessCardOcrService } = await import('../../../packages/core/src/utils/business-card/ocrParser.js');
+  const merged = BusinessCardOcrService.mergeOcrProfile({ fullName: 'User', email: '' }, { fullName: 'OCR', email: 'o@x.jp' });
+  assert.equal(merged.fullName, 'User');
+  assert.equal(merged.email, 'o@x.jp');
+  const parsed = BusinessCardOcrService.parseCardText('〒100-0005 東京都千代田区丸の内1-1-1\nTEL: 03-5555-0199');
+  assert.equal(parsed.postalCode, '〒100-0005');
+  assert.equal(parsed.phone, '03-5555-0199');
+});
+
+test('ZIP manifest has no fictional order data and uses Toolio branding', async () => {
+  const { buildPrintManifest } = await import('../../../packages/core/src/utils/business-card/zipPackager.js');
+  const { computePrintLayout } = await import('../../../packages/core/src/utils/business-card/pdfExporter.js');
+  const project = baseProject();
+  const m = buildPrintManifest(project, computePrintLayout(project, {}), PreflightVerificationService.inspect(project));
+  const json = JSON.stringify(m);
+  assert.equal(m.orderSpecification, undefined);
+  assert.ok(!json.includes('CMYK'));
+  assert.ok(!json.includes('Meishi Studio'));
+  assert.equal(m.generator, 'Toolio Business Card Studio');
+  assert.equal(m.cardSpecification.imageType, 'raster');
+});
+
+test('business-card proof PNG DPI helper writes the same pHYs as the id-photo helper', async () => {
+  const { setPngDpiBytes } = await import('../../../packages/core/src/utils/business-card/pngDpi.js');
+  const idPhoto = await import('../../../packages/core/src/utils/id-photo/imageDpi.js');
+  // 1×1 RGB PNG
+  const b64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC';
+  const png = new Uint8Array(Buffer.from(b64, 'base64'));
+  const a = setPngDpiBytes(png, 300);
+  assert.deepEqual([...a], [...idPhoto.setPngDpiBytes(png, 300)]);
+  const phys = idPhoto.readPngPhys(a);
+  assert.equal(phys.xPpm, 11811);
+  assert.equal(phys.unit, 1);
+  assert.equal(phys.crcValid, true);
+});

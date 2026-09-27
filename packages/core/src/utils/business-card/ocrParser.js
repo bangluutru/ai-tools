@@ -66,7 +66,7 @@ export class BusinessCardOcrService {
       if (!url.startsWith("http")) url = "https://" + url;
       result.website = url;
     }
-    const postalMatch = text.match(/〒?\s*(\d{3}[-ー]\d{4})/);
+    const postalMatch = text.match(/(?:〒\s*|(?<![\d\-ー]))(\d{3}[-ー]\d{4})(?![\d\-ー])/);
     if (postalMatch) {
       result.postalCode = "\u3012" + postalMatch[1].replace("\u30FC", "-");
     }
@@ -153,38 +153,113 @@ export class BusinessCardOcrService {
     return result;
   }
   /**
-   * Main scan & extract function: runs client-side parser & color extractor
+   * Runs real on-device OCR (tesseract.js, jpn+eng) on the image and parses the text.
+   * The image never leaves the browser; tesseract's worker/core and language data (~10 MB)
+   * are downloaded from the jsDelivr CDN on first use and cached by the browser.
+   * Returns { confidence (0..1, from tesseract), profile (parsed fields only), rawText, detectedColors }.
    */
-  static async extractFromImage(fileOrDataUrl) {
-    const colors = await this.extractDominantColors(fileOrDataUrl);
-    let text = "";
-    if (typeof fileOrDataUrl === "string" && fileOrDataUrl.includes("data:image/svg+xml")) {
-      const decoded = decodeURIComponent(fileOrDataUrl);
-      const matches = decoded.match(/<text[^>]*>([^<]+)<\/text>/g);
-      if (matches) {
-        text = matches.map((m) => m.replace(/<[^>]+>/g, "").trim()).join("\n");
-      }
+  static async extractFromImage(fileOrDataUrl, { onProgress } = {}) {
+    const [colors, source] = await Promise.all([
+      this.extractDominantColors(fileOrDataUrl),
+      prepareOcrSource(fileOrDataUrl)
+    ]);
+    const worker = await getOcrWorker();
+    currentProgressHandler = onProgress || null;
+    let data;
+    try {
+      ({ data } = await worker.recognize(source));
+    } finally {
+      currentProgressHandler = null;
     }
-    if (!text || text.length < 10) {
-      text = `\u682A\u5F0F\u4F1A\u793E\u30B0\u30ED\u30FC\u30D0\u30EB\u30A4\u30CE\u30D9\u30FC\u30B7\u30E7\u30F3\u30BD\u30EA\u30E5\u30FC\u30B7\u30E7\u30F3\u30BA
-GLOBAL INNOVATION SOLUTIONS INC.
-\u4EE3\u8868\u53D6\u7DE0\u5F79 CEO
-\u7530\u4E2D \u5065\u4E8C
-KENJI TANAKA
-\u3012100-0005 \u6771\u4EAC\u90FD\u5343\u4EE3\u7530\u533A\u4E38\u306E\u51851-1-1 \u30D1\u30FC\u30AF\u30BF\u30EF\u30FC14F
-TEL: 03-5555-0199  /  Mobile: 090-1234-5678
-Email: k.tanaka@global-innov.co.jp
-https://www.global-innov.co.jp`;
+    const rawText = (data?.text || "").replace(/[ \t]+\n/g, "\n").trim();
+    if (rawText.replace(/\s/g, "").length < 4) {
+      const err = new Error("OCR_NO_TEXT");
+      err.code = "OCR_NO_TEXT";
+      throw err;
     }
-    const profile = this.parseCardText(text);
+    const profile = this.parseCardText(normalizeOcrText(rawText));
     return {
-      confidence: 0.94,
-      profile: {
-        ...profile,
-        brandColors: colors
-      },
-      rawText: text,
+      confidence: Math.max(0, Math.min(1, (data?.confidence || 0) / 100)),
+      profile,
+      rawText,
       detectedColors: colors
     };
   }
+  /**
+   * Merges OCR fields into the current profile without overwriting user data:
+   * only fields listed in `acceptedKeys` are applied (default: fields that are currently empty).
+   */
+  static mergeOcrProfile(currentProfile, ocrProfile, acceptedKeys) {
+    const keys = acceptedKeys || Object.keys(ocrProfile).filter((k) => OCR_FIELD_KEYS.includes(k) && ocrProfile[k] && !String(currentProfile[k] || "").trim());
+    const next = { ...currentProfile };
+    for (const k of keys) {
+      if (OCR_FIELD_KEYS.includes(k) && ocrProfile[k]) next[k] = ocrProfile[k];
+    }
+    return next;
+  }
+}
+
+export const OCR_FIELD_KEYS = ["companyName", "fullName", "fullNameEn", "jobTitle", "postalCode", "address", "phone", "mobile", "fax", "email", "website"];
+
+let workerPromise = null;
+let currentProgressHandler = null;
+
+/** Lazily creates (once) a tesseract.js worker for Japanese + English. */
+export function getOcrWorker() {
+  if (!workerPromise) {
+    workerPromise = (async () => {
+      const { createWorker } = await import("tesseract.js");
+      return createWorker(["jpn", "eng"], 1, {
+        logger: (m) => {
+          if (!currentProgressHandler) return;
+          currentProgressHandler({ status: m.status, progress: typeof m.progress === "number" ? m.progress : 0 });
+        }
+      });
+    })().catch((err) => {
+      workerPromise = null;
+      throw err;
+    });
+  }
+  return workerPromise;
+}
+
+/** Tesseract (jpn) often inserts spaces between CJK characters; collapse them so the regex parser works. */
+export function normalizeOcrText(text) {
+  return String(text || "").replace(/([\u3000-\u30ff\u4e00-\u9faf\uff00-\uffef]) (?=[\u3000-\u30ff\u4e00-\u9faf\uff00-\uffef])/g, "$1").replace(/[\uff10-\uff19]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 65248)).replace(/[\u2010-\u2015\u2212\uff0d]/g, "-").replace(/\uff20/g, "@");
+}
+
+/** Loads the image into a canvas (downscaled to max 2400px long edge) for OCR. */
+function prepareOcrSource(fileOrDataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    let objectUrl = null;
+    img.onload = () => {
+      try {
+        const longEdge = Math.max(img.naturalWidth, img.naturalHeight) || 1;
+        const scale = Math.min(1, 2400 / longEdge);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas);
+      } catch (err) {
+        reject(err);
+      } finally {
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+      }
+    };
+    img.onerror = () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      reject(new Error("OCR_IMAGE_LOAD_FAILED"));
+    };
+    if (typeof fileOrDataUrl === "string") {
+      img.src = fileOrDataUrl;
+    } else {
+      objectUrl = URL.createObjectURL(fileOrDataUrl);
+      img.src = objectUrl;
+    }
+  });
 }

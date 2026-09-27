@@ -12,7 +12,7 @@ import {
   Cpu,
   Lock,
 } from 'lucide-react';
-import { reconcileAccountingData } from '../utils/accounting/reconcile.js';
+import { invoiceLabel, reconcileAccountingData } from '../utils/accounting/reconcile.js';
 import { reconcileWorkbooks } from '../utils/accounting/reconcilePipeline.js';
 import { exportReconcileWorkbook } from '../utils/accounting/reconcileExport.js';
 import {
@@ -21,6 +21,10 @@ import {
   validateDocumentFiles,
   verifyDocumentSignature,
 } from '../utils/documentFiles.js';
+
+// Tạo một lần cho cả bảng thay vì mỗi ô một Intl.NumberFormat mới.
+const VND_FORMATTER = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
+const formatCurrency = (val) => VND_FORMATTER.format(Number(val) || 0);
 
 export default function AccountingReconcileView({ displayLang = 'vi' }) {
   const [files, setFiles] = useState({ 511: null, 33311: null, br: null });
@@ -42,10 +46,14 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
     }
     const workbook = XLSX.read(new Uint8Array(await file.arrayBuffer()), { type: 'array' });
     const sheetRows = {};
+    const sheetRowOffsets = {};
     for (const sheetName of workbook.SheetNames) {
-      sheetRows[sheetName] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+      const sheet = workbook.Sheets[sheetName];
+      sheetRows[sheetName] = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: true });
+      // Vùng dữ liệu không bắt đầu ở dòng 1 thì dòng đầu mảng không phải dòng 1 của Excel.
+      sheetRowOffsets[sheetName] = sheet?.['!ref'] ? XLSX.utils.decode_range(sheet['!ref']).s.r : 0;
     }
-    return { sheetNames: workbook.SheetNames, sheetRows };
+    return { sheetNames: workbook.SheetNames, sheetRows, sheetRowOffsets };
   };
 
   const handleFileUpload = async (event) => {
@@ -72,13 +80,26 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
 
       const outcome = reconcileWorkbooks(workbooks);
 
-      setFiles((current) => ({ ...current, ...outcome.files }));
+      // Chỉ thay tên file của loại vừa nạp; loại không có trong lần tải này giữ nguyên.
+      setFiles((current) => ({
+        511: outcome.files['511'] ?? current['511'],
+        33311: outcome.files['33311'] ?? current['33311'],
+        br: outcome.files.br ?? current.br,
+      }));
       setData((current) => ({
         511: outcome.data['511'].length > 0 ? outcome.data['511'] : current['511'],
         33311: outcome.data['33311'].length > 0 ? outcome.data['33311'] : current['33311'],
         br: outcome.data.br.length > 0 ? outcome.data.br : current.br,
       }));
-      setDiagnostics(outcome.diagnostics);
+      // Giữ nhật ký của các loại file không nạp lại trong lần này; loại nào vừa
+      // nạp lại thì thay bằng nhật ký mới.
+      const reloadedKinds = new Set(
+        Object.entries(outcome.data).filter(([, records]) => records.length > 0).map(([kind]) => kind),
+      );
+      setDiagnostics((current) => [
+        ...current.filter((entry) => entry.kind && !reloadedKinds.has(String(entry.kind))),
+        ...outcome.diagnostics,
+      ]);
       setFileError(errors.join(' • '));
     } catch (err) {
       console.error('Lỗi đọc file:', err);
@@ -101,10 +122,6 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
     if (!data['511'].length && !data['33311'].length && !data.br.length) return null;
     return reconcileAccountingData(data);
   }, [data]);
-
-  const formatCurrency = (val) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
-  };
 
   const exportExcel = async () => {
     if (!results) return;
@@ -148,8 +165,8 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
 
         {file ? (
           <div>
-            <p className="text-body-sm text-secondary font-mono truncate" title={file.name}>
-              {file.name}
+            <p className="text-body-sm text-secondary font-mono truncate" title={file}>
+              {file}
             </p>
             <p className="text-label-sm text-on-surface-variant mt-1">Đã nạp {rowCount.toLocaleString('vi-VN')} dòng dữ liệu</p>
           </div>
@@ -167,7 +184,7 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
           <thead className="text-xs text-on-surface-variant uppercase bg-surface-container-low border-b border-border-subtle/40">
             <tr>
               <th className="px-4 py-3 font-semibold">Số HĐ</th>
-              <th className="px-4 py-3 text-right font-semibold">{type === '511' ? '511 (Có)' : '33311 (Tổng)'}</th>
+              <th className="px-4 py-3 text-right font-semibold">{type === '511' ? '511 (Có − Nợ)' : '33311 (Có − Nợ)'}</th>
               {type === '33311' && <th className="px-4 py-3 text-right font-semibold">VAT Tặng</th>}
               <th className="px-4 py-3 text-right font-semibold">BR ({type === '511' ? 'Chưa thuế' : 'Thuế'})</th>
               <th className="px-4 py-3 text-right font-semibold">Chênh lệch</th>
@@ -177,7 +194,7 @@ export default function AccountingReconcileView({ displayLang = 'vi' }) {
           <tbody className="divide-y divide-border-subtle/20">
             {reportData.map((row, idx) => (
               <tr key={`${row.invoice}-${idx}`} className="hover:bg-surface-container/50 transition-colors">
-                <td className="px-4 py-3 font-mono font-medium text-on-surface">{row.invoice}</td>
+                <td className="px-4 py-3 font-mono font-medium text-on-surface">{invoiceLabel(row)}</td>
                 <td className="px-4 py-3 text-right text-on-surface font-mono">
                   {type === '511' ? formatCurrency(row.val511) : formatCurrency(row.val33311)}
                 </td>

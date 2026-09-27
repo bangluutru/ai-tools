@@ -256,6 +256,19 @@ export function extractCandidateLookupCode(text, providerAdapter = null) {
   return '';
 }
 
+const ADDRESS_FOLLOWERS = /^\s*(?:[,/-]|(?:đường|duong|phố|pho|ngõ|ngo|ngách|ngach|hẻm|hem|kiệt|kiet|lô|lo|tổ|to|thôn|thon|ấp|ap|khu|tầng|tang|phường|phuong|quận|quan)(?=[\s,.]|$))/i;
+
+export function findFallbackInvoiceNumber(text) {
+  const pattern = /^[ \t]*(?:Số\s*hóa\s*đơn|Số\s*HĐ|Invoice\s*No\.?|Số)[ \t]*(\([^)\n]*\)|\/[ \t]*No\.?)?[ \t]*([:.])?[ \t]*(\d{1,8})\b(.*)$/gim;
+  for (const match of String(text).matchAll(pattern)) {
+    const [, bilingual, separator, digits, rest] = match;
+    if (!bilingual && !separator) continue;
+    if (ADDRESS_FOLLOWERS.test(rest)) continue;
+    return String(digits).padStart(8, '0');
+  }
+  return '';
+}
+
 /**
   * Extracts standard TT78/TT91 metadata fields from PDF invoice text
   * @param {string} text
@@ -266,12 +279,12 @@ export function extractInvoiceMetadataFromText(text) {
   const symbol = fields.symbol?.raw || fields.symbol?.symbol || '';
   let invoiceNumber = fields.invoiceNo ? String(fields.invoiceNo).padStart(8, '0') : '';
 
-  // Fallback for bilingual invoice numbers like "Số (No.) : 73293447" or "Số / No : 00123456"
+  // Fallback for bilingual invoice numbers like "Số (No.) : 73293447" or "Số / No : 00123456".
+  // Nhãn phải đứng đầu dòng và có dấu ":"/"." hoặc bản dịch "(No.)"/"/ No" ngay
+  // sau, để "Địa chỉ: Số 123 Đường ..." hay "Số 45 ngõ 12" không bị đọc thành số
+  // hóa đơn.
   if (!invoiceNumber && text) {
-    const noMatch = text.match(/(?:Số|Invoice\s*No|Số\s*HĐ)\s*(?:\([^)]*\)|\/[^:]*)?\s*[:.]?\s*(\d{1,8})\b/i);
-    if (noMatch && noMatch[1]) {
-      invoiceNumber = String(noMatch[1]).padStart(8, '0');
-    }
+    invoiceNumber = findFallbackInvoiceNumber(text);
   }
 
   const invoiceDate = fields.date || '';

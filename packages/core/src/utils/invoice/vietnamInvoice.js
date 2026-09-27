@@ -14,7 +14,7 @@
  */
 
 import { parseLocalizedNumber } from '../numbers.js';
-import { parseVietnameseAmountWords } from './amountWords.js';
+import { analyzeVietnameseAmountWords } from './amountWords.js';
 
 export const INVOICE_RULE_VERSION = 'tt91-2026-invoice-v1';
 
@@ -58,6 +58,34 @@ export const INVOICE_SYMBOL_PATTERN = new RegExp(
 
 /** Mã số thuế Việt Nam: 10 chữ số, đơn vị phụ thuộc thêm 3 chữ số, hoặc 12 chữ số (CCCD / hộ kinh doanh). */
 export const TAX_CODE_PATTERN = /\b(\d{10})(?:[-\s]?(\d{3}))?\b|\b(\d{12})\b/;
+
+/** Dạng đầy đủ của một mã số thuế: 10, 10-3 (13) hoặc 12 chữ số, không lẫn gì khác. */
+const TAX_CODE_EXACT = /^(?:(\d{10})(?:-?\d{3})?|\d{12})$/;
+
+/**
+ * Trọng số kiểm tra chữ số thứ 10 của mã số thuế doanh nghiệp theo thuật toán
+ * mod 11 của Tổng cục Thuế: N10 = 10 - (Σ Ni * Wi mod 11). Kết quả 10 (tổng chia
+ * hết cho 11) không phải chữ số nên mã đó không hợp lệ.
+ */
+const TAX_CODE_WEIGHTS = [31, 29, 23, 19, 17, 13, 7, 5, 3];
+
+/**
+ * Kiểm tra chữ số kiểm tra của mã số thuế 10 chữ số (hoặc phần 10 chữ số đầu
+ * của mã đơn vị phụ thuộc 13 chữ số). Mã 12 chữ số (số định danh cá nhân) không
+ * có chữ số kiểm tra theo thuật toán này nên luôn trả về true. Trả về null khi
+ * không phải dạng mã số thuế.
+ */
+export function isValidTaxCodeChecksum(value) {
+  const compact = String(value ?? '').replace(/[\s.]/g, '');
+  const match = TAX_CODE_EXACT.exec(compact);
+  if (!match) return null;
+  if (!match[1]) return true;
+
+  const digits = match[1].split('').map(Number);
+  const sum = TAX_CODE_WEIGHTS.reduce((acc, weight, index) => acc + weight * digits[index], 0);
+  const check = 10 - (sum % 11);
+  return check === digits[9];
+}
 
 /**
  * Bỏ dấu theo từng ký tự để độ dài chuỗi không đổi. Nhờ vậy vị trí tìm được
@@ -180,7 +208,11 @@ export function findLabeledValue(lines, labels, options = {}) {
  * nghìn: "4.246.000", "4,246,000" và "4 246 000" — kiểu dấu cách khá phổ biến
  * trên bản thể hiện vé máy bay.
  */
-const MONEY_TOKEN = /\d{1,3}(?:[ .,]\d{3})+(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?/g;
+const MONEY_BODY = '\\d{1,3}(?:[ .,]\\d{3})+(?:[.,]\\d{1,2})?|\\d+(?:[.,]\\d{1,2})?';
+// Hóa đơn điều chỉnh giảm in số âm dạng "-1.080.000" hoặc kế toán "(1.080.000)".
+// Dấu trừ chỉ được nhận khi dính liền chữ số và không đứng sau chữ/số khác, để
+// gạch nối như "0101234567-001" hay "Tổng - 1.000" không biến thành số âm.
+const MONEY_TOKEN = new RegExp(`\\((?:${MONEY_BODY})\\)|(?:(?<![\\w.,])-)?(?:${MONEY_BODY})`, 'g');
 
 const isGroupedMoney = (token) => /[ .,]\d{3}/.test(token);
 
@@ -453,12 +485,15 @@ export function extractInvoiceFields(rawText) {
   const rateHit = findLabeledAmount(lines, LABELS.taxRate);
   const authorityHit = findLabeledAmount(lines, LABELS.authorityCollection);
   const authorityCollection = authorityHit?.amount ?? 0;
-  const amountInWordsValue = amountInWords ? parseVietnameseAmountWords(amountInWords) : null;
+  const wordsAnalysis = amountInWords ? analyzeVietnameseAmountWords(amountInWords) : null;
+  const amountInWordsValue = wordsAnalysis?.value ?? null;
+  const amountInWordsConfident = Boolean(wordsAnalysis?.confident);
 
   // "Số tiền viết bằng chữ" là tiêu thức bắt buộc và là bản ghi độc lập của
   // tổng thanh toán. Chữ không có dấu phân nhóm nên không bị đọc lệch hệ số như
-  // cột số, vì vậy khi hai bên lệch nhau thì lấy theo chữ và báo lại cả hai —
-  // đây là cách bắt được lỗi đọc nhầm dấu chấm nghìn thành hàng tỷ.
+  // cột số; khi hai bên lệch nhau theo đúng dạng lỗi đọc số (xem bên dưới) thì
+  // lấy theo chữ và báo lại cả hai — đây là cách bắt được lỗi đọc nhầm dấu chấm
+  // nghìn thành hàng tỷ. Lệch kiểu khác thì chỉ cảnh báo, không tự sửa.
   const numericTotal = totalHit?.amount ?? null;
   const beforeTax = beforeTaxHit?.amount ?? 0;
   const vat = vatHit?.amount ?? 0;
@@ -472,13 +507,19 @@ export function extractInvoiceFields(rawText) {
       totalSource = 'words';
     } else if (Math.abs(amountInWordsValue - numericTotal) > AMOUNT_TOLERANCE) {
       // Bảng thuế là nhân chứng thứ hai cho cột số: khi chưa thuế + tiền thuế
-      // đúng bằng cột số thì cột số mới là bên đáng tin, chỉ cảnh báo. Không có
-      // nhân chứng đó thì lấy theo chữ, vì chữ không có dấu phân nhóm nên không
-      // bị đọc lệch hệ số nghìn như cột số.
-      const hasBreakdown = beforeTax > 0 || vat > 0;
-      const numericCorroborated = hasBreakdown
-        && Math.abs(beforeTax + vat - numericTotal) <= AMOUNT_TOLERANCE;
-      if (!numericCorroborated) {
+      // đúng bằng cột số thì cột số mới là bên đáng tin, chỉ cảnh báo.
+      const hasBreakdown = beforeTax !== 0 || vat !== 0;
+      const addsUpTo = (target) => hasBreakdown
+        && (Math.abs(beforeTax + vat - target) <= AMOUNT_TOLERANCE
+          || Math.abs(beforeTax + vat + authorityCollection - target) <= AMOUNT_TOLERANCE);
+      const numericCorroborated = addsUpTo(numericTotal);
+      // Chữ chỉ được thay cột số khi đọc chữ chắc chắn VÀ sai lệch có dạng của
+      // một lỗi đọc số điển hình: lệch hệ số 10^k (dấu phân nhóm đọc nhầm), chỉ
+      // lệch dấu (mất dấu trừ), hoặc chính bảng thuế xác nhận số bằng chữ. Mọi
+      // trường hợp khác giữ cột số và để cảnh báo lệch cho người dùng soát.
+      const wordsCorroborated = addsUpTo(amountInWordsValue);
+      if (amountInWordsConfident && !numericCorroborated
+        && (wordsCorroborated || isScaleOrSignMisread(numericTotal, amountInWordsValue))) {
         totalAmount = amountInWordsValue;
         totalSource = 'words-override';
       }
@@ -505,7 +546,26 @@ export function extractInvoiceFields(rawText) {
     taxRate: rateHit?.amount ?? null,
     amountInWords,
     amountInWordsValue,
+    amountInWordsConfident,
   };
+}
+
+/**
+ * Hai số lệch nhau đúng một hệ số 10^k (k = 1..9), hoặc chỉ khác dấu — dạng lỗi
+ * điển hình khi đọc cột số: dấu phân nhóm/thập phân bị hiểu nhầm, hoặc mất dấu
+ * trừ của hóa đơn điều chỉnh giảm.
+ */
+function isScaleOrSignMisread(numeric, words) {
+  if (!numeric || !words) return false;
+  if (Math.abs(Math.abs(numeric) - Math.abs(words)) <= AMOUNT_TOLERANCE) return true;
+  if (Math.sign(numeric) !== Math.sign(words)) return false;
+  const big = Math.max(Math.abs(numeric), Math.abs(words));
+  const small = Math.min(Math.abs(numeric), Math.abs(words));
+  for (let power = 1; power <= 9; power += 1) {
+    const factor = 10 ** power;
+    if (Math.abs(big - small * factor) <= AMOUNT_TOLERANCE * factor) return true;
+  }
+  return false;
 }
 
 /** Sai lệch làm tròn chấp nhận được giữa các cột tiền trên hóa đơn. */
@@ -566,8 +626,17 @@ export function validateInvoiceFields(fields) {
     warnings.push(`${symbol.formName} không có thuế GTGT nhưng đọc được tiền thuế.`);
   }
 
-  if (fields.sellerTax && !TAX_CODE_PATTERN.test(fields.sellerTax)) {
-    warnings.push('Mã số thuế người bán không đúng dạng 10 hoặc 13 chữ số.');
+  if (fields.sellerTax) {
+    const checksum = isValidTaxCodeChecksum(fields.sellerTax);
+    if (checksum === null) {
+      warnings.push('Mã số thuế người bán không đúng dạng 10, 12 hoặc 13 chữ số.');
+    } else if (checksum === false) {
+      warnings.push(`Mã số thuế người bán ${fields.sellerTax} sai chữ số kiểm tra (thuật toán mod 11 của cơ quan thuế), cần đối chiếu chứng từ gốc.`);
+    }
+  }
+
+  if (Number(totalAmount) < 0) {
+    warnings.push('Tổng thanh toán âm: đây là hóa đơn điều chỉnh giảm, cần đối chiếu với hóa đơn gốc trước khi đưa vào đề nghị thanh toán.');
   }
 
   if (fields.dateSource === 'scan') {
@@ -576,6 +645,10 @@ export function validateInvoiceFields(fields) {
 
   if (fields.totalSource === 'words') {
     warnings.push('Không đọc được dòng tổng thanh toán; số tiền lấy từ "Số tiền viết bằng chữ".');
+  }
+
+  if (fields.totalSource === 'words' && fields.amountInWordsConfident === false) {
+    warnings.push('Số tiền bằng chữ có từ không nhận ra được, cần đối chiếu chứng từ gốc.');
   }
 
   if (fields.totalSource === 'words-override') {

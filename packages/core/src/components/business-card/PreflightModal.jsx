@@ -137,7 +137,7 @@ export const PreflightModal = ({
                         <div className="font-bold text-on-surface flex items-center gap-2">
                           <span>{issueTitle}</span>
                           <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-container-high border border-border-subtle text-on-surface-variant">
-                            {issue.side === "front" ? (t("frontSide") || "Mặt trước") : (t("backSide") || "Mặt sau")}
+                            {issue.side === "front" ? t("frontSide") : t("backSide")}
                           </span>
                         </div>
                         <p className="text-on-surface-variant text-[11px] mt-0.5 leading-normal">
@@ -167,7 +167,7 @@ export const PreflightModal = ({
             onClick={onClose}
             className="px-5 py-2 text-xs font-bold rounded-xl bg-surface-container-highest hover:bg-surface-subtle border border-border-strong text-on-surface transition-colors cursor-pointer"
           >
-            {t("btnClose") || "Đóng"}
+            {t("btnClose")}
           </button>
         </div>
       </div>

@@ -9,8 +9,8 @@ import {
   ShieldCheck,
   Printer
 } from "lucide-react";
-import { BusinessCardPdfExporter } from "../../utils/business-card/pdfExporter.js";
-import { PrintPackageService } from "../../utils/business-card/zipPackager.js";
+import { BusinessCardPdfExporter, computePrintLayout } from "../../utils/business-card/pdfExporter.js";
+import { PrintPackageService, downloadBlob } from "../../utils/business-card/zipPackager.js";
 import { useLanguage } from "../../utils/business-card/LanguageContext.jsx";
 export const FreeExportModal = ({
   isOpen,
@@ -22,22 +22,30 @@ export const FreeExportModal = ({
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingZip, setIsExportingZip] = useState(false);
   const [exportSuccessMsg, setExportSuccessMsg] = useState(null);
+  const [exportErrorMsg, setExportErrorMsg] = useState(null);
+  const [printMode, setPrintMode] = useState("tonbo");
   if (!isOpen) return null;
+  const layout = computePrintLayout(project, { mode: printMode });
+  const baseName = (project.title || "business-card").replace(/[\\/:*?"<>|]+/g, "_");
+  const flash = (msg) => {
+    setExportErrorMsg(null);
+    setExportSuccessMsg(msg);
+    setTimeout(() => setExportSuccessMsg(null), 4e3);
+  };
+  const fail = (err) => {
+    console.error("Export error:", err);
+    setExportSuccessMsg(null);
+    setExportErrorMsg(t("exportFailedMsg"));
+  };
   const handleDownloadPdf = async () => {
     try {
       setIsExportingPdf(true);
-      const pdfDoc = await BusinessCardPdfExporter.generatePrintPdf(project, {
-        includeBleed: true,
-        includeCropMarks: true,
-        dpi: 300,
-        colorMode: "cmyk_simulation"
-      });
-      const filename = `${project.title || "Meishi"}_300DPI_\u30C8\u30F3\u30DC\u4ED8.pdf`;
-      pdfDoc.save(filename);
-      setExportSuccessMsg(`\u0110\xE3 t\u1EA3i xu\u1ED1ng th\xE0nh c\xF4ng: ${filename}`);
-      setTimeout(() => setExportSuccessMsg(null), 4e3);
+      const pdfDoc = await BusinessCardPdfExporter.generatePrintPdf(project, { mode: printMode });
+      const filename = `${baseName}_300dpi_${printMode === "tonbo" ? "tonbo" : "bleed"}_${layout.pageW}x${layout.pageH}mm.pdf`;
+      downloadBlob(pdfDoc.output("blob"), filename);
+      flash(t("exportDownloadedMsg").replace("{file}", filename));
     } catch (err) {
-      console.error("Export PDF error:", err);
+      fail(err);
     } finally {
       setIsExportingPdf(false);
     }
@@ -45,36 +53,24 @@ export const FreeExportModal = ({
   const handleDownloadZip = async () => {
     try {
       setIsExportingZip(true);
-      const zipBlob = await PrintPackageService.createPrintBundleZip(project, {
-        quantity: 100
-      });
-      const url = URL.createObjectURL(zipBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${project.title || "Meishi"}_\u5165\u7A3F\u5B8C\u5168\u30D1\u30C3\u30B1\u30FC\u30B8.zip`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setExportSuccessMsg("\u0110\xE3 t\u1EA1o v\xE0 t\u1EA3i g\xF3i ZIP ho\xE0n ch\u1EC9nh chu\u1EA9n nh\xE0 in!");
-      setTimeout(() => setExportSuccessMsg(null), 4e3);
+      const zipBlob = await PrintPackageService.createPrintBundleZip(project, { mode: printMode });
+      const filename = `${baseName}_print_package.zip`;
+      downloadBlob(zipBlob, filename);
+      flash(t("exportDownloadedMsg").replace("{file}", filename));
     } catch (err) {
-      console.error("Export ZIP error:", err);
+      fail(err);
     } finally {
       setIsExportingZip(false);
     }
   };
   const handleDownloadProof = async (side) => {
     try {
-      const proofUrl = await BusinessCardPdfExporter.generateProofPng(project, side);
-      const a = document.createElement("a");
-      a.href = proofUrl;
-      a.download = `${project.title || "Meishi"}_Proof_${side}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const blob = await BusinessCardPdfExporter.generateProofPngBlob(project, side);
+      const filename = `${baseName}_proof_${side}_300dpi.png`;
+      downloadBlob(blob, filename);
+      flash(t("exportDownloadedMsg").replace("{file}", filename));
     } catch (err) {
-      console.error("Proof export error:", err);
+      fail(err);
     }
   };
   return <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
@@ -111,6 +107,9 @@ export const FreeExportModal = ({
             <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
             <span className="font-medium">{exportSuccessMsg}</span>
           </div>}
+        {exportErrorMsg && <div role="alert" className="mx-6 mt-4 p-3 rounded-xl bg-error/10 border border-error/30 text-error text-xs">
+            {exportErrorMsg}
+          </div>}
 
         {/* Body Content */}
         <div className="p-6 space-y-5 overflow-y-auto flex-1">
@@ -125,8 +124,8 @@ export const FreeExportModal = ({
                   {preflight.score} / 100 {t("scoreUnit")}
                 </span>
               </div>
-              <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                {t("pfPassed")}
+              <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${preflight.passed ? "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/20" : "text-tertiary bg-tertiary/10 border-tertiary/30"}`}>
+                {preflight.passed ? t("pfPassed") : t("pfWarning")}
               </span>
             </div>}
 
@@ -169,6 +168,24 @@ export const FreeExportModal = ({
             </div>
           </div>
 
+          {/* Print layout mode */}
+          <fieldset className="p-3.5 rounded-xl border border-border-subtle bg-surface-container space-y-2">
+            <legend className="px-1 text-xs font-bold text-on-surface">{t("printModeLabel")}</legend>
+            {["tonbo", "bleed"].map((mode) => {
+    const l = computePrintLayout(project, { mode });
+    return <label key={mode} className="flex items-start gap-2 text-xs cursor-pointer">
+                  <input type="radio" name="bc-print-mode" className="mt-0.5" checked={printMode === mode} onChange={() => setPrintMode(mode)} />
+                  <span>
+                    <span className="font-semibold text-on-surface">{t(mode === "tonbo" ? "printModeTonbo" : "printModeBleed")}</span>
+                    <span className="block text-[11px] text-on-surface-variant">
+                      {t("printModePageSize").replace("{page}", `${l.pageW} × ${l.pageH}`).replace("{trim}", `${l.trimW} × ${l.trimH}`)}
+                    </span>
+                  </span>
+                </label>;
+  })}
+            <p className="text-[11px] text-on-surface-variant">{t("printModeHint")}</p>
+          </fieldset>
+
           {/* Primary Action Buttons */}
           <div className="space-y-3 pt-2">
             {/* Download Print-Ready PDF */}
@@ -198,7 +215,7 @@ export const FreeExportModal = ({
     /* Secondary: Proof PNGs */
   }
           <div className="pt-2 border-t border-border-subtle/50 flex items-center justify-between">
-            <span className="text-xs font-medium text-on-surface-variant">Tải nhanh ảnh Proof duyệt mẫu (PNG):</span>
+            <span className="text-xs font-medium text-on-surface-variant">{t("proofQuickLabel")}</span>
             <div className="flex items-center gap-2">
               <button
     onClick={() => handleDownloadProof("front")}

@@ -7,7 +7,8 @@ import {
   exportPhotoBlob,
   exportSheetPdf,
   renderPrintSheet,
-  renderSingleIdPhoto
+  renderSingleIdPhoto,
+  resolveSheetDpi
 } from '../../utils/id-photo/exportEngine.js';
 import { PrintSheetPreview } from './PrintSheetPreview.jsx';
 import { ConvenienceStoreModal } from './ConvenienceStoreModal.jsx';
@@ -43,6 +44,8 @@ const Step4Export = ({
     exportDpi: 300
   });
   const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
+  const [exportNotice, setExportNotice] = useState(null);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const singlePhotoCanvas = useMemo(() => {
     return renderSingleIdPhoto(compositeImage, standard, transform, 300, bgColor, useVignette);
@@ -52,6 +55,8 @@ const Step4Export = ({
   }, [selectedPaper, standard, settings.gapMm]);
   const handleDownloadImage = async () => {
     setIsExporting(true);
+    setExportError(null);
+    setExportNotice(null);
     try {
       const ext = exportFormat === "png" ? "png" : "jpg";
       let blob;
@@ -68,27 +73,35 @@ const Step4Export = ({
         );
         blob = await exportPhotoBlob(photoCanvas, exportFormat, exportDpi);
       } else {
-        filename = `print-sheet-${selectedPaper.id}-${tiling.paperWidthMm}x${tiling.paperHeightMm}mm-${exportDpi}dpi.${ext}`;
+        // Giới hạn diện tích canvas (iOS ~16.7 MP): A4 @600 DPI ≈ 34.8 MP → tự hạ DPI và báo cho người dùng
+        const { dpi: sheetDpi, downgraded } = resolveSheetDpi(tiling.paperWidthMm, tiling.paperHeightMm, exportDpi);
+        if (downgraded) {
+          setExportNotice(format(t.dpiDowngradedNotice, { from: exportDpi, to: sheetDpi }));
+        }
+        filename = `print-sheet-${selectedPaper.id}-${tiling.paperWidthMm}x${tiling.paperHeightMm}mm-${sheetDpi}dpi.${ext}`;
         const photoCanvas = renderSingleIdPhoto(
           compositeImage,
           standard,
           transform,
-          exportDpi,
+          sheetDpi,
           bgColor,
           useVignette
         );
-        const sheetCanvas = renderPrintSheet(photoCanvas, tiling, settings, exportDpi);
-        blob = await exportPhotoBlob(sheetCanvas, exportFormat, exportDpi);
+        const sheetCanvas = renderPrintSheet(photoCanvas, tiling, settings, sheetDpi);
+        blob = await exportPhotoBlob(sheetCanvas, exportFormat, sheetDpi);
       }
       triggerDownload(blob, filename);
     } catch (err) {
       console.error("Export Image error:", err);
+      setExportError(t.exportFailed);
     } finally {
       setIsExporting(false);
     }
   };
   const handleDownloadPdf = async () => {
     setIsExporting(true);
+    setExportError(null);
+    setExportNotice(null);
     try {
       const filename = `print-sheet-${selectedPaper.id}-${tiling.paperWidthMm}x${tiling.paperHeightMm}mm.pdf`;
       const highResPhoto = renderSingleIdPhoto(
@@ -103,6 +116,7 @@ const Step4Export = ({
       triggerDownload(pdfBlob, filename);
     } catch (err) {
       console.error("Export PDF error:", err);
+      setExportError(t.exportFailed);
     } finally {
       setIsExporting(false);
     }
@@ -115,7 +129,8 @@ const Step4Export = ({
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Thu hồi URL sau một khoảng trễ — thu hồi ngay sau click() có thể hủy tải xuống (Safari/Firefox)
+    setTimeout(() => URL.revokeObjectURL(url), 3e4);
   };
   const isSingle = selectedPaper.id === "paper-single";
   return <div className="mx-auto max-w-5xl space-y-6">
@@ -373,7 +388,7 @@ const Step4Export = ({
               </span>
             </button>
 
-            {/* Vector PDF Download */}
+            {/* PDF Download (raster photos placed at exact mm size) */}
             {!isSingle && (
               <button
                 type="button"
@@ -385,6 +400,8 @@ const Step4Export = ({
                 <span>{t.downloadPdf}</span>
               </button>
             )}
+            {exportNotice && <p role="status" className="text-[11px] text-tertiary leading-snug">{exportNotice}</p>}
+            {exportError && <p role="alert" className="rounded-lg border border-error/30 bg-error-container/20 p-2 text-[11px] text-error leading-snug">{exportError}</p>}
           </div>
 
           {/* Back Button */}

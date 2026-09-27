@@ -5,26 +5,30 @@ export function exportTaxBreakdownToCsv(result, _displayLang = 'vi') {
   if (!result) return;
 
   const dateStr = new Date().toLocaleDateString('vi-VN');
+  const capLabel = new Intl.NumberFormat('vi-VN').format(result.insuranceDetails?.maxBhxhSalary || 50_600_000);
+  const baseLabel = new Intl.NumberFormat('vi-VN').format(result.insuranceDetails?.baseSalary || 2_530_000);
   const bom = '\uFEFF'; // UTF-8 BOM for Excel to open Vietnamese characters properly
 
   const rows = [
     ['BẢNG TÍNH THUẾ THU NHẬP CÁ NHÂN (TNCN) NĂM 2026'],
-    ['Căn cứ: Luật 109/2025/QH15 & NĐ 253/2026/NĐ-CP | Lương cơ sở 2,53tr (NĐ 161/2026)'],
+    [`Căn cứ: Luật 109/2025/QH15 & NĐ 253/2026/NĐ-CP | Lương cơ sở ${baseLabel} ₫ (${result.insuranceDetails?.baseSalarySource || 'NĐ 161/2026/NĐ-CP'})`],
     [`Ngày tính toán: ${dateStr}`],
     [''],
     ['CHỈ SỐ THU NHẬP', 'SỐ TIỀN (VNĐ)', 'GHI CHÚ'],
     ['1. Lương thỏa thuận (Gross)', result.gross, 'Tổng thu nhập trước thuế'],
+    ['   - Thu nhập miễn thuế (tiền ăn ca)', result.nonTaxableIncome || 0, 'Miễn tối đa 1.200.000 ₫/tháng (NĐ 253/2026)'],
+    ['   = Thu nhập chịu thuế (TNCT)', result.assessableIncome ?? result.gross, '=(Gross) - (Thu nhập miễn thuế)'],
     ['2. Bảo hiểm bắt buộc (NLĐ đóng 10,5%)', result.totalInsurance, 'BHXH 8% + BHYT 1,5% + BHTN 1%'],
-    ['   - BHXH (8%)', result.insuranceDetails?.bhxh || 0, 'Trần đóng 50.600.000 ₫'],
-    ['   - BHYT (1,5%)', result.insuranceDetails?.bhyt || 0, 'Trần đóng 50.600.000 ₫'],
+    ['   - BHXH (8%)', result.insuranceDetails?.bhxh || 0, `Trần đóng ${capLabel} ₫ (20 × lương cơ sở của kỳ)`],
+    ['   - BHYT (1,5%)', result.insuranceDetails?.bhyt || 0, `Trần đóng ${capLabel} ₫ (20 × lương cơ sở của kỳ)`],
     ['   - BHTN (1%)', result.insuranceDetails?.bhtn || 0, `Trần theo Vùng ${result.region || 1}`],
     ['3. Tổng các khoản giảm trừ', result.totalDeductions, 'Bản thân + Người phụ thuộc + Giảm trừ mới'],
     ['   - Giảm trừ bản thân', result.deductionsDetails?.personal || 15_500_000, 'NQ 110/2025/UBTVQH15: 15,5 tr/tháng'],
     ['   - Giảm trừ người phụ thuộc', result.deductionsDetails?.dependent || 0, `${result.deductionsDetails?.dependentsCount || 0} người x 6,2 tr/tháng`],
     ['   - Hưu trí tự nguyện', result.deductionsDetails?.pension || 0, 'Tối đa 3 tr/tháng'],
-    ['   - Chi phí Y tế', result.deductionsDetails?.medical || 0, 'Tối đa 23 tr/năm'],
-    ['   - Chi phí Giáo dục', result.deductionsDetails?.education || 0, 'Tối đa 24 tr/năm'],
-    ['4. Thu nhập tính thuế (TNTT)', result.taxableIncome, '=(Gross) - (Bảo hiểm) - (Giảm trừ)'],
+    ['   - Chi phí Y tế', result.deductionsDetails?.medical || 0, 'Chỉ trừ khi quyết toán năm; tối đa 23 tr/năm'],
+    ['   - Chi phí Giáo dục', result.deductionsDetails?.education || 0, 'Chỉ trừ khi quyết toán năm; tối đa 24 tr/năm'],
+    ['4. Thu nhập tính thuế (TNTT)', result.taxableIncome, '=(TNCT) - (Bảo hiểm) - (Giảm trừ)'],
     ['5. Thuế TNCN phải nộp', result.pitTax, 'Áp dụng biểu thuế lũy tiến 5 bậc'],
     ['6. LƯƠNG THỰC NHẬN (NET)', result.net, '=(Gross) - (Bảo hiểm) - (Thuế TNCN)'],
     ['Thuế suất thực tế hiệu dụng', `${result.effectiveTaxRate}%`, '=(Thuế TNCN) / (Lương Gross)'],
@@ -46,7 +50,7 @@ export function exportTaxBreakdownToCsv(result, _displayLang = 'vi') {
   }
 
   rows.push(['']);
-  rows.push(['LƯU Ý PHÁP LÝ: Bảng tính mang tính chất tham khảo, vui lòng đối chiếu với ứng dụng eTax Mobile của Tổng cục Thuế.']);
+  rows.push(['LƯU Ý PHÁP LÝ: Bảng tính mang tính chất tham khảo, vui lòng đối chiếu với ứng dụng eTax Mobile của Cục Thuế (Bộ Tài chính).']);
 
   // Convert to CSV format
   const csvContent = bom + rows.map(row => 

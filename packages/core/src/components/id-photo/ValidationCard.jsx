@@ -6,7 +6,7 @@ const ValidationCard = ({
   onAutoAlign
 }) => {
   const { t, language } = useTranslation();
-  const isAllValid = validation.hasFace && validation.isTiltAcceptable && validation.isFaceRatioAcceptable && validation.isResolutionAcceptable;
+  const isAllValid = validation.hasFace && validation.isTiltAcceptable && validation.isFaceRatioAcceptable && validation.isTopMarginAcceptable !== false && validation.isResolutionAcceptable;
   return <div className="rounded-2xl border border-border-subtle bg-surface-container p-4 sm:p-5 shadow-xs space-y-3.5">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -117,6 +117,7 @@ const ValidationCard = ({
           <span>{t.valAllGood}</span>
         </div>
       )}
+      <p className="text-[10px] leading-snug text-on-surface-variant">{t.valDisclaimer}</p>
     </div>;
 };
 export {

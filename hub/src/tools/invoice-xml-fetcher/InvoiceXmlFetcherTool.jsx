@@ -29,6 +29,7 @@ import {
   detectProvider,
   buildStandardXmlFilename,
   attemptDirectXmlDownload,
+  checkEditedMetadataAgainstXml,
   sanitizeLookupUrl,
   sanitizeLookupCode,
   recognizeImage,
@@ -358,6 +359,22 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
       invoiceNumber: updatedData.invoiceNumber,
       invoiceDate: updatedData.invoiceDate,
     };
+
+    // Hóa đơn đã có XML: thông tin sửa vẫn khớp XML thì giữ READY để không bị
+    // rơi khỏi ZIP tải về; lệch thì bỏ XML và yêu cầu kiểm tra lại.
+    if (xmlContent) {
+      const { stillMatches, mismatchDetails } = checkEditedMetadataAgainstXml(xmlContent, metadata);
+      if (stillMatches) {
+        status = STATUS_TYPES.READY;
+        note = 'Đã cập nhật thông tin; file XML hiện có vẫn khớp';
+        xmlFilename = buildStandardXmlFilename(metadata);
+      } else {
+        status = STATUS_TYPES.MANUAL_REQUIRED;
+        note = `Thông tin sau khi sửa không khớp file XML đã tải${mismatchDetails.length ? `: ${mismatchDetails.join('; ')}` : ''}. Vui lòng kiểm tra và tải lại XML.`;
+        xmlContent = null;
+        xmlFilename = null;
+      }
+    }
 
     if (status === STATUS_TYPES.READY && !xmlContent) {
       const downloadResult = await attemptDirectXmlDownload({

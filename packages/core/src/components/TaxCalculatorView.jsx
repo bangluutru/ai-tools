@@ -21,7 +21,8 @@ import {
   Receipt,
   HelpCircle,
   Clock,
-  ExternalLink
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
 import {
   calculateGrossToNet,
@@ -36,8 +37,18 @@ import {
 import { taxI18n } from '../utils/tax/taxI18n.js';
 import { exportTaxBreakdownToCsv } from '../utils/tax/exportTaxReport.js';
 
+// Kỳ lương mặc định = tháng hiện tại (YYYY-MM), dùng để chọn trần BHXH/BHYT theo lương cơ sở của kỳ.
+function getCurrentPayPeriod() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+const formatMillions = (amount) =>
+  `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(amount / 1_000_000)}tr`;
+
 export default function TaxCalculatorView({ displayLang = 'vi' }) {
-  const t = taxI18n[displayLang] || taxI18n.vi;
+  // Fallback về tiếng Việt cho khóa chưa dịch
+  const t = useMemo(() => ({ ...taxI18n.vi, ...(taxI18n[displayLang] || {}) }), [displayLang]);
 
   // Active Main Tab
   const [activeTab, setActiveTab] = useState('gross-net'); // 'gross-net' | 'freelancer' | 'bhxh' | 'assets' | 'sop'
@@ -53,6 +64,7 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
   const [medicalMonthly, setMedicalMonthly] = useState(0);
   const [educationMonthly, setEducationMonthly] = useState(0);
   const [mealAllowance, setMealAllowance] = useState(0);
+  const [payPeriod, setPayPeriod] = useState(getCurrentPayPeriod);
 
   // Tab 2: Freelancer State
   const [flRevenueInput, setFlRevenueInput] = useState(800_000_000);
@@ -65,12 +77,25 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
   ]);
   const [newTxAmount, setNewTxAmount] = useState('');
   const [newTxLabel, setNewTxLabel] = useState('');
+  const [flPitMethod, setFlPitMethod] = useState('revenue');
+  const [flExpenses, setFlExpenses] = useState(0);
+  const [flExpensesDisplay, setFlExpensesDisplay] = useState('0');
+  const [flApplyVatReduction, setFlApplyVatReduction] = useState(false);
+  const [flOtherIncome, setFlOtherIncome] = useState(0);
+  const [flOtherIncomeDisplay, setFlOtherIncomeDisplay] = useState('0');
+  const [flOtherInsurance, setFlOtherInsurance] = useState(0);
+  const [flOtherInsuranceDisplay, setFlOtherInsuranceDisplay] = useState('0');
+  const [flOtherWithheld, setFlOtherWithheld] = useState(0);
+  const [flOtherWithheldDisplay, setFlOtherWithheldDisplay] = useState('0');
+  const [flDependents, setFlDependents] = useState(0);
 
   // Tab 3: BHXH 1 Lần & BHTN State
   const [bhxhAvgSalary, setBhxhAvgSalary] = useState(15_000_000);
   const [bhxhAvgSalaryDisplay, setBhxhAvgSalaryDisplay] = useState('15,000,000');
   const [yearsBefore2014, setYearsBefore2014] = useState(2);
   const [yearsFrom2014, setYearsFrom2014] = useState(6);
+  const [bhxhStartedBefore2025, setBhxhStartedBefore2025] = useState(true);
+  const [bhxhStopped12Months, setBhxhStopped12Months] = useState(true);
 
   // BHTN State
   const [bhtnAvgSalary, setBhtnAvgSalary] = useState(18_000_000);
@@ -98,6 +123,17 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
     setFlRevenueInput(rawNumber);
     setFlRevenueDisplay(new Intl.NumberFormat('vi-VN').format(rawNumber));
   };
+
+  // Tạo handler định dạng số tiền cho các ô nhập của tab Freelancer
+  const makeMoneyHandler = (setValue, setDisplay) => (valStr) => {
+    const rawNumber = Number(valStr.replace(/[^0-9]/g, '')) || 0;
+    setValue(rawNumber);
+    setDisplay(new Intl.NumberFormat('vi-VN').format(rawNumber));
+  };
+  const handleFlExpensesChange = makeMoneyHandler(setFlExpenses, setFlExpensesDisplay);
+  const handleFlOtherIncomeChange = makeMoneyHandler(setFlOtherIncome, setFlOtherIncomeDisplay);
+  const handleFlOtherInsuranceChange = makeMoneyHandler(setFlOtherInsurance, setFlOtherInsuranceDisplay);
+  const handleFlOtherWithheldChange = makeMoneyHandler(setFlOtherWithheld, setFlOtherWithheldDisplay);
 
   const handleBhxhAvgChange = (valStr) => {
     const rawNumber = Number(valStr.replace(/[^0-9]/g, '')) || 0;
@@ -143,15 +179,14 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
     setFlTransactions(prev => prev.filter(tx => tx.id !== id));
   };
 
-  // Calculate Tab 1: Gross ↔ Net
+  // Calculate Tab 1: Gross ↔ Net (lương tháng — KHÔNG gồm giảm trừ y tế/giáo dục vì chỉ áp dụng khi quyết toán)
   const grossNetResult = useMemo(() => {
     const options = {
       region,
       dependents,
       voluntaryPension,
-      medicalMonthly,
-      educationMonthly,
-      mealAllowance
+      mealAllowance,
+      period: payPeriod
     };
 
     if (calcMode === 'grossToNet') {
@@ -159,25 +194,61 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
     } else {
       return calculateNetToGross(salaryInput, options);
     }
-  }, [calcMode, salaryInput, region, dependents, voluntaryPension, medicalMonthly, educationMonthly, mealAllowance]);
+  }, [calcMode, salaryInput, region, dependents, voluntaryPension, mealAllowance, payPeriod]);
+
+  // Ước tính thuế giảm khi quyết toán năm nhờ chi phí y tế/giáo dục (NĐ 253/2026) — chỉ là ước tính
+  const settlementSaving = useMemo(() => {
+    if (medicalMonthly <= 0 && educationMonthly <= 0) return null;
+    const withSettlement = calculateGrossToNet(grossNetResult.gross, {
+      region,
+      dependents,
+      voluntaryPension,
+      mealAllowance,
+      medicalMonthly,
+      educationMonthly,
+      period: payPeriod
+    });
+    const monthly = Math.max(0, grossNetResult.pitTax - withSettlement.pitTax);
+    return { monthly, annual: monthly * 12 };
+  }, [grossNetResult, region, dependents, voluntaryPension, mealAllowance, medicalMonthly, educationMonthly, payPeriod]);
 
   // Calculate Tab 2: Freelancer
   const flResult = useMemo(() => {
     return calculateFreelancerTax({
       annualRevenue: flRevenueInput,
       singleTransactions: flTransactions,
-      businessType: flBusinessType
+      businessType: flBusinessType,
+      pitMethod: flPitMethod,
+      annualExpenses: flExpenses,
+      applyVatReduction: flApplyVatReduction,
+      otherAnnualWageIncome: flOtherIncome,
+      otherAnnualInsurance: flOtherInsurance,
+      otherTaxWithheld: flOtherWithheld,
+      dependents: flDependents
     });
-  }, [flRevenueInput, flTransactions, flBusinessType]);
+  }, [
+    flRevenueInput,
+    flTransactions,
+    flBusinessType,
+    flPitMethod,
+    flExpenses,
+    flApplyVatReduction,
+    flOtherIncome,
+    flOtherInsurance,
+    flOtherWithheld,
+    flDependents
+  ]);
 
   // Calculate Tab 3: BHXH 1 Lần
   const bhxhResult = useMemo(() => {
     return calculateBhxhLumpSum({
       yearsBefore2014,
       yearsFrom2014,
-      averageSalary: bhxhAvgSalary
+      averageSalary: bhxhAvgSalary,
+      startedBeforeJuly2025: bhxhStartedBefore2025,
+      stoppedFor12Months: bhxhStopped12Months
     });
-  }, [yearsBefore2014, yearsFrom2014, bhxhAvgSalary]);
+  }, [yearsBefore2014, yearsFrom2014, bhxhAvgSalary, bhxhStartedBefore2025, bhxhStopped12Months]);
 
   // Calculate Tab 3: BHTN
   const bhtnResult = useMemo(() => {
@@ -221,6 +292,7 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
     setMedicalMonthly(0);
     setEducationMonthly(0);
     setMealAllowance(0);
+    setPayPeriod(getCurrentPayPeriod());
     setShowAdvanced(false);
   };
 
@@ -447,11 +519,34 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
                   onChange={(e) => setRegion(Number(e.target.value))}
                   className="w-full px-3 py-2 rounded-xl bg-surface-container-high border border-border-subtle text-on-surface text-xs sm:text-sm focus:outline-none focus:border-primary cursor-pointer"
                 >
-                  <option value={1}>Vùng I (Hà Nội, TP.HCM...) - Lương TT: 5.310.000 ₫ (Trần: 106.2tr)</option>
-                  <option value={2}>Vùng II (Đô thị loại II, TP tỉnh) - Lương TT: 4.730.000 ₫ (Trần: 94.6tr)</option>
-                  <option value={3}>Vùng III (Huyện, thị xã ngoại ô) - Lương TT: 4.140.000 ₫ (Trần: 82.8tr)</option>
-                  <option value={4}>Vùng IV (Các địa bàn còn lại) - Lương TT: 3.700.000 ₫ (Trần: 74tr)</option>
+                  {[1, 2, 3, 4].map((reg) => {
+                    const cfg = TAX_CONSTANTS_2026.REGIONS[reg];
+                    return (
+                      <option key={reg} value={reg}>
+                        {cfg.name_vn} - Lương TT: {new Intl.NumberFormat('vi-VN').format(cfg.minWage)} ₫ (Trần BHTN: {formatMillions(cfg.maxBhtnSalary)})
+                      </option>
+                    );
+                  })}
                 </select>
+                <span className="text-[11px] text-on-surface-variant">
+                  Vùng xác định theo địa bàn cấp xã nơi doanh nghiệp hoạt động (Phụ lục NĐ 293/2025/NĐ-CP, sau sắp xếp ĐVHC 2025).
+                </span>
+              </div>
+
+              {/* Pay period (xác định trần BHXH/BHYT theo lương cơ sở) */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="tax-pay-period-input" className="text-xs font-semibold text-on-surface">
+                  {t.payPeriodLabel}
+                </label>
+                <input
+                  id="tax-pay-period-input"
+                  type="month"
+                  min="2026-01"
+                  value={payPeriod}
+                  onChange={(e) => setPayPeriod(e.target.value || getCurrentPayPeriod())}
+                  className="w-full px-3 py-2 rounded-xl bg-surface-container-high border border-border-subtle text-on-surface text-xs sm:text-sm font-mono focus:outline-none focus:border-primary"
+                />
+                <span className="text-[11px] text-on-surface-variant">{t.payPeriodHint}</span>
               </div>
 
               {/* Dependents Counter */}
@@ -543,7 +638,7 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
                         type="range"
                         min="0"
                         max={Math.round(TAX_CONSTANTS_2026.DEDUCTIONS.MAX_MEDICAL_ANNUAL / 12)}
-                        step="200000"
+                        step="1"
                         value={medicalMonthly}
                         onChange={(e) => setMedicalMonthly(Number(e.target.value))}
                         className="w-full accent-primary cursor-pointer"
@@ -592,6 +687,16 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
                       />
                       <span className="text-[10px] text-on-surface-variant">{t.mealAllowanceHint}</span>
                     </div>
+
+                    {settlementSaving && (
+                      <div className="p-2.5 rounded-lg bg-surface-container-high border border-border-subtle/70 flex flex-col gap-1">
+                        <span className="font-semibold text-on-surface">{t.settlementEstimateTitle}</span>
+                        <span className="font-mono text-secondary font-bold">
+                          ≈ {formatVND(settlementSaving.annual)}/năm ({formatVND(settlementSaving.monthly)}/tháng)
+                        </span>
+                        <span className="text-[10px] text-on-surface-variant">{t.settlementEstimateNote}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -760,14 +865,14 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
                   <span className="text-[11px] font-sans text-on-surface-variant">{t.bhxhItem}</span>
                   <span className="font-bold text-on-surface text-sm">{formatVND(grossNetResult.insuranceDetails.bhxh)}</span>
                   {grossNetResult.insuranceDetails.isBhxhCapped && (
-                    <span className="text-[10px] text-tertiary font-sans">Đạt trần 50,6tr</span>
+                    <span className="text-[10px] text-tertiary font-sans">Đạt trần {formatMillions(grossNetResult.insuranceDetails.maxBhxhSalary)}</span>
                   )}
                 </div>
                 <div className="p-2.5 rounded-xl bg-surface-container-high border border-border-subtle/50 flex flex-col gap-1">
                   <span className="text-[11px] font-sans text-on-surface-variant">{t.bhytItem}</span>
                   <span className="font-bold text-on-surface text-sm">{formatVND(grossNetResult.insuranceDetails.bhyt)}</span>
                   {grossNetResult.insuranceDetails.isBhxhCapped && (
-                    <span className="text-[10px] text-tertiary font-sans">Đạt trần 50,6tr</span>
+                    <span className="text-[10px] text-tertiary font-sans">Đạt trần {formatMillions(grossNetResult.insuranceDetails.maxBhxhSalary)}</span>
                   )}
                 </div>
                 <div className="p-2.5 rounded-xl bg-surface-container-high border border-border-subtle/50 flex flex-col gap-1">
@@ -836,125 +941,242 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
                 </select>
               </div>
 
-              {/* Transactions list */}
-              <div className="border-t border-border-subtle/60 pt-4 flex flex-col gap-3">
-                <span className="text-xs font-bold text-on-surface">
-                  {t.flTransactionsTitle}
-                </span>
+              <span className="text-[11px] text-on-surface-variant">{t.flFormulaNote}</span>
 
-                <div className="flex flex-col gap-2 max-h-52 overflow-y-auto pr-1">
-                  {flTransactions.map(tx => {
-                    const isWithheld = tx.amount >= TAX_CONSTANTS_2026.FREELANCER.WITHHOLDING_MIN_TRANSACTION;
-                    return (
-                      <div
-                        key={tx.id}
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-high border border-border-subtle/50 text-xs"
-                      >
-                        <div className="flex flex-col">
-                          <span className="font-medium text-on-surface">{tx.label}</span>
-                          <span className="font-mono font-bold text-on-surface">{formatVND(tx.amount)}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`text-[11px] font-mono px-2 py-0.5 rounded-md ${
-                            isWithheld
-                              ? 'bg-tertiary/15 text-tertiary border border-tertiary/30'
-                              : 'bg-surface-subtle text-on-surface-variant'
-                          }`}>
-                            {isWithheld ? `-10% (${formatVND(tx.amount * 0.1)})` : '0%'}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveTx(tx.id)}
-                            className="text-on-surface-variant hover:text-error text-xs cursor-pointer"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* PIT method */}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="tax-fl-pit-method-select" className="text-xs font-semibold text-on-surface">
+                  {t.flPitMethodLabel}
+                </label>
+                <select
+                  id="tax-fl-pit-method-select"
+                  value={flBusinessType === 'rental' ? 'revenue' : flPitMethod}
+                  disabled={flBusinessType === 'rental'}
+                  onChange={(e) => setFlPitMethod(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-surface-container-high border border-border-subtle text-on-surface text-xs focus:outline-none focus:border-primary cursor-pointer disabled:opacity-60"
+                >
+                  <option value="revenue">{t.flPitMethodRevenue}</option>
+                  <option value="profit">{t.flPitMethodProfit}</option>
+                </select>
+                <span className="text-[11px] text-on-surface-variant">{t.flPitMethodHint}</span>
+              </div>
 
-                {/* Add transaction form */}
-                <div className="flex flex-col sm:flex-row gap-2 mt-1">
+              {flResult.pitMethodApplied === 'profit' && (
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="tax-fl-expenses-input" className="text-xs font-semibold text-on-surface">
+                    {t.flExpensesLabel}
+                  </label>
                   <input
+                    id="tax-fl-expenses-input"
                     type="text"
-                    placeholder="Mô tả khoản chi"
-                    value={newTxLabel}
-                    onChange={(e) => setNewTxLabel(e.target.value)}
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-surface-container-high border border-border-subtle text-xs text-on-surface"
+                    inputMode="numeric"
+                    value={flExpensesDisplay}
+                    onChange={(e) => handleFlExpensesChange(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl bg-surface-container-high border border-border-subtle text-on-surface font-mono font-bold text-sm focus:outline-none focus:border-primary"
                   />
-                  <input
-                    type="number"
-                    placeholder="Số tiền (₫)"
-                    value={newTxAmount}
-                    onChange={(e) => setNewTxAmount(e.target.value)}
-                    className="w-28 px-3 py-1.5 rounded-lg bg-surface-container-high border border-border-subtle text-xs text-on-surface font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddTx}
-                    className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-bold text-xs hover:opacity-90 cursor-pointer"
-                  >
-                    +
-                  </button>
                 </div>
-                <span className="text-[11px] text-on-surface-variant">{t.flTxNote}</span>
+              )}
+
+              {/* NĐ 174/2025 VAT ratio reduction */}
+              <label className="flex items-start gap-2 text-xs text-on-surface cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={flApplyVatReduction}
+                  onChange={(e) => setFlApplyVatReduction(e.target.checked)}
+                  className="mt-0.5 accent-primary"
+                />
+                <span className="flex flex-col gap-0.5">
+                  <span className="font-medium">{t.flVatReductionLabel}</span>
+                  <span className="text-[11px] text-on-surface-variant">{t.flVatReductionHint}</span>
+                </span>
+              </label>
+            </div>
+
+            {/* Casual income (tiền công vãng lai) */}
+            <div className="p-5 rounded-2xl bg-surface-container border border-border-subtle flex flex-col gap-3 shadow-sm">
+              <span className="text-sm font-bold text-on-surface">
+                {t.flTransactionsTitle}
+              </span>
+              <span className="text-[11px] text-on-surface-variant">{t.flCasualIntro}</span>
+
+              <div className="flex flex-col gap-2 max-h-52 overflow-y-auto pr-1">
+                {flResult.transactionDetails.map((detail, idx) => {
+                  const tx = flTransactions[idx];
+                  return (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between p-2.5 rounded-xl bg-surface-container-high border border-border-subtle/50 text-xs"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium text-on-surface">{tx.label}</span>
+                        <span className="font-mono font-bold text-on-surface">{formatVND(detail.amount)}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-[11px] font-mono px-2 py-0.5 rounded-md ${
+                          detail.isWithheld
+                            ? 'bg-tertiary/15 text-tertiary border border-tertiary/30'
+                            : 'bg-surface-subtle text-on-surface-variant'
+                        }`}>
+                          {detail.isWithheld ? `-10% (${formatVND(detail.withheldAmount)})` : '0%'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTx(tx.id)}
+                          aria-label={`Xóa ${tx.label}`}
+                          className="text-on-surface-variant hover:text-error text-xs cursor-pointer"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Add transaction form */}
+              <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                <input
+                  type="text"
+                  placeholder="Mô tả khoản chi"
+                  value={newTxLabel}
+                  onChange={(e) => setNewTxLabel(e.target.value)}
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-surface-container-high border border-border-subtle text-xs text-on-surface"
+                />
+                <input
+                  type="number"
+                  placeholder="Số tiền (₫)"
+                  value={newTxAmount}
+                  onChange={(e) => setNewTxAmount(e.target.value)}
+                  className="w-full sm:w-28 px-3 py-1.5 rounded-lg bg-surface-container-high border border-border-subtle text-xs text-on-surface font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddTx}
+                  className="px-3 py-1.5 rounded-lg bg-primary text-on-primary font-bold text-xs hover:opacity-90 cursor-pointer"
+                >
+                  +
+                </button>
+              </div>
+              <span className="text-[11px] text-on-surface-variant">{t.flTxNote}</span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border-subtle/60">
+                {[
+                  { id: 'tax-fl-other-income-input', label: t.flOtherIncomeLabel, value: flOtherIncomeDisplay, onChange: handleFlOtherIncomeChange },
+                  { id: 'tax-fl-other-insurance-input', label: t.flOtherInsuranceLabel, value: flOtherInsuranceDisplay, onChange: handleFlOtherInsuranceChange },
+                  { id: 'tax-fl-other-withheld-input', label: t.flOtherWithheldLabel, value: flOtherWithheldDisplay, onChange: handleFlOtherWithheldChange }
+                ].map((field) => (
+                  <div key={field.id} className="flex flex-col gap-1">
+                    <label htmlFor={field.id} className="text-[11px] font-semibold text-on-surface">
+                      {field.label}
+                    </label>
+                    <input
+                      id={field.id}
+                      type="text"
+                      inputMode="numeric"
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-lg bg-surface-container-high border border-border-subtle text-xs text-on-surface font-mono"
+                    />
+                  </div>
+                ))}
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="tax-fl-dependents-input" className="text-[11px] font-semibold text-on-surface">
+                    {t.flCasualDependentsLabel}
+                  </label>
+                  <input
+                    id="tax-fl-dependents-input"
+                    type="number"
+                    min="0"
+                    max="10"
+                    value={flDependents}
+                    onChange={(e) => setFlDependents(Math.max(0, Number(e.target.value) || 0))}
+                    className="w-full px-3 py-1.5 rounded-lg bg-surface-container-high border border-border-subtle text-xs text-on-surface font-mono"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           {/* Freelancer Results */}
           <div className="lg:col-span-7 flex flex-col gap-5">
+            {/* Kết quả thuế hộ / cá nhân kinh doanh */}
             {flResult.isExempt ? (
               <div className="p-5 rounded-2xl bg-secondary/10 border border-secondary/30 flex flex-col gap-3 shadow-sm">
                 <div className="flex items-center gap-2 text-secondary font-bold text-base">
                   <CheckCircle2 size={20} />
-                  <span>MIỄN THUẾ 100% (DOANH THU DƯỚI 1 TỶ/NĂM)</span>
+                  <span>KHÔNG PHẢI NỘP GTGT & TNCN (DOANH THU ≤ 1 TỶ/NĂM)</span>
                 </div>
                 <p className="text-xs text-on-surface leading-relaxed">
                   {t.flExemptAlert}
-                </p>
-                <div className="p-4 rounded-xl bg-surface-container border border-border-subtle flex flex-col gap-2 mt-1">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-on-surface-variant">{t.flTotalWithheld}:</span>
-                    <span className="font-mono font-bold text-tertiary text-sm">{formatVND(flResult.totalWithheld)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm font-bold text-secondary border-t border-border-subtle pt-2">
-                    <span>{t.flRefundable}:</span>
-                    <span className="font-mono text-lg">{formatVND(flResult.refundableTax)}</span>
-                  </div>
-                </div>
-                <p className="text-[11px] text-on-surface-variant">
-                  {t.flRefundableAlert}
                 </p>
               </div>
             ) : (
               <div className="p-5 rounded-2xl bg-surface-container border border-border-subtle flex flex-col gap-4 shadow-sm">
                 <div className="flex items-center gap-2 text-tertiary font-bold text-base">
                   <AlertCircle size={20} />
-                  <span>DOANH THU TRÊN 1 TỶ: KÊ KHAI VÀ NỘP THUẾ THỰC TẾ</span>
+                  <span>{t.flHkdTitle}: DOANH THU TRÊN 1 TỶ</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono">
                   <div className="p-3 rounded-xl bg-surface-container-high border border-border-subtle">
-                    <span className="text-xs font-sans text-on-surface-variant">{t.flOfficialLiability}</span>
-                    <div className="text-xl font-bold text-tertiary mt-1">{formatVND(flResult.officialTaxLiability)}</div>
+                    <span className="text-xs font-sans text-on-surface-variant">
+                      {t.flVatAmount} ({(flResult.vatRateApplied * 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}% × toàn bộ doanh thu)
+                    </span>
+                    <div className="text-xl font-bold text-on-surface mt-1">{formatVND(flResult.vatAmount)}</div>
                   </div>
                   <div className="p-3 rounded-xl bg-surface-container-high border border-border-subtle">
-                    <span className="text-xs font-sans text-on-surface-variant">{t.flTotalWithheld}</span>
-                    <div className="text-xl font-bold text-on-surface mt-1">{formatVND(flResult.totalWithheld)}</div>
+                    <span className="text-xs font-sans text-on-surface-variant">
+                      {t.flPitAmount} ({(flResult.pitRateApplied * 100).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}% × {formatVND(flResult.pitBase)})
+                    </span>
+                    <div className="text-xl font-bold text-on-surface mt-1">{formatVND(flResult.pitAmount)}</div>
                   </div>
                 </div>
                 <div className="p-3 rounded-xl bg-surface-subtle border border-border-subtle flex justify-between items-center">
-                  <span className="text-xs font-bold text-on-surface">
-                    {flResult.refundableTax > 0 ? t.flRefundable : t.flAdditionalDue}:
+                  <span className="text-xs font-bold text-on-surface">{t.flOfficialLiability}:</span>
+                  <span className="font-mono font-extrabold text-lg text-tertiary">
+                    {formatVND(flResult.officialTaxLiability)}
                   </span>
-                  <span className="font-mono font-extrabold text-lg text-primary">
-                    {formatVND(flResult.refundableTax > 0 ? flResult.refundableTax : flResult.additionalTaxDue)}
+                </div>
+                {flResult.warnings.length > 0 && (
+                  <ul className="flex flex-col gap-1 text-[11px] text-tertiary">
+                    {flResult.warnings.includes('profit_method_mandatory_above_3b') && <li>• {t.flWarnProfitMandatory}</li>}
+                    {flResult.warnings.includes('profit_method_missing_expenses') && <li>• {t.flWarnMissingExpenses}</li>}
+                    {flResult.warnings.includes('vat_reduction_not_applicable') && <li>• {t.flWarnVatReductionNA}</li>}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {/* Ước tính quyết toán thu nhập vãng lai */}
+            <div className="p-5 rounded-2xl bg-surface-container border border-border-subtle flex flex-col gap-3 shadow-sm">
+              <div className="flex items-center gap-2 text-on-surface font-bold text-base">
+                <Receipt size={18} className="text-primary" />
+                <span>{t.flCasualTitle}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono text-xs">
+                <div className="p-3 rounded-xl bg-surface-container-high border border-border-subtle">
+                  <span className="font-sans text-on-surface-variant">{t.flTotalWithheld}</span>
+                  <div className="text-lg font-bold text-on-surface mt-1">{formatVND(flResult.casualSettlement.totalPrepaid)}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-surface-container-high border border-border-subtle">
+                  <span className="font-sans text-on-surface-variant">{t.flAnnualTaxDue}</span>
+                  <div className="text-lg font-bold text-on-surface mt-1">{formatVND(flResult.casualSettlement.annualTaxDue)}</div>
+                  <span className="font-sans text-[10px] text-on-surface-variant">
+                    TNTT năm: {formatVND(flResult.casualSettlement.annualTaxableIncome)}
                   </span>
                 </div>
               </div>
-            )}
+              <div className="p-3 rounded-xl bg-surface-subtle border border-border-subtle flex justify-between items-center">
+                <span className="text-xs font-bold text-on-surface">
+                  {flResult.refundableTax > 0 ? t.flRefundable : t.flAdditionalDue}:
+                </span>
+                <span className="font-mono font-extrabold text-lg text-primary">
+                  {formatVND(flResult.refundableTax > 0 ? flResult.refundableTax : flResult.additionalTaxDue)}
+                </span>
+              </div>
+              <p className="text-[11px] text-on-surface-variant">
+                {t.flRefundableAlert}
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -1017,6 +1239,37 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
                 />
                 <span className="text-[11px] text-on-surface-variant">{t.bhxhMultiplierFrom}</span>
               </div>
+            </div>
+
+            {/* Điều kiện hưởng BHXH 1 lần (Luật BHXH 2024, Điều 70) */}
+            <div className="p-3 rounded-xl bg-surface-container-high border border-border-subtle flex flex-col gap-2 text-xs">
+              <span className="font-bold text-on-surface">{t.bhxhEligibilityTitle}</span>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={bhxhStartedBefore2025}
+                  onChange={(e) => setBhxhStartedBefore2025(e.target.checked)}
+                  className="mt-0.5 accent-primary"
+                />
+                <span>{t.bhxhStartedBefore}</span>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={bhxhStopped12Months}
+                  onChange={(e) => setBhxhStopped12Months(e.target.checked)}
+                  className="mt-0.5 accent-primary"
+                />
+                <span>{t.bhxhStopped12}</span>
+              </label>
+              <div
+                role="status"
+                className={`flex items-start gap-1.5 font-semibold ${bhxhResult.meetsCommonCondition ? 'text-secondary' : 'text-tertiary'}`}
+              >
+                {bhxhResult.meetsCommonCondition ? <CheckCircle2 size={14} className="shrink-0 mt-0.5" /> : <AlertCircle size={14} className="shrink-0 mt-0.5" />}
+                <span>{bhxhResult.meetsCommonCondition ? t.bhxhEligibleOk : t.bhxhEligibleNo}</span>
+              </div>
+              <span className="text-[11px] text-on-surface-variant">{t.bhxhEligibilityNote}</span>
             </div>
 
             <div className="p-4 rounded-xl bg-surface-container-high border border-border-subtle flex flex-col gap-2 mt-2">
@@ -1264,7 +1517,7 @@ export default function TaxCalculatorView({ displayLang = 'vi' }) {
                 rel="noreferrer"
                 className="flex items-center gap-1 text-primary hover:underline font-medium"
               >
-                <span>Tổng Cục Thuế (gdt.gov.vn)</span>
+                <span>Cục Thuế (gdt.gov.vn)</span>
                 <ExternalLink size={12} />
               </a>
             </div>

@@ -101,6 +101,6 @@ test('an unrecognised workbook is reported rather than dropped', () => {
 test('the approved rule version and tolerance are pinned', () => {
   const { results } = reconcileWorkbooks(fixtures[0].workbooks);
 
-  assert.equal(results.ruleVersion, 'accounting-reconcile-v2');
+  assert.equal(results.ruleVersion, 'accounting-reconcile-v3');
   assert.equal(results.tolerance, 0.5);
 });

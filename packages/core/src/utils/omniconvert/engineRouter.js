@@ -1,6 +1,6 @@
 import { getFileExtension } from './formats.js';
 /**
- * Bốn engine được nạp theo yêu cầu. Nếu import tĩnh, mở công cụ là kéo về cả
+ * Các engine được nạp theo yêu cầu. Nếu import tĩnh, mở công cụ là kéo về cả
  * jspdf, mammoth, docx-preview và html2canvas (~1,4 MB) dù người
  * dùng chỉ định chuyển một tấm ảnh.
  */
@@ -8,6 +8,7 @@ const imageEngine = () => import('./imagePdfConverter.js');
 const docxEngine = () => import('./docxPdfConverter.js');
 const xlsxEngine = () => import('./xlsxPdfConverter.js');
 const markdownEngine = () => import('./markdownConverter.js');
+const pptxEngine = () => import('./pptxTextConverter.js');
 
 const convertImagesToPdf = async (...args) => (await imageEngine()).convertImagesToPdf(...args);
 const convertPdfToImages = async (...args) => (await imageEngine()).convertPdfToImages(...args);
@@ -28,6 +29,8 @@ const convertMdToPdf = async (...args) => (await markdownEngine()).convertMdToPd
 const convertMdToDocx = async (...args) => (await markdownEngine()).convertMdToDocx(...args);
 const convertMdToTxt = async (...args) => (await markdownEngine()).convertMdToTxt(...args);
 const convertMdToHtml = async (...args) => (await markdownEngine()).convertMdToHtml(...args);
+const convertPptxToTxt = async (...args) => (await pptxEngine()).convertPptxToTxt(...args);
+const convertPptxToMd = async (...args) => (await pptxEngine()).convertPptxToMd(...args);
 
 export async function executeConversion(file, targetFormat, options = {}, onProgress = () => {}) {
   const sourceExt = getFileExtension(file.name);
@@ -46,6 +49,12 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
     if (targetExt === 'pdf') return await convertDocxToPdf(file, options, onProgress);
     if (targetExt === 'txt') return await convertDocxToTxt(file, options, onProgress);
     if (targetExt === 'md') return await convertDocxToMd(file, options, onProgress);
+  }
+
+  // 1b. PPTX — chỉ trích xuất chữ của các slide
+  if (sourceExt === 'pptx') {
+    if (targetExt === 'txt') return await convertPptxToTxt(file, options, onProgress);
+    if (targetExt === 'md') return await convertPptxToMd(file, options, onProgress);
   }
 
   // 2. XLSX / CSV
@@ -113,35 +122,20 @@ export async function executeConversion(file, targetFormat, options = {}, onProg
     if (targetExt === 'pdf') {
       if (onProgress) onProgress(20);
       const text = await file.text();
-      // Chỉ nhánh TXT→PDF cần jspdf, nạp tại chỗ để nhánh khác khỏi gánh.
-      const { jsPDF } = await import('jspdf');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(11);
-      const pageWidth = 595.28;
-      const marginX = 40;
-      const marginTop = 50;
-      const marginBottom = 50;
-      const usableWidth = pageWidth - marginX * 2;
-      const lineHeight = 15;
-      const pageHeight = 841.89;
-      const maxY = pageHeight - marginBottom;
-
-      const wrappedLines = pdf.splitTextToSize(text, usableWidth);
-      let y = marginTop;
-      for (let i = 0; i < wrappedLines.length; i++) {
-        if (y + lineHeight > maxY) {
-          pdf.addPage();
-          y = marginTop;
-        }
-        pdf.text(wrappedLines[i], marginX, y);
-        y += lineHeight;
-      }
-      if (onProgress) onProgress(90);
+      // Dựng HTML rồi chụp theo trang: helvetica của jsPDF không có glyph
+      // tiếng Việt/Nhật (ra ký tự rác).
+      const [{ renderBlocksToPdf }, { textToRenderBlocks, MARKDOWN_DOCUMENT_CSS }] = await Promise.all([
+        import('./htmlPdfRenderer.js'),
+        import('./markdownHtml.js'),
+      ]);
+      const blob = await renderBlocksToPdf(textToRenderBlocks(text), {
+        css: MARKDOWN_DOCUMENT_CSS,
+        onProgress: (f) => onProgress && onProgress(20 + Math.round(f * 75)),
+      });
       const baseName = file.name ? file.name.replace(/\.[^/.]+$/, '') : 'text';
       if (onProgress) onProgress(100);
       return {
-        blob: pdf.output('blob'),
+        blob,
         filename: `${baseName}.pdf`,
         mimeType: 'application/pdf',
         isZip: false

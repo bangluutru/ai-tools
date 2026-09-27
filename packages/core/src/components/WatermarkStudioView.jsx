@@ -14,8 +14,21 @@
  * @module WatermarkStudioView
  */
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { PDFDocument, degrees, rgb, StandardFonts } from 'pdf-lib';
-import JSZip from 'jszip';
+import {
+  IMAGE_CONVERT_LIMITS,
+  formatMiB,
+  rejectionMessages,
+  validateDocumentFiles,
+  verifyDocumentSignature,
+} from '../utils/documentFiles.js';
+import { destroyPdfDocument, encryptedPdfMessage, isPdfLibEncryptedError, openPdfDocument } from '../utils/pdfjs.js';
+import {
+  NS as OOXML_NS,
+  applyDocxWatermark,
+  applyPptxWatermark,
+  applyXlsxBackground,
+  fitAspect,
+} from '../utils/watermark/ooxmlWatermark.js';
 import {
   ShieldCheck, HelpCircle, Sparkles, LayoutGrid,
   Zap, Check, UploadCloud, FileText, Image as ImageIcon, FileSpreadsheet,
@@ -27,19 +40,19 @@ import {
   Archive, FileCode2, Home, CheckSquare, Layers2
 } from 'lucide-react';
 
-let pdfJsPromise = null;
-function loadPdfJs() {
-  if (!pdfJsPromise) {
-    pdfJsPromise = Promise.all([
-      import('pdfjs-dist'),
-      import('pdfjs-dist/build/pdf.worker.min.mjs?url')
-    ]).then(function ([pdfjsLib, workerModule]) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
-      return pdfjsLib;
-    });
-  }
-  return pdfJsPromise;
-}
+// pdf-lib (~500 KB) và JSZip chỉ cần khi đóng dấu → nạp khi dùng để chunk đầu nhẹ.
+const loadPdfLib = () => import('pdf-lib');
+const loadJSZip = () => import('jszip').then(function (m) { return m.default; });
+
+const MIB = 1024 * 1024;
+/** Giới hạn đầu vào; .doc/.xls/.ppt/.csv (không phải OOXML) bị từ chối thay vì xử lý sai. */
+const WATERMARK_LIMITS = Object.freeze({
+  maxFiles: 50,
+  maxFileBytes: 50 * MIB,
+  maxTotalBytes: 100 * MIB,
+  maxPixels: IMAGE_CONVERT_LIMITS.maxPixels,
+  extensions: ['.pdf', '.docx', '.xlsx', '.pptx', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif', '.bmp', '.svg'],
+});
 
 // ========================================================================
 // CONSTANTS & PRESETS
@@ -60,16 +73,13 @@ const DEFAULT_WATERMARK_CONFIG = {
   removeWhiteBg: true,
   opacity: 0.28,
   rotation: -45,
-  blendMode: 'normal',
   layoutMode: 'tiled',
   position: 'center',
   tileGapX: 160,
   tileGapY: 130,
-  density: 'medium',
-  targetPages: 'all',
-  applyAllPages: true,
-  addTimestampHidden: true,
-  flattenLayers: true
+  targetPages: 'all', // 'all' | 'first' | 'range' (chỉ áp dụng cho PDF)
+  pageRange: '1',
+  addTimestampHidden: false
 };
 
 const WATERMARK_PRESETS = [
@@ -78,7 +88,7 @@ const WATERMARK_PRESETS = [
     name: '[BẢO MẬT NỘI BỘ]',
     description: 'Chữ đỏ cảnh báo in hoa, nghiêng 45°, độ mờ 25% chống sao chép',
     badge: 'Bảo mật',
-    config: { type: 'text', text: 'TUYỆT MẬT / CONFIDENTIAL', color: '#EF4444', fontSize: 32, opacity: 0.25, rotation: -45, bold: true, layoutMode: 'tiled', density: 'medium' }
+    config: { type: 'text', text: 'TUYỆT MẬT / CONFIDENTIAL', color: '#EF4444', fontSize: 32, opacity: 0.25, rotation: -45, bold: true, layoutMode: 'tiled' }
   },
   {
     id: 'draft',
@@ -99,7 +109,7 @@ const WATERMARK_PRESETS = [
     name: '[CHỈ LƯU HÀNH NỘI BỘ]',
     description: 'Cam hổ phách, lưới dày đặc chống chụp màn hình',
     badge: 'Nội bộ',
-    config: { type: 'text', text: 'LƯU HÀNH NỘI BỘ - KHÔNG SAO CHÉP', color: '#F59E0B', fontSize: 26, opacity: 0.22, rotation: -35, bold: true, layoutMode: 'tiled', density: 'high' }
+    config: { type: 'text', text: 'LƯU HÀNH NỘI BỘ - KHÔNG SAO CHÉP', color: '#F59E0B', fontSize: 26, opacity: 0.22, rotation: -35, bold: true, layoutMode: 'tiled' }
   },
   {
     id: 'approved',
@@ -165,10 +175,12 @@ function removeWhiteBackgroundFromCanvas(ctx, width, height, tolerance) {
 function getFileCategory(filename, mimeType) {
   const ext = (filename.split('.').pop() || '').toLowerCase();
   if (ext === 'pdf' || mimeType === 'application/pdf') return 'pdf';
-  if (['docx', 'doc'].includes(ext) || (mimeType && mimeType.includes('wordprocessingml'))) return 'docx';
-  if (['xlsx', 'xls', 'csv'].includes(ext) || (mimeType && mimeType.includes('spreadsheetml'))) return 'xlsx';
-  if (['pptx', 'ppt'].includes(ext) || (mimeType && mimeType.includes('presentationml'))) return 'pptx';
-  if (['png', 'jpg', 'jpeg', 'webp', 'svg', 'bmp', 'gif', 'avif'].includes(ext) || (mimeType && mimeType.startsWith('image/'))) return 'image';
+  // Chỉ nhận định dạng OOXML thật: .doc/.xls/.ppt/.csv không phải gói ZIP nên
+  // đưa vào engine DOCX/XLSX/PPTX chỉ ra lỗi khó hiểu.
+  if (ext === 'docx') return 'docx';
+  if (ext === 'xlsx') return 'xlsx';
+  if (ext === 'pptx') return 'pptx';
+  if (['png', 'jpg', 'jpeg', 'webp', 'svg', 'bmp', 'gif', 'avif'].includes(ext)) return 'image';
   return 'unknown';
 }
 
@@ -220,7 +232,30 @@ function downloadBlob(blob, filename) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  // Thu hồi quá sớm (1s) làm Safari/Firefox hủy tải tệp lớn.
+  setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+}
+
+/** Kích thước ảnh; SVG không khai báo width/height có naturalWidth = 0. */
+function imageSize(img) {
+  const w = img.naturalWidth || img.width || 0;
+  const h = img.naturalHeight || img.height || 0;
+  if (w > 0 && h > 0) return { width: w, height: h };
+  if (w > 0) return { width: w, height: w };
+  if (h > 0) return { width: h, height: h };
+  return { width: 512, height: 512 };
+}
+
+let watermarkImageCache = { src: null, promise: null };
+/** Nạp ảnh logo watermark (có cache theo nguồn). */
+async function loadWatermarkImage(config) {
+  let src = config.imageDataUrl;
+  if (!src && config.imageFile) src = await readFileAsDataURL(config.imageFile);
+  if (!src) return null;
+  if (watermarkImageCache.src !== src) {
+    watermarkImageCache = { src: src, promise: loadImageElement(src) };
+  }
+  return watermarkImageCache.promise;
 }
 
 function escapeXml(unsafe) {
@@ -255,7 +290,7 @@ function getAnchorCoordinates(pos, width, height, padding) {
   }
 }
 
-async function drawTextWatermark(ctx, width, height, config) {
+function drawTextWatermark(ctx, width, height, config) {
   const text = config.allCaps ? config.text.toUpperCase() : config.text;
   if (!text.trim()) return;
   ctx.save();
@@ -291,13 +326,11 @@ async function drawTextWatermark(ctx, width, height, config) {
   ctx.restore();
 }
 
-async function drawImageWatermark(ctx, width, height, config) {
-  let imgSource = config.imageDataUrl;
-  if (!imgSource && config.imageFile) imgSource = await readFileAsDataURL(config.imageFile);
-  if (!imgSource) return;
-  const wmImg = await loadImageElement(imgSource);
-  const wmWidth = wmImg.naturalWidth || wmImg.width;
-  const wmHeight = wmImg.naturalHeight || wmImg.height;
+function drawImageWatermark(ctx, width, height, config, wmImg) {
+  if (!wmImg) return;
+  const natural = imageSize(wmImg);
+  const wmWidth = natural.width;
+  const wmHeight = natural.height;
   const offCanvas = document.createElement('canvas');
   offCanvas.width = wmWidth; offCanvas.height = wmHeight;
   const offCtx = offCanvas.getContext('2d');
@@ -328,22 +361,47 @@ async function processImageWatermark(imageFile, config) {
   const dataUrl = await readFileAsDataURL(imageFile);
   const baseImg = await loadImageElement(dataUrl);
   const canvas = document.createElement('canvas');
-  const width = baseImg.naturalWidth || baseImg.width;
-  const height = baseImg.naturalHeight || baseImg.height;
+  const { width, height } = imageSize(baseImg);
   canvas.width = width; canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas 2D context error');
+  const mimeType = outputImageMime(imageFile);
+  if (mimeType === 'image/jpeg') {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+  }
   ctx.drawImage(baseImg, 0, 0, width, height);
-  if (config.type === 'text') await drawTextWatermark(ctx, width, height, config);
-  else if (config.type === 'image' && (config.imageDataUrl || config.imageFile)) await drawImageWatermark(ctx, width, height, config);
-  let mimeType = 'image/png';
-  if (imageFile instanceof File) {
-    if (imageFile.type === 'image/jpeg' || imageFile.type === 'image/jpg') mimeType = 'image/jpeg';
-    else if (imageFile.type === 'image/webp') mimeType = 'image/webp';
+  if (config.type === 'text') drawTextWatermark(ctx, width, height, config);
+  else if (config.type === 'image' && (config.imageDataUrl || config.imageFile)) {
+    const wmImg = await loadWatermarkImage(config);
+    if (wmImg) drawImageWatermark(ctx, width, height, config, wmImg);
   }
   return new Promise(function (resolve, reject) {
     canvas.toBlob(function (blob) { if (blob) resolve(blob); else reject(new Error('Image export error')); }, mimeType, 0.95);
   });
+}
+
+/** Chỉ JPEG/WebP được mã hóa lại đúng định dạng; GIF/BMP/AVIF/SVG → PNG. */
+function outputImageMime(file) {
+  const type = (file && file.type) || '';
+  const ext = ((file && file.name) || '').split('.').pop().toLowerCase();
+  if (type === 'image/jpeg' || type === 'image/jpg' || ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (type === 'image/webp' || ext === 'webp') return 'image/webp';
+  return 'image/png';
+}
+
+const MIME_EXT = { 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/png': 'png' };
+
+/** Tên tệp kết quả: đuôi theo định dạng thực tế của blob (ảnh GIF → .png…). */
+function resultFileName(item, blob) {
+  const dot = item.name.lastIndexOf('.');
+  const stem = dot > 0 ? item.name.slice(0, dot) : item.name;
+  let ext = dot > 0 ? item.name.slice(dot + 1) : '';
+  if (item.category === 'image' && blob && MIME_EXT[blob.type]) {
+    const current = ext.toLowerCase() === 'jpeg' ? 'jpg' : ext.toLowerCase();
+    if (current !== MIME_EXT[blob.type]) ext = MIME_EXT[blob.type];
+  }
+  return 'watermarked_' + stem + (ext ? '.' + ext : '');
 }
 
 // ========================================================================
@@ -378,18 +436,17 @@ async function generateWatermarkImage(config, targetWidth, targetHeight) {
       return { dataUrl: stampCanvas.toDataURL('image/png'), width: textW, height: textH };
     }
   } else if (config.type === 'image' && (config.imageDataUrl || config.imageFile)) {
-    let src = config.imageDataUrl;
-    if (!src && config.imageFile) src = await readFileAsDataURL(config.imageFile);
-    if (src) {
-      const img = await loadImageElement(src);
-      const w = (img.naturalWidth || img.width) * config.imageScale;
-      const h = (img.naturalHeight || img.height) * config.imageScale;
+    const img = await loadWatermarkImage(config);
+    if (img) {
+      const natural = imageSize(img);
+      const w = natural.width * config.imageScale;
+      const h = natural.height * config.imageScale;
       const stampCanvas2 = document.createElement('canvas');
-      stampCanvas2.width = w * dpr; stampCanvas2.height = h * dpr;
+      stampCanvas2.width = Math.max(1, Math.round(w * dpr)); stampCanvas2.height = Math.max(1, Math.round(h * dpr));
       const sCtx2 = stampCanvas2.getContext('2d');
       if (sCtx2) {
         sCtx2.scale(dpr, dpr); sCtx2.drawImage(img, 0, 0, w, h);
-        if (config.removeWhiteBg) removeWhiteBackgroundFromCanvas(sCtx2, w * dpr, h * dpr, 35);
+        if (config.removeWhiteBg) removeWhiteBackgroundFromCanvas(sCtx2, stampCanvas2.width, stampCanvas2.height, 35);
         return { dataUrl: stampCanvas2.toDataURL('image/png'), width: w, height: h };
       }
     }
@@ -412,11 +469,40 @@ function getPdfAnchorCoordinates(pos, pageWidth, pageHeight) {
   }
 }
 
+/**
+ * Chỉ số trang (0-based) cần đóng dấu theo cấu hình. `pageRange` dạng "1-3, 5, 8-".
+ * Ném lỗi nếu dải không hợp lệ thay vì âm thầm đóng dấu cả tệp.
+ */
+function selectPdfPages(config, pageCount) {
+  if (config.targetPages === 'first') return [0];
+  if (config.targetPages !== 'range') return Array.from({ length: pageCount }, function (_, i) { return i; });
+  const picked = new Set();
+  const parts = String(config.pageRange || '').split(',').map(function (p) { return p.trim(); }).filter(Boolean);
+  for (const part of parts) {
+    const m = part.match(/^(\d+)\s*(?:-\s*(\d*))?$/);
+    if (!m) throw new Error('Dải trang không hợp lệ: "' + part + '"');
+    const start = Number(m[1]);
+    const end = part.includes('-') ? (m[2] ? Number(m[2]) : pageCount) : start;
+    if (start < 1 || end < start) throw new Error('Dải trang không hợp lệ: "' + part + '"');
+    for (let p = start; p <= Math.min(end, pageCount); p++) picked.add(p - 1);
+  }
+  if (picked.size === 0) throw new Error('Dải trang không khớp trang nào của tệp (có ' + pageCount + ' trang).');
+  return Array.from(picked).sort(function (a, b) { return a - b; });
+}
+
 async function processPdfWatermark(pdfFile, config, onProgress) {
+  const { PDFDocument, degrees } = await loadPdfLib();
   const arrayBuffer = await readFileAsArrayBuffer(pdfFile);
-  const pdfDoc = await PDFDocument.load(arrayBuffer);
+  let pdfDoc;
+  try {
+    pdfDoc = await PDFDocument.load(arrayBuffer);
+  } catch (err) {
+    if (isPdfLibEncryptedError(err)) throw new Error(encryptedPdfMessage('vi'));
+    throw err;
+  }
   const pages = pdfDoc.getPages();
   const pageCount = pages.length;
+  const targetIndices = selectPdfPages(config, pageCount);
   const firstPage = pages[0];
   const size = firstPage.getSize();
   const watermarkStamp = await generateWatermarkImage(config, size.width, size.height);
@@ -431,8 +517,8 @@ async function processPdfWatermark(pdfFile, config, onProgress) {
   const centerOffsetX = (stampW / 2) * cosA - (stampH / 2) * sinA;
   const centerOffsetY = (stampW / 2) * sinA + (stampH / 2) * cosA;
 
-  for (let i = 0; i < pageCount; i++) {
-    const page = pages[i];
+  for (let t = 0; t < targetIndices.length; t++) {
+    const page = pages[targetIndices[t]];
     const pgSize = page.getSize();
     if (config.layoutMode === 'single') {
       const center = getPdfAnchorCoordinates(config.position, pgSize.width, pgSize.height);
@@ -464,7 +550,14 @@ async function processPdfWatermark(pdfFile, config, onProgress) {
         row++;
       }
     }
-    if (onProgress) onProgress(Math.round(((i + 1) / pageCount) * 100));
+    if (onProgress) onProgress(Math.round(((t + 1) / targetIndices.length) * 100));
+  }
+  if (config.addTimestampHidden) {
+    // Ghi thời điểm đóng dấu vào metadata (Keywords/ModDate) — ai có tệp đều đọc/sửa được.
+    const stampedAt = new Date();
+    const existing = pdfDoc.getKeywords();
+    pdfDoc.setKeywords([existing, 'watermarked:' + stampedAt.toISOString()].filter(Boolean));
+    pdfDoc.setModificationDate(stampedAt);
   }
   const pdfBytes = await pdfDoc.save();
   return new Blob([pdfBytes], { type: 'application/pdf' });
@@ -474,71 +567,53 @@ async function processPdfWatermark(pdfFile, config, onProgress) {
 // DOCX ENGINE
 // ========================================================================
 
+/** Ảnh logo đã khử nền (nếu chọn) dưới dạng PNG bytes + kích thước gốc. */
+async function prepareLogoPng(config) {
+  const img = await loadWatermarkImage(config);
+  if (!img) throw new Error('Chưa chọn ảnh logo làm watermark');
+  const natural = imageSize(img);
+  const canvas = document.createElement('canvas');
+  canvas.width = natural.width; canvas.height = natural.height;
+  const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('Canvas error');
+  ctx.drawImage(img, 0, 0, natural.width, natural.height);
+  if (config.removeWhiteBg) removeWhiteBackgroundFromCanvas(ctx, canvas.width, canvas.height, 35);
+  const pngBlob = await new Promise(function (resolve) { canvas.toBlob(function (b) { resolve(b); }, 'image/png'); });
+  if (!pngBlob) throw new Error('Không xuất được ảnh logo');
+  return { bytes: new Uint8Array(await readFileAsArrayBuffer(pngBlob)), width: natural.width, height: natural.height };
+}
+
+const VML_NS_ATTRS = ' xmlns:w="' + OOXML_NS.w + '" xmlns:r="' + OOXML_NS.r + '" xmlns:v="' + OOXML_NS.v + '" xmlns:o="' + OOXML_NS.o + '"';
+
 async function processDocxWatermark(docxFile, config) {
-  const arrayBuffer = await readFileAsArrayBuffer(docxFile);
-  const zip = await JSZip.loadAsync(arrayBuffer);
-  const headerRelId = 'rIdWatermarkHeader';
+  const JSZip = await loadJSZip();
+  const zip = await JSZip.loadAsync(await readFileAsArrayBuffer(docxFile));
   const rotation = Math.round(config.rotation);
   const opacity = config.opacity.toFixed(2);
-  const color = config.color;
-  let headerXmlContent = '';
+  let watermark;
   if (config.type === 'text') {
     const text = config.allCaps ? config.text.toUpperCase() : config.text;
     const escapedText = escapeXml(text);
-    const font = config.fontFamily.split(',')[0].replace(/['"]/g, '');
+    const font = escapeXml(config.fontFamily.split(',')[0].replace(/['"]/g, '').trim());
     const weight = config.bold ? 'bold' : 'normal';
     const style = config.italic ? 'italic' : 'normal';
-    headerXmlContent = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:rPr><w:noProof/></w:rPr><w:pict><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" path="m@7,l@8,m@5,21600l@6,21600e"><v:textpath on="t" fitshape="t"/><v:path textpathok="t"/></v:shapetype><v:shape id="WatermarkStudioText" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:468pt;height:260pt;z-index:-251657216;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin;rotation:' + rotation + '" fillcolor="' + color + '" stroked="f"><v:fill opacity="' + opacity + '"/><v:textpath style="font-family:\'' + font + '\';font-weight:' + weight + ';font-style:' + style + '" string="' + escapedText + '"/></v:shape></w:pict></w:r></w:p></w:hdr>';
-  } else {
-    let dataUrl = config.imageDataUrl;
-    if (!dataUrl && config.imageFile) dataUrl = await readFileAsDataURL(config.imageFile);
-    if (!dataUrl) throw new Error('No watermark image selected for DOCX');
-    const img = await loadImageElement(dataUrl);
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth || img.width; canvas.height = img.naturalHeight || img.height;
-    const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('Canvas error');
-    ctx.drawImage(img, 0, 0);
-    if (config.removeWhiteBg) removeWhiteBackgroundFromCanvas(ctx, canvas.width, canvas.height, 35);
-    const pngBlob = await new Promise(function (resolve) { canvas.toBlob(function (b) { resolve(b); }, 'image/png'); });
-    const pngBytes = await readFileAsArrayBuffer(pngBlob);
-    zip.file('word/media/watermark_logo.png', pngBytes);
-    const headerRelsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/watermark_logo.png"/></Relationships>';
-    zip.file('word/_rels/header_wm.xml.rels', headerRelsXml);
-    const imgScale = Math.round(350 * config.imageScale);
-    headerXmlContent = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:rPr><w:noProof/></w:rPr><w:pict><v:shape id="WatermarkStudioImage" style="position:absolute;margin-left:0;margin-top:0;width:' + imgScale + 'pt;height:' + imgScale + 'pt;z-index:-251657216;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin;rotation:' + rotation + '" stroked="f"><v:imagedata r:id="rIdLogo" o:title="watermark"/><v:fill opacity="' + opacity + '"/></v:shape></w:pict></w:r></w:p></w:hdr>';
-  }
-  zip.file('word/header_wm.xml', headerXmlContent);
-  const contentTypesFile = zip.file('[Content_Types].xml');
-  if (contentTypesFile) {
-    let ct = await contentTypesFile.async('text');
-    if (!ct.includes('PartName="/word/header_wm.xml"')) {
-      ct = ct.replace('</Types>', '  <Override PartName="/word/header_wm.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>\n</Types>');
-      zip.file('[Content_Types].xml', ct);
-    }
-  }
-  const docRelsFile = zip.file('word/_rels/document.xml.rels');
-  if (docRelsFile) {
-    let dr = await docRelsFile.async('text');
-    if (!dr.includes(headerRelId)) {
-      dr = dr.replace('</Relationships>', '  <Relationship Id="' + headerRelId + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header_wm.xml"/>\n</Relationships>');
-      zip.file('word/_rels/document.xml.rels', dr);
-    }
-  }
-  const documentFile = zip.file('word/document.xml');
-  if (documentFile) {
-    let docXml = await documentFile.async('text');
-    const headerRefTag = '<w:headerReference w:type="default" r:id="' + headerRelId + '"/>';
-    if (!docXml.includes(headerRelId)) {
-      if (docXml.includes('<w:sectPr/>')) {
-        docXml = docXml.replace(/<w:sectPr\s*\/>/g, '<w:sectPr>' + headerRefTag + '</w:sectPr>');
-      } else if (docXml.includes('<w:sectPr')) {
-        docXml = docXml.replace(/<w:sectPr([^>]*)>/g, '<w:sectPr$1>' + headerRefTag);
-      } else if (docXml.includes('</w:body>')) {
-        docXml = docXml.replace('</w:body>', '<w:sectPr>' + headerRefTag + '</w:sectPr></w:body>');
+    const color = escapeXml(config.color);
+    watermark = {
+      paragraphXml: function () {
+        return '<w:p' + VML_NS_ATTRS + '><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:rPr><w:noProof/></w:rPr><w:pict><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e"><v:textpath on="t" fitshape="t"/><v:path textpathok="t" o:connecttype="custom"/><o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype><v:shape id="WatermarkStudioText" o:spid="_x0000_s2049" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:468pt;height:156pt;z-index:-251657216;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin;rotation:' + rotation + '" o:allowincell="f" fillcolor="' + color + '" stroked="f"><v:fill opacity="' + opacity + '"/><v:textpath style="font-family:&quot;' + font + '&quot;;font-weight:' + weight + ';font-style:' + style + '" string="' + escapedText + '"/></v:shape></w:pict></w:r></w:p>';
       }
-      zip.file('word/document.xml', docXml);
-    }
+    };
+  } else {
+    const logo = await prepareLogoPng(config);
+    // Giữ tỉ lệ ảnh gốc: logo vuông cũ bị ép thành hình vuông.
+    const box = fitAspect(logo.width, logo.height, Math.max(20, 350 * config.imageScale));
+    watermark = {
+      image: { bytes: logo.bytes, ext: 'png' },
+      paragraphXml: function (relId) {
+        return '<w:p' + VML_NS_ATTRS + '><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:rPr><w:noProof/></w:rPr><w:pict><v:shape id="WatermarkStudioImage" o:spid="_x0000_s2050" type="#_x0000_t75" style="position:absolute;margin-left:0;margin-top:0;width:' + box.width + 'pt;height:' + box.height + 'pt;z-index:-251657216;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin;rotation:' + rotation + '" o:allowincell="f" stroked="f"><v:imagedata r:id="' + relId + '" o:title="watermark"/><v:fill opacity="' + opacity + '"/></v:shape></w:pict></w:r></w:p>';
+      }
+    };
   }
+  await applyDocxWatermark(zip, watermark);
   return await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 }
 
@@ -564,20 +639,19 @@ async function createExcelWatermarkImageBlob(config) {
     ctx.rotate((config.rotation * Math.PI) / 180);
     ctx.fillText(text, 0, 0); ctx.restore();
   } else {
-    let src = config.imageDataUrl;
-    if (!src && config.imageFile) src = await readFileAsDataURL(config.imageFile);
-    if (src) {
-      const img = await loadImageElement(src);
-      const w = (img.naturalWidth || img.width) * config.imageScale;
-      const h = (img.naturalHeight || img.height) * config.imageScale;
+    const img = await loadWatermarkImage(config);
+    if (img) {
+      const natural = imageSize(img);
+      const w = natural.width * config.imageScale;
+      const h = natural.height * config.imageScale;
       ctx.save(); ctx.globalAlpha = config.opacity;
       ctx.translate(tileWidth / 2, tileHeight / 2);
       ctx.rotate((config.rotation * Math.PI) / 180);
       const offCanvas = document.createElement('canvas');
-      offCanvas.width = img.naturalWidth || img.width; offCanvas.height = img.naturalHeight || img.height;
+      offCanvas.width = natural.width; offCanvas.height = natural.height;
       const offCtx = offCanvas.getContext('2d');
       if (offCtx) {
-        offCtx.drawImage(img, 0, 0);
+        offCtx.drawImage(img, 0, 0, natural.width, natural.height);
         if (config.removeWhiteBg) removeWhiteBackgroundFromCanvas(offCtx, offCanvas.width, offCanvas.height, 35);
         ctx.drawImage(offCanvas, -w / 2, -h / 2, w, h);
       }
@@ -588,47 +662,11 @@ async function createExcelWatermarkImageBlob(config) {
 }
 
 async function processXlsxWatermark(xlsxFile, config) {
-  const arrayBuffer = await readFileAsArrayBuffer(xlsxFile);
-  const zip = await JSZip.loadAsync(arrayBuffer);
+  const JSZip = await loadJSZip();
+  const zip = await JSZip.loadAsync(await readFileAsArrayBuffer(xlsxFile));
   const imgBlob = await createExcelWatermarkImageBlob(config);
-  const imgBytes = await readFileAsArrayBuffer(imgBlob);
-  zip.file('xl/media/watermark_bg.png', imgBytes);
-  const contentTypesFile = zip.file('[Content_Types].xml');
-  if (contentTypesFile) {
-    let ct = await contentTypesFile.async('text');
-    if (!ct.includes('Extension="png"')) {
-      ct = ct.replace('</Types>', '  <Default Extension="png" ContentType="image/png"/>\n</Types>');
-      zip.file('[Content_Types].xml', ct);
-    }
-  }
-  const sheetFiles = Object.keys(zip.files).filter(function (p) { return p.startsWith('xl/worksheets/sheet') && p.endsWith('.xml'); });
-  const bgRelId = 'rIdWatermarkBg';
-  for (let si = 0; si < sheetFiles.length; si++) {
-    const sheetPath = sheetFiles[si];
-    const sheetNum = sheetPath.replace('xl/worksheets/', '').replace('.xml', '');
-    const relsPath = 'xl/worksheets/_rels/' + sheetNum + '.xml.rels';
-    let relsXml = '';
-    const existingRelsFile = zip.file(relsPath);
-    if (existingRelsFile) {
-      relsXml = await existingRelsFile.async('text');
-      if (!relsXml.includes(bgRelId)) {
-        relsXml = relsXml.replace('</Relationships>', '  <Relationship Id="' + bgRelId + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/watermark_bg.png"/>\n</Relationships>');
-      }
-    } else {
-      relsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="' + bgRelId + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/watermark_bg.png"/></Relationships>';
-    }
-    zip.file(relsPath, relsXml);
-    const sheetFile = zip.file(sheetPath);
-    if (sheetFile) {
-      let sheetXml = await sheetFile.async('text');
-      const pictureTag = '<picture r:id="' + bgRelId + '"/>';
-      sheetXml = sheetXml.replace(/<picture[^>]*\/>/g, '');
-      if (sheetXml.includes('</worksheet>')) {
-        sheetXml = sheetXml.replace('</worksheet>', '  ' + pictureTag + '\n</worksheet>');
-        zip.file(sheetPath, sheetXml);
-      }
-    }
-  }
+  const imgBytes = new Uint8Array(await readFileAsArrayBuffer(imgBlob));
+  await applyXlsxBackground(zip, imgBytes);
   return await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 }
 
@@ -636,84 +674,42 @@ async function processXlsxWatermark(xlsxFile, config) {
 // PPTX ENGINE
 // ========================================================================
 
+const PPTX_NS_ATTRS = ' xmlns:p="' + OOXML_NS.p + '" xmlns:a="' + OOXML_NS.a + '" xmlns:r="' + OOXML_NS.r + '"';
+
 async function processPptxWatermark(pptxFile, config) {
-  const arrayBuffer = await readFileAsArrayBuffer(pptxFile);
-  const zip = await JSZip.loadAsync(arrayBuffer);
-  const slideFiles = Object.keys(zip.files).filter(function (p) { return p.startsWith('ppt/slides/slide') && p.endsWith('.xml'); });
+  const JSZip = await loadJSZip();
+  const zip = await JSZip.loadAsync(await readFileAsArrayBuffer(pptxFile));
   const opacityValue = Math.round(config.opacity * 100000);
   const rotValue = Math.round(config.rotation * 60000);
   const rgbVal = hexToRgb(config.color);
   const hexColor = ((1 << 24) + (rgbVal.r << 16) + (rgbVal.g << 8) + rgbVal.b).toString(16).slice(1).toUpperCase();
+  let watermark;
   if (config.type === 'text') {
     const text = config.allCaps ? config.text.toUpperCase() : config.text;
     const escapedText = escapeXml(text);
-    const font = config.fontFamily.split(',')[0].replace(/['"]/g, '');
+    const font = escapeXml(config.fontFamily.split(',')[0].replace(/['"]/g, '').trim());
     const szVal = Math.round(config.fontSize * 100);
-    for (let i = 0; i < slideFiles.length; i++) {
-      const slidePath = slideFiles[i];
-      const slideFile = zip.file(slidePath);
-      if (!slideFile) continue;
-      let slideXml = await slideFile.async('text');
-      const shapeId = 9990 + i;
-      const watermarkShapeXml = '<p:sp xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:nvSpPr><p:cNvPr id="' + shapeId + '" name="WatermarkText_' + shapeId + '"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm rot="' + rotValue + '"><a:off x="914400" y="1028700"/><a:ext cx="7315200" cy="3086100"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr><p:txBody><a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="vi-VN" sz="' + szVal + '" b="' + (config.bold ? 1 : 0) + '" i="' + (config.italic ? 1 : 0) + '"><a:solidFill><a:srgbClr val="' + hexColor + '"><a:alpha val="' + opacityValue + '"/></a:srgbClr></a:solidFill><a:latin typeface="' + font + '"/><a:ea typeface="' + font + '"/><a:cs typeface="' + font + '"/></a:rPr><a:t>' + escapedText + '</a:t></a:r></a:p></p:txBody></p:sp>';
-      if (slideXml.includes('</p:spTree>')) {
-        slideXml = slideXml.replace('</p:spTree>', watermarkShapeXml + '\n    </p:spTree>');
-        zip.file(slidePath, slideXml);
+    watermark = {
+      shapeXml: function (ctx) {
+        // Hộp chữ chiếm 80% x 40% slide, căn giữa theo kích thước slide thật (p:sldSz).
+        const cx = Math.round(ctx.slideSize.cx * 0.8), cy = Math.round(ctx.slideSize.cy * 0.4);
+        const offX = Math.round((ctx.slideSize.cx - cx) / 2), offY = Math.round((ctx.slideSize.cy - cy) / 2);
+        return '<p:sp' + PPTX_NS_ATTRS + '><p:nvSpPr><p:cNvPr id="' + ctx.id + '" name="WatermarkText ' + ctx.id + '"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm rot="' + rotValue + '"><a:off x="' + offX + '" y="' + offY + '"/><a:ext cx="' + cx + '" cy="' + cy + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr><p:txBody><a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="ctr"/><a:lstStyle/><a:p><a:pPr algn="ctr"/><a:r><a:rPr lang="vi-VN" sz="' + szVal + '" b="' + (config.bold ? 1 : 0) + '" i="' + (config.italic ? 1 : 0) + '"><a:solidFill><a:srgbClr val="' + hexColor + '"><a:alpha val="' + opacityValue + '"/></a:srgbClr></a:solidFill><a:latin typeface="' + font + '"/><a:ea typeface="' + font + '"/><a:cs typeface="' + font + '"/></a:rPr><a:t>' + escapedText + '</a:t></a:r></a:p></p:txBody></p:sp>';
       }
-    }
+    };
   } else {
-    let dataUrl = config.imageDataUrl;
-    if (!dataUrl && config.imageFile) dataUrl = await readFileAsDataURL(config.imageFile);
-    if (!dataUrl) throw new Error('No watermark image for PPTX');
-    const img = await loadImageElement(dataUrl);
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth || img.width; canvas.height = img.naturalHeight || img.height;
-    const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('Canvas error');
-    ctx.drawImage(img, 0, 0);
-    if (config.removeWhiteBg) removeWhiteBackgroundFromCanvas(ctx, canvas.width, canvas.height, 35);
-    const pngBlob = await new Promise(function (resolve) { canvas.toBlob(function (b) { resolve(b); }, 'image/png'); });
-    const pngBytes = await readFileAsArrayBuffer(pngBlob);
-    zip.file('ppt/media/watermark_logo.png', pngBytes);
-    const ctFile = zip.file('[Content_Types].xml');
-    if (ctFile) {
-      let ctText = await ctFile.async('text');
-      if (!ctText.includes('Extension="png"')) {
-        ctText = ctText.replace('</Types>', '  <Default Extension="png" ContentType="image/png"/>\n</Types>');
-        zip.file('[Content_Types].xml', ctText);
+    const logo = await prepareLogoPng(config);
+    watermark = {
+      image: { bytes: logo.bytes, ext: 'png' },
+      shapeXml: function (ctx) {
+        const longSide = Math.min(ctx.slideSize.cx, ctx.slideSize.cy) * 0.75 * Math.min(1.5, config.imageScale * 1.6);
+        const box = fitAspect(logo.width, logo.height, longSide);
+        const offX = Math.round((ctx.slideSize.cx - box.width) / 2), offY = Math.round((ctx.slideSize.cy - box.height) / 2);
+        return '<p:pic' + PPTX_NS_ATTRS + '><p:nvPicPr><p:cNvPr id="' + ctx.id + '" name="WatermarkPicture ' + ctx.id + '"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="' + ctx.relId + '"><a:alphaModFix amt="' + opacityValue + '"/></a:blip><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm rot="' + rotValue + '"><a:off x="' + offX + '" y="' + offY + '"/><a:ext cx="' + box.width + '" cy="' + box.height + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
       }
-    }
-    const imgRelId = 'rIdWatermarkImg';
-    const picScale = config.imageScale;
-    const picW = Math.round(3657600 * picScale), picH = Math.round(3657600 * picScale);
-    const slideWidthEmu = 9144000, slideHeightEmu = 5143500;
-    const offX = Math.round((slideWidthEmu - picW) / 2), offY = Math.round((slideHeightEmu - picH) / 2);
-    for (let j = 0; j < slideFiles.length; j++) {
-      const sPath = slideFiles[j];
-      const slideNum = sPath.replace('ppt/slides/', '').replace('.xml', '');
-      const relsPath = 'ppt/slides/_rels/' + slideNum + '.xml.rels';
-      let relsXml = '';
-      const existingRels = zip.file(relsPath);
-      if (existingRels) {
-        relsXml = await existingRels.async('text');
-        if (!relsXml.includes(imgRelId)) {
-          relsXml = relsXml.replace('</Relationships>', '  <Relationship Id="' + imgRelId + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/watermark_logo.png"/>\n</Relationships>');
-        }
-      } else {
-        relsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="' + imgRelId + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/watermark_logo.png"/></Relationships>';
-      }
-      zip.file(relsPath, relsXml);
-      const sFile = zip.file(sPath);
-      if (sFile) {
-        let sXml = await sFile.async('text');
-        const picId = 8880 + j;
-        const picShapeXml = '<p:pic xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:nvPicPr><p:cNvPr id="' + picId + '" name="WatermarkPicture_' + picId + '"/><p:cNvPicPr/><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="' + imgRelId + '" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><a:alphaModFix amt="' + opacityValue + '"/></a:blip><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm rot="' + rotValue + '"><a:off x="' + offX + '" y="' + offY + '"/><a:ext cx="' + picW + '" cy="' + picH + '"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
-        if (sXml.includes('</p:spTree>')) {
-          sXml = sXml.replace('</p:spTree>', picShapeXml + '\n    </p:spTree>');
-          zip.file(sPath, sXml);
-        }
-      }
-    }
+    };
   }
+  await applyPptxWatermark(zip, watermark);
   return await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 }
 
@@ -732,8 +728,7 @@ async function processFileItem(item, config, onProgress) {
     case 'pptx': if (onProgress) onProgress(30); resultBlob = await processPptxWatermark(item.file, config); if (onProgress) onProgress(100); break;
     default: throw new Error('Unsupported format: .' + item.extension);
   }
-  const resultUrl = URL.createObjectURL(resultBlob);
-  return { resultBlob: resultBlob, resultUrl: resultUrl };
+  return { resultBlob: resultBlob, resultName: resultFileName(item, resultBlob) };
 }
 
 // ========================================================================
@@ -741,6 +736,7 @@ async function processFileItem(item, config, onProgress) {
 // ========================================================================
 
 async function createSamplePdf() {
+  const { PDFDocument, rgb, StandardFonts } = await loadPdfLib();
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]);
   const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -755,6 +751,7 @@ async function createSamplePdf() {
 }
 
 async function createSampleDocx() {
+  const JSZip = await loadJSZip();
   const zip = new JSZip();
   zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
   zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
@@ -814,6 +811,7 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
   const [bgImage, setBgImage] = useState(null);
   const wmImageInputRef = useRef(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [notice, setNotice] = useState('');
   const fileInputRef = useRef(null);
 
   const stats = useMemo(function () {
@@ -842,10 +840,9 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
       });
     } else if (activeFile && activeFile.category === 'pdf') {
       readFileAsArrayBuffer(activeFile.file).then(async function (buffer) {
+        let pdf = null;
         try {
-          const pdfjsLib = await loadPdfJs();
-          const loadingTask = pdfjsLib.getDocument({ data: buffer.slice(0) });
-          const pdf = await loadingTask.promise;
+          pdf = await openPdfDocument(buffer);
           const page = await pdf.getPage(1);
           const viewport = page.getViewport({ scale: 1.5 });
           const offscreenCanvas = document.createElement('canvas');
@@ -853,6 +850,8 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
           offscreenCanvas.height = viewport.height;
           const offscreenCtx = offscreenCanvas.getContext('2d');
           if (offscreenCtx) {
+            offscreenCtx.fillStyle = '#ffffff';
+            offscreenCtx.fillRect(0, 0, offscreenCanvas.width, offscreenCanvas.height);
             await page.render({ canvasContext: offscreenCtx, viewport }).promise;
             const dataUrl = offscreenCanvas.toDataURL('image/png');
             const img = new Image();
@@ -861,10 +860,11 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
             img.src = dataUrl;
           }
           page.cleanup();
-          await loadingTask.destroy();
         } catch (err) {
           console.warn('PDF preview render error, using document mockup fallback:', err);
           if (isMounted) setBgImage(null);
+        } finally {
+          destroyPdfDocument(pdf);
         }
       }).catch(function (err) {
         console.warn('Error reading PDF file for preview:', err);
@@ -879,8 +879,13 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
   }, [activeFile]);
 
   useEffect(function () {
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext('2d'); if (!ctx) return;
+    const canvas = canvasRef.current; if (!canvas) return undefined;
+    const ctx = canvas.getContext('2d'); if (!ctx) return undefined;
+    // Ảnh logo nạp bất đồng bộ: vẽ toàn bộ khung trong MỘT lần sau khi ảnh sẵn
+    // sàng, và bỏ kết quả nếu cấu hình đã đổi (tránh lần vẽ cũ đè lên lần mới).
+    let cancelled = false;
+    const render = function (wmImg) {
+    if (cancelled) return;
     let width = 540, height = 760;
     if (bgImage) {
       const imgAspect = bgImage.naturalWidth / bgImage.naturalHeight;
@@ -926,7 +931,14 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
     }
 
     if (config.type === 'text') drawTextWatermark(ctx, width, height, config);
-    else if (config.type === 'image') drawImageWatermark(ctx, width, height, config);
+    else if (config.type === 'image') drawImageWatermark(ctx, width, height, config, wmImg);
+    };
+    if (config.type === 'image' && (config.imageDataUrl || config.imageFile)) {
+      loadWatermarkImage(config).then(render).catch(function () { render(null); });
+    } else {
+      render(null);
+    }
+    return function () { cancelled = true; };
   }, [config, bgImage, showGrid, contrastMode, activeFile]);
 
   const handleFilesAdded = useCallback(function (newItems) {
@@ -951,20 +963,35 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
   const handleClearAll = useCallback(function () {
     setFileItems([]);
     setSelectedId(null);
+    setNotice('');
+  }, []);
+
+  // Đổi cấu hình thì kết quả đã đóng dấu không còn khớp → đưa về "Sẵn sàng".
+  const invalidateResults = useCallback(function () {
+    setFileItems(function (prev) {
+      if (!prev.some(function (i) { return i.status === 'done' || i.status === 'error'; })) return prev;
+      return prev.map(function (i) {
+        return (i.status === 'done' || i.status === 'error')
+          ? Object.assign({}, i, { status: 'pending', progress: 0, resultBlob: null, resultName: null, errorMessage: null })
+          : i;
+      });
+    });
   }, []);
 
   const handleApplyPreset = useCallback(function (preset) {
     setConfig(function (prev) { return Object.assign({}, prev, preset.config); });
-  }, []);
+    invalidateResults();
+  }, [invalidateResults]);
 
   const handleConfigChange = useCallback(function (updates) {
     setConfig(function (prev) { return Object.assign({}, prev, updates); });
-  }, []);
+    invalidateResults();
+  }, [invalidateResults]);
 
   const handleProcessAll = useCallback(async function () {
     if (fileItems.length === 0 || isProcessing) return;
     setIsProcessing(true);
-    const updatedItems = fileItems.slice();
+    const updatedItems = fileItems.map(function (i) { return Object.assign({}, i); });
     for (let i = 0; i < updatedItems.length; i++) {
       const item = updatedItems[i];
       item.status = 'processing';
@@ -978,7 +1005,8 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
         item.status = 'done';
         item.progress = 100;
         item.resultBlob = result.resultBlob;
-        item.resultUrl = result.resultUrl;
+        item.resultName = result.resultName;
+        item.errorMessage = null;
       } catch (err) {
         console.error('Error processing ' + item.name + ':', err);
         item.status = 'error';
@@ -993,15 +1021,35 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
   const handleDownloadZip = useCallback(async function () {
     const doneItems = fileItems.filter(function (i) { return i.status === 'done' && i.resultBlob; });
     if (doneItems.length === 0) return;
+    const JSZip = await loadJSZip();
     const zip = new JSZip();
+    const usedNames = new Set();
     for (let i = 0; i < doneItems.length; i++) {
-      zip.file('watermarked_' + doneItems[i].name, doneItems[i].resultBlob);
+      // Hai tệp trùng tên (từ hai thư mục) trước đây ghi đè nhau trong ZIP.
+      const original = doneItems[i].resultName || ('watermarked_' + doneItems[i].name);
+      const dot = original.lastIndexOf('.');
+      const stem = dot > 0 ? original.slice(0, dot) : original;
+      const ext = dot > 0 ? original.slice(dot) : '';
+      let entry = original;
+      let n = 2;
+      while (usedNames.has(entry.toLowerCase())) entry = stem + ' (' + (n++) + ')' + ext;
+      usedNames.add(entry.toLowerCase());
+      zip.file(entry, doneItems[i].resultBlob);
     }
     const zipBlob = await zip.generateAsync({ type: 'blob' });
     downloadBlob(zipBlob, 'watermark_studio_batch.zip');
   }, [fileItems]);
 
-  const processFiles = useCallback(function (files) {
+  const processFiles = useCallback(async function (incoming) {
+    const validation = validateDocumentFiles(incoming, fileItems, WATERMARK_LIMITS);
+    const problems = rejectionMessages(validation.rejected);
+    const files = [];
+    for (const file of validation.accepted) {
+      if (await verifyDocumentSignature(file)) files.push(file);
+      else problems.push(file.name + ': nội dung không khớp phần mở rộng');
+    }
+    setNotice(problems.join(' • '));
+    if (files.length === 0) return;
     const newItems = files.map(function (file) {
       const ext = (file.name.split('.').pop() || '').toLowerCase();
       return {
@@ -1016,14 +1064,19 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
       };
     });
     handleFilesAdded(newItems);
-  }, [handleFilesAdded]);
+  }, [handleFilesAdded, fileItems]);
 
   const handleWmImageChange = useCallback(async function (e) {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const dataUrl = await readFileAsDataURL(file);
-      handleConfigChange({ type: 'image', imageFile: file, imageDataUrl: dataUrl });
+    const input = e.target;
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    if (file.size > 15 * MIB) {
+      setNotice(file.name + ': logo vượt 15 MiB');
+      return;
     }
+    const dataUrl = await readFileAsDataURL(file);
+    handleConfigChange({ type: 'image', imageFile: file, imageDataUrl: dataUrl });
   }, [handleConfigChange]);
 
   const handleTabClick = useCallback(function (tab) {
@@ -1074,7 +1127,11 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
               </span>
             </h1>
             <p className="text-sm text-on-surface-variant max-w-4xl leading-relaxed">
-              Đóng dấu văn bản (Text) hoặc logo hình ảnh bản quyền lên hàng loạt tệp ảnh (PNG, JPG, WebP), tài liệu PDF và Microsoft Office (DOCX, XLSX, PPTX). Tự động tính toán góc xoay, độ trong suốt (opacity), lặp ma trận (tile grid) hoặc dấu chìm chống sao chép trái phép hoàn toàn trong trình duyệt.
+              {displayLang === 'en'
+                ? 'Stamp a text or logo watermark onto batches of images (PNG, JPG, WebP…), PDF and Microsoft Office files (DOCX, XLSX, PPTX) with adjustable rotation, opacity and tiling — right in your browser.'
+                : displayLang === 'ja'
+                  ? '画像（PNG・JPG・WebPなど）、PDF、Microsoft Office（DOCX・XLSX・PPTX）に文字やロゴの透かしを一括で入れます。回転・不透明度・タイル配置を調整でき、すべてブラウザ内で処理します。'
+                  : 'Đóng dấu văn bản hoặc logo lên hàng loạt ảnh (PNG, JPG, WebP…), tài liệu PDF và Microsoft Office (DOCX, XLSX, PPTX) với góc xoay, độ trong suốt và kiểu lặp tùy chỉnh — xử lý ngay trong trình duyệt.'}
             </p>
             <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-2">
               <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
@@ -1099,7 +1156,7 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                 <span className="w-6 h-6 rounded bg-primary text-on-primary flex items-center justify-center font-mono text-xs font-bold">1</span>
                 <h2 className="text-sm font-semibold text-on-surface">Tải tệp tin cần đóng dấu</h2>
               </div>
-              <span className="font-mono text-xs text-on-surface-variant">Tối đa 50 tệp / 100MB</span>
+              <span className="font-mono text-xs text-on-surface-variant">Tối đa {WATERMARK_LIMITS.maxFiles} tệp / {formatMiB(WATERMARK_LIMITS.maxTotalBytes)} MiB</span>
             </div>
 
             {/* Drag & Drop Zone */}
@@ -1109,11 +1166,12 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
               onDrop={function (e) {
                 e.preventDefault();
                 setIsDragOver(false);
+                if (isProcessing) return;
                 if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                   processFiles(Array.from(e.dataTransfer.files));
                 }
               }}
-              onClick={function () { fileInputRef.current && fileInputRef.current.click(); }}
+              onClick={function () { if (!isProcessing && fileInputRef.current) fileInputRef.current.click(); }}
               className={'relative group cursor-pointer border-2 border-dashed rounded-xl p-6 text-center flex flex-col items-center justify-center gap-2 transition-all ' +
                 (isDragOver
                   ? 'border-primary-container bg-primary-container/10 scale-[0.99]'
@@ -1123,12 +1181,13 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept=".pdf,.docx,.xlsx,.pptx,.png,.jpg,.jpeg,.webp,.svg,.bmp,.gif"
+                accept={WATERMARK_LIMITS.extensions.join(',')}
                 className="hidden"
                 onChange={function (e) {
-                  if (e.target.files && e.target.files.length > 0) {
-                    processFiles(Array.from(e.target.files));
-                  }
+                  const picked = e.target.files ? Array.from(e.target.files) : [];
+                  // Reset để chọn lại đúng tệp đó vẫn kích hoạt onChange.
+                  e.target.value = '';
+                  if (picked.length > 0) processFiles(picked);
                 }}
               />
               <div className="w-12 h-12 rounded-xl bg-surface-container border border-border-subtle flex items-center justify-center text-primary-container group-hover:scale-105 transition-transform">
@@ -1138,7 +1197,7 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                 <p className="text-sm font-medium text-on-surface">
                   Kéo thả tệp hoặc <span className="text-primary-container underline underline-offset-4">chọn từ thiết bị</span>
                 </p>
-                <p className="text-xs text-on-surface-variant">Hỗ trợ PDF, DOCX, XLSX, PPTX, PNG, JPG, WebP</p>
+                <p className="text-xs text-on-surface-variant">Hỗ trợ PDF, DOCX, XLSX, PPTX, PNG, JPG, WebP, GIF, AVIF, BMP, SVG (không nhận .doc/.xls/.ppt/.csv)</p>
               </div>
 
               {/* Sample Files Loader Button */}
@@ -1153,6 +1212,13 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                 </button>
               </div>
             </div>
+
+            {notice && (
+              <div role="alert" className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-300 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <span>{notice}</span>
+              </div>
+            )}
 
             {/* File List (Batch Queue) */}
             {fileItems.length > 0 && (
@@ -1188,6 +1254,9 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-medium text-on-surface truncate">{item.name}</p>
                             <span className="text-[11px] font-mono text-on-surface-variant">{formatFileSize(item.size)} • {item.extension.toUpperCase()}</span>
+                            {item.status === 'error' && item.errorMessage && (
+                              <p className="text-[11px] text-red-400 break-words">{item.errorMessage}</p>
+                            )}
                           </div>
                         </div>
 
@@ -1204,7 +1273,7 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                             </span>
                           )}
                           {item.status === 'error' && (
-                            <span className="px-2 py-0.5 bg-red-500/15 text-red-400 font-mono text-[11px] rounded flex items-center gap-1">
+                            <span className="px-2 py-0.5 bg-red-500/15 text-red-400 font-mono text-[11px] rounded flex items-center gap-1" title={item.errorMessage || ''}>
                               <AlertCircle className="w-3 h-3" /> Lỗi
                             </span>
                           )}
@@ -1219,7 +1288,7 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                               type="button"
                               onClick={function (e) {
                                 e.stopPropagation();
-                                downloadBlob(item.resultBlob, 'watermarked_' + item.name);
+                                downloadBlob(item.resultBlob, item.resultName || ('watermarked_' + item.name));
                               }}
                               className="p-1 rounded bg-emerald-500/20 text-secondary hover:bg-emerald-500/30 transition-colors"
                               aria-label={`Tải tệp ${item.name}`}
@@ -1561,6 +1630,9 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                   <span className="font-mono text-[11px]">Góc dưới phải</span>
                 </button>
               </div>
+              <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                Bố cục (lặp/vị trí/khoảng cách) chỉ áp dụng cho PDF và ảnh. DOCX và PPTX luôn đặt một dấu ở giữa trang/slide; XLSX dùng ảnh nền lặp lại của sheet (chỉ hiện trên màn hình, không in ra giấy).
+              </p>
             </div>
 
             {/* Sliders Matrix */}
@@ -1675,35 +1747,44 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
               </div>
             )}
 
-            {/* Advanced Checkbox Options */}
+            {/* Advanced Options (PDF) */}
             <div className="p-3 bg-surface rounded-lg border border-border-subtle space-y-2">
-              <label className="flex items-center gap-2.5 cursor-pointer">
+              <label htmlFor="watermark-target-pages" className="block text-xs text-on-surface font-medium">Trang cần đóng dấu (chỉ áp dụng cho PDF)</label>
+              <select
+                id="watermark-target-pages"
+                value={config.targetPages}
+                onChange={function (e) { handleConfigChange({ targetPages: e.target.value }); }}
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface text-xs cursor-pointer"
+              >
+                <option value="all">Tất cả các trang</option>
+                <option value="first">Chỉ trang đầu tiên</option>
+                <option value="range">Dải trang tùy chọn…</option>
+              </select>
+              {config.targetPages === 'range' && (
                 <input
-                  type="checkbox"
-                  checked={config.applyAllPages}
-                  onChange={function (e) { handleConfigChange({ applyAllPages: e.target.checked }); }}
-                  className="w-4 h-4 accent-primary-container rounded cursor-pointer"
+                  type="text"
+                  aria-label="Dải trang cần đóng dấu"
+                  value={config.pageRange}
+                  onChange={function (e) { handleConfigChange({ pageRange: e.target.value }); }}
+                  placeholder="VD: 1-3, 5, 8-"
+                  className="w-full bg-surface text-on-surface px-3 py-2 rounded-lg border border-border-subtle text-xs focus:outline-none focus:border-primary"
                 />
-                <span className="text-xs text-on-surface">Áp dụng trên toàn bộ trang tài liệu PDF & Office</span>
-              </label>
-              <label className="flex items-center gap-2.5 cursor-pointer">
+              )}
+              <label className="flex items-start gap-2.5 cursor-pointer pt-1">
                 <input
                   type="checkbox"
                   checked={config.addTimestampHidden}
                   onChange={function (e) { handleConfigChange({ addTimestampHidden: e.target.checked }); }}
-                  className="w-4 h-4 accent-primary-container rounded cursor-pointer"
+                  className="w-4 h-4 mt-0.5 accent-primary-container rounded cursor-pointer"
                 />
-                <span className="text-xs text-on-surface">Chèn Timestamp & User ID ngầm (Chống rò rỉ nội bộ)</span>
+                <span className="text-xs text-on-surface">
+                  Ghi thời điểm đóng dấu vào thuộc tính (metadata) tệp PDF
+                  <span className="block text-[11px] text-on-surface-variant">Chỉ là ghi chú trong tệp, ai có tệp cũng xem/sửa được — không phải cơ chế chống rò rỉ.</span>
+                </span>
               </label>
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.flattenLayers}
-                  onChange={function (e) { handleConfigChange({ flattenLayers: e.target.checked }); }}
-                  className="w-4 h-4 accent-primary-container rounded cursor-pointer"
-                />
-                <span className="text-xs text-on-surface">Khóa chỉnh sửa & bảo vệ vector tài liệu (Flatten layers)</span>
-              </label>
+              <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                Watermark được chèn thành lớp ảnh/hình phía trên tài liệu; người có phần mềm chỉnh sửa PDF/Office vẫn có thể xóa được.
+              </p>
             </div>
 
             {/* PRIMARY EXECUTION CTA */}
@@ -1721,12 +1802,12 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                 {stats.processing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Đang render Canvas & đóng dấu PDF-Lib (In-Memory)...</span>
+                    <span>Đang đóng dấu tài liệu...</span>
                   </>
                 ) : (
                   <>
                     <Zap className="w-4 h-4 fill-current" />
-                    <span>Bắt Đầu Đóng Dấu {hasFiles ? fileItems.length : 0} Tệp Tin (Xuất Ngay Lập Tức)</span>
+                    <span>Bắt Đầu Đóng Dấu {hasFiles ? fileItems.length : 0} Tệp Tin</span>
                   </>
                 )}
               </button>
@@ -1749,16 +1830,9 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
 
               {/* Mini Toolbar Controls */}
               <div className="flex items-center gap-2">
-                {/* Page switch simulation */}
-                <div className="flex items-center bg-surface border border-border-subtle rounded px-2 py-1 gap-2 font-mono text-xs text-on-surface-variant">
-                  <button type="button" aria-label="Trang trước" className="hover:text-primary transition-colors">
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <span>Trang 1 / 1</span>
-                  <button type="button" aria-label="Trang sau" className="hover:text-primary transition-colors">
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                <span className="font-mono text-xs text-on-surface-variant px-1">
+                  {activeFile && activeFile.category === 'pdf' ? 'Xem trước trang 1' : activeFile && ['docx', 'xlsx', 'pptx'].indexOf(activeFile.category) >= 0 ? 'Mô phỏng bố cục' : 'Xem trước'}
+                </span>
 
                 {/* Zoom */}
                 <div className="flex items-center bg-surface border border-border-subtle rounded px-2 py-1 gap-1 font-mono text-xs text-on-surface-variant">
@@ -1857,7 +1931,7 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                 <CheckCircle2 className="w-4 h-4" />
                 <span className="font-mono text-xs font-semibold">
                   {isAllDone
-                    ? 'ĐÃ ĐÓNG DẤU HOÀN TẤT ' + stats.done + '/' + stats.total + ' TỆP (0.42s - In-Memory WASM)'
+                    ? 'ĐÃ ĐÓNG DẤU HOÀN TẤT ' + stats.done + '/' + stats.total + ' TỆP'
                     : hasFiles
                       ? 'SẴN SÀNG ĐÓNG DẤU ' + stats.total + ' TỆP TIN'
                       : 'CHƯA CÓ TỆP TIN NÀO ĐƯỢC CHỌN'}
@@ -1881,17 +1955,17 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
               </div>
 
               <div className="p-3 bg-surface border border-border-subtle rounded-lg flex flex-col">
-                <span className="font-mono text-[10px] text-on-surface-variant uppercase">KHỐI LƯỢNG TRANG</span>
-                <span className="text-xl font-bold text-on-surface font-mono mt-0.5">
-                  {hasFiles ? fileItems.length * 4 : 0}
+                <span className="font-mono text-[10px] text-on-surface-variant uppercase">TỆP LỖI</span>
+                <span className={'text-xl font-bold font-mono mt-0.5 ' + (stats.error > 0 ? 'text-red-400' : 'text-on-surface')}>
+                  {stats.error}
                 </span>
-                <span className="text-xs text-on-surface-variant mt-0.5">PDF & Office & Ảnh</span>
+                <span className="text-xs text-on-surface-variant mt-0.5">Di chuột vào nhãn “Lỗi” để xem lý do</span>
               </div>
 
               <div className="p-3 bg-surface border border-border-subtle rounded-lg flex flex-col">
-                <span className="font-mono text-[10px] text-on-surface-variant uppercase">CHẤT LƯỢNG XUẤT</span>
-                <span className="text-xl font-bold text-primary font-mono mt-0.5">Lossless</span>
-                <span className="text-xs text-on-surface-variant mt-0.5">Không nén suy hao</span>
+                <span className="font-mono text-[10px] text-on-surface-variant uppercase">ĐỊNH DẠNG XUẤT</span>
+                <span className="text-sm font-bold text-primary font-mono mt-0.5">Giữ như tệp gốc</span>
+                <span className="text-xs text-on-surface-variant mt-0.5">JPG/WebP nén lại ở 95%; GIF/BMP/AVIF/SVG → PNG</span>
               </div>
             </div>
 
@@ -1912,7 +1986,7 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
               </button>
 
               {/* Secondary Actions */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={function () { setZoom(1); }}
@@ -1920,14 +1994,6 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                 >
                   <Maximize2 className="w-3.5 h-3.5" />
                   <span>Vừa khung hình</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={function () { alert('Đã lưu cấu hình watermark thành công!'); }}
-                  className="py-2 px-3 bg-surface hover:bg-surface-container border border-border-subtle text-on-surface-variant hover:text-on-surface rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Lưu cấu hình mẫu</span>
                 </button>
                 <button
                   type="button"
@@ -1970,7 +2036,7 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-on-surface">Đóng Dấu Hoàn Tất!</h3>
-                  <p className="text-xs text-on-surface-variant">{successfulItems.length} tệp đã xử lý thành công 100%</p>
+                  <p className="text-xs text-on-surface-variant">{successfulItems.length}/{fileItems.length} tệp đã xử lý thành công{stats.error > 0 ? ' • ' + stats.error + ' tệp lỗi' : ''}</p>
                 </div>
               </div>
 
@@ -1987,13 +2053,13 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                         <FileCheck className="w-4 h-4 text-secondary shrink-0" />
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-on-surface truncate">{item.name}</p>
-                          <p className="text-[11px] font-mono text-outline">{formatFileSize(item.size)}</p>
+                          <p className="text-[11px] font-mono text-outline">{formatFileSize(item.resultBlob ? item.resultBlob.size : item.size)}</p>
                         </div>
                       </div>
                       <button
                         type="button"
                         aria-label={'Tải tệp ' + item.name}
-                        onClick={function () { downloadBlob(item.resultBlob, 'watermarked_' + item.name); }}
+                        onClick={function () { downloadBlob(item.resultBlob, item.resultName || ('watermarked_' + item.name)); }}
                         className="px-2.5 py-1.5 rounded-lg bg-surface hover:bg-surface-bright border border-border-subtle text-on-surface text-xs font-medium flex items-center gap-1 transition-colors shrink-0"
                       >
                         <Download className="w-3.5 h-3.5" />
@@ -2046,7 +2112,7 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
               </div>
               <div>
                 <h3 className="text-base font-bold text-on-surface">Hướng Dẫn Sử Dụng Watermark Studio</h3>
-                <p className="text-xs text-on-surface-variant">Công nghệ đóng dấu bảo mật đa định dạng v3.1</p>
+                <p className="text-xs text-on-surface-variant">Đóng dấu văn bản/logo cho PDF, Office và ảnh</p>
               </div>
             </div>
 
@@ -2062,7 +2128,7 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                   <span>100% An Toàn & Client-Side</span>
                 </h4>
                 <p className="leading-relaxed text-outline">
-                  Tất cả tệp dữ liệu được xử lý trong RAM máy của bạn thông qua Canvas API và PDF-Lib WebAssembly. Tuyệt đối không gửi dữ liệu ra máy chủ ngoại biên.
+                  Tệp được xử lý ngay trong trình duyệt bằng Canvas API, pdf-lib và JSZip (JavaScript); dữ liệu không được gửi lên máy chủ.
                 </p>
               </div>
 
@@ -2072,11 +2138,11 @@ export default function WatermarkStudioView({ displayLang = 'vi' } = {}) {
                   <span>Khả Năng Hỗ Trợ Đa Định Dạng</span>
                 </h4>
                 <ul className="space-y-1.5 text-on-surface-variant">
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-red-400" /><span><strong>PDF:</strong> Vẽ vector watermark lên mọi trang</span></li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-blue-400" /><span><strong>DOCX:</strong> Chèn watermark header chuẩn OpenXML</span></li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /><span><strong>XLSX:</strong> Đóng dấu nền toàn bộ các sheet tính</span></li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-amber-400" /><span><strong>PPTX:</strong> Chèn vector shape bảo vệ từng slide</span></li>
-                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-purple-400" /><span><strong>Ảnh:</strong> Giữ nguyên kích thước và chất lượng gốc</span></li>
+                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-red-400" /><span><strong>PDF:</strong> Chèn ảnh PNG watermark (raster) lên các trang được chọn</span></li>
+                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-blue-400" /><span><strong>DOCX:</strong> Chèn watermark vào header mọi section (luôn ở giữa trang)</span></li>
+                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /><span><strong>XLSX:</strong> Đặt ảnh nền cho mọi sheet — chỉ hiện trên màn hình, <strong>không in ra giấy</strong></span></li>
+                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-amber-400" /><span><strong>PPTX:</strong> Chèn hộp chữ/ảnh bán trong suốt giữa từng slide (xóa được trong PowerPoint)</span></li>
+                  <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-purple-400" /><span><strong>Ảnh:</strong> Giữ nguyên kích thước; JPG/WebP nén lại, GIF/BMP/AVIF/SVG xuất PNG</span></li>
                 </ul>
               </div>
             </div>

@@ -5,6 +5,9 @@ import { CameraModal } from './CameraModal.jsx';
 import { Upload, Camera, Sparkles, CheckCircle2, ArrowRight } from "lucide-react";
 import { verifyDocumentSignature } from '../../utils/documentFiles.js';
 
+// ~2400px cạnh dài vẫn đủ cho ảnh 50mm @600 DPI (≈1181px) và giảm mạnh bộ nhớ khi tách nền
+const MAX_INPUT_LONG_EDGE = 2400;
+
 const Step1Upload = ({ onImageSelected }) => {
   const { t } = useTranslation();
   const fileInputRef = useRef(null);
@@ -36,8 +39,38 @@ const Step1Upload = ({ onImageSelected }) => {
     const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      setIsLoading(false);
-      onImageSelected(img);
+      const longEdge = Math.max(img.naturalWidth, img.naturalHeight);
+      if (longEdge <= MAX_INPUT_LONG_EDGE) {
+        setIsLoading(false);
+        onImageSelected(img);
+        return;
+      }
+      // Thu nhỏ ảnh lớn (VD 48MP từ điện thoại) để tách nền/nhận diện không làm treo hoặc hết bộ nhớ
+      try {
+        const scale = MAX_INPUT_LONG_EDGE / longEdge;
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const scaled = new window.Image();
+        scaled.onload = () => {
+          setIsLoading(false);
+          onImageSelected(scaled);
+        };
+        scaled.onerror = () => {
+          setIsLoading(false);
+          onImageSelected(img);
+        };
+        scaled.src = canvas.toDataURL("image/jpeg", 0.95);
+      } catch {
+        setIsLoading(false);
+        onImageSelected(img);
+      }
     };
     img.onerror = () => {
       setIsLoading(false);

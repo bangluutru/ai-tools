@@ -19,6 +19,7 @@ test('never invents a tax rate when only the total is known', () => {
     {
       totalAmount: 1_080_000, amountBeforeTax: 0, vatAmount: 0,
       authorityCollection: 0, authorityCollectionDerived: false,
+      vatAmountDerived: false, warnings: [],
     },
   );
 });
@@ -30,6 +31,7 @@ test('derives only direct arithmetic from fields present in the document', () =>
     {
       totalAmount: 1_080_000, amountBeforeTax: 1_000_000, vatAmount: 80_000,
       authorityCollection: 0, authorityCollectionDerived: false,
+      vatAmountDerived: false, warnings: [],
     },
   );
   assert.deepEqual(
@@ -37,6 +39,7 @@ test('derives only direct arithmetic from fields present in the document', () =>
     {
       totalAmount: 1_080_000, amountBeforeTax: 1_000_000, vatAmount: 80_000,
       authorityCollection: 0, authorityCollectionDerived: false,
+      vatAmountDerived: true, warnings: [],
     },
   );
 });
@@ -52,6 +55,8 @@ test('an airline authorized collection is part of the amount payable', () => {
       vatAmount: 276_000,
       authorityCollection: 351_543,
       authorityCollectionDerived: false,
+      vatAmountDerived: false,
+      warnings: [],
     },
   );
 
@@ -64,6 +69,8 @@ test('an airline authorized collection is part of the amount payable', () => {
       vatAmount: 276_000,
       authorityCollection: 351_543,
       authorityCollectionDerived: false,
+      vatAmountDerived: true,
+      warnings: [],
     },
   );
 });

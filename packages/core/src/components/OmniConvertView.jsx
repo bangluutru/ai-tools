@@ -2,8 +2,9 @@
  * OmniConvertView.jsx
  * ========================================================================
  * Self-contained OmniConvert miniapp for the AI-Tools portal.
- * Bidirectional conversion between Office formats (DOCX, PPTX, XLSX),
- * Images, Markdown, and PDF using in-browser WebAssembly engines.
+ * Conversion between Office formats (DOCX, XLSX; PPTX text extraction),
+ * images, Markdown and PDF using in-browser JavaScript libraries
+ * (pdf.js, pdf-lib, jsPDF, html2canvas, mammoth, SheetJS).
  *
  * Fully reactive queue grouping, multiple re-conversions, dynamic real-time
  * preview (PDF canvas, Excel sheets, Word text, Images), and custom pairs.
@@ -19,9 +20,6 @@ import {
 } from '../utils/documentFiles.js';
 import confetti from 'canvas-confetti';
 import { saveAs } from 'file-saver';
-import JSZip from 'jszip';
-import mammoth from 'mammoth';
-import * as XLSX from 'xlsx';
 import { 
   FileStack, 
   UploadCloud, 
@@ -67,10 +65,11 @@ import {
   executeConversion, 
   mergeMultipleImagesToPdf 
 } from '../utils/omniconvert/engineRouter.js';
-import { 
-  loadPdfDocument, 
-  renderPdfPageToCanvas 
-} from '../utils/omniconvert/pdfHelper.js';
+import { destroyPdfDocument, encryptedPdfMessage, isEncryptedPdfError } from '../utils/pdfjs.js';
+
+// Thư viện đọc tệp chỉ cần khi xem trước / nén ZIP → nạp khi dùng để chunk đầu nhẹ.
+const loadPdfHelper = () => import('../utils/omniconvert/pdfHelper.js');
+const loadJSZip = () => import('jszip').then((m) => m.default);
 
 // Target Format Definitions with Rich Metadata
 const TARGET_FORMAT_OPTIONS = [
@@ -78,7 +77,7 @@ const TARGET_FORMAT_OPTIONS = [
     id: 'pdf',
     title: 'PDF Tài Liệu & In Ấn',
     ext: '.pdf',
-    desc: 'Chuẩn A4 vector, dàn trang pixel-perfect',
+    desc: 'Khổ A4; Word/Excel/TXT/MD được dựng thành ảnh trang (chữ không bôi đen được)',
     icon: FileCode,
     color: 'text-red-400 bg-red-500/20'
   },
@@ -86,7 +85,7 @@ const TARGET_FORMAT_OPTIONS = [
     id: 'docx',
     title: 'Microsoft Word',
     ext: '.docx',
-    desc: 'Giữ nguyên đề mục, văn bản & bảng biểu',
+    desc: 'Trích văn bản & đề mục (PDF → Word không giữ bảng/ảnh)',
     icon: FileText,
     color: 'text-sky-400 bg-sky-500/20'
   },
@@ -94,23 +93,15 @@ const TARGET_FORMAT_OPTIONS = [
     id: 'xlsx',
     title: 'Excel Bảng Tính',
     ext: '.xlsx',
-    desc: 'Bóc tách cấu trúc bảng sang các sheet',
+    desc: 'Mỗi trang PDF một sheet, mỗi dòng chữ một hàng (không nhận diện bảng)',
     icon: FileSpreadsheet,
     color: 'text-emerald-400 bg-emerald-500/20'
   },
   {
-    id: 'pptx',
-    title: 'PowerPoint Thuyết Trình',
-    ext: '.pptx',
-    desc: 'Tạo slide trình chiếu 16:9 sắc nét từ các trang',
-    icon: Presentation,
-    color: 'text-orange-400 bg-orange-500/20'
-  },
-  {
     id: 'png',
-    title: 'Ảnh PNG Trong Suốt',
+    title: 'Ảnh PNG',
     ext: '.png',
-    desc: 'Trích xuất ảnh phân giải cao, hỗ trợ alpha',
+    desc: 'Không nén mất dữ liệu; ảnh nguồn trong suốt được giữ alpha',
     icon: ImageIcon,
     color: 'text-purple-400 bg-purple-500/20'
   },
@@ -142,7 +133,7 @@ const TARGET_FORMAT_OPTIONS = [
     id: 'md',
     title: 'Markdown (.md)',
     ext: '.md',
-    desc: 'Định dạng nhẹ, giữ trọn vẹn ngữ nghĩa, đề mục & bảng biểu',
+    desc: 'Đề mục, danh sách & văn bản; bảng từ Excel/CSV/Word',
     icon: FileCode,
     color: 'text-indigo-400 bg-indigo-500/20'
   },
@@ -158,7 +149,7 @@ const TARGET_FORMAT_OPTIONS = [
     id: 'csv',
     title: 'Bảng Dữ Liệu CSV',
     ext: '.csv',
-    desc: 'Bảng phân tách dấu phẩy cho hệ thống dữ liệu',
+    desc: 'UTF-8; nhiều sheet có dữ liệu → mỗi sheet một tệp trong ZIP',
     icon: FileSpreadsheet,
     color: 'text-teal-400 bg-teal-500/20'
   }
@@ -182,11 +173,6 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
   // Modal preview item
   const [previewModalItem, setPreviewModalItem] = useState(null);
   const [previewModalUrl, setPreviewModalUrl] = useState(null);
-
-  // Advanced toggles & settings
-  const [keepHyperlinks, setKeepHyperlinks] = useState(true);
-  const [embedFonts, setEmbedFonts] = useState(true);
-  const [compressImages, setCompressImages] = useState(true);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settings, setSettings] = useState({
@@ -488,7 +474,8 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
       confetti({ particleCount: 35, spread: 60, origin: { y: 0.85 } });
     } catch (err) {
       console.error('Conversion failed for item:', item, err);
-      setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'error', error: err.message || 'Lỗi chuyển đổi tệp' } : q));
+      const message = isEncryptedPdfError(err) ? encryptedPdfMessage(displayLang) : (err.message || 'Lỗi chuyển đổi tệp');
+      setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'error', error: message } : q));
     }
   };
 
@@ -528,6 +515,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
       return;
     }
 
+    const JSZip = await loadJSZip();
     const zip = new JSZip();
     const folder = zip.folder('OmniConvert_Files');
     const usedNames = new Set();
@@ -622,7 +610,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
     // Default by preset
     if (activePreset === 'pdf-to-office') {
-      return TARGET_FORMAT_OPTIONS.filter(opt => ['docx', 'xlsx', 'pptx', 'png', 'txt'].includes(opt.id));
+      return TARGET_FORMAT_OPTIONS.filter(opt => ['docx', 'xlsx', 'png', 'txt'].includes(opt.id));
     }
     if (activePreset === 'img-to-pdf') {
       return TARGET_FORMAT_OPTIONS.filter(opt => ['pdf', 'png', 'jpg', 'webp'].includes(opt.id));
@@ -658,7 +646,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
           </nav>
           <div className="hidden sm:flex items-center gap-2 font-mono text-[11px] text-on-surface-variant">
             <span className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-            <span>WASM ENGINE v3.2.0 ACTIVE</span>
+            <span>100% CLIENT-SIDE</span>
           </div>
         </div>
 
@@ -675,11 +663,21 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   {displayLang === 'en' ? 'Universal File Converter' : displayLang === 'ja' ? '万能ファイル変換' : 'Chuyển Đổi Đa Năng'}
                 </h1>
                 <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
-                  Chuyển đổi đa chiều tài liệu văn phòng Office (Word .docx, Excel .xlsx, PowerPoint .pptx, TXT, CSV), bộ ảnh và PDF chuẩn vector. Hỗ trợ gộp ảnh, xuất slide thuyết trình, bóc tách bảng tính và xem trước trực tiếp 100% trên trình duyệt.
+                  {displayLang === 'en'
+                    ? 'Convert Word (.docx), Excel (.xlsx/.xls, .csv), Markdown, TXT, images and PDF; extract text from PowerPoint (.pptx). Merge images into one PDF and preview files right in the browser.'
+                    : displayLang === 'ja'
+                      ? 'Word（.docx）、Excel（.xlsx/.xls・.csv）、Markdown、TXT、画像、PDF を相互変換し、PowerPoint（.pptx）からテキストを抽出します。画像を1つのPDFに結合し、ブラウザ内でプレビューできます。'
+                      : 'Chuyển đổi Word (.docx), Excel (.xlsx/.xls, .csv), Markdown, TXT, ảnh và PDF; trích xuất chữ từ PowerPoint (.pptx). Gộp nhiều ảnh thành một PDF và xem trước ngay trên trình duyệt.'}
                 </p>
                 <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
-                  <span>Xử lý trực tiếp trên trình duyệt bằng WebAssembly — tệp không tải lên máy chủ.</span>
+                  <span>
+                    {displayLang === 'en'
+                      ? 'Processed in your browser — files are never uploaded.'
+                      : displayLang === 'ja'
+                        ? 'ブラウザ内で処理され、ファイルはアップロードされません。'
+                        : 'Xử lý trực tiếp trên trình duyệt — tệp không tải lên máy chủ.'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -737,7 +735,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 { id: 'pdf', label: 'PDF' },
                 { id: 'docx', label: 'Word (.docx)' },
                 { id: 'xlsx', label: 'Excel (.xlsx)' },
-                { id: 'pptx', label: 'PowerPoint (.pptx)' },
+                { id: 'pptx', label: 'PowerPoint (.pptx → chữ)' },
                 { id: 'png', label: 'Ảnh (.png/.jpg)' },
                 { id: 'txt', label: 'Văn bản (.txt)' },
                 { id: 'csv', label: 'Bảng CSV' },
@@ -816,7 +814,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                   }
                 }}
                 className="hidden"
-                accept=".docx,.pptx,.xlsx,.xls,.pdf,.png,.jpg,.jpeg,.webp,.svg,.bmp,.txt,.csv,.md"
+                accept={CONVERT_LIMITS.extensions.join(',')}
               />
               <div className="w-12 h-12 rounded-full bg-surface-container border border-border-subtle flex items-center justify-center text-primary-container mb-2">
                 <UploadCloud className="w-6 h-6" />
@@ -825,10 +823,10 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 Kéo thả tài liệu vào đây, hoặc <span className="text-primary-container underline underline-offset-4">Duyệt tệp tin</span>
               </span>
               <p className="text-xs text-on-surface-variant max-w-sm">
-                Hỗ trợ Word (.docx), Excel (.xlsx, .csv), PowerPoint (.pptx), PDF, Markdown (.md), Ảnh (.png, .jpg, .webp), TXT.
+                Hỗ trợ Word (.docx), Excel (.xlsx, .xls, .csv), PowerPoint (.pptx — chỉ trích chữ), PDF, Markdown (.md), Ảnh (.png, .jpg, .webp, .svg, .bmp), TXT.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
-                {['DOCX', 'XLSX', 'PPTX', 'PDF', 'MD', 'PNG', 'JPG', 'WEBP', 'TXT', 'CSV'].map((ext) => (
+                {['DOCX', 'XLSX', 'XLS', 'PPTX*', 'PDF', 'MD', 'PNG', 'JPG', 'WEBP', 'SVG', 'TXT', 'CSV'].map((ext) => (
                   <span key={ext} className="px-2 py-0.5 rounded bg-surface font-mono text-[10px] text-on-surface-variant border border-border-subtle">
                     {ext}
                   </span>
@@ -905,6 +903,9 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                                   ))}
                                 </select>
                               </div>
+                              {item.status === 'error' && item.error && (
+                                <p className="text-[11px] text-red-400 mt-1 break-words">{item.error}</p>
+                              )}
                             </div>
                           </div>
 
@@ -1051,53 +1052,12 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               </div>
             </div>
 
-            {/* Advanced Tuning Options */}
-            <div className="space-y-3 pt-1 border-t border-border-subtle">
-              <label className="font-mono text-[10px] text-on-surface-variant block uppercase tracking-wider">
-                Tùy chọn xuất nâng cao
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  aria-label="Giữ nguyên siêu liên kết (Hyperlinks) & Bookmark mục lục"
-                  checked={keepHyperlinks}
-                  onChange={(e) => setKeepHyperlinks(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary"
-                />
-                <div className="text-xs">
-                  <span className="text-on-surface font-medium block">Giữ nguyên siêu liên kết (Hyperlinks) &amp; Mục lục</span>
-                  <span className="text-on-surface-variant text-[11px]">Bảo toàn liên kết web và dàn mục lục phân cấp của tài liệu nguồn.</span>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  aria-label="Tự động nhúng font chữ Unicode toàn diện"
-                  checked={embedFonts}
-                  onChange={(e) => setEmbedFonts(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary"
-                />
-                <div className="text-xs">
-                  <span className="text-on-surface font-medium block">Tự động nhúng font chữ Unicode toàn diện</span>
-                  <span className="text-on-surface-variant text-[11px]">Tránh lỗi nhảy dòng hoặc hiển thị ô vuông khi mở file trên máy tính khác.</span>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  aria-label="Tối ưu nén hình ảnh nhúng trong tài liệu"
-                  checked={compressImages}
-                  onChange={(e) => setCompressImages(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded bg-surface border-border-subtle accent-primary"
-                />
-                <div className="text-xs">
-                  <span className="text-on-surface font-medium block">Tối ưu dung lượng hình ảnh nhúng</span>
-                  <span className="text-on-surface-variant text-[11px]">Tự động nén thông minh giảm kích cỡ tệp mà vẫn đảm bảo độ nét in ấn.</span>
-                </div>
-              </label>
+            {/* Honest scope note (the old hyperlink/font/compression toggles were never wired) */}
+            <div className="space-y-1.5 pt-1 border-t border-border-subtle text-[11px] text-on-surface-variant leading-relaxed">
+              <p className="font-mono text-[10px] uppercase tracking-wider">Lưu ý chất lượng</p>
+              <p>• Word/Excel/TXT/Markdown → PDF: trang được dựng rồi chụp thành ảnh, giữ đúng chữ tiếng Việt/Nhật nhưng không bôi đen, tìm kiếm hay bấm liên kết được.</p>
+              <p>• PDF → Word/Excel/Markdown/TXT: chỉ trích xuất chữ; PDF scan (ảnh) không có chữ để trích.</p>
+              <p>• PowerPoint (.pptx): chỉ trích xuất chữ của slide sang TXT/Markdown.</p>
             </div>
 
             {/* Primary Execution CTA */}
@@ -1155,7 +1115,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 </span>
               </div>
               <span className="font-mono text-xs text-secondary bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded self-start sm:self-auto">
-                Client-Side WASM
+                Client-side
               </span>
             </div>
 
@@ -1211,7 +1171,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-on-surface">Cài Đặt Chuyển Đổi Nâng Cao</h3>
-                  <p className="text-xs text-on-surface-variant">Tùy chỉnh khổ giấy, chất lượng và độ phân giải xuất</p>
+                  <p className="text-xs text-on-surface-variant">Khổ giấy/hướng trang chỉ áp dụng cho Ảnh → PDF</p>
                 </div>
               </div>
               <button
@@ -1226,7 +1186,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
             <div className="p-6 space-y-5 text-xs text-on-surface">
               <div className="space-y-1.5">
-                <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Khổ giấy PDF</label>
+                <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Khổ giấy PDF (Ảnh → PDF)</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[{ id: 'a4', label: 'A4' }, { id: 'letter', label: 'US Letter' }, { id: 'fit', label: 'Khớp kích thước ảnh' }].map(opt => (
                     <button
@@ -1246,7 +1206,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Hướng trang giấy</label>
+                <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Hướng trang giấy (Ảnh → PDF)</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[{ id: 'auto', label: 'Tự động' }, { id: 'portrait', label: 'Dọc (Portrait)' }, { id: 'landscape', label: 'Ngang (Landscape)' }].map(opt => (
                     <button
@@ -1266,9 +1226,9 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Độ nét trích xuất trang PDF ➔ Ảnh / PPTX</label>
+                <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Độ nét trích xuất trang PDF ➔ Ảnh</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {[{ val: 1.5, label: '1.5x (Web)' }, { val: 2.0, label: '2.0x (150 DPI)' }, { val: 3.0, label: '3.0x (300 DPI)' }].map(opt => (
+                  {[{ val: 1.5, label: '1.5x (Web)' }, { val: 2.0, label: '2.0x (144 DPI)' }, { val: 3.0, label: '3.0x (216 DPI)' }].map(opt => (
                     <button
                       key={opt.val}
                       type="button"
@@ -1287,7 +1247,7 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Chất lượng nén ảnh JPG / WebP</label>
+                  <label className="font-semibold uppercase tracking-wider text-on-surface-variant">Chất lượng nén ảnh JPG / WebP (ảnh &amp; PDF → ảnh)</label>
                   <span className="font-mono text-primary font-bold">{Math.round(settings.quality * 100)}%</span>
                 </div>
                 <input
@@ -1395,6 +1355,18 @@ export default function OmniConvertView({ displayLang = 'vi' }) {
 }
 
 /**
+ * Bọc HTML xem trước DOCX thành tài liệu độc lập cho iframe sandbox. CSP chặn
+ * mọi tải mạng ngoài (ảnh nhúng dạng data: vẫn hiện).
+ */
+function buildSandboxedDocHtml(bodyHtml) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; style-src 'unsafe-inline'">
+<style>body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;font-size:13px;line-height:1.6;color:#1e293b;margin:24px;}
+table{border-collapse:collapse;}td,th{border:1px solid #cbd5e1;padding:4px 8px;}img{max-width:100%;height:auto;}</style>
+</head><body>${bodyHtml}</body></html>`;
+}
+
+/**
  * Realtime Dynamic Preview Viewport
  * Renders actual uploaded file contents (images, rendered PDF canvas, Excel tables, Docx text)
  */
@@ -1405,6 +1377,27 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
   const [pdfPage, setPdfPage] = useState(1);
   const [, setPdfTotalPages] = useState(1);
   const [activeSheetIdx, setActiveSheetIdx] = useState(0);
+
+  // pdf.js document của tệp đang xem được giữ lại: lật trang không phải parse
+  // lại cả tệp, và luôn destroy() khi đổi tệp/unmount để worker không tích tụ.
+  const pdfCacheRef = useRef({ blob: null, promise: null });
+  const releasePdfCache = useCallback(() => {
+    const { promise } = pdfCacheRef.current;
+    pdfCacheRef.current = { blob: null, promise: null };
+    if (promise) promise.then((doc) => destroyPdfDocument(doc)).catch(() => {});
+  }, []);
+  const getCachedPdf = useCallback((blob) => {
+    const cache = pdfCacheRef.current;
+    if (cache.blob === blob && cache.promise) return cache.promise;
+    releasePdfCache();
+    const promise = loadPdfHelper().then((m) => m.loadPdfDocument(blob));
+    pdfCacheRef.current = { blob, promise };
+    promise.catch(() => {
+      if (pdfCacheRef.current.promise === promise) pdfCacheRef.current = { blob: null, promise: null };
+    });
+    return promise;
+  }, [releasePdfCache]);
+  useEffect(() => releasePdfCache, [releasePdfCache]);
 
   // Auto switch tab when completed
   useEffect(() => {
@@ -1432,6 +1425,14 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
     const filename = isResult ? activeItem.result.filename : (activeItem.file?.name || '');
     const ext = getFileExtension(filename) || (isResult ? activeItem.targetFormat : activeItem.sourceFormat);
 
+    const createdUrls = [];
+    const makeUrl = (b) => {
+      const url = URL.createObjectURL(b);
+      createdUrls.push(url);
+      return url;
+    };
+    if (ext !== 'pdf') releasePdfCache();
+
     const loadContent = async () => {
       setIsLoading(true);
       try {
@@ -1440,7 +1441,7 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
           const thumbnails = (activeItem.rawImageFiles || []).map(f => ({
             name: f.name,
             size: f.size,
-            url: URL.createObjectURL(f)
+            url: makeUrl(f)
           }));
           if (!isCancelled) {
             setPreviewState({ type: 'merge-group', thumbnails, filename });
@@ -1451,7 +1452,7 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
         // 2. Images
         const imageExts = ['png', 'jpg', 'jpeg', 'webp', 'svg', 'bmp'];
         if (imageExts.includes(ext)) {
-          const url = URL.createObjectURL(blob);
+          const url = makeUrl(blob);
           if (!isCancelled) {
             setPreviewState({ type: 'image', url, filename });
           }
@@ -1460,13 +1461,15 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
 
         // 3. PDF
         if (ext === 'pdf') {
-          const pdfDoc = await loadPdfDocument(blob);
+          const [pdfDoc, { renderPdfPageToCanvas }] = await Promise.all([getCachedPdf(blob), loadPdfHelper()]);
           if (isCancelled) return;
           setPdfTotalPages(pdfDoc.numPages);
           const safePage = Math.min(Math.max(1, pdfPage), pdfDoc.numPages);
           const canvas = await renderPdfPageToCanvas(pdfDoc, safePage, 1.5);
           if (isCancelled) return;
           const dataUrl = canvas.toDataURL('image/png');
+          canvas.width = 0;
+          canvas.height = 0;
           if (!isCancelled) {
             setPreviewState({ type: 'pdf', dataUrl, page: safePage, total: pdfDoc.numPages, filename });
           }
@@ -1476,6 +1479,7 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
         // 4. Excel / Spreadsheet
         if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
           const arrayBuffer = await blob.arrayBuffer();
+          const XLSX = await import('xlsx');
           if (isCancelled) return;
           const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
           const sheetNames = workbook.SheetNames || [];
@@ -1499,12 +1503,15 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
         // 5. Word DOCX
         if (ext === 'docx') {
           const arrayBuffer = await blob.arrayBuffer();
+          const { default: mammoth } = await import('mammoth');
           if (isCancelled) return;
           const mammothResult = await mammoth.convertToHtml({ arrayBuffer });
           if (!isCancelled) {
+            // HTML từ tệp người dùng: chỉ hiển thị trong iframe sandbox (không
+            // script, khác origin) thay vì chèn thẳng HTML vào trang.
             setPreviewState({
               type: 'docx',
-              html: mammothResult.value || '<p>Không có nội dung văn bản trong tệp.</p>',
+              html: buildSandboxedDocHtml(mammothResult.value || '<p>Không có nội dung văn bản trong tệp.</p>'),
               filename
             });
           }
@@ -1538,27 +1545,17 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
           return;
         }
 
-        // 7. PPTX
+        // 9. PPTX (chỉ chữ)
         if (ext === 'pptx') {
-          const arrayBuffer = await blob.arrayBuffer();
-          if (isCancelled) return;
-          const zip = await JSZip.loadAsync(arrayBuffer);
-          const slideEntries = [];
-          zip.folder('ppt/slides')?.forEach((_rel, entry) => {
-            if (/slide\d+\.xml$/i.test(entry.name)) slideEntries.push(entry);
-          });
-          let slideTexts = [];
-          if (slideEntries.length > 0) {
-            const slideXml = await slideEntries[0].async('text');
-            const textMatches = slideXml.match(/<a:t>([^<]+)<\/a:t>/g) || [];
-            slideTexts = textMatches.map(m => m.replace(/<\/?a:t>/g, '').trim()).filter(Boolean);
-          }
+          const { extractPptxSlides } = await import('../utils/omniconvert/pptxTextConverter.js');
+          const slides = await extractPptxSlides(await blob.arrayBuffer());
           if (!isCancelled) {
+            const first = slides[0]?.paragraphs || [];
             setPreviewState({
               type: 'pptx',
-              totalSlides: slideEntries.length,
-              slideTitle: slideTexts[0] || 'Slide 1',
-              slideBody: slideTexts.slice(1),
+              totalSlides: slides.length,
+              slideTitle: first[0] || 'Slide 1',
+              slideBody: first.slice(1),
               filename
             });
           }
@@ -1583,10 +1580,7 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
 
     return () => {
       isCancelled = true;
-      if (previewState?.url) URL.revokeObjectURL(previewState.url);
-      if (previewState?.thumbnails) {
-        previewState.thumbnails.forEach(t => URL.revokeObjectURL(t.url));
-      }
+      createdUrls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [activeItem?.id, activeItem?.status, previewTab, pdfPage, activeSheetIdx]);
 
@@ -1774,10 +1768,13 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
           </div>
         ) : previewState?.type === 'docx' ? (
           /* Real Word Document Preview in Sheet Container */
-          <div
-            className="w-full max-w-xl bg-surface-container-lowest text-on-surface p-8 rounded-xl shadow-2xl text-xs overflow-auto max-h-[460px] leading-relaxed prose prose-sm"
+          <iframe
+            title="DOCX Preview"
+            srcDoc={previewState.html}
+            sandbox=""
+            referrerPolicy="no-referrer"
+            className="w-full max-w-xl h-[460px] bg-surface-container-lowest rounded-xl shadow-2xl border border-border-subtle"
             style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center' }}
-            dangerouslySetInnerHTML={{ __html: previewState.html }}
           />
         ) : previewState?.type === 'markdown' ? (
           /* Real Markdown Document Preview */
@@ -1810,7 +1807,8 @@ function DynamicRealtimePreviewViewport({ activeItem, zoomLevel, setZoomLevel, o
               title="HTML Preview"
               srcDoc={previewState.html}
               className="w-full h-[360px] rounded border border-border-subtle bg-surface-container-lowest"
-              sandbox="allow-same-origin"
+              sandbox=""
+              referrerPolicy="no-referrer"
             />
           </div>
         ) : previewState?.type === 'text' ? (

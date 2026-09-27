@@ -99,7 +99,9 @@ test('convertMdToDocx creates valid Microsoft Word (.docx) document', async () =
   assert.ok(result.blob.size > 1000);
 });
 
-test('convertMdToPdf creates valid PDF document from Markdown', async () => {
+// MD → PDF giờ dựng HTML rồi chụp bằng html2canvas (đúng glyph tiếng Việt/Nhật),
+// nên cần DOM thật; logic thuần được kiểm ở omniconvert-accuracy.test.js.
+test('convertMdToPdf creates valid PDF document from Markdown', { skip: typeof document === 'undefined' }, async () => {
   const md = '# Tai Lieu Huong Dan\n\n## 1. Cai Dat\n\nChay lenh `npm install`.\n\n- Buoc 1\n- Buoc 2';
   const file = new File([md], 'guide.md', { type: 'text/markdown' });
   const result = await convertMdToPdf(file);

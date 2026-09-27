@@ -16,6 +16,7 @@ export const ElementRenderer = ({
     opacity: element.opacity ?? 1,
     zIndex: element.zIndex,
     cursor: "move",
+    touchAction: "none",
     transform: element.rotation ? `rotate(${element.rotation}deg)` : void 0
   };
 
@@ -117,12 +118,13 @@ export const ElementRenderer = ({
         <div
           key={handle}
           data-handle={handle}
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
             e.stopPropagation();
             onStartResize?.(element, handle, e);
           }}
+          style={{ touchAction: "none" }}
           className={`absolute w-2.5 h-2.5 bg-primary border border-white dark:border-surface-canvas rounded-xs shadow-xs hover:scale-125 transition-transform z-30 ${cursor} ${pos}`}
-          title={`Co giãn (${handle.toUpperCase()})`}
+          title={`Resize (${handle.toUpperCase()})`}
         />
       ))}
     </div>;

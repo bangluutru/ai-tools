@@ -1,91 +1,141 @@
-let imageSegmenterInstance = null;
-let isSegmenterInitializing = false;
-async function initMediaPipeSegmenter() {
-  if (typeof window === "undefined") return null;
-  if (imageSegmenterInstance) return imageSegmenterInstance;
-  if (isSegmenterInitializing) {
-    await new Promise((r) => setTimeout(r, 400));
-    if (imageSegmenterInstance) return imageSegmenterInstance;
-  }
-  try {
-    isSegmenterInitializing = true;
-    const { FilesetResolver, ImageSegmenter } = await import("@mediapipe/tasks-vision");
-    const vision = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-    );
-    imageSegmenterInstance = await ImageSegmenter.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
-        delegate: "GPU"
-      },
-      runningMode: "IMAGE",
-      outputCategoryMask: false,
-      outputConfidenceMasks: true
-    });
-    return imageSegmenterInstance;
-  } catch (err) {
-    console.warn("MediaPipe GPU failed, trying CPU delegate:", err);
-    try {
-      const { FilesetResolver, ImageSegmenter } = await import("@mediapipe/tasks-vision");
-      const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-      );
-      imageSegmenterInstance = await ImageSegmenter.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite",
-          delegate: "CPU"
-        },
+// NOTE: @imgly/background-removal is licensed under AGPL-3.0 (see its LICENSE.md). Whether that is
+// compatible with how Toolio is distributed/hosted is a legal question for the owner — the library
+// is kept, but only loaded when the user explicitly opts in to the HD engine.
+import {
+  IMGLY_MODEL,
+  IMGLY_PUBLIC_PATH,
+  SELFIE_SEGMENTER_MODEL_URL,
+  getVisionFileset
+} from './mediapipeConfig.js';
+
+let segmenterPromise = null;
+/** Creates the MediaPipe selfie segmenter once (cached promise). Resolves to null on failure. */
+function initMediaPipeSegmenter() {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  if (!segmenterPromise) {
+    segmenterPromise = (async () => {
+      const { ImageSegmenter } = await import("@mediapipe/tasks-vision");
+      const vision = await getVisionFileset();
+      const create = (delegate) => ImageSegmenter.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: SELFIE_SEGMENTER_MODEL_URL, delegate },
         runningMode: "IMAGE",
         outputCategoryMask: false,
         outputConfidenceMasks: true
       });
-      return imageSegmenterInstance;
-    } catch (cpuErr) {
-      console.warn("MediaPipe CPU init failed:", cpuErr);
+      try {
+        return await create("GPU");
+      } catch (gpuErr) {
+        console.warn("MediaPipe GPU failed, trying CPU delegate:", gpuErr);
+        return await create("CPU");
+      }
+    })().catch((err) => {
+      console.warn("MediaPipe segmenter init failed:", err);
+      segmenterPromise = null;
       return null;
-    }
-  } finally {
-    isSegmenterInitializing = false;
+    });
   }
+  return segmenterPromise;
 }
+
+// ---------------------------------------------------------------------------
+// @imgly HD engine (opt-in). The model/runtime download is started once and shared;
+// a stall watchdog (no download progress for IMGLY_STALL_MS) aborts it instead of a hard timeout.
+// ---------------------------------------------------------------------------
+const IMGLY_STALL_MS = 3e4;
+let imglyInit = null; // { promise, config }
+let imglyAttempt = 0;
+const imglyProgressListeners = new Set();
+
+function ensureImglyReady(onProgress) {
+  if (onProgress) imglyProgressListeners.add(onProgress);
+  if (!imglyInit) {
+    imglyAttempt += 1;
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    let lastProgressAt = Date.now();
+    const config = {
+      model: IMGLY_MODEL,
+      publicPath: IMGLY_PUBLIC_PATH,
+      device: "cpu",
+      // `attempt` changes the library's memoization key so a failed init can really be retried
+      fetchArgs: { signal: controller?.signal, attempt: imglyAttempt },
+      progress: (key, current, total) => {
+        lastProgressAt = Date.now();
+        if (total > 0) {
+          const percent = Math.min(99, Math.round(current / total * 100));
+          for (const listener of imglyProgressListeners) listener(percent, key);
+        }
+      }
+    };
+    const promise = (async () => {
+      const { preload } = await import("@imgly/background-removal");
+      let watchdog;
+      const stalled = new Promise((_, reject) => {
+        watchdog = setInterval(() => {
+          if (Date.now() - lastProgressAt > IMGLY_STALL_MS) {
+            controller?.abort();
+            reject(new Error("IMGLY_DOWNLOAD_STALLED"));
+          }
+        }, 2e3);
+      });
+      try {
+        await Promise.race([preload(config), stalled]);
+        return config;
+      } finally {
+        clearInterval(watchdog);
+      }
+    })();
+    imglyInit = { promise, config };
+    promise.catch(() => {
+      imglyInit = null;
+    });
+  }
+  return imglyInit.promise.finally(() => {
+    if (onProgress) imglyProgressListeners.delete(onProgress);
+  });
+}
+
 async function generateSubjectMask(source, options = {}) {
   const width = source instanceof HTMLImageElement ? source.naturalWidth : source.width;
   const height = source instanceof HTMLImageElement ? source.naturalHeight : source.height;
-  const requestedEngine = options.engine || "imgly_hd";
+  // Default: fast MediaPipe engine. HD (@imgly, ~55 MB download) only when explicitly requested.
+  const requestedEngine = options.engine === "imgly_hd" ? "imgly_hd" : "mediapipe_fast";
   const threshold = options.threshold ?? 0.45;
+  let fallbackReason = null;
   if (requestedEngine === "imgly_hd") {
     try {
-      if (options.onProgress) options.onProgress(15, "Loading AI model...");
-      const imglyPromise = runImglySegmentation(source, options);
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Imgly timeout")), 15000)
-      );
-      const imglyResult = await Promise.race([imglyPromise, timeoutPromise]);
+      if (options.onProgress) options.onProgress(5, "download");
+      const imglyResult = await runImglySegmentation(source, options);
       if (imglyResult) {
         despeckleMask(imglyResult.maskCanvas);
-        return { ...imglyResult, engineUsed: "imgly_hd" };
+        return { ...imglyResult, engineUsed: "imgly_hd", requestedEngine };
       }
     } catch (err) {
-      console.warn("@imgly HD segmentation timed out/failed, falling back to MediaPipe:", err);
+      console.warn("@imgly HD segmentation failed, falling back to MediaPipe:", err);
+      fallbackReason = err?.message || "IMGLY_FAILED";
     }
   }
   try {
-    if (options.onProgress) options.onProgress(40, "Segmenting subject with AI...");
+    if (options.onProgress) options.onProgress(40, "segment");
     const mpResult = await runMediaPipeSegmentation(source, width, height, threshold);
     if (mpResult) {
       despeckleMask(mpResult.maskCanvas);
-      return { ...mpResult, engineUsed: "mediapipe_fast" };
+      return { ...mpResult, engineUsed: "mediapipe_fast", requestedEngine, fallbackReason };
     }
   } catch (err) {
     console.warn("MediaPipe segmentation error:", err);
   }
   return {
     ...generateFallbackMask(source, width, height),
-    engineUsed: "mediapipe_fast",
+    engineUsed: "basic_fallback",
+    requestedEngine,
+    fallbackReason: fallbackReason || "MEDIAPIPE_FAILED",
     isFallback: true
   };
 }
 async function runImglySegmentation(source, options) {
+  const config = await ensureImglyReady((percent) => {
+    if (options.onProgress) options.onProgress(Math.max(5, Math.round(percent * 0.8)), "download");
+  });
   const { removeBackground } = await import("@imgly/background-removal");
   let srcBlob;
   if (source instanceof HTMLImageElement) {
@@ -98,16 +148,9 @@ async function runImglySegmentation(source, options) {
   } else {
     srcBlob = await new Promise((resolve) => source.toBlob((b) => resolve(b), "image/png"));
   }
-  const resultBlob = await removeBackground(srcBlob, {
-    model: "isnet_fp16",
-    publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/",
-    progress: (key, current, total) => {
-      if (options.onProgress && total > 0) {
-        const percent = Math.min(95, Math.round(current / total * 100));
-        options.onProgress(percent, `AI segmenting (${percent}%)...`);
-      }
-    }
-  });
+  if (options.onProgress) options.onProgress(85, "segment");
+  // Same config object as preload → reuses the already-initialised session (no new download)
+  const resultBlob = await removeBackground(srcBlob, config);
   const cutoutImg = new Image();
   cutoutImg.src = URL.createObjectURL(resultBlob);
   await new Promise((resolve, reject) => {

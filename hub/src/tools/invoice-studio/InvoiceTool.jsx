@@ -15,6 +15,7 @@ import {
   INVOICE_LIMITS,
   isInvoiceDocument,
   isKnownInvoiceNumber,
+  isSameInvoiceDocument,
   isUnsafeZipPath,
   mergeInvoiceBatch,
 } from '@ai-tools/core/utils/invoice/validation.js';
@@ -43,6 +44,13 @@ import {
   validateInvoiceFields,
 } from '@ai-tools/core/utils/invoice/vietnamInvoice.js';
 import { numberToWordsVN } from '@ai-tools/core/utils/invoice/numberToWords.js';
+import {
+  convertForeignAmounts,
+  describeInvoiceRelation,
+  parseXmlDecimal,
+  readInvoiceCurrency,
+  readInvoiceRelation,
+} from '@ai-tools/core/utils/invoice/xmlInvoiceFields.js';
 
 let pdfJsPromise;
 const loadPdfJs = () => {
@@ -281,13 +289,14 @@ function findFirstLineItem(text) {
  * Bóc tách bản thể hiện PDF theo đúng bộ trường mà Thông tư 91/2026/TT-BTC quy
  * định, thay vì dò theo vị trí.
  */
-function parsePDFInvoiceText(text, fileName, zipName = null) {
+function parsePDFInvoiceText(text, fileName, zipName = null, entryPath = null) {
   try {
     if (text.replace(/\s/g, '').length < 20) {
       return {
         id: makeId(),
         fileName: zipName ? `${zipName} ➔ ${fileName}` : fileName,
         rawFileName: fileName,
+        entryPath: entryPath || null,
         zipName: zipName || null,
         invoiceNo: 'Chưa rõ số',
         date: 'Chưa rõ ngày',
@@ -315,7 +324,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
     });
     const resolved = { ...fields, ...amounts };
 
-    const warnings = validateInvoiceFields(resolved);
+    const warnings = [...validateInvoiceFields(resolved), ...amounts.warnings];
     const missingFields = missingInvoiceFields(resolved);
 
     const travelName = describeTravelDocument(text, fileName);
@@ -340,6 +349,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       id: makeId(),
       fileName: zipName ? `${zipName} ➔ ${fileName}` : fileName,
       rawFileName: fileName,
+      entryPath: entryPath || null,
       zipName: zipName || null,
       invoiceNo,
       invoiceSymbol: fields.symbol?.raw || '',
@@ -357,7 +367,9 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
       vatAmount: resolved.vatAmount,
       authorityCollection: resolved.authorityCollection,
       authorityCollectionDerived: resolved.authorityCollectionDerived,
+      vatAmountDerived: resolved.vatAmountDerived,
       totalAmount: resolved.totalAmount,
+      isAdjustment: resolved.totalAmount < 0,
       amountInWords: fields.amountInWords || '',
       status: missingFields.length === 0 && warnings.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
       rawType: 'PDF',
@@ -391,7 +403,7 @@ function parsePDFInvoiceText(text, fileName, zipName = null) {
 }
 
 // Hàm parse XML hóa đơn điện tử
-function parseXMLInvoice(xmlString, fileName, zipName = null) {
+function parseXMLInvoice(xmlString, fileName, zipName = null, entryPath = null) {
   try {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
@@ -432,9 +444,12 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       'NBan Ten', 'Seller Ten', 'Seller Name', 'TenNguoiBan', 'TenDonViBan', 'SupplierName', 'NBan > Ten'
     ]) || getText(['Ten']) || 'Nhà cung cấp';
 
-    const sellerTax = getText([
-      'NBan MST', 'Seller MST', 'Seller TaxCode', 'MST', 'MaSoThue', 'TaxCode', 'NBan > MST'
-    ]) || '';
+    // Có khối người bán thì chỉ đọc MST trong khối đó: thẻ MST chung đầu tiên
+    // có thể là MST người mua khi MST người bán để trống.
+    const hasSellerBlock = Boolean(xmlDoc.querySelector('NBan, Seller'));
+    const sellerTax = getText(hasSellerBlock
+      ? ['NBan MST', 'Seller MST', 'Seller TaxCode', 'NBan > MST']
+      : ['MST', 'MaSoThue', 'TaxCode']) || '';
     const sellerName = seller;
 
     let buyer = getText([
@@ -574,16 +589,14 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
     }
 
     // 5. Các loại tiền
-    const parseXmlAmount = (valStr) => {
-      if (/^-?\d+(\.\d+)?$/.test(valStr)) return Number(valStr);
-      return parseLocalizedNumber(valStr);
-    };
+    const parseXmlAmount = (valStr) => parseXmlDecimal(valStr) ?? parseLocalizedNumber(valStr);
 
+    // Hóa đơn điều chỉnh giảm ghi số âm; giữ nguyên dấu thay vì ép về 0.
     const parseAmount = (selectors) => {
       const valStr = getText(selectors);
       if (valStr) {
         const num = parseXmlAmount(valStr);
-        if (num !== null && num >= 0) return num;
+        if (num !== null && Number.isFinite(num)) return num;
       }
       return 0;
     };
@@ -608,7 +621,7 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
     for (const [field, value] of Object.entries(ttinData)) {
       if (!isAuthorityField(field)) continue;
       const parsed = parseXmlAmount(value);
-      if (parsed !== null && parsed > 0) {
+      if (parsed !== null && parsed !== 0) {
         authorityCollection = parsed;
         break;
       }
@@ -617,20 +630,34 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       for (const node of xmlDoc.querySelectorAll('*')) {
         if (node.children.length > 0 || !isAuthorityField(node.tagName)) continue;
         const parsed = parseXmlAmount(node.textContent.trim());
-        if (parsed !== null && parsed > 0) {
+        if (parsed !== null && parsed !== 0) {
           authorityCollection = parsed;
           break;
         }
       }
     }
 
+    // Hóa đơn ngoại tệ: mọi cột tiền là nguyên tệ, quy đổi theo tỷ giá TGia.
+    const currencyInfo = readInvoiceCurrency(getText);
+    const conversion = convertForeignAmounts(
+      { totalAmount, amountBeforeTax, vatAmount, authorityCollection },
+      currencyInfo,
+    );
+    ({ totalAmount, amountBeforeTax, vatAmount, authorityCollection } = conversion.amounts);
+
+    const relation = readInvoiceRelation(getText);
+
     let authorityCollectionDerived = false;
+    let vatAmountDerived = false;
+    let derivationWarnings = [];
     ({
       totalAmount,
       amountBeforeTax,
       vatAmount,
       authorityCollection,
       authorityCollectionDerived,
+      vatAmountDerived,
+      warnings: derivationWarnings,
     } = deriveInvoiceAmounts({
       totalAmount,
       amountBeforeTax,
@@ -651,22 +678,28 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       missingFields.push('taxBreakdown');
     }
 
-    const warnings = validateInvoiceFields({
-      symbol,
-      date: dateStr === 'Chưa rõ ngày' ? '' : dateStr,
-      amountBeforeTax,
-      vatAmount,
-      authorityCollection,
-      totalAmount,
-      sellerTax,
-      amountInWordsValue: null,
-      dateSource: 'label',
-    });
+    const warnings = [
+      ...validateInvoiceFields({
+        symbol,
+        date: dateStr === 'Chưa rõ ngày' ? '' : dateStr,
+        amountBeforeTax,
+        vatAmount,
+        authorityCollection,
+        totalAmount,
+        sellerTax,
+        amountInWordsValue: null,
+        dateSource: 'label',
+      }),
+      ...derivationWarnings,
+      ...conversion.warnings,
+    ];
+    if (relation) warnings.push(describeInvoiceRelation(relation));
 
     return {
       id: makeId(),
       fileName: zipName ? `${zipName} ➔ ${fileName}` : fileName,
       rawFileName: fileName,
+      entryPath: entryPath || null,
       zipName: zipName || null,
       invoiceNo,
       invoiceSymbol: symbol?.raw || '',
@@ -684,7 +717,13 @@ function parseXMLInvoice(xmlString, fileName, zipName = null) {
       vatAmount,
       authorityCollection,
       authorityCollectionDerived,
+      vatAmountDerived,
       totalAmount,
+      currency: currencyInfo.currency,
+      exchangeRate: currencyInfo.exchangeRate,
+      originalAmounts: conversion.original,
+      relation,
+      isAdjustment: totalAmount < 0 || relation?.kind === 'adjustment',
       status: missingFields.length === 0 && warnings.length === 0 ? 'Đã trích xuất' : 'Cần kiểm tra',
       rawType: 'XML',
       missingFields,
@@ -904,31 +943,12 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    // Ưu tiên phát hiện trước các file XML để loại trừ file PDF bản thể hiện trùng lặp
-    const incomingXmlBases = new Set(
-      files
-        .filter((file) => /\.xml$/i.test(file.name))
-        .map((file) => file.name.replace(/\.xml$/i, '').toLowerCase()),
-    );
-    invoicesRef.current.forEach((inv) => {
-      if (inv.rawType === 'XML') {
-        const base = String(inv.rawFileName || inv.fileName || '').replace(/\.xml$/i, '').toLowerCase();
-        if (base) incomingXmlBases.add(base);
-      }
-    });
-
-    const dedupedFiles = [];
+    // Bản thể hiện PDF trùng với file XML chỉ bị loại sau khi đọc cả hai và
+    // mergeInvoiceBatch xác nhận cùng một hóa đơn (trùng tên tệp VÀ khớp số hóa
+    // đơn / MST / tổng tiền). Loại theo tên tệp trước khi đọc sẽ làm mất những
+    // hóa đơn khác nhau nhưng tình cờ trùng tên.
+    const dedupedFiles = files;
     const skipped = [];
-    for (const file of files) {
-      if (/\.pdf$/i.test(file.name)) {
-        const base = file.name.replace(/\.pdf$/i, '').toLowerCase();
-        if (incomingXmlBases.has(base)) {
-          skipped.push(`${file.name}: Đã có tệp XML tương ứng, tự động ưu tiên XML`);
-          continue;
-        }
-      }
-      dedupedFiles.push(file);
-    }
 
     const notes = [];
     const accepted = dedupedFiles.slice(0, INVOICE_LIMITS.maxFiles).filter((file) => {
@@ -955,13 +975,13 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
 
     const parsedList = [];
 
-    const readXmlEntry = async (text, displayName, zipName) => {
-      parsedList.push(parseXMLInvoice(text, displayName, zipName));
+    const readXmlEntry = async (text, displayName, zipName, entryPath = null) => {
+      parsedList.push(parseXMLInvoice(text, displayName, zipName, entryPath));
     };
 
-    const readPdfEntry = async (buffer, displayName, zipName) => {
+    const readPdfEntry = async (buffer, displayName, zipName, entryPath = null) => {
       const pdfText = await extractTextFromPDFBuffer(buffer);
-      const parsed = parsePDFInvoiceText(pdfText, displayName, zipName);
+      const parsed = parsePDFInvoiceText(pdfText, displayName, zipName, entryPath);
       if (/itinerary|\bcopy\b|lich trinh/i.test(displayName)) {
         parsed.warnings = [
           ...(parsed.warnings ?? []),
@@ -1003,12 +1023,6 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
         return !entryName.includes('__MACOSX') && !entryName.split('/').pop().startsWith('._');
       });
 
-      const xmlBaseNames = new Set(
-        usable
-          .filter((entryName) => /\.xml$/i.test(entryName))
-          .map((entryName) => entryName.split('/').pop().replace(/\.xml$/i, '').toLowerCase()),
-      );
-
       for (const entryName of usable) {
         if (parsedList.length >= INVOICE_LIMITS.maxDocuments) {
           skipped.push(`Dừng ở ${INVOICE_LIMITS.maxDocuments} chứng từ`);
@@ -1019,11 +1033,11 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
         const baseName = entryName.split('/').pop();
         const displayName = zipLabel ? `${zipLabel} ➔ ${baseName}` : baseName;
 
+        // Đường dẫn đầy đủ trong ZIP để ghép cặp XML/PDF đúng thư mục.
         if (/\.xml$/i.test(baseName)) {
-          await readXmlEntry(await entry.async('text'), baseName, zipLabel);
+          await readXmlEntry(await entry.async('text'), baseName, zipLabel, entryName);
         } else if (/\.pdf$/i.test(baseName)) {
-          if (xmlBaseNames.has(baseName.replace(/\.pdf$/i, '').toLowerCase())) continue;
-          await readPdfEntry(await entry.async('arraybuffer'), baseName, zipLabel);
+          await readPdfEntry(await entry.async('arraybuffer'), baseName, zipLabel, entryName);
         } else if (/\.zip$/i.test(baseName)) {
           await readZip(await entry.async('blob'), displayName, depth + 1);
         } else {
@@ -1031,18 +1045,6 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
         }
       }
     };
-
-    const xmlBaseNames = new Set(
-      accepted
-        .filter((file) => /\.xml$/i.test(file.name))
-        .map((file) => file.name.replace(/\.xml$/i, '').toLowerCase()),
-    );
-    invoicesRef.current.forEach((inv) => {
-      if (inv.rawType === 'XML') {
-        const base = String(inv.rawFileName || inv.fileName || '').replace(/\.xml$/i, '').toLowerCase();
-        if (base) xmlBaseNames.add(base);
-      }
-    });
 
     for (const [index, file] of accepted.entries()) {
       setProgress({ done: index, total: accepted.length, label: file.name });
@@ -1054,11 +1056,6 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
         } else if (lowerName.endsWith('.xml')) {
           await readXmlEntry(await file.text(), file.name, null);
         } else if (lowerName.endsWith('.pdf')) {
-          const base = file.name.replace(/\.pdf$/i, '').toLowerCase();
-          if (xmlBaseNames.has(base)) {
-            skipped.push(`${file.name}: Đã có tệp XML tương ứng, tự động ưu tiên XML`);
-            continue;
-          }
           if (!(await verifyDocumentSignature(file))) {
             throw new Error('Nội dung không phải PDF hợp lệ');
           }
@@ -1097,6 +1094,10 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
     setInvoices(merged);
 
     const summary = [`Đã đọc ${added} chứng từ từ ${accepted.length} tệp`];
+    const mergedIds = new Set(merged.map((item) => item.id));
+    const pairedPdfs = parsedList.filter((item) => item.rawType === 'PDF' && !mergedIds.has(item.id)
+      && merged.some((other) => other.rawType === 'XML' && isSameInvoiceDocument(other, item))).length;
+    if (pairedPdfs > 0) summary.push(`${pairedPdfs} bản PDF trùng hóa đơn XML đã được thay bằng XML`);
     if (skipped.length > 0) {
       summary.push(`bỏ qua ${skipped.length} mục: ${skipped.slice(0, 5).join(', ')}${skipped.length > 5 ? '…' : ''}`);
     }
@@ -1209,8 +1210,9 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
   };
 
   const setInvoiceAmount = (id, field, rawValue) => {
+    // Giữ dấu âm: hóa đơn điều chỉnh giảm có số tiền âm hợp lệ.
     const parsed = parseLocalizedNumber(rawValue);
-    const amount = parsed === null ? 0 : Math.max(0, parsed);
+    const amount = parsed === null || !Number.isFinite(parsed) ? 0 : parsed;
 
     setInvoices((current) => current.map((invoice) => {
       if (invoice.id !== id) return invoice;
@@ -1908,7 +1910,7 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
                         onCommit={(next) => setInvoiceAmount(inv.id, 'authorityCollection', next)}
                         label={`Khoản thu hộ nhà chức trách của ${inv.rawFileName || inv.fileName}`}
                       />
-                      {inv.authorityCollection > 0 && inv.authorityCollectionDerived && (
+                      {inv.authorityCollection !== 0 && inv.authorityCollectionDerived && (
                         <p
                           className="mt-1 text-right text-[10px] italic text-outline"
                           title="Hóa đơn không ghi riêng khoản này; số hiện ra là phần chênh giữa tổng thanh toán và chưa thuế + tiền thuế."
@@ -1926,6 +1928,21 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
                       />
                       {inv.amountsEdited && (
                         <p className="mt-1 text-right text-[10px] italic text-primary">đã sửa tay</p>
+                      )}
+                      {inv.originalAmounts && inv.currency && (
+                        <p
+                          className="mt-1 text-right text-[10px] italic text-tertiary"
+                          title={inv.exchangeRate ? `Tỷ giá ${inv.exchangeRate.toLocaleString('vi-VN')}` : 'Chưa có tỷ giá'}
+                        >
+                          {inv.exchangeRate ? 'VND quy đổi từ ' : 'nguyên tệ '}
+                          {(Number(inv.originalAmounts.totalAmount) || 0).toLocaleString('vi-VN')} {inv.currency}
+                        </p>
+                      )}
+                      {inv.isAdjustment && (
+                        <p className="mt-1 text-right text-[10px] font-semibold text-tertiary">HĐ điều chỉnh</p>
+                      )}
+                      {inv.relation?.kind === 'replacement' && (
+                        <p className="mt-1 text-right text-[10px] font-semibold text-tertiary">HĐ thay thế</p>
                       )}
                     </td>
                     <td className="py-3 px-3 font-mono text-outline">
@@ -2293,10 +2310,10 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
                   </p>
                 </div>
 
-                {/* 6. Khối chữ ký chuẩn 3 bên theo sổ ĐNTT */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-0 text-center text-[12px] pt-4">
+                {/* 6. Khối chữ ký: đúng hai bên như file Excel xuất ra (paymentRequestForm.js) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-0 text-center text-[12px] pt-4">
                   <div className="space-y-1">
-                    <p className="font-bold italic">Người đề nghị</p>
+                    <p className="font-bold italic">Người đề nghị thanh toán</p>
                     <p className="italic text-slate-600 text-[11px]">(Ký, họ tên)</p>
                     <div className="h-16"></div>
                     <p className="font-bold uppercase">{formSettings.requester || ''}</p>
@@ -2307,13 +2324,6 @@ export default function InvoiceTool({ displayLang = 'vi' } = {}) {
                     <p className="italic text-slate-600 text-[11px]">(Ký, họ tên)</p>
                     <div className="h-16"></div>
                     <p className="font-bold uppercase">{formSettings.accountant || ''}</p>
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="font-bold italic">Giám đốc duyệt</p>
-                    <p className="italic text-slate-600 text-[11px]">(Ký, họ tên)</p>
-                    <div className="h-16"></div>
-                    <p className="font-bold uppercase"></p>
                   </div>
                 </div>
               </div>

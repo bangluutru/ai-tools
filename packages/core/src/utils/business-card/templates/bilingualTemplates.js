@@ -1,3 +1,4 @@
+import { QrCodeService } from "../qrGenerator.js";
 export const bilingualSplitTemplate = {
   id: "bilingual-split",
   name: "Bilingual Symmetrical Split",
@@ -521,14 +522,7 @@ ${profile.address || ""}`,
       {
         id: "b-qr1",
         type: "qr",
-        data: `BEGIN:VCARD
-VERSION:3.0
-FN:${profile.fullName}
-ORG:${profile.companyName}
-TITLE:${profile.jobTitle}
-TEL:${profile.phone}
-EMAIL:${profile.email}
-END:VCARD`,
+        data: QrCodeService.formatVCard(profile),
         qrType: "vcard",
         xMm: isHoriz ? 18 : 10,
         yMm: isHoriz ? 12 : 20,

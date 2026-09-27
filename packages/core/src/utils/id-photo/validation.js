@@ -1,4 +1,7 @@
 import { mmToPixels } from './exportEngine.js';
+import { estimateHeadBounds } from './faceDetection.js';
+
+const fmt = (v) => (Math.round(v * 10) / 10).toString();
 function validateFraming(face, sourceWidth, sourceHeight, standard, transform) {
   const warnings = [];
   if (!face) {
@@ -43,45 +46,62 @@ function validateFraming(face, sourceWidth, sourceHeight, standard, transform) {
   const targetH = mmToPixels(standard.heightMm, 300);
   const baseScale = Math.max(targetW / sourceWidth, targetH / sourceHeight);
   const totalScale = baseScale * transform.scale;
-  const eyeMidY = (face.landmarks.leftEye.y + face.landmarks.rightEye.y) / 2;
-  const chinY = face.landmarks.mouthCenter.y + (face.landmarks.mouthCenter.y - eyeMidY) * 0.6;
-  const crownY = eyeMidY - (chinY - eyeMidY) * 1.15;
-  const originalHeadH = Math.max(face.box.height * 1.1, chinY - crownY);
+  const { crownY, headHeight: originalHeadH } = estimateHeadBounds(face);
   const renderedHeadH = originalHeadH * totalScale;
   const faceHeightRatio = renderedHeadH / targetH * 100;
-  const isFaceRatioAcceptable = faceHeightRatio >= standard.faceHeightPercentMin - 5 && faceHeightRatio <= standard.faceHeightPercentMax + 5;
-  if (faceHeightRatio < standard.faceHeightPercentMin - 5) {
+  const faceMm = faceHeightRatio / 100 * standard.heightMm;
+  const faceMin = standard.faceHeightPercentMin;
+  const faceMax = standard.faceHeightPercentMax;
+  // Tiny epsilon only for floating-point noise — no extra tolerance beyond the standard's range
+  const EPS = 0.05;
+  const isFaceRatioAcceptable = faceHeightRatio >= faceMin - EPS && faceHeightRatio <= faceMax + EPS;
+  const rangeMm = `${fmt(faceMin / 100 * standard.heightMm)}–${fmt(faceMax / 100 * standard.heightMm)}mm`;
+  if (faceHeightRatio < faceMin - EPS) {
     warnings.push({
       code: "FACE_TOO_SMALL",
       severity: "warning",
       message: {
-        ja: `顔の比率 (${Math.round(faceHeightRatio)}%) が規格基準 (${standard.faceHeightPercentMin}%〜) より小さめです。拡大してください。`,
-        vi: `Khuôn mặt (${Math.round(faceHeightRatio)}%) nhỏ hơn chuẩn quy định (${standard.faceHeightPercentMin}%-). Hãy phóng to thêm một chút.`,
-        en: `Face size (${Math.round(faceHeightRatio)}%) is smaller than standard (${standard.faceHeightPercentMin}%+). Please zoom in.`
+        ja: `顔の縦の長さ（推定 約${fmt(faceMm)}mm / ${fmt(faceHeightRatio)}%）が参考規格（${rangeMm}）より小さめです。拡大してください。`,
+        vi: `Chiều cao mặt (ước tính ~${fmt(faceMm)}mm / ${fmt(faceHeightRatio)}%) nhỏ hơn khoảng tham khảo (${rangeMm}). Hãy phóng to thêm một chút.`,
+        en: `Face height (estimated ~${fmt(faceMm)}mm / ${fmt(faceHeightRatio)}%) is below the reference range (${rangeMm}). Please zoom in.`
       }
     });
-  } else if (faceHeightRatio > standard.faceHeightPercentMax + 5) {
+  } else if (faceHeightRatio > faceMax + EPS) {
     warnings.push({
       code: "FACE_TOO_LARGE",
       severity: "warning",
       message: {
-        ja: `顔の比率 (${Math.round(faceHeightRatio)}%) が規格基準 (〜${standard.faceHeightPercentMax}%) より大きめです。縮小してください。`,
-        vi: `Khuôn mặt (${Math.round(faceHeightRatio)}%) to hơn chuẩn quy định (tối đa ${standard.faceHeightPercentMax}%). Hãy thu nhỏ lại một chút.`,
-        en: `Face size (${Math.round(faceHeightRatio)}%) is larger than standard (max ${standard.faceHeightPercentMax}%). Please zoom out.`
+        ja: `顔の縦の長さ（推定 約${fmt(faceMm)}mm / ${fmt(faceHeightRatio)}%）が参考規格（${rangeMm}）より大きめです。縮小してください。`,
+        vi: `Chiều cao mặt (ước tính ~${fmt(faceMm)}mm / ${fmt(faceHeightRatio)}%) lớn hơn khoảng tham khảo (${rangeMm}). Hãy thu nhỏ lại một chút.`,
+        en: `Face height (estimated ~${fmt(faceMm)}mm / ${fmt(faceHeightRatio)}%) is above the reference range (${rangeMm}). Please zoom out.`
       }
     });
   }
   const renderedCrownY = targetH / 2 + transform.offsetY - (sourceHeight / 2 - crownY) * totalScale;
   const topMarginPercent = renderedCrownY / targetH * 100;
-  const isTopMarginAcceptable = topMarginPercent >= 4 && topMarginPercent <= 25;
-  if (topMarginPercent < 4) {
+  const topMin = standard.topMarginPercentMin;
+  const topMax = standard.topMarginPercentMax;
+  const isTopMarginAcceptable = topMarginPercent >= topMin - EPS && topMarginPercent <= topMax + EPS;
+  const topRangeMm = `${fmt(topMin / 100 * standard.heightMm)}–${fmt(topMax / 100 * standard.heightMm)}mm`;
+  const topMm = fmt(topMarginPercent / 100 * standard.heightMm);
+  if (topMarginPercent < topMin - EPS) {
     warnings.push({
       code: "MARGIN_TOO_SMALL",
       severity: "warning",
       message: {
-        ja: "頭頂部が写真の上枠に近すぎるか、切れています。少し下に移動してください。",
-        vi: "Đỉnh đầu quá sát hoặc bị chạm mép trên của ảnh. Hãy kéo ảnh xuống dưới một chút.",
-        en: "Top of head is too close to upper border. Please shift the photo downward."
+        ja: `頭頂から上端までの余白（推定 約${topMm}mm）が参考規格（${topRangeMm}）より狭いです。少し下に移動してください。`,
+        vi: `Khoảng cách đỉnh đầu tới mép trên (ước tính ~${topMm}mm) nhỏ hơn khoảng tham khảo (${topRangeMm}). Hãy kéo ảnh xuống dưới một chút.`,
+        en: `Space above the head (estimated ~${topMm}mm) is below the reference range (${topRangeMm}). Please shift the photo down.`
+      }
+    });
+  } else if (topMarginPercent > topMax + EPS) {
+    warnings.push({
+      code: "MARGIN_TOO_LARGE",
+      severity: "warning",
+      message: {
+        ja: `頭頂から上端までの余白（推定 約${topMm}mm）が参考規格（${topRangeMm}）より広いです。少し上に移動してください。`,
+        vi: `Khoảng cách đỉnh đầu tới mép trên (ước tính ~${topMm}mm) lớn hơn khoảng tham khảo (${topRangeMm}). Hãy kéo ảnh lên trên một chút.`,
+        en: `Space above the head (estimated ~${topMm}mm) is above the reference range (${topRangeMm}). Please shift the photo up.`
       }
     });
   }
@@ -107,9 +127,9 @@ function validateFraming(face, sourceWidth, sourceHeight, standard, transform) {
       code: "OFF_CENTER",
       severity: "info",
       message: {
-        ja: "顔が左右の中心から少しずれています。「AIで自動位置合わせ」で中央に配置できます。",
-        vi: 'Khuôn mặt đang lệch tâm sang một bên. Bạn có thể bấm "AI tự động căn vị trí" để căn giữa.',
-        en: 'Face is slightly off-center horizontally. Use "Auto-Align with AI" to center.'
+        ja: "顔が左右の中心から少しずれています。「自動位置合わせ」で中央に配置できます。",
+        vi: 'Khuôn mặt đang lệch tâm sang một bên. Bạn có thể bấm "Tự động căn vị trí" để căn giữa.',
+        en: 'Face is slightly off-center horizontally. Use "Auto-align" to center.'
       }
     });
   }
@@ -117,7 +137,9 @@ function validateFraming(face, sourceWidth, sourceHeight, standard, transform) {
     hasFace: true,
     tiltAngleDeg: Math.round(effectiveTilt * 10) / 10,
     isTiltAcceptable,
-    faceHeightRatio: Math.round(faceHeightRatio),
+    faceHeightRatio: Math.round(faceHeightRatio * 10) / 10,
+    faceHeightMm: Math.round(faceMm * 10) / 10,
+    topMarginPercent: Math.round(topMarginPercent * 10) / 10,
     isFaceRatioAcceptable,
     isTopMarginAcceptable,
     effectiveDpi,

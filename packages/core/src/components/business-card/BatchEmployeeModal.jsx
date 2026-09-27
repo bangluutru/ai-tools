@@ -8,9 +8,10 @@ import {
   Trash2,
   FileSpreadsheet
 } from "lucide-react";
-import { jsPDF } from "jspdf";
 import { StorageService } from "../../utils/business-card/storage.js";
 import { BusinessCardPdfExporter } from "../../utils/business-card/pdfExporter.js";
+import { QrCodeService } from "../../utils/business-card/qrGenerator.js";
+import { downloadBlob } from "../../utils/business-card/zipPackager.js";
 import { useLanguage } from "../../utils/business-card/LanguageContext.jsx";
 export const BatchEmployeeModal = ({
   isOpen,
@@ -19,42 +20,21 @@ export const BatchEmployeeModal = ({
 }) => {
   const { t, language } = useLanguage();
   const csvInputRef = useRef(null);
-  const [employees, setEmployees] = useState([
-    masterProject.profile,
-    {
-      ...masterProject.profile,
-      fullName: "\u9234\u6728 \u4E00\u90CE",
-      fullNameKana: "\u3059\u305A\u304D \u3044\u3061\u308D\u3046",
-      fullNameEn: "Ichiro Suzuki",
-      jobTitle: "\u5C02\u52D9\u53D6\u7DE0\u5F79 COO",
-      email: "i.suzuki@sample-corp.co.jp",
-      phone: "03-5555-0199"
-    },
-    {
-      ...masterProject.profile,
-      fullName: "\u9AD8\u6A4B \u5948\u3005",
-      fullNameKana: "\u305F\u304B\u306F\u3057 \u306A\u306A",
-      fullNameEn: "Nana Takahashi",
-      jobTitle: "\u30C7\u30B6\u30A4\u30F3\u7D71\u62EC \u30C7\u30A3\u30EC\u30AF\u30BF\u30FC",
-      email: "n.takahashi@sample-corp.co.jp",
-      phone: "03-5555-0199"
-    }
-  ]);
+  // Bắt đầu chỉ với hồ sơ master; không chèn nhân viên mẫu giả.
+  // Parent chỉ mount modal khi mở nên state luôn khởi tạo lại từ hồ sơ hiện tại.
+  const [employees, setEmployees] = useState(() => [masterProject.profile]);
   const [isExportingBatch, setIsExportingBatch] = useState(false);
   const [exportProgress, setExportProgress] = useState("");
+  const [batchMessage, setBatchMessage] = useState(null);
   if (!isOpen) return null;
+  const placeholderQrCount = [...masterProject.front.elements, ...(masterProject.isDoubleSided ? masterProject.back.elements : [])].filter((el) => el.type === "qr" && el.qrType !== "vcard" && QrCodeService.isPlaceholderData(el.data)).length;
+  const blankEmployee = () => {
+    const emp = { ...masterProject.profile };
+    for (const key of ["fullName", "fullNameKana", "fullNameEn", "jobTitle", "department", "email", "mobile"]) emp[key] = "";
+    return emp;
+  };
   const handleAddRow = () => {
-    setEmployees([
-      ...employees,
-      {
-        ...masterProject.profile,
-        fullName: "\u65B0\u898F \u793E\u54E1\u6C0F\u540D",
-        fullNameKana: "\u3057\u3093\u304D \u3057\u3083\u3044\u3093",
-        fullNameEn: "New Employee",
-        jobTitle: "\u55B6\u696D\u90E8 \u30A2\u30BD\u30B7\u30A8\u30A4\u30C8",
-        email: "employee@sample.co.jp"
-      }
-    ]);
+    setEmployees([...employees, blankEmployee()]);
   };
   const handleRemoveRow = (idx) => {
     setEmployees(employees.filter((_, i) => i !== idx));
@@ -68,72 +48,54 @@ export const BatchEmployeeModal = ({
     setEmployees(updated);
   };
   const handleDownloadSampleCsv = () => {
-    const header = "fullName,fullNameKana,fullNameEn,jobTitle,department,email,phone,mobile\n";
-    const row1 = "\u7530\u4E2D \u5065\u4E8C,\u305F\u306A\u304B \u3051\u3093\u3058,Kenji Tanaka,\u4EE3\u8868\u53D6\u7DE0\u5F79 CEO,\u7D4C\u55B6\u4F01\u753B\u672C\u90E8,k.tanaka@sample.jp,03-5555-0199,090-1234-5678\n";
-    const row2 = "\u9234\u6728 \u4E00\u90CE,\u3059\u305A\u304D \u3044\u3061\u308D\u3046,Ichiro Suzuki,\u5C02\u52D9\u53D6\u7DE0\u5F79 COO,\u4E8B\u696D\u958B\u767A\u90E8,i.suzuki@sample.jp,03-5555-0199,080-9876-5432\n";
-    const row3 = "\u9AD8\u6A4B \u5948\u3005,\u305F\u304B\u306F\u3057 \u306A\u306A,Nana Takahashi,\u30AF\u30EA\u30A8\u30A4\u30C6\u30A3\u30D6\u30C7\u30A3\u30EC\u30AF\u30BF\u30FC,\u30C7\u30B6\u30A4\u30F3\u90E8,n.takahashi@sample.jp,03-5555-0199,070-1122-3344\n";
-    const blob = new Blob(["\uFEFF" + header + row1 + row2 + row3], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "meishi_employee_template.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    const header = "fullName,fullNameKana,fullNameEn,jobTitle,department,email,phone,mobile\r\n";
+    const p = masterProject.profile;
+    const cell = (v) => {
+      const s2 = String(v ?? "");
+      return /[",\r\n]/.test(s2) ? `"${s2.replace(/"/g, '""')}"` : s2;
+    };
+    const row1 = [p.fullName, p.fullNameKana, p.fullNameEn, p.jobTitle, p.department, p.email, p.phone, p.mobile].map(cell).join(",") + "\r\n";
+    const blob = new Blob(["\uFEFF" + header + row1], { type: "text/csv;charset=utf-8;" });
+    downloadBlob(blob, "business_card_employees_template.csv");
   };
-  const handleCsvUpload = (e) => {
+  const handleCsvUpload = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result;
+    try {
+      const text = StorageService.decodeCsvBytes(await file.arrayBuffer());
       const parsed = StorageService.parseEmployeeCsv(text, masterProject.profile);
       if (parsed.length > 0) {
         setEmployees(parsed);
+        setBatchMessage({ type: "ok", text: t("batchCsvImported").replace("{count}", String(parsed.length)) });
+      } else {
+        setBatchMessage({ type: "error", text: t("batchCsvEmpty") });
       }
-    };
-    reader.readAsText(file);
+    } catch (err) {
+      console.error("CSV import failed:", err);
+      setBatchMessage({ type: "error", text: t("batchCsvEmpty") });
+    }
   };
   const handleExportBatchPdf = async () => {
+    const valid = employees.filter((emp) => String(emp.fullName || "").trim());
+    if (!valid.length) {
+      setBatchMessage({ type: "error", text: t("batchNoNames") });
+      return;
+    }
     setIsExportingBatch(true);
-    setExportProgress("Rendering...");
+    setBatchMessage(null);
+    setExportProgress(t("batchRendering"));
     try {
-      const dim = masterProject.dimension;
-      const isHoriz = masterProject.orientation === "horizontal";
-      const rawW = isHoriz ? dim.widthMm : dim.heightMm;
-      const rawH = isHoriz ? dim.heightMm : dim.widthMm;
-      const bleed = dim.bleedMm;
-      const totalW = rawW + bleed * 2;
-      const totalH = rawH + bleed * 2;
-      const batchDoc = new jsPDF({
-        orientation: isHoriz ? "landscape" : "portrait",
-        unit: "mm",
-        format: [totalW, totalH],
-        compress: true
+      const projects = valid.map((emp) => StorageService.applyEmployeeProfileToTemplate(masterProject, emp));
+      const doc = await BusinessCardPdfExporter.generateBatchPdf(projects, { mode: "tonbo" }, (i, n) => {
+        setExportProgress(`${t("batchRendering")} (${i} / ${n})`);
       });
-      for (let i = 0; i < employees.length; i++) {
-        setExportProgress(`Rendering (${i + 1} / ${employees.length})...`);
-        const emp = employees[i];
-        const empProject = StorageService.applyEmployeeProfileToTemplate(masterProject, emp);
-        if (i > 0) {
-          batchDoc.addPage([totalW, totalH], isHoriz ? "landscape" : "portrait");
-        }
-        const frontCanvas = await BusinessCardPdfExporter.renderSideToCanvas(empProject.front, empProject, {
-          includeBleed: true,
-          scale: 3.125
-        });
-        batchDoc.addImage(frontCanvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, totalW, totalH);
-        if (empProject.isDoubleSided) {
-          batchDoc.addPage([totalW, totalH], isHoriz ? "landscape" : "portrait");
-          const backCanvas = await BusinessCardPdfExporter.renderSideToCanvas(empProject.back, empProject, {
-            includeBleed: true,
-            scale: 3.125
-          });
-          batchDoc.addImage(backCanvas.toDataURL("image/jpeg", 0.98), "JPEG", 0, 0, totalW, totalH);
-        }
-      }
-      batchDoc.save(`${masterProject.profile.companyName || "Company"}_Batch_PDF_${employees.length}.pdf`);
+      const baseName = (masterProject.profile.companyName || "company").replace(/[\\/:*?"<>|]+/g, "_");
+      downloadBlob(doc.output("blob"), `${baseName}_batch_${projects.length}.pdf`);
+      setBatchMessage({ type: "ok", text: t("batchExported").replace("{count}", String(projects.length)) });
     } catch (err) {
       console.error("Batch export failed:", err);
+      setBatchMessage({ type: "error", text: t("exportFailedMsg") });
     } finally {
       setIsExportingBatch(false);
       setExportProgress("");
@@ -177,7 +139,7 @@ export const BatchEmployeeModal = ({
     type="file"
     ref={csvInputRef}
     onChange={handleCsvUpload}
-    accept=".csv"
+    accept=".csv,text/csv"
     className="hidden"
   />
             <button
@@ -220,7 +182,14 @@ export const BatchEmployeeModal = ({
         {
     /* Employees Table */
   }
-        <div className="p-4 flex-1 overflow-y-auto">
+        <div className="p-4 flex-1 overflow-y-auto space-y-3">
+          <p className="text-[11px] text-on-surface-variant">{t("batchVcardNote")}</p>
+          {placeholderQrCount > 0 && <div role="alert" className="p-3 rounded-lg bg-tertiary/10 border border-tertiary/30 text-tertiary text-xs">
+              {t("batchPlaceholderQrWarn")}
+            </div>}
+          {batchMessage && <div role={batchMessage.type === "error" ? "alert" : "status"} className={`p-3 rounded-lg text-xs border ${batchMessage.type === "error" ? "bg-error/10 border-error/30 text-error" : "bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300"}`}>
+              {batchMessage.text}
+            </div>}
           <div className="border border-border-subtle rounded-xl overflow-hidden shadow-xs">
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-surface-canvas text-on-surface-variant font-bold border-b border-border-subtle">
@@ -284,7 +253,8 @@ export const BatchEmployeeModal = ({
                         onClick={() => handleRemoveRow(idx)}
                         disabled={employees.length <= 1}
                         className="p-1 rounded text-outline hover:text-error transition-colors disabled:opacity-30 cursor-pointer"
-                        title={t("btnDeleteRow") || "Xóa dòng"}
+                        title={t("colDelete")}
+                        aria-label={t("colDelete")}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -304,7 +274,7 @@ export const BatchEmployeeModal = ({
             onClick={onClose}
             className="px-5 py-2 text-xs font-bold rounded-xl bg-surface-container-highest hover:bg-surface-subtle border border-border-strong text-on-surface transition-colors cursor-pointer"
           >
-            {t("btnClose") || "Đóng"}
+            {t("btnClose")}
           </button>
         </div>
       </div>

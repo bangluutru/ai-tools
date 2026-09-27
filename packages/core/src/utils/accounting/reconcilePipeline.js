@@ -1,5 +1,5 @@
 import { detectWorkbookKind, parseBrWorkbook, parseLedgerWorkbook } from './workbookParser.js';
-import { reconcileAccountingData } from './reconcile.js';
+import { invoiceLabel, reconcileAccountingData } from './reconcile.js';
 
 /**
  * Một đường đi duy nhất từ workbook đã đọc tới kết quả đối chiếu.
@@ -8,12 +8,18 @@ import { reconcileAccountingData } from './reconcile.js';
  * chính là kết quả người dùng nhìn thấy — không có nhánh xử lý song song nào
  * có thể lệch đi mà test không bắt được.
  *
- * @param {Array<{sourceFile: string, sheetNames: string[], sheetRows: Record<string, unknown[][]>}>} workbooks
+ * Nhiều file cùng loại trong một lần tải được gộp (kèm ghi chú trong
+ * diagnostics); `files[kind]` khi đó là danh sách tên file ngăn cách bởi dấu phẩy.
+ * `sheetRowOffsets` (tùy chọn) là chỉ số dòng 0-based nơi vùng dữ liệu của mỗi
+ * sheet bắt đầu, để số dòng bằng chứng khớp file gốc.
+ *
+ * @param {Array<{sourceFile: string, sheetNames: string[], sheetRows: Record<string, unknown[][]>, sheetRowOffsets?: Record<string, number>}>} workbooks
  */
 export function reconcileWorkbooks(workbooks, options = {}) {
   const data = { 511: [], 33311: [], br: [] };
   const diagnostics = [];
   const files = { 511: null, 33311: null, br: null };
+  const seenFiles = new Set();
 
   for (const workbook of workbooks) {
     const kind = detectWorkbookKind(workbook);
@@ -29,12 +35,34 @@ export function reconcileWorkbooks(workbooks, options = {}) {
       continue;
     }
 
+    // Cùng một file nạp hai lần thì bỏ lần sau, không cộng đôi số liệu.
+    if (seenFiles.has(`${kind}::${workbook.sourceFile}`)) {
+      diagnostics.push({
+        sourceFile: workbook.sourceFile,
+        sourceSheet: workbook.sheetNames.join(', '),
+        kind,
+        ok: false,
+        reason: `File trùng tên với file ${kind === 'br' ? 'Bảng kê BR' : `Sổ ${kind}`} đã nạp trong cùng lần tải; đã bỏ qua để không cộng trùng.`,
+      });
+      continue;
+    }
+    seenFiles.add(`${kind}::${workbook.sourceFile}`);
+
     const parsed = kind === 'br' ? parseBrWorkbook(workbook) : parseLedgerWorkbook(workbook);
-    diagnostics.push(...parsed.diagnostics.map((entry) => ({ ...entry, kind })));
+    const alreadyLoaded = files[kind];
+    diagnostics.push(...parsed.diagnostics.map((entry) => ({
+      ...entry,
+      kind,
+      // Hai file cùng loại (ví dụ sổ 511 tách theo tháng) được gộp, nhưng phải
+      // báo để kế toán chắc rằng đó không phải hai bản của cùng một sổ.
+      ...(alreadyLoaded && parsed.records.length > 0
+        ? { reason: [entry.reason, `Đã gộp với ${alreadyLoaded} (cùng loại ${kind === 'br' ? 'Bảng kê BR' : `Sổ ${kind}`}); kiểm tra hai file không trùng kỳ.`].filter(Boolean).join(' '), merged: true }
+        : {}),
+    })));
 
     if (parsed.records.length > 0) {
-      data[kind] = parsed.records;
-      files[kind] = workbook.sourceFile;
+      data[kind] = [...data[kind], ...parsed.records];
+      files[kind] = alreadyLoaded ? `${alreadyLoaded}, ${workbook.sourceFile}` : workbook.sourceFile;
     }
   }
 
@@ -56,7 +84,7 @@ export function summariseForGolden(results) {
   if (!results) return null;
 
   const row = (entry) => ({
-    invoice: entry.invoice,
+    invoice: invoiceLabel(entry),
     ledger: entry.ledgerValue,
     br: entry.brValue,
     diff: entry.diff,

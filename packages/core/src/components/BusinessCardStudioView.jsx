@@ -11,13 +11,13 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { LanguageProvider, useLanguage } from '../utils/business-card/LanguageContext.jsx';
-import { ToolBreadcrumb } from './shared/StandardToolLayout.jsx';
 import { DEFAULT_CARD_DIMENSION } from '../utils/business-card/cardSizes.js';
 import { SAMPLE_PROFILES } from '../utils/business-card/samples.js';
 import { TEMPLATE_DEFINITIONS } from '../utils/business-card/templates.js';
 import { PreflightVerificationService } from '../utils/business-card/preflightChecker.js';
 import { StorageService } from '../utils/business-card/storage.js';
 import { BusinessCardPdfExporter } from '../utils/business-card/pdfExporter.js';
+import { downloadBlob } from '../utils/business-card/zipPackager.js';
 import { WorkflowSteps } from './business-card/WorkflowSteps.jsx';
 import { InputStep } from './business-card/InputStep.jsx';
 import { GenerationStep } from './business-card/GenerationStep.jsx';
@@ -175,15 +175,13 @@ function BusinessCardStudioContent({ onBackToHub }) {
   const handleExportPdf = async () => {
     setIsExportingPdf(true);
     try {
-      const pdfDoc = await BusinessCardPdfExporter.generatePrintPdf(project, {
-        includeBleed: true,
-        includeCropMarks: true,
-        dpi: 300,
-        colorMode: 'cmyk_simulation',
-      });
-      pdfDoc.save(`${project.title || 'Meishi'}_print_artwork_300dpi_tonbo.pdf`);
+      const pdfDoc = await BusinessCardPdfExporter.generatePrintPdf(project, { mode: 'tonbo' });
+      const baseName = (project.title || 'business-card').replace(/[\\/:*?"<>|]+/g, '_');
+      downloadBlob(pdfDoc.output('blob'), `${baseName}_300dpi_tonbo.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
+      setSaveToast(t('exportFailedMsg'));
+      setTimeout(() => setSaveToast(null), 4000);
     } finally {
       setIsExportingPdf(false);
     }
@@ -199,11 +197,7 @@ function BusinessCardStudioContent({ onBackToHub }) {
         </div>
       )}
 
-      {/* BREADCRUMB */}
-      <ToolBreadcrumb
-        title={t('brandTitle') || 'Tạo Danh Thiếp'}
-        onBackToHub={onBackToHub}
-      />
+      {/* Điều hướng về hub do ToolContainer cung cấp; breadcrumb dùng chung chỉ có href="#" nên bỏ */}
 
       {/* CONTEXT HEADER */}
       <section className="w-full mb-6">
@@ -223,7 +217,7 @@ function BusinessCardStudioContent({ onBackToHub }) {
                 </h1>
                 <div className="flex items-center gap-1.5 text-xs text-secondary font-medium mt-1">
                   <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-                  <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
+                  <span>{t('privacyNotice')}</span>
                 </div>
               </div>
             </div>
@@ -238,7 +232,7 @@ function BusinessCardStudioContent({ onBackToHub }) {
                       ? 'bg-secondary/10 text-secondary border-secondary/30 hover:bg-secondary/20'
                       : 'bg-tertiary/10 text-tertiary border-tertiary/30 hover:bg-tertiary/20'
                   }`}
-                  title="Preflight Quality Check"
+                  title={t('pfTitle')}
                 >
                   {preflight.passed ? (
                     <ShieldCheck className="w-4 h-4 text-secondary" />
@@ -255,7 +249,7 @@ function BusinessCardStudioContent({ onBackToHub }) {
                   type="button"
                   onClick={() => setIsBatchOpen(true)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-subtle text-xs font-semibold text-on-surface hover:bg-surface-container-high transition cursor-pointer"
-                  title="Nạp danh sách nhân viên qua CSV"
+                  title={t('batchSub')}
                 >
                   <Users className="w-4 h-4 text-primary" />
                   <span>{t('btnBatch') || 'Tạo nhân viên (CSV)'}</span>
@@ -266,7 +260,7 @@ function BusinessCardStudioContent({ onBackToHub }) {
                   type="button"
                   onClick={handleSaveProject}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-subtle text-xs font-semibold text-on-surface hover:bg-surface-container-high transition cursor-pointer"
-                  title="Lưu vào bộ nhớ máy"
+                  title={t('btnSave')}
                 >
                   <Save className="w-3.5 h-3.5 text-on-surface-variant" />
                   <span>{t('btnSave') || 'Lưu'}</span>
@@ -278,7 +272,7 @@ function BusinessCardStudioContent({ onBackToHub }) {
                   disabled={isExportingPdf}
                   onClick={handleExportPdf}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-subtle text-xs font-semibold text-on-surface hover:bg-surface-container-high transition cursor-pointer disabled:opacity-50"
-                  title="Tải nhanh PDF in 300 DPI"
+                  title={t('btnExportPdf')}
                 >
                   <Download className="w-3.5 h-3.5 text-secondary" />
                   <span>{t('btnExportPdf') || 'PDF 300 DPI'}</span>
@@ -290,7 +284,7 @@ function BusinessCardStudioContent({ onBackToHub }) {
                   id="btn-header-free-export"
                   onClick={() => setIsFreeExportOpen(true)}
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary-container text-on-primary-container text-xs font-bold shadow hover:brightness-105 transition cursor-pointer"
-                  title="Mở bộ xuất bản nhà in (PDF, PNG Proofs, ZIP bundle)"
+                  title={t('freeExportModalTitle')}
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>{t('btnFreeExport') || 'Bộ xuất file in'}</span>
@@ -301,7 +295,8 @@ function BusinessCardStudioContent({ onBackToHub }) {
                   type="button"
                   onClick={handleReset}
                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border-subtle bg-surface-subtle text-xs font-medium text-on-surface-variant hover:text-error hover:border-error/30 transition cursor-pointer"
-                  title="Bắt đầu lại"
+                  title={t('btnReset')}
+                  aria-label={t('btnReset')}
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
@@ -374,11 +369,13 @@ function BusinessCardStudioContent({ onBackToHub }) {
         onUpdateProject={setProject}
       />
 
-      <BatchEmployeeModal
-        isOpen={isBatchOpen}
-        onClose={() => setIsBatchOpen(false)}
-        masterProject={project}
-      />
+      {isBatchOpen && (
+        <BatchEmployeeModal
+          isOpen={isBatchOpen}
+          onClose={() => setIsBatchOpen(false)}
+          masterProject={project}
+        />
+      )}
     </div>
   );
 }

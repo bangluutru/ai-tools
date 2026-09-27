@@ -10,6 +10,14 @@ const CameraModal = ({ isOpen, onClose, onCapture }) => {
   const [countdown, setCountdown] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const [useTimer, setUseTimer] = useState(true);
+  const countdownTimerRef = useRef(null);
+  const clearCountdown = useCallback(() => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    setCountdown(null);
+  }, []);
 
   const stopStream = useCallback(() => {
     if (streamRef.current) {
@@ -53,6 +61,10 @@ const CameraModal = ({ isOpen, onClose, onCapture }) => {
     }, 0);
     return () => {
       clearTimeout(timer);
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
       stopStream();
     };
   }, [isOpen, startCamera, stopStream]);
@@ -60,17 +72,21 @@ const CameraModal = ({ isOpen, onClose, onCapture }) => {
     setFacingMode((prev) => prev === "user" ? "environment" : "user");
   };
   const handleCaptureClick = () => {
+    if (countdownTimerRef.current) return;
     if (useTimer) {
-      setCountdown(3);
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev === null || prev <= 1) {
-            clearInterval(timer);
-            doCapture();
-            return null;
-          }
-          return prev - 1;
-        });
+      // Đếm ngược bằng biến cục bộ; chụp ảnh NGOÀI setState updater (StrictMode gọi updater 2 lần)
+      let remaining = 3;
+      setCountdown(remaining);
+      countdownTimerRef.current = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+          setCountdown(null);
+          doCapture();
+        } else {
+          setCountdown(remaining);
+        }
       }, 1e3);
     } else {
       doCapture();
@@ -84,10 +100,7 @@ const CameraModal = ({ isOpen, onClose, onCapture }) => {
     canvas.height = video.videoHeight || 960;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    if (facingMode === "user") {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-    }
+    // Khung xem trước được lật gương (CSS) cho dễ căn chỉnh, nhưng ảnh lưu KHÔNG lật để đúng chiều thật
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
     stopStream();
@@ -107,6 +120,7 @@ const CameraModal = ({ isOpen, onClose, onCapture }) => {
           </div>
           <button
     onClick={() => {
+      clearCountdown();
       stopStream();
       onClose();
     }}

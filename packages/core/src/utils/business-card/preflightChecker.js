@@ -1,3 +1,4 @@
+import { QrCodeService } from "./qrGenerator.js";
 export class PreflightVerificationService {
   /**
    * Evaluates a CardProject against commercial print standards
@@ -148,6 +149,24 @@ export class PreflightVerificationService {
           }
         }
         if (el.type === "qr") {
+          if (QrCodeService.isPlaceholderData(el.data)) {
+            issues.push({
+              id: `issue-qr-placeholder-${el.id}`,
+              severity: "critical",
+              ruleCode: "QR_PLACEHOLDER_URL",
+              title: `QR code points to a sample URL (${el.data || "empty"})`,
+              titleVi: `Mã QR đang trỏ tới URL mẫu (${el.data || "trống"})`,
+              titleEn: `QR code points to a sample URL (${el.data || "empty"})`,
+              titleJp: `QRコードがサンプルURLのままです (${el.data || "未設定"})`,
+              description: "Enter your own website/SNS or let auto-fix replace it with your vCard before printing.",
+              descriptionVi: "Hãy nhập website/SNS của bạn, hoặc dùng sửa tự động để thay bằng vCard của bạn trước khi in.",
+              descriptionEn: "Enter your own website/SNS or let auto-fix replace it with your vCard before printing.",
+              descriptionJp: "印刷前にご自身のWebサイト/SNSを入力するか、自動修正でvCard（連絡先）に置き換えてください。",
+              side: sideName,
+              elementId: el.id,
+              autoFixAvailable: true
+            });
+          }
           if (el.widthMm < 10 || el.heightMm < 10) {
             issues.push({
               id: `issue-qr-size-${el.id}`,
@@ -214,6 +233,19 @@ export class PreflightVerificationService {
         case "MIN_FONT_SIZE": {
           if (cloned.type === "text") {
             cloned.fontSizePt = 6;
+          }
+          break;
+        }
+        case "QR_PLACEHOLDER_URL": {
+          if (cloned.type === "qr") {
+            const site = project.profile?.website;
+            if (site && !QrCodeService.isPlaceholderData(site)) {
+              cloned.data = site;
+              cloned.qrType = "url";
+            } else {
+              cloned.data = QrCodeService.formatVCard(project.profile || {});
+              cloned.qrType = "vcard";
+            }
           }
           break;
         }

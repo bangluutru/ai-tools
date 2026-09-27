@@ -27,7 +27,20 @@ export class MinvoiceProviderAdapter extends BaseProviderAdapter {
     // 1. Spaced-out lookup code (e.g. "Mã tra cứu: J Y R E 6 7 V G 1 2 E T M 8 0 P D B R Y")
     const spacedMatch = text.match(/(?:mã\s+tra\s+cứu|mã\s+nhận\s+hóa\s+đơn|mã\s+bảo\s+mật|số\s+bảo\s+mật)\s*[:.]?\s*([A-Za-z0-9\-_* ]{10,80})/i);
     if (spacedMatch && spacedMatch[1]) {
-      const candidate = spacedMatch[1].replace(/\s+/g, '').trim();
+      // Chỉ ghép các ký tự rời ("J Y R E 6 7 ..."); gặp một từ dài hơn 2 ký tự
+      // là đã sang chữ tiếp theo ("Ngày", "Tra cứu tại") thì dừng, không nuốt vào mã.
+      const tokens = spacedMatch[1].trim().split(/\s+/).filter(Boolean);
+      let candidate = '';
+      if (tokens.length > 1 && tokens[0].length <= 2) {
+        const spaced = [];
+        for (const token of tokens) {
+          if (token.length > 2) break;
+          spaced.push(token);
+        }
+        candidate = spaced.join('');
+      } else {
+        candidate = tokens[0] ?? '';
+      }
       if (candidate.length >= 8 && /^[A-Za-z0-9\-_*]+$/.test(candidate)) {
         return sanitizeLookupCode(candidate);
       }

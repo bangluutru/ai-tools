@@ -5,6 +5,7 @@ import {
   generateSubjectMask,
   renderCompositeImage
 } from '../../utils/id-photo/backgroundRemoval.js';
+import { IMGLY_APPROX_DOWNLOAD_MB } from '../../utils/id-photo/mediapipeConfig.js';
 import { MaskBrushModal } from './MaskBrushModal.jsx';
 import {
   Sparkles,
@@ -28,8 +29,11 @@ const Step2Background = ({
   const [isProcessing, setIsProcessing] = useState(true);
   const [progressMsg, setProgressMsg] = useState(t.processingAi);
   const [progressPercent, setProgressPercent] = useState(20);
-  const [engine, setEngine] = useState("imgly_hd");
-  const [engineUsed, setEngineUsed] = useState("imgly_hd");
+  // Mặc định dùng MediaPipe (nhẹ). HD (@imgly, tải ~55 MB) chỉ chạy khi người dùng đồng ý.
+  const [engine, setEngine] = useState("mediapipe_fast");
+  const [engineUsed, setEngineUsed] = useState(null);
+  const [fallbackReason, setFallbackReason] = useState(null);
+  const [hdConsentOpen, setHdConsentOpen] = useState(false);
   const [maskCanvas, setMaskCanvas] = useState(null);
   const [selectedBgColor, setSelectedBgColor] = useState("#FFFFFF");
   const [useVignette, setUseVignette] = useState(false);
@@ -53,20 +57,22 @@ const Step2Background = ({
       setProgressPercent(10);
       setProgressMsg(t.loadingModel);
       setIsFallback(false);
+      setFallbackReason(null);
       try {
         const result = await generateSubjectMask(originalImage, {
           engine,
           threshold,
-          onProgress: (p) => {
+          onProgress: (p, phase) => {
             if (isMounted) {
               setProgressPercent(p);
-              setProgressMsg(format(t.extractingSubject, { percent: p }));
+              setProgressMsg(format(phase === "download" ? t.downloadingHdModel : t.extractingSubject, { percent: p }));
             }
           }
         });
         if (isMounted) {
           setMaskCanvas(result.maskCanvas);
           setEngineUsed(result.engineUsed);
+          setFallbackReason(result.requestedEngine !== result.engineUsed ? result.fallbackReason || "failed" : null);
           if (result.isFallback) {
             setIsFallback(true);
           }
@@ -83,9 +89,12 @@ const Step2Background = ({
     return () => {
       isMounted = false;
     };
-  }, [originalImage, engine, retryCount, threshold, t.loadingModel, t.extractingSubject, format]);
+  }, [originalImage, engine, retryCount, threshold, t.loadingModel, t.extractingSubject, t.downloadingHdModel, format]);
   useEffect(() => {
     if (!maskCanvas || !previewCanvasRef.current) return;
+    // Debounce: feather/choke/defringe là thao tác nặng trên toàn ảnh — chỉ vẽ lại khi slider dừng ~150ms
+    const timer = setTimeout(() => {
+    if (!previewCanvasRef.current) return;
     const composite = renderCompositeImage(
       originalImage,
       maskCanvas,
@@ -103,6 +112,8 @@ const Step2Background = ({
       ctx.clearRect(0, 0, preview.width, preview.height);
       ctx.drawImage(composite, 0, 0);
     }
+    }, 150);
+    return () => clearTimeout(timer);
   }, [originalImage, maskCanvas, selectedBgColor, useVignette, featherPx, chokePx, defringe]);
   const handleNext = () => {
     if (!maskCanvas) return;
@@ -137,7 +148,10 @@ const Step2Background = ({
       <div className="mx-auto flex max-w-lg items-center justify-center rounded-2xl border border-border-subtle bg-surface-container p-1.5 shadow-xs">
         <button
           type="button"
-          onClick={() => setEngine("imgly_hd")}
+          onClick={() => {
+            if (engine !== "imgly_hd") setHdConsentOpen(true);
+          }}
+          aria-pressed={engine === "imgly_hd"}
           className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 px-3 text-xs font-bold transition ${engine === "imgly_hd" ? "bg-primary-container text-on-primary-container shadow-xs" : "text-on-surface-variant hover:text-on-surface hover:bg-surface-subtle"}`}
         >
           <Sparkles className="h-3.5 w-3.5" />
@@ -146,13 +160,35 @@ const Step2Background = ({
 
         <button
           type="button"
-          onClick={() => setEngine("mediapipe_fast")}
+          onClick={() => {
+            setHdConsentOpen(false);
+            setEngine("mediapipe_fast");
+          }}
+          aria-pressed={engine === "mediapipe_fast"}
           className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 px-3 text-xs font-bold transition ${engine === "mediapipe_fast" ? "bg-primary-container text-on-primary-container shadow-xs" : "text-on-surface-variant hover:text-on-surface hover:bg-surface-subtle"}`}
         >
           <Zap className="h-3.5 w-3.5" />
           <span>{t.engineMediaPipe}</span>
         </button>
       </div>
+
+      {hdConsentOpen && (
+        <div role="dialog" aria-label={t.hdConsentTitle} className="mx-auto max-w-lg rounded-2xl border border-tertiary/30 bg-tertiary-container/10 p-4 text-xs space-y-2">
+          <p className="font-bold text-on-surface">{t.hdConsentTitle}</p>
+          <p className="text-on-surface-variant leading-relaxed">{format(t.hdConsentBody, { mb: IMGLY_APPROX_DOWNLOAD_MB })}</p>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button type="button" onClick={() => setHdConsentOpen(false)} className="rounded-lg border border-border-subtle px-3 py-1.5 text-on-surface-variant hover:bg-surface-subtle">
+              {t.cancel}
+            </button>
+            <button type="button" onClick={() => {
+              setHdConsentOpen(false);
+              setEngine("imgly_hd");
+            }} className="rounded-lg bg-primary-container px-3 py-1.5 font-bold text-on-primary-container">
+              {format(t.hdConsentAccept, { mb: IMGLY_APPROX_DOWNLOAD_MB })}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Grid: Preview on Left, Options on Right */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-12 items-start">
@@ -210,8 +246,11 @@ const Step2Background = ({
                 </span>
               ) : (
                 <span className="rounded-md bg-secondary/15 border border-secondary/30 px-2.5 py-1 text-[11px] font-bold text-secondary">
-                  {engineUsed === "imgly_hd" ? "✨ Studio HD" : "⚡ MediaPipe Fast"} {t.appliedBadge}
+                  {t.engineUsedLabel}: {engineUsed === "imgly_hd" ? t.engineNameHd : t.engineNameFast}
                 </span>
+              )}
+              {fallbackReason && engine === "imgly_hd" && (
+                <p role="status" className="w-full text-center text-[11px] text-tertiary">{t.hdFallbackNotice}</p>
               )}
             </div>
           )}
@@ -270,7 +309,7 @@ const Step2Background = ({
                   <span className="text-[11px] text-on-surface-variant">HEX:</span>
                   <input
                     type="text"
-                    aria-label="Mã màu HEX phông nền"
+                    aria-label={t.colorHex}
                     value={selectedBgColor}
                     onChange={(e) => setSelectedBgColor(e.target.value)}
                     className="w-20 rounded border border-border-subtle bg-surface-container px-1.5 py-0.5 text-center font-mono text-xs uppercase text-on-surface"

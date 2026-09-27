@@ -34,7 +34,7 @@ export const CONVERT_LIMITS = Object.freeze({
   maxFiles: 20,
   maxFileBytes: 50 * MIB,
   maxTotalBytes: 200 * MIB,
-  extensions: ['.docx', '.pptx', '.xlsx', '.pdf', '.png', '.jpg', '.jpeg', '.webp', '.svg', '.md', '.txt', '.csv'],
+  extensions: ['.docx', '.pptx', '.xlsx', '.xls', '.pdf', '.png', '.jpg', '.jpeg', '.webp', '.svg', '.bmp', '.md', '.txt', '.csv'],
 });
 
 /**
@@ -131,6 +131,9 @@ export function hasExpectedDocumentSignature(bytes, extension) {
   }
   if (ext === '.jpg' || ext === '.jpeg') {
     return bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+  if (ext === '.bmp') {
+    return bytes.length >= 2 && bytes[0] === 0x42 && bytes[1] === 0x4d;
   }
   if (ext === '.gif') {
     return bytes.length >= 6 && String.fromCharCode(...bytes.slice(0, 6)).startsWith('GIF8');

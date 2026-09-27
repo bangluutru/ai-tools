@@ -30,6 +30,9 @@ export default defineConfig({
           if (/\/node_modules\/(jszip|pako|lie|immediate|setimmediate|readable-stream|process-nextick-args|core-util-is|isarray|safe-buffer|string_decoder|util-deprecate|inherits)\//.test(id)) {
             return 'vendor-jszip';
           }
+          // Bản legacy (có polyfill cho Safari/Chrome cũ) dùng bởi utils/pdfjs.js; tách riêng để
+          // miniapp PDF không phải tải cả hai bản build của pdf.js.
+          if (id.includes('pdfjs-dist/legacy')) return 'vendor-pdfjs-legacy';
           if (id.includes('pdfjs-dist')) return 'vendor-pdfjs';
           if (id.includes('pdf-lib')) return 'vendor-pdf-lib';
           if (id.includes('/exceljs/')) return 'vendor-exceljs';

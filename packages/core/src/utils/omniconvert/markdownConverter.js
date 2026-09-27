@@ -1,4 +1,6 @@
 import mammoth from 'mammoth';
+import { escapeHtml } from './htmlPdfRenderer.js';
+import { markdownToHtml, markdownToRenderBlocks, MARKDOWN_DOCUMENT_CSS } from './markdownHtml.js';
 
 /**
  * Helper: Tạo base name từ tên tệp (bỏ extension)
@@ -45,13 +47,13 @@ export async function convertDocxToMd(file, _options = {}, onProgress = () => {}
  */
 export async function convertPdfToMd(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(10);
-  const { loadPdfDocument, extractPdfStructuredText } = await import('./pdfHelper.js');
+  const { withPdfDocument, extractPdfStructuredText } = await import('./pdfHelper.js');
   if (onProgress) onProgress(20);
-  const pdfDoc = await loadPdfDocument(file);
-
-  if (onProgress) onProgress(35);
-  const pagesData = await extractPdfStructuredText(pdfDoc, (p) => {
-    if (onProgress) onProgress(35 + Math.round(p * 0.45));
+  const pagesData = await withPdfDocument(file, (pdfDoc) => {
+    if (onProgress) onProgress(35);
+    return extractPdfStructuredText(pdfDoc, (p) => {
+      if (onProgress) onProgress(35 + Math.round(p * 0.45));
+    });
   });
 
   const mdSections = [];
@@ -447,144 +449,19 @@ function parseInlineFormatting(text, TextRunClass) {
 
 /**
  * 7. Chuyển đổi Markdown (.md) sang PDF
- * Render phân trang và dàn trang chữ chuẩn typographic A4 qua jsPDF
+ * Dựng HTML rồi chụp theo trang (xem htmlPdfRenderer.js): font chuẩn của jsPDF
+ * không có glyph tiếng Việt/Nhật nên vẽ chữ trực tiếp sẽ ra ký tự rác.
  */
 export async function convertMdToPdf(file, _options = {}, onProgress = () => {}) {
   if (onProgress) onProgress(20);
   const mdText = await file.text();
 
-  if (onProgress) onProgress(40);
-  const { jsPDF } = await import('jspdf');
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-
-  const pageWidth = 595.28;
-  const pageHeight = 841.89;
-  const marginX = 45;
-  const marginTop = 50;
-  const marginBottom = 50;
-  const usableWidth = pageWidth - marginX * 2;
-  const maxY = pageHeight - marginBottom;
-
-  let y = marginTop;
-
-  const checkPageBreak = (neededHeight) => {
-    if (y + neededHeight > maxY) {
-      pdf.addPage();
-      y = marginTop;
-    }
-  };
-
-  const lines = mdText.replace(/\r\n/g, '\n').split('\n');
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) {
-      y += 8;
-      continue;
-    }
-
-    // Tiêu đề
-    if (line.startsWith('# ')) {
-      checkPageBreak(35);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(18);
-      pdf.setTextColor(15, 23, 42);
-      const text = line.replace(/^#\s+/, '');
-      const wrapped = pdf.splitTextToSize(text, usableWidth);
-      for (const w of wrapped) {
-        pdf.text(w, marginX, y);
-        y += 24;
-      }
-      y += 6;
-      continue;
-    }
-
-    if (line.startsWith('## ')) {
-      checkPageBreak(28);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(14);
-      pdf.setTextColor(30, 41, 59);
-      const text = line.replace(/^##\s+/, '');
-      const wrapped = pdf.splitTextToSize(text, usableWidth);
-      for (const w of wrapped) {
-        pdf.text(w, marginX, y);
-        y += 18;
-      }
-      y += 4;
-      continue;
-    }
-
-    if (line.startsWith('### ')) {
-      checkPageBreak(22);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(12);
-      pdf.setTextColor(51, 65, 85);
-      const text = line.replace(/^###\s+/, '');
-      const wrapped = pdf.splitTextToSize(text, usableWidth);
-      for (const w of wrapped) {
-        pdf.text(w, marginX, y);
-        y += 15;
-      }
-      y += 4;
-      continue;
-    }
-
-    // Phân cách trang / đường kẻ
-    if (line.startsWith('---') || line.startsWith('***')) {
-      checkPageBreak(15);
-      pdf.setDrawColor(226, 232, 240);
-      pdf.line(marginX, y, marginX + usableWidth, y);
-      y += 15;
-      continue;
-    }
-
-    // Danh sách liệt kê
-    if (line.startsWith('- ') || line.startsWith('* ')) {
-      checkPageBreak(14);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(10.5);
-      pdf.setTextColor(51, 65, 85);
-      const bulletText = line.replace(/^[-*]\s+/, '').replace(/\*\*/g, '');
-      const wrapped = pdf.splitTextToSize(bulletText, usableWidth - 16);
-
-      pdf.text('•', marginX + 4, y);
-      for (let wIdx = 0; wIdx < wrapped.length; wIdx++) {
-        pdf.text(wrapped[wIdx], marginX + 16, y);
-        y += 14;
-      }
-      y += 2;
-      continue;
-    }
-
-    // Bảng biểu đơn giản
-    if (line.startsWith('|') && line.endsWith('|')) {
-      if (/^\|[\s\-:]+(\|[\s\-:]+)+\|$/.test(line)) continue;
-      checkPageBreak(14);
-      pdf.setFont('courier', 'normal');
-      pdf.setFontSize(9);
-      pdf.setTextColor(71, 85, 105);
-      const cells = line.slice(1, -1).split('|').map(c => c.trim()).join('   |   ');
-      pdf.text(cells, marginX, y);
-      y += 13;
-      continue;
-    }
-
-    // Văn bản thông thường
-    checkPageBreak(14);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(10.5);
-    pdf.setTextColor(30, 41, 59);
-    const cleanLine = line.replace(/\*\*/g, '').replace(/`/g, '');
-    const wrapped = pdf.splitTextToSize(cleanLine, usableWidth);
-    for (const w of wrapped) {
-      pdf.text(w, marginX, y);
-      y += 14;
-    }
-    y += 4;
-  }
-
-  if (onProgress) onProgress(85);
-  const pdfBlob = pdf.output('blob');
+  if (onProgress) onProgress(35);
+  const { renderBlocksToPdf } = await import('./htmlPdfRenderer.js');
+  const pdfBlob = await renderBlocksToPdf(markdownToRenderBlocks(mdText), {
+    css: MARKDOWN_DOCUMENT_CSS,
+    onProgress: (f) => onProgress && onProgress(35 + Math.round(f * 60)),
+  });
   const baseName = getBaseName(file.name, 'markdown');
 
   if (onProgress) onProgress(100);
@@ -638,71 +515,15 @@ export async function convertMdToHtml(file, _options = {}, onProgress = () => {}
   const md = await file.text();
 
   if (onProgress) onProgress(50);
-  // Trình chuyển đổi Markdown cơ bản sang HTML ngữ nghĩa an toàn
-  const lines = md.replace(/\r\n/g, '\n').split('\n');
-  const htmlParts = [];
-  let inCode = false;
-  let inTable = false;
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-
-    if (line.startsWith('```')) {
-      if (inCode) {
-        htmlParts.push('</code></pre>');
-        inCode = false;
-      } else {
-        htmlParts.push('<pre><code>');
-        inCode = true;
-      }
-      continue;
-    }
-
-    if (inCode) {
-      htmlParts.push(rawLine.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'));
-      continue;
-    }
-
-    if (line.startsWith('|') && line.endsWith('|')) {
-      if (/^\|[\s\-:]+(\|[\s\-:]+)+\|$/.test(line)) continue;
-      if (!inTable) {
-        htmlParts.push('<table><tbody>');
-        inTable = true;
-      }
-      const cells = line.slice(1, -1).split('|').map(c => `<td>${c.trim()}</td>`).join('');
-      htmlParts.push(`<tr>${cells}</tr>`);
-      continue;
-    } else if (inTable) {
-      htmlParts.push('</tbody></table>');
-      inTable = false;
-    }
-
-    if (!line) continue;
-
-    if (line.startsWith('# ')) {
-      htmlParts.push(`<h1>${line.slice(2)}</h1>`);
-    } else if (line.startsWith('## ')) {
-      htmlParts.push(`<h2>${line.slice(3)}</h2>`);
-    } else if (line.startsWith('### ')) {
-      htmlParts.push(`<h3>${line.slice(4)}</h3>`);
-    } else if (line.startsWith('- ') || line.startsWith('* ')) {
-      htmlParts.push(`<li>${line.slice(2)}</li>`);
-    } else if (line.startsWith('---')) {
-      htmlParts.push('<hr />');
-    } else {
-      htmlParts.push(`<p>${line}</p>`);
-    }
-  }
-
-  if (inTable) htmlParts.push('</tbody></table>');
-  if (inCode) htmlParts.push('</code></pre>');
+  // HTML thô trong Markdown được escape (không chạy script khi mở tệp .html).
+  const bodyHtml = markdownToHtml(md);
 
   const baseName = getBaseName(file.name, 'document');
   const fullHtml = `<!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>${baseName}</title>
+  <title>${escapeHtml(baseName)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 820px; margin: 40px auto; padding: 0 20px; line-height: 1.65; color: #1e293b; background: #f8fafc; }
     .card { background: #ffffff; padding: 48px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
@@ -711,6 +532,8 @@ export async function convertMdToHtml(file, _options = {}, onProgress = () => {}
     h3 { color: #334155; font-size: 16px; margin-top: 20px; }
     table { width: 100%; border-collapse: collapse; margin: 20px 0; }
     th, td { border: 1px solid #cbd5e1; padding: 10px 14px; text-align: left; font-size: 13px; }
+    th { background: #f1f5f9; }
+    blockquote { margin: 0 0 16px; padding: 8px 16px; border-left: 4px solid #cbd5e1; color: #475569; background: #f8fafc; }
     tr:nth-child(even) { background-color: #f1f5f9; }
     pre { background: #0f172a; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; }
     code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
@@ -719,7 +542,7 @@ export async function convertMdToHtml(file, _options = {}, onProgress = () => {}
 </head>
 <body>
   <div class="card">
-    ${htmlParts.join('\n')}
+    ${bodyHtml}
   </div>
 </body>
 </html>`;

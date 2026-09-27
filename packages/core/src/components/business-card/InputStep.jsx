@@ -13,7 +13,7 @@ import {
 import { CARD_DIMENSIONS, getDimensionDisplay } from "../../utils/business-card/cardSizes.js";
 import { SAMPLE_PROFILES } from "../../utils/business-card/samples.js";
 import { JAPANESE_PALETTE } from "../../utils/business-card/fonts.js";
-import { BusinessCardOcrService } from "../../utils/business-card/ocrParser.js";
+import { BusinessCardOcrService, OCR_FIELD_KEYS } from "../../utils/business-card/ocrParser.js";
 import { useLanguage } from "../../utils/business-card/LanguageContext.jsx";
 export const InputStep = ({
   profile,
@@ -31,6 +31,9 @@ export const InputStep = ({
   const { t, language } = useLanguage();
   const [isScanningOcr, setIsScanningOcr] = useState(false);
   const [ocrSuccessMsg, setOcrSuccessMsg] = useState(null);
+  const [ocrError, setOcrError] = useState(null);
+  const [ocrReview, setOcrReview] = useState(null);
+  const [ocrProgress, setOcrProgress] = useState(null);
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
   const updateField = (key, value) => {
@@ -41,25 +44,65 @@ export const InputStep = ({
   };
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
     setIsScanningOcr(true);
     setOcrSuccessMsg(null);
+    setOcrError(null);
+    setOcrReview(null);
+    setOcrProgress(null);
     try {
-      const result = await BusinessCardOcrService.extractFromImage(file);
-      onProfileChange({
-        ...profile,
-        ...result.profile,
-        brandColors: result.detectedColors.length ? result.detectedColors : profile.brandColors
+      const result = await BusinessCardOcrService.extractFromImage(file, {
+        onProgress: (p) => setOcrProgress(p)
       });
-      setOcrSuccessMsg(
-        language === "vi" ? `\u0110\xE3 qu\xE9t AI th\xE0nh c\xF4ng: \u0110\u1ED9 tin c\u1EADy ${(result.confidence * 100).toFixed(0)}%. Vui l\xF2ng ki\u1EC3m tra bi\u1EC3u m\u1EABu b\xEAn d\u01B0\u1EDBi.` : language === "en" ? `AI OCR Complete: ${(result.confidence * 100).toFixed(0)}% confidence. Please verify the extracted fields below.` : `AI\u30B9\u30AD\u30E3\u30F3\u5B8C\u4E86: \u8A8D\u8B58\u7CBE\u5EA6 ${(result.confidence * 100).toFixed(0)}% \u3067\u60C5\u5831\u3092\u62BD\u51FA\u3057\u307E\u3057\u305F\u3002\u4E0B\u306E\u5165\u529B\u6B04\u3067\u5185\u5BB9\u3092\u3054\u78BA\u8A8D\u304F\u3060\u3055\u3044\u3002`
-      );
+      const fields = OCR_FIELD_KEYS.filter((k) => result.profile[k]).map((k) => ({
+        key: k,
+        value: result.profile[k],
+        current: String(profile[k] || "").trim(),
+        // Chỉ tự chọn trường đang trống — không bao giờ ghi đè dữ liệu người dùng mà không hỏi
+        checked: !String(profile[k] || "").trim()
+      }));
+      setOcrReview({
+        confidence: result.confidence,
+        fields,
+        colors: result.detectedColors || [],
+        applyColors: false,
+        rawText: result.rawText
+      });
     } catch (err) {
       console.error(err);
+      setOcrError(err?.code === "OCR_NO_TEXT" ? t("ocrNoText") : t("ocrFailed"));
     } finally {
       setIsScanningOcr(false);
+      setOcrProgress(null);
     }
   };
+  const toggleOcrField = (key) => {
+    setOcrReview((prev) => prev ? { ...prev, fields: prev.fields.map((f) => f.key === key ? { ...f, checked: !f.checked } : f) } : prev);
+  };
+  const applyOcrReview = () => {
+    if (!ocrReview) return;
+    const accepted = ocrReview.fields.filter((f) => f.checked).map((f) => f.key);
+    const ocrProfile = Object.fromEntries(ocrReview.fields.map((f) => [f.key, f.value]));
+    const merged = BusinessCardOcrService.mergeOcrProfile(profile, ocrProfile, accepted);
+    if (ocrReview.applyColors && ocrReview.colors.length) merged.brandColors = ocrReview.colors;
+    onProfileChange(merged);
+    setOcrSuccessMsg(t("ocrAppliedMsg").replace("{count}", String(accepted.length)));
+    setOcrReview(null);
+  };
+  const ocrFieldLabel = (key) => ({
+    companyName: t("labelCompanyName"),
+    fullName: t("labelFullName"),
+    fullNameEn: t("labelFullNameEn"),
+    jobTitle: t("labelJobTitle"),
+    postalCode: t("labelPostal"),
+    address: t("labelAddress"),
+    phone: t("labelPhone"),
+    mobile: t("labelMobile"),
+    fax: "FAX",
+    email: t("labelEmail"),
+    website: t("labelWebsite")
+  })[key] || key;
   const handleLoadPreset = (presetId) => {
     const found = SAMPLE_PROFILES.find((p) => p.id === presetId);
     if (!found) return;
@@ -70,9 +113,7 @@ export const InputStep = ({
     } else {
       onOrientationChange("horizontal");
     }
-    setOcrSuccessMsg(
-      language === "vi" ? `\u0110\xE3 n\u1EA1p h\u1ED3 s\u01A1 m\u1EABu: ${found.label}` : language === "en" ? `Loaded sample profile: ${found.labelEn || found.label}` : `\u30B5\u30F3\u30D7\u30EB\u30C7\u30FC\u30BF\u300C${found.label}\u300D\u3092\u9069\u7528\u3057\u307E\u3057\u305F\u3002`
-    );
+    setOcrSuccessMsg(t("presetLoadedMsg").replace("{name}", language === "en" ? found.labelEn || found.label : language === "vi" ? found.labelVi || found.label : found.label));
   };
   const handleLogoUpload = (e) => {
     const file = e.target.files?.[0];
@@ -158,12 +199,22 @@ export const InputStep = ({
   />
 
             <div
-    onClick={() => fileInputRef.current?.click()}
+    onClick={() => !isScanningOcr && fileInputRef.current?.click()}
+    onDragOver={(e) => e.preventDefault()}
+    onDrop={(e) => {
+      e.preventDefault();
+      if (isScanningOcr) return;
+      const dropped = e.dataTransfer?.files;
+      if (dropped?.length) handleFileUpload({ target: { files: dropped, value: "" } });
+    }}
     className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${isScanningOcr ? "border-brand-500 bg-primary/10/50" : "border-border-subtle hover:border-brand-500 hover:bg-surface-canvas/80"}`}
   >
               {isScanningOcr ? <div className="flex flex-col items-center justify-center py-4">
                   <div className="w-8 h-8 border-3 border-brand-500 border-t-transparent rounded-full animate-spin mb-3" />
                   <p className="text-sm font-semibold text-primary">{t("ocrScanning")}</p>
+                  {ocrProgress && <p className="text-xs text-on-surface-variant mt-1">
+                      {ocrProgress.status === "recognizing text" ? t("ocrStatusRecognizing") : t("ocrStatusLoading")} {Math.round((ocrProgress.progress || 0) * 100)}%
+                    </p>}
                 </div> : <div className="flex flex-col items-center justify-center">
                   <UploadCloud className="w-10 h-10 text-outline mb-2" />
                   <p className="text-sm font-semibold text-on-surface-variant">
@@ -174,6 +225,50 @@ export const InputStep = ({
                   </p>
                 </div>}
             </div>
+            <p className="text-[11px] text-on-surface-variant mt-2 leading-relaxed">{t("ocrDownloadNotice")}</p>
+
+            {ocrError && <div role="alert" className="mt-3 p-3 rounded-lg bg-error/10 border border-error/30 text-error text-xs">{ocrError}</div>}
+
+            {ocrReview && <div className="mt-4 p-4 rounded-xl border border-border-subtle bg-surface-canvas space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-xs font-bold text-on-surface">{t("ocrReviewTitle")}</p>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-surface-subtle text-on-surface-variant">
+                    {t("ocrConfidence")}: {Math.round(ocrReview.confidence * 100)}%
+                  </span>
+                </div>
+                <p className="text-[11px] text-on-surface-variant">{t("ocrReviewHint")}</p>
+                {ocrReview.fields.length === 0 ? <p className="text-xs text-on-surface-variant">{t("ocrNoFields")}</p> : <ul className="space-y-1.5">
+                    {ocrReview.fields.map((f) => <li key={f.key}>
+                        <label className="flex items-start gap-2 text-xs cursor-pointer">
+                          <input type="checkbox" className="mt-0.5" checked={f.checked} onChange={() => toggleOcrField(f.key)} />
+                          <span className="min-w-0">
+                            <span className="font-semibold text-on-surface">{ocrFieldLabel(f.key)}:</span>{" "}
+                            <span className="text-on-surface break-all">{f.value}</span>
+                            {f.current && f.current !== f.value && <span className="block text-[11px] text-on-surface-variant break-all">
+                                {t("ocrCurrentValue")}: {f.current}
+                              </span>}
+                          </span>
+                        </label>
+                      </li>)}
+                  </ul>}
+                {ocrReview.colors.length > 0 && <label className="flex items-center gap-2 text-xs cursor-pointer">
+                    <input type="checkbox" checked={ocrReview.applyColors} onChange={() => setOcrReview((prev) => prev ? { ...prev, applyColors: !prev.applyColors } : prev)} />
+                    <span>{t("ocrApplyColors")}</span>
+                    {ocrReview.colors.map((c) => <span key={c} className="inline-block w-4 h-4 rounded-full border border-border-subtle" style={{ backgroundColor: c }} />)}
+                  </label>}
+                <details className="text-[11px] text-on-surface-variant">
+                  <summary className="cursor-pointer">{t("ocrRawText")}</summary>
+                  <pre className="mt-1 whitespace-pre-wrap break-all font-mono">{ocrReview.rawText}</pre>
+                </details>
+                <div className="flex flex-wrap gap-2 justify-end">
+                  <button type="button" onClick={() => setOcrReview(null)} className="px-3 py-1.5 text-xs rounded-lg border border-border-subtle text-on-surface-variant hover:bg-surface-subtle">
+                    {t("ocrDiscard")}
+                  </button>
+                  <button type="button" onClick={applyOcrReview} className="px-3 py-1.5 text-xs font-bold rounded-lg bg-primary text-on-primary hover:brightness-110">
+                    {t("ocrApplySelected")}
+                  </button>
+                </div>
+              </div>}
           </div>
 
           {

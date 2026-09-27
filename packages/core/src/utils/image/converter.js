@@ -1,12 +1,27 @@
 import { calculateSavedPercent } from './formatters.js';
-import { IMAGE_LIMITS } from './limits.js';
+import { isAnimatedGif, looksLikeGif } from './gif.js';
+import { IMAGE_LIMITS, getMaxCanvasPixels } from './limits.js';
 
 export const SUPPORTED_TARGET_FORMATS = Object.freeze({
   webp: { mime: 'image/webp', ext: '.webp', label: 'WebP' },
   avif: { mime: 'image/avif', ext: '.avif', label: 'AVIF' },
   jpg: { mime: 'image/jpeg', ext: '.jpg', label: 'JPEG' },
   jpeg: { mime: 'image/jpeg', ext: '.jpg', label: 'JPEG' },
+  // Chỉ xuất hiện khi trình duyệt tự đổi định dạng (vd Safari trả PNG khi xin WebP).
+  png: { mime: 'image/png', ext: '.png', label: 'PNG' },
 });
+
+const MIME_TO_FORMAT = Object.freeze({
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+});
+
+/** Định dạng thật của một Blob theo MIME (null nếu không nhận ra). */
+export function formatFromMime(mime) {
+  return MIME_TO_FORMAT[String(mime || '').split(';')[0].trim().toLowerCase()] || null;
+}
 
 /**
  * Checks if the browser's HTML5 Canvas natively supports encoding to a given MIME type
@@ -26,23 +41,89 @@ export function isCanvasMimeSupported(mime) {
 }
 
 /**
- * Encodes a canvas element to a Blob with support for WebP, AVIF, and JPEG
+ * Khả năng mã hoá của trình duyệt hiện tại, để giao diện tắt lựa chọn không dùng được.
+ * AVIF: canvas gốc (hiếm) hoặc WebCodecs (Chromium) — WebCodecs vẫn có thể thất bại
+ * lúc chạy, khi đó kết quả mang `fallbackFrom: 'avif'`.
+ */
+export function getEncoderSupport() {
+  return {
+    webp: isCanvasMimeSupported('image/webp'),
+    jpg: true,
+    avif: isCanvasMimeSupported('image/avif') || typeof VideoEncoder !== 'undefined',
+  };
+}
+
+/**
+ * Kích thước canvas đích: áp dụng giới hạn người dùng rồi giới hạn pixel của thiết bị
+ * (iOS ~16,7 MP). Trả `downscaledForDevice` nếu phải thu nhỏ thêm vì thiết bị.
+ */
+export function computeTargetDimensions(origWidth, origHeight, options = {}) {
+  const { maxWidth = null, maxHeight = null, keepAspectRatio = true, maxCanvasPixels = Infinity } = options;
+  let width = origWidth;
+  let height = origHeight;
+
+  if (maxWidth || maxHeight) {
+    const reqMaxW = maxWidth ? parseInt(maxWidth, 10) : origWidth;
+    const reqMaxH = maxHeight ? parseInt(maxHeight, 10) : origHeight;
+    if (keepAspectRatio) {
+      const ratio = Math.min(reqMaxW / origWidth, reqMaxH / origHeight);
+      if (ratio < 1) {
+        width = Math.round(origWidth * ratio);
+        height = Math.round(origHeight * ratio);
+      }
+    } else {
+      width = reqMaxW;
+      height = reqMaxH;
+    }
+  }
+
+  let downscaledForDevice = false;
+  if (width * height > maxCanvasPixels) {
+    const ratio = Math.sqrt(maxCanvasPixels / (width * height));
+    width = Math.max(1, Math.floor(width * ratio));
+    height = Math.max(1, Math.floor(height * ratio));
+    downscaledForDevice = true;
+  }
+  return { width, height, downscaledForDevice };
+}
+
+function toBlobAsync(canvas, mime, quality) {
+  return new Promise((resolve) => {
+    canvas.toBlob((b) => resolve(b), mime, quality);
+  });
+}
+
+/**
+ * Encodes a canvas element to a Blob with support for WebP, AVIF, and JPEG.
+ * Luôn đọc `blob.type`: Safari trả PNG khi xin WebP thay vì trả null, nên
+ * định dạng/đuôi tệp phải theo MIME thật chứ không theo lựa chọn.
  * @param {HTMLCanvasElement} canvas
  * @param {string} targetFormat - 'webp' | 'avif' | 'jpg' | 'jpeg'
  * @param {number} quality - 0.01 to 1.0
  * @returns {Promise<{ blob: Blob, actualFormat: string, actualMime: string, fallbackFrom?: string }>}
  */
-async function encodeCanvasToBlob(canvas, targetFormat, quality) {
+export async function encodeCanvasToBlob(canvas, targetFormat, quality) {
   const fmtKey = String(targetFormat || 'webp').toLowerCase();
   const normalizedQuality = Math.min(1, Math.max(0.01, Number(quality) || 0.85));
+  const requested = fmtKey === 'jpeg' ? 'jpg' : fmtKey;
+
+  const describe = (blob, fallbackFrom) => {
+    const actualFormat = formatFromMime(blob.type) || 'png';
+    const result = {
+      blob,
+      actualFormat,
+      actualMime: SUPPORTED_TARGET_FORMATS[actualFormat].mime,
+    };
+    const from = fallbackFrom || (actualFormat !== requested ? requested : null);
+    if (from) result.fallbackFrom = from;
+    return result;
+  };
 
   // 1. AVIF Format
   if (fmtKey === 'avif') {
-    // A. Native canvas toBlob('image/avif') if supported by browser (e.g. Safari 16.4+)
+    // A. Native canvas toBlob('image/avif') if supported by browser
     if (isCanvasMimeSupported('image/avif')) {
-      const nativeBlob = await new Promise((resolve) => {
-        canvas.toBlob((b) => resolve(b), 'image/avif', normalizedQuality);
-      });
+      const nativeBlob = await toBlobAsync(canvas, 'image/avif', normalizedQuality);
       if (nativeBlob && nativeBlob.type === 'image/avif') {
         return { blob: nativeBlob, actualFormat: 'avif', actualMime: 'image/avif' };
       }
@@ -65,35 +146,32 @@ async function encodeCanvasToBlob(canvas, targetFormat, quality) {
       }
     }
 
-    // C. Fallback to WebP if neither native canvas nor WebCodecs AVIF is available
-    const webpBlob = await new Promise((resolve) => {
-      canvas.toBlob((b) => resolve(b), 'image/webp', normalizedQuality);
-    });
-    if (webpBlob) {
-      return {
-        blob: webpBlob,
-        actualFormat: 'webp',
-        actualMime: 'image/webp',
-        fallbackFrom: 'avif',
-      };
-    }
+    // C. Fallback to WebP (or whatever the browser actually produces)
+    const fallbackBlob = await toBlobAsync(canvas, 'image/webp', normalizedQuality);
+    if (fallbackBlob) return describe(fallbackBlob, 'avif');
+    throw new Error('Không thể mã hoá ảnh (AVIF/WebP) từ canvas');
   }
 
   // 2. JPEG Format
   if (fmtKey === 'jpg' || fmtKey === 'jpeg') {
-    const jpegBlob = await new Promise((resolve) => {
-      canvas.toBlob((b) => resolve(b), 'image/jpeg', normalizedQuality);
-    });
+    const jpegBlob = await toBlobAsync(canvas, 'image/jpeg', normalizedQuality);
     if (!jpegBlob) throw new Error('Không thể tạo file JPEG từ canvas');
-    return { blob: jpegBlob, actualFormat: 'jpg', actualMime: 'image/jpeg' };
+    return describe(jpegBlob);
   }
 
   // 3. WebP Format (Default)
-  const webpBlob = await new Promise((resolve) => {
-    canvas.toBlob((b) => resolve(b), 'image/webp', normalizedQuality);
-  });
+  const webpBlob = await toBlobAsync(canvas, 'image/webp', normalizedQuality);
   if (!webpBlob) throw new Error('Không thể tạo file WebP từ canvas');
-  return { blob: webpBlob, actualFormat: 'webp', actualMime: 'image/webp' };
+  return describe(webpBlob);
+}
+
+async function detectAnimatedGif(file) {
+  if (!looksLikeGif(file) || typeof file.arrayBuffer !== 'function') return false;
+  try {
+    return isAnimatedGif(new Uint8Array(await file.arrayBuffer()));
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -125,6 +203,8 @@ export async function convertImage(file, options = {}) {
     throw new Error(`Ảnh vượt giới hạn ${Math.round(IMAGE_LIMITS.maxFileBytes / 1024 / 1024)} MiB`);
   }
 
+  const animatedSource = await detectAnimatedGif(file);
+
   return new Promise((resolve, reject) => {
     const sourceUrl = URL.createObjectURL(file);
     const cleanupAndReject = (error) => {
@@ -147,25 +227,16 @@ export async function convertImage(file, options = {}) {
           throw new Error(`Ảnh vượt giới hạn ${IMAGE_LIMITS.maxPixels.toLocaleString('vi-VN')} pixel`);
         }
 
-        let targetWidth = origWidth;
-        let targetHeight = origHeight;
-
-        // Handle resizing
-        if (maxWidth || maxHeight) {
-          const reqMaxW = maxWidth ? parseInt(maxWidth, 10) : origWidth;
-          const reqMaxH = maxHeight ? parseInt(maxHeight, 10) : origHeight;
-
-          if (keepAspectRatio) {
-            const ratio = Math.min(reqMaxW / origWidth, reqMaxH / origHeight);
-            if (ratio < 1) {
-              targetWidth = Math.round(origWidth * ratio);
-              targetHeight = Math.round(origHeight * ratio);
-            }
-          } else {
-            targetWidth = reqMaxW;
-            targetHeight = reqMaxH;
-          }
-        }
+        const {
+          width: targetWidth,
+          height: targetHeight,
+          downscaledForDevice,
+        } = computeTargetDimensions(origWidth, origHeight, {
+          maxWidth,
+          maxHeight,
+          keepAspectRatio,
+          maxCanvasPixels: getMaxCanvasPixels(),
+        });
 
         const canvas = document.createElement('canvas');
         canvas.width = targetWidth;
@@ -190,13 +261,18 @@ export async function convertImage(file, options = {}) {
         ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
         // Encode to desired format Blob
-        const { blob, actualFormat, actualMime, fallbackFrom } = await encodeCanvasToBlob(
-          canvas,
-          targetFormat,
-          quality
-        );
+        let encoded;
+        try {
+          encoded = await encodeCanvasToBlob(canvas, targetFormat, quality);
+        } finally {
+          // Giải phóng bộ nhớ canvas ngay (iOS giới hạn tổng bộ nhớ canvas).
+          canvas.width = 0;
+          canvas.height = 0;
+        }
+        const { blob, actualFormat, actualMime, fallbackFrom } = encoded;
 
         URL.revokeObjectURL(sourceUrl);
+        img.src = '';
 
         const formatMeta = SUPPORTED_TARGET_FORMATS[actualFormat] || SUPPORTED_TARGET_FORMATS.webp;
         const lastDotIndex = file.name.lastIndexOf('.');
@@ -232,6 +308,10 @@ export async function convertImage(file, options = {}) {
           savings: savedPercent,
           status: 'completed',
           fallbackFrom: fallbackFrom || null,
+          // GIF động: canvas chỉ lấy khung hình đầu tiên.
+          animatedSourceFlattened: animatedSource,
+          // Ảnh bị thu nhỏ thêm vì giới hạn canvas của thiết bị (iOS ~16,7 MP).
+          downscaledForDevice,
           convertedAt: new Date(),
         });
       } catch (err) {

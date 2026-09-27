@@ -1,32 +1,47 @@
-let faceDetectorInstance = null;
-let isInitializing = false;
-async function initFaceDetector() {
-  if (typeof window === "undefined") return null;
-  if (faceDetectorInstance) return faceDetectorInstance;
-  if (isInitializing) {
-    await new Promise((r) => setTimeout(r, 500));
-    if (faceDetectorInstance) return faceDetectorInstance;
-  }
-  try {
-    isInitializing = true;
-    const { FilesetResolver, FaceDetector } = await import("@mediapipe/tasks-vision");
-    const vision = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-    );
-    faceDetectorInstance = await FaceDetector.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",
-        delegate: "GPU"
-      },
-      runningMode: "IMAGE"
+import { FACE_DETECTOR_MODEL_URL, getVisionFileset } from './mediapipeConfig.js';
+let faceDetectorPromise = null;
+/** Creates the MediaPipe face detector once (cached promise → no init race). Resolves to null on failure. */
+function initFaceDetector() {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  if (!faceDetectorPromise) {
+    faceDetectorPromise = (async () => {
+      const { FaceDetector } = await import("@mediapipe/tasks-vision");
+      const vision = await getVisionFileset();
+      const create = (delegate) => FaceDetector.createFromOptions(vision, {
+        baseOptions: { modelAssetPath: FACE_DETECTOR_MODEL_URL, delegate },
+        runningMode: "IMAGE"
+      });
+      try {
+        return await create("GPU");
+      } catch (gpuErr) {
+        console.warn("MediaPipe FaceDetector GPU init failed, trying CPU:", gpuErr);
+        return await create("CPU");
+      }
+    })().catch((err) => {
+      console.warn("MediaPipe FaceDetector init failed, using fallback detector:", err);
+      faceDetectorPromise = null;
+      return null;
     });
-    return faceDetectorInstance;
-  } catch (err) {
-    console.warn("MediaPipe FaceDetector CDN init failed, using fallback detector:", err);
-    return null;
-  } finally {
-    isInitializing = false;
   }
+  return faceDetectorPromise;
+}
+/**
+ * Single head-geometry model shared by auto-framing and validation (so auto-align never
+ * produces a result that validation immediately rejects).
+ * From BlazeFace keypoints: chin ≈ mouth + 0.65·(eye→mouth); crown (incl. hair) ≈ eye − 1.1·(eye→chin).
+ * Returns source-pixel coordinates.
+ */
+function estimateHeadBounds(face) {
+  const eyeMidX = (face.landmarks.leftEye.x + face.landmarks.rightEye.x) / 2;
+  const eyeMidY = (face.landmarks.leftEye.y + face.landmarks.rightEye.y) / 2;
+  const mouthY = face.landmarks.mouthCenter.y;
+  const eyeToMouth = Math.max(10, mouthY - eyeMidY);
+  const chinY = mouthY + eyeToMouth * 0.65;
+  let crownY = eyeMidY - (chinY - eyeMidY) * 1.1;
+  // The detector box (brows→chin) × 1.15 is a lower bound for the full head height
+  const minHeight = (face.box?.height || 0) * 1.15;
+  if (chinY - crownY < minHeight) crownY = chinY - minHeight;
+  return { eyeMidX, eyeMidY, chinY, crownY, headHeight: chinY - crownY };
 }
 async function detectFace(source) {
   const width = source instanceof HTMLImageElement ? source.naturalWidth : source.width;
@@ -101,19 +116,14 @@ function detectFaceFallback(source) {
 function computeAutoFraming(face, imageWidth, imageHeight, standard) {
   const targetFaceRatio = (standard.faceHeightPercentMin + standard.faceHeightPercentMax) / 200;
   const targetTopMarginRatio = (standard.topMarginPercentMin + standard.topMarginPercentMax) / 200;
-  const eyeMidX = (face.landmarks.leftEye.x + face.landmarks.rightEye.x) / 2;
-  const eyeMidY = (face.landmarks.leftEye.y + face.landmarks.rightEye.y) / 2;
-  const mouthY = face.landmarks.mouthCenter.y;
-  const eyeToMouth = Math.max(10, mouthY - eyeMidY);
-  const chinY = mouthY + eyeToMouth * 0.55;
-  const crownY = eyeMidY - eyeToMouth * 1.25;
-  const estimatedHeadHeight = Math.max(face.box.height * 1.15, chinY - crownY);
+  const { eyeMidX, crownY, chinY, headHeight: estimatedHeadHeight } = estimateHeadBounds(face);
   const headCenterY = (crownY + chinY) / 2;
   const targetW = Math.round(standard.widthMm / 25.4 * 300);
   const targetH = Math.round(standard.heightMm / 25.4 * 300);
   const baseScale = Math.max(targetW / imageWidth, targetH / imageHeight);
   const desiredTotalScale = targetFaceRatio * targetH / estimatedHeadHeight;
   const rawScale = desiredTotalScale / baseScale;
+  // Keep full precision here: rounding the scale would shift the face size out of tight ranges
   const scale = Math.max(0.4, Math.min(3.5, rawScale));
   const effectiveTotalScale = baseScale * scale;
   const offsetX = (imageWidth / 2 - eyeMidX) * effectiveTotalScale;
@@ -121,14 +131,15 @@ function computeAutoFraming(face, imageWidth, imageHeight, standard) {
   const offsetY = targetHeadCenterY - targetH / 2 - (headCenterY - imageHeight / 2) * effectiveTotalScale;
   const rotation = -Math.round(face.tiltAngleDeg * 10) / 10;
   return {
-    scale: Math.round(scale * 100) / 100,
-    offsetX: Math.round(offsetX),
-    offsetY: Math.round(offsetY),
+    scale: Math.round(scale * 1e4) / 1e4,
+    offsetX: Math.round(offsetX * 10) / 10,
+    offsetY: Math.round(offsetY * 10) / 10,
     rotation: Math.abs(rotation) <= 15 ? rotation : 0
   };
 }
 export {
   computeAutoFraming,
   detectFace,
+  estimateHeadBounds,
   initFaceDetector
 };

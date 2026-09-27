@@ -174,10 +174,17 @@ export async function buildPaymentRequestWorkbook(invoices, options = {}) {
   return { workbook, totals };
 }
 
+export function localDateStamp(date) {
+  const pad = (value) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 export async function exportPaymentRequest(invoices, options = {}) {
   const generatedAt = options.generatedAt ?? new Date();
   const { workbook } = await buildPaymentRequestWorkbook(invoices, { generatedAt });
-  const stamp = generatedAt.toISOString().slice(0, 10);
+  // Ngày theo giờ máy người dùng: toISOString() là giờ UTC nên trước 7h sáng ở
+  // Việt Nam tên tệp sẽ mang ngày hôm trước.
+  const stamp = localDateStamp(generatedAt);
   await downloadWorkbook(workbook, `Bang_ke_De_Nghi_Thanh_Toan_${stamp}.xlsx`);
 }
 

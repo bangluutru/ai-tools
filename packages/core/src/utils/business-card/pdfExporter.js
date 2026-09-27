@@ -1,37 +1,118 @@
 import { jsPDF } from "jspdf";
 import { QrCodeService } from "./qrGenerator.js";
+import { setPngDpiBytes } from "./pngDpi.js";
+
+// Kích thước vùng lề ngoài chứa トンボ (tính từ mép bù xén), khoảng hở và chiều dài vạch.
+export const CROP_MARK_MARGIN_MM = 10;
+export const CROP_MARK_GAP_MM = 1;
+export const CROP_MARK_LENGTH_MM = 8;
+export const PRINT_MODES = ["tonbo", "bleed", "trim"];
+
+function resolveMode(options = {}) {
+  if (options.mode && PRINT_MODES.includes(options.mode)) return options.mode;
+  if (options.includeBleed === false) return "trim";
+  if (options.includeCropMarks === false) return "bleed";
+  return "tonbo";
+}
+
+/**
+ * Tính bố cục trang in (đơn vị mm):
+ *  - "tonbo": trang = thành phẩm + 2×(bù xén + lề 10mm); ảnh (kèm bù xén) đặt lệch vào trong,
+ *    トンボ góc (đường thành phẩm + đường bù xén) và トンボ giữa chỉ nằm ở lề ngoài, cách mép bù xén 1mm.
+ *  - "bleed": trang = thành phẩm + 2×bù xén (VD 97×61 cho 91×55), không có トンボ.
+ *  - "trim" : trang = kích thước thành phẩm.
+ */
+export function computePrintLayout(project, options = {}) {
+  const dim = project.dimension;
+  const isHoriz = project.orientation === "horizontal";
+  const trimW = isHoriz ? dim.widthMm : dim.heightMm;
+  const trimH = isHoriz ? dim.heightMm : dim.widthMm;
+  const mode = resolveMode(options);
+  const bleed = mode === "trim" ? 0 : dim.bleedMm || 0;
+  const margin = mode === "tonbo" ? CROP_MARK_MARGIN_MM : 0;
+  const artX = margin;
+  const artY = margin;
+  const artW = trimW + bleed * 2;
+  const artH = trimH + bleed * 2;
+  const pageW = artW + margin * 2;
+  const pageH = artH + margin * 2;
+  const trimX = artX + bleed;
+  const trimY = artY + bleed;
+  const marks = [];
+  if (mode === "tonbo") {
+    const gap = CROP_MARK_GAP_MM;
+    const len = Math.min(CROP_MARK_LENGTH_MM, margin - gap);
+    const left = artX;
+    const right = artX + artW;
+    const top = artY;
+    const bottom = artY + artH;
+    // Corner marks: at each corner, inner = trim line, outer = bleed line (二重トンボ)
+    const xLines = [trimX, left, trimX + trimW, right];
+    const yLines = [trimY, top, trimY + trimH, bottom];
+    // vertical ticks (x = const) above the top edge and below the bottom edge
+    for (const x of xLines) {
+      marks.push({ x1: x, y1: top - gap - len, x2: x, y2: top - gap, kind: "corner" });
+      marks.push({ x1: x, y1: bottom + gap, x2: x, y2: bottom + gap + len, kind: "corner" });
+    }
+    // horizontal ticks (y = const) left of the left edge and right of the right edge
+    for (const y of yLines) {
+      marks.push({ x1: left - gap - len, y1: y, x2: left - gap, y2: y, kind: "corner" });
+      marks.push({ x1: right + gap, y1: y, x2: right + gap + len, y2: y, kind: "corner" });
+    }
+    // Center marks (センタートンボ): a "+" shape centred in each margin
+    const cx = trimX + trimW / 2;
+    const cy = trimY + trimH / 2;
+    const half = Math.min(4, len / 2);
+    const midTop = top - gap - len / 2;
+    const midBottom = bottom + gap + len / 2;
+    const midLeft = left - gap - len / 2;
+    const midRight = right + gap + len / 2;
+    marks.push({ x1: cx, y1: top - gap - len, x2: cx, y2: top - gap, kind: "center" });
+    marks.push({ x1: cx - half, y1: midTop, x2: cx + half, y2: midTop, kind: "center" });
+    marks.push({ x1: cx, y1: bottom + gap, x2: cx, y2: bottom + gap + len, kind: "center" });
+    marks.push({ x1: cx - half, y1: midBottom, x2: cx + half, y2: midBottom, kind: "center" });
+    marks.push({ x1: left - gap - len, y1: cy, x2: left - gap, y2: cy, kind: "center" });
+    marks.push({ x1: midLeft, y1: cy - half, x2: midLeft, y2: cy + half, kind: "center" });
+    marks.push({ x1: right + gap, y1: cy, x2: right + gap + len, y2: cy, kind: "center" });
+    marks.push({ x1: midRight, y1: cy - half, x2: midRight, y2: cy + half, kind: "center" });
+  }
+  return { mode, pageW, pageH, artX, artY, artW, artH, trimX, trimY, trimW, trimH, bleed, margin, marks };
+}
+
+/** Collects the CSS font strings ("700 16px \"Noto Sans JP\", sans-serif") used by text elements. */
+export function collectFontDescriptors(sides) {
+  const set = new Set();
+  for (const side of sides) {
+    for (const el of side?.elements || []) {
+      if (el.type === "text" && el.fontFamily) {
+        set.add(`${el.fontWeight || "normal"} 16px ${el.fontFamily}`);
+      }
+    }
+  }
+  return [...set];
+}
+
+/** Waits (max ~6s) until every web font used by the given sides is loaded, so canvas text is not rendered with a fallback font. */
+export async function ensureFontsLoaded(sides, timeoutMs = 6e3) {
+  if (typeof document === "undefined" || !document.fonts?.load) return;
+  const descriptors = collectFontDescriptors(sides);
+  const sample = "\u3042\u6F22Aa1";
+  const loadAll = Promise.all(descriptors.map((d) => document.fonts.load(d, sample).catch(() => null)));
+  await Promise.race([loadAll, new Promise((resolve) => setTimeout(resolve, timeoutMs))]);
+  await document.fonts.ready;
+}
+
 export class BusinessCardPdfExporter {
   /**
-   * Draws Japanese Standard Crop Marks (トンボ / Tonbo)
+   * Draws Japanese crop marks (トンボ) from a computed layout — marks sit in the outer margin only.
    */
-  static drawJapaneseCropMarks(doc, w, h, bleed) {
+  static drawJapaneseCropMarks(doc, layout) {
+    if (!layout?.marks?.length) return;
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.1);
-    const markLen = 3;
-    doc.line(bleed, 0, bleed, markLen);
-    doc.line(0, bleed, markLen, bleed);
-    doc.line(0, 0, 0, markLen);
-    doc.line(0, 0, markLen, 0);
-    const rX = w - bleed;
-    doc.line(rX, 0, rX, markLen);
-    doc.line(w - markLen, bleed, w, bleed);
-    doc.line(w, 0, w, markLen);
-    doc.line(w - markLen, 0, w, 0);
-    const bY = h - bleed;
-    doc.line(bleed, h - markLen, bleed, h);
-    doc.line(0, bY, markLen, bY);
-    doc.line(0, h - markLen, 0, h);
-    doc.line(0, h, markLen, h);
-    doc.line(rX, h - markLen, rX, h);
-    doc.line(w - markLen, bY, w, bY);
-    doc.line(w, h - markLen, w, h);
-    doc.line(w - markLen, h, w, h);
-    const midX = w / 2;
-    const midY = h / 2;
-    doc.line(midX, 0, midX, markLen);
-    doc.line(midX, h - markLen, midX, h);
-    doc.line(0, midY, markLen, midY);
-    doc.line(w - markLen, midY, w, midY);
+    for (const m of layout.marks) {
+      doc.line(m.x1, m.y1, m.x2, m.y2);
+    }
   }
   /**
    * Renders a single CardSide onto a high-res HTML5 Canvas buffer
@@ -52,9 +133,7 @@ export class BusinessCardPdfExporter {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas context unavailable");
     ctx.scale(scale * mmToPx, scale * mmToPx);
-    if (typeof document !== "undefined" && document.fonts) {
-      await document.fonts.ready;
-    }
+    await ensureFontsLoaded([side]);
     ctx.fillStyle = side.backgroundColor || "#ffffff";
     ctx.fillRect(0, 0, totalWMm, totalHMm);
     if (side.paperTexture === "washi") {
@@ -259,69 +338,85 @@ export class BusinessCardPdfExporter {
     }
     return result;
   }
-  /**
-   * Generates a commercial-grade Print-Ready PDF
-   */
-  static async generatePrintPdf(project, options = {
-    includeBleed: true,
-    includeCropMarks: true,
-    dpi: 300,
-    colorMode: "cmyk_simulation"
-  }) {
-    const dim = project.dimension;
-    const isHoriz = project.orientation === "horizontal";
-    const cardW = isHoriz ? dim.widthMm : dim.heightMm;
-    const cardH = isHoriz ? dim.heightMm : dim.widthMm;
-    const bleed = options.includeBleed ? dim.bleedMm : 0;
-    const totalW = cardW + bleed * 2;
-    const totalH = cardH + bleed * 2;
-    const doc = new jsPDF({
-      orientation: isHoriz ? "landscape" : "portrait",
-      unit: "mm",
-      format: [totalW, totalH],
-      compress: true
-    });
-    const frontCanvas = await this.renderSideToCanvas(project.front, project, {
-      includeBleed: options.includeBleed,
+  /** Adds one rendered side as a page using the given layout. */
+  static async addSidePage(doc, side, project, layout, isFirstPage) {
+    const orientation = layout.pageW >= layout.pageH ? "landscape" : "portrait";
+    if (!isFirstPage) doc.addPage([layout.pageW, layout.pageH], orientation);
+    const canvas = await this.renderSideToCanvas(side, project, {
+      includeBleed: layout.bleed > 0,
       scale: 3.125
     });
-    const frontImgData = frontCanvas.toDataURL("image/jpeg", 0.98);
-    doc.addImage(frontImgData, "JPEG", 0, 0, totalW, totalH);
-    if (options.includeCropMarks && options.includeBleed) {
-      this.drawJapaneseCropMarks(doc, totalW, totalH, bleed);
-    }
-    if (project.isDoubleSided) {
-      doc.addPage([totalW, totalH], isHoriz ? "landscape" : "portrait");
-      const backCanvas = await this.renderSideToCanvas(project.back, project, {
-        includeBleed: options.includeBleed,
-        scale: 3.125
-      });
-      const backImgData = backCanvas.toDataURL("image/jpeg", 0.98);
-      doc.addImage(backImgData, "JPEG", 0, 0, totalW, totalH);
-      if (options.includeCropMarks && options.includeBleed) {
-        this.drawJapaneseCropMarks(doc, totalW, totalH, bleed);
-      }
-    }
-    doc.setProperties({
-      title: `${project.title || "Meishi"} - Print Artwork`,
-      subject: `Print-ready business card (${totalW}x${totalH}mm with 3mm bleed)`,
-      author: "Meishi Studio AI Name Card Maker",
-      keywords: "Business Card, Meishi, Raksul, Graphic, Printpac, Bleed 3mm",
-      creator: "Meishi Studio Production Engine"
+    // Ảnh raster 300 DPI (JPEG chất lượng cao) — không phải PDF vector
+    doc.addImage(canvas.toDataURL("image/jpeg", 0.98), "JPEG", layout.artX, layout.artY, layout.artW, layout.artH);
+    this.drawJapaneseCropMarks(doc, layout);
+  }
+  static createDoc(layout) {
+    return new jsPDF({
+      orientation: layout.pageW >= layout.pageH ? "landscape" : "portrait",
+      unit: "mm",
+      format: [layout.pageW, layout.pageH],
+      compress: true
     });
+  }
+  static setDocProperties(doc, project, layout) {
+    const modeLabel = layout.mode === "tonbo" ? `bleed ${layout.bleed}mm + crop marks` : layout.mode === "bleed" ? `bleed ${layout.bleed}mm, no crop marks` : "trim size";
+    doc.setProperties({
+      title: `${project.title || "Business card"} - Print Artwork`,
+      subject: `Business card ${layout.trimW}x${layout.trimH}mm (${modeLabel}), 300 DPI raster image`,
+      author: "Toolio",
+      keywords: "Business Card, Meishi, 300 DPI",
+      creator: "Toolio Business Card Studio"
+    });
+  }
+  /**
+   * Generates a print PDF (300 DPI raster artwork).
+   * options.mode: "tonbo" (bleed + トンボ in an outer margin, default) | "bleed" (bleed only, e.g. 97×61mm) | "trim"
+   */
+  static async generatePrintPdf(project, options = {}) {
+    const layout = computePrintLayout(project, options);
+    await ensureFontsLoaded([project.front, project.isDoubleSided ? project.back : null].filter(Boolean));
+    const doc = this.createDoc(layout);
+    await this.addSidePage(doc, project.front, project, layout, true);
+    if (project.isDoubleSided) {
+      await this.addSidePage(doc, project.back, project, layout, false);
+    }
+    this.setDocProperties(doc, project, layout);
     return doc;
   }
   /**
-   * Generates high-resolution PNG image proofs
+   * Generates one PDF containing the cards of several projects (batch employees).
    */
-  static async generateProofPng(project, side) {
+  static async generateBatchPdf(projects, options = {}, onProgress) {
+    if (!projects.length) throw new Error("NO_PROJECTS");
+    const layout = computePrintLayout(projects[0], options);
+    const doc = this.createDoc(layout);
+    let first = true;
+    for (let i = 0; i < projects.length; i++) {
+      onProgress?.(i + 1, projects.length);
+      const p = projects[i];
+      await this.addSidePage(doc, p.front, p, layout, first);
+      first = false;
+      if (p.isDoubleSided) {
+        await this.addSidePage(doc, p.back, p, layout, false);
+      }
+    }
+    this.setDocProperties(doc, projects[0], layout);
+    return doc;
+  }
+  /**
+   * Generates a 300 DPI PNG proof (trim size) as a Blob, with pHYs DPI metadata.
+   */
+  static async generateProofPngBlob(project, side) {
     const targetSide = side === "front" ? project.front : project.back;
     const canvas = await this.renderSideToCanvas(targetSide, project, {
       includeBleed: false,
-      // Clean finished trim size for proof
       scale: 3.125
       // 300 DPI
     });
-    return canvas.toDataURL("image/png");
+    const raw = await new Promise((resolve, reject) => {
+      canvas.toBlob((b) => b ? resolve(b) : reject(new Error("CANVAS_EXPORT_FAILED")), "image/png");
+    });
+    const bytes = setPngDpiBytes(new Uint8Array(await raw.arrayBuffer()), 300);
+    return new Blob([bytes], { type: "image/png" });
   }
 }

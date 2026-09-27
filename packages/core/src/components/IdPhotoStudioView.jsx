@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { I18nProvider, useTranslation } from '../utils/id-photo/i18n/index.jsx';
-import { ToolBreadcrumb } from './shared/StandardToolLayout.jsx';
 import { StepWizard } from './id-photo/StepWizard.jsx';
 import { Step1Upload } from './id-photo/Step1Upload.jsx';
 import { Step2Background } from './id-photo/Step2Background.jsx';
@@ -95,7 +94,7 @@ function IdPhotoAppContent() {
 
   // Reset
   const handleReset = () => {
-    if (window.confirm(t.confirmReset || 'Bạn có chắc muốn làm lại từ đầu?')) {
+    if (window.confirm(t.confirmReset)) {
       setOriginalImage(null);
       setCompositeImage(null);
       setMaskCanvas(null);
@@ -109,14 +108,8 @@ function IdPhotoAppContent() {
     <div className="flex flex-col w-full text-on-surface">
       {/* 1. BREADCRUMB & TOOL HEADER */}
       <section className="w-full pb-8">
-        <ToolBreadcrumb
-          items={[
-            { label: 'Trang chủ', href: '#' },
-            { label: 'Hình ảnh & WebP', href: '#' },
-            { label: 'Tạo Ảnh Thẻ & Hộ Chiếu ICAO' },
-          ]}
-        />
-        <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-xl relative overflow-hidden mt-3">
+        {/* Điều hướng về hub do ToolContainer cung cấp (nút "Về Trung Tâm"); không dùng breadcrumb href="#" */}
+        <div className="bg-surface-container border border-border-subtle rounded-xl p-6 shadow-xl relative overflow-hidden">
           {/* Ambient Glow */}
           <div className="absolute -right-20 -top-20 w-96 h-96 bg-primary-container/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute right-40 -bottom-24 w-80 h-80 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
@@ -133,7 +126,7 @@ function IdPhotoAppContent() {
                   </h1>
                 </div>
                 <p className="text-sm text-on-surface-variant max-w-3xl leading-relaxed">
-                  {t.appSubtitle || 'Cắt ghép ảnh thẻ theo tiêu chuẩn quốc tế ICAO, tự động xóa nền thông minh và thay phông xanh/trắng, dàn trang in ấn 3x4, 4x6, hộ chiếu trực tiếp trên trình duyệt mà không cần cài đặt Photoshop.'}
+                  {t.appSubtitle}
                 </p>
               </div>
             </div>
@@ -141,7 +134,7 @@ function IdPhotoAppContent() {
             <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-3 min-w-0">
               <div className="flex items-center gap-1.5 text-xs text-on-surface-variant">
                 <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
-                <span className="break-words">Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
+                <span className="break-words">{t.privacyLine}</span>
               </div>
               <div className="flex items-center gap-2">
                 <button

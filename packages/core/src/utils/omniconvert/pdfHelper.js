@@ -1,45 +1,46 @@
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Cấu hình Worker an toàn cho PDF.js
-try {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version || '6.2.108'}/build/pdf.worker.min.mjs`;
-} catch {
-  console.warn('PDF.js worker initialization notice');
-}
-
 /**
- * Tải document PDF từ File hoặc ArrayBuffer
+ * Tải document PDF từ File, Blob hoặc ArrayBuffer.
+ * Người gọi phải `destroy()` tài liệu khi dùng xong (xem `withPdfDocument`).
  */
 export async function loadPdfDocument(fileOrBuffer) {
-  let arrayBuffer;
-  if (fileOrBuffer instanceof File || fileOrBuffer instanceof Blob) {
-    arrayBuffer = await fileOrBuffer.arrayBuffer();
-  } else if (fileOrBuffer instanceof ArrayBuffer) {
-    arrayBuffer = fileOrBuffer;
-  } else {
+  if (!(fileOrBuffer instanceof Blob) && !(fileOrBuffer instanceof ArrayBuffer) && !ArrayBuffer.isView(fileOrBuffer)) {
     throw new Error('Dữ liệu PDF không hợp lệ');
   }
-
-  const loadingTask = pdfjsLib.getDocument({
-    data: new Uint8Array(arrayBuffer),
-    cMapUrl: 'https://unpkg.com/pdfjs-dist@6.2.108/cmaps/',
-    cMapPacked: true,
-  });
-
-  return await loadingTask.promise;
+  // Nạp động: bộ nạp pdf.js chứa import `?url` của Vite, chỉ cần khi thật sự mở PDF.
+  const { openPdfDocument } = await import('../pdfjs.js');
+  return openPdfDocument(fileOrBuffer);
 }
+
+/** Mở PDF, chạy `fn(pdfDoc)` rồi luôn giải phóng worker/bộ nhớ của pdf.js. */
+export async function withPdfDocument(fileOrBuffer, fn) {
+  const pdfDoc = await loadPdfDocument(fileOrBuffer);
+  try {
+    return await fn(pdfDoc);
+  } finally {
+    const { destroyPdfDocument } = await import('../pdfjs.js');
+    await destroyPdfDocument(pdfDoc);
+  }
+}
+
+/** Trần số điểm ảnh cho một trang render: canvas lớn hơn làm tab trình duyệt sập. */
+export const MAX_RENDER_PIXELS = 36_000_000;
 
 /**
  * Render 1 trang PDF ra Canvas HTML5
  */
 export async function renderPdfPageToCanvas(pdfDoc, pageNum, scale = 2.0) {
   const page = await pdfDoc.getPage(pageNum);
-  const viewport = page.getViewport({ scale });
+  let viewport = page.getViewport({ scale });
+  const pixels = viewport.width * viewport.height;
+  if (pixels > MAX_RENDER_PIXELS) {
+    // Trang khổ lớn (bản vẽ A0…) ở scale 3 vượt giới hạn canvas → hạ scale.
+    viewport = page.getViewport({ scale: scale * Math.sqrt(MAX_RENDER_PIXELS / pixels) });
+  }
 
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d', { alpha: false });
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
+  canvas.width = Math.floor(viewport.width);
+  canvas.height = Math.floor(viewport.height);
 
   // Background trắng
   context.fillStyle = '#ffffff';
@@ -50,7 +51,11 @@ export async function renderPdfPageToCanvas(pdfDoc, pageNum, scale = 2.0) {
     viewport: viewport,
   };
 
-  await page.render(renderContext).promise;
+  try {
+    await page.render(renderContext).promise;
+  } finally {
+    page.cleanup();
+  }
   return canvas;
 }
 
@@ -66,6 +71,7 @@ export async function extractPdfStructuredText(pdfDoc, onProgress) {
     const page = await pdfDoc.getPage(i);
     const textContent = await page.getTextContent();
     const viewport = page.getViewport({ scale: 1.0 });
+    page.cleanup();
 
     const items = textContent.items.map(item => ({
       text: item.str,

@@ -6,6 +6,21 @@ import {
   verifyDocumentSignature,
 } from '../utils/documentFiles.js';
 import confetti from 'canvas-confetti';
+import { canvasToBlob, writeCanvasToClipboard } from '../utils/screenCapture/clipboardImage.js';
+import { downloadBlob, extensionForMime } from '../utils/screenCapture/download.js';
+import {
+  REDACT_FILL_THRESHOLD,
+  applyRedaction,
+  effectiveBlockSize,
+} from '../utils/screenCapture/redact.js';
+import {
+  HISTORY_MAX_EDGE,
+  readHistory,
+  scaleToFit,
+  upsertHistoryItem,
+  writeHistory,
+} from '../utils/screenCapture/history.js';
+import { SCREEN_CAPTURE_I18N, formatMessage } from '../utils/screenCapture/i18n.js';
 import {
   Camera,
   Clipboard,
@@ -46,247 +61,7 @@ import {
 // =====================================================================
 // Translations & Design Constants
 // =====================================================================
-const i18n = {
-  vi: {
-    breadcrumbCategory: 'Tiện ích & Studio',
-    toolTitle: 'Chụp Màn Hình',
-    pipelineId: 'PIPELINE ID: CAPTURE-ANNOTATE-V2.4.8-STU',
-    tagStudio: 'Studio',
-    tagOffline: 'Offline Client-Side',
-    tagVector: 'Vector Annotate',
-    btnDrafts: 'Lịch sử nháp',
-    btnShortcuts: 'Phím tắt',
-    toolDesc:
-      'Chụp trực tiếp từ màn hình/cửa sổ/tab hoặc dán nhanh ảnh chụp màn hình (Ctrl+V) từ Clipboard. Thêm đánh số bước tự động (1, 2, 3), làm mờ che vùng nhạy cảm (Blur/Pixelate), viền mũi tên, hộp nổi bật, bo góc mượt mà và xuất ảnh sắc nét chuẩn HD/Retina.',
-    privacyTitle: 'BẢO MẬT CLIENT-SIDE 100%',
-    privacyBadge: 'ISO-27001 ISOLATED',
-    privacyDesc:
-      'Toàn bộ xử lý hình ảnh và gắn nhãn vẽ vector diễn ra trực tiếp trong bộ nhớ RAM trình duyệt của bạn với Canvas API, không gửi bất kỳ ảnh màn hình nào lên server.',
-    step1Title: 'Thu Nhận & Tải Ảnh Màn Hình',
-    step1Ready: 'Sẵn sàng',
-    btnCaptureApi: 'Chụp Màn Hình / Tab (Screen Capture API)',
-    btnPreparing: 'Đang khởi tạo máy ảnh...',
-    timerInstant: '0s (Tức thì)',
-    dropzoneTitle: 'Bấm Ctrl + V để dán trực tiếp từ Clipboard',
-    dropzoneSubtitle: 'hoặc kéo thả tệp ảnh (PNG, JPG, WebP tối đa 50MB)',
-    loadedBadge: 'ĐÃ NẠP SẴN SÀNG',
-    btnReplace: 'Thay ảnh',
-    btnClear: 'Xóa ảnh',
-    step2Title: 'Hộp Công Cụ Chú Thích & Tùy Biến',
-    step2Badge: 'VECTOR GRAPHICS',
-    tools: {
-      step: 'Đánh số bước',
-      stepSub: 'Tự động (1, 2, 3)',
-      arrow: 'Mũi tên chỉ dẫn',
-      arrowSub: 'Arrow & Callout',
-      rect: 'Khung nổi bật',
-      rectSub: 'Focus Rectangle',
-      circle: 'Hình tròn',
-      circleSub: 'Oval & Circle',
-      blur: 'Làm mờ & Che',
-      blurSub: 'Blur / Pixelate',
-      pen: 'Bút vẽ',
-      penSub: 'Freehand Line',
-      highlight: 'Dạ quang',
-      highlightSub: 'Glow Highlight',
-      text: 'Thêm chữ viết',
-      textSub: 'Rich Text Note',
-    },
-    labelAccentColor: 'Màu sắc điểm nhấn:',
-    labelStepStyle: 'Kiểu dáng số bước:',
-    stepStyleSolid: 'Nền đặc',
-    stepStyleOutline: 'Viền nét',
-    stepStyleGlow: 'Hào quang',
-    labelBlurIntensity: 'Cường độ làm mờ bảo mật:',
-    labelCornerRadius: 'Bo góc ảnh xuất khẩu:',
-    labelEffects: 'Viền đệm & Đổ bóng:',
-    softShadow: 'Soft Shadow',
-    paddingCanvas: 'Padding 32px',
-    primaryCta: 'Kết Xuất Ảnh Chú Thích Siêu Nét (.PNG / Retina)',
-    previewTitle: 'Khung Trực Quan Tương Tác',
-    previewBadge: 'LIVE WORKSPACE',
-    btnUndo: 'Hoàn tác (Ctrl+Z)',
-    btnRedo: 'Làm lại (Ctrl+Y)',
-    btnClearAll: 'Xóa tất cả lớp vẽ',
-    btnResnip: 'Cắt / Chọn lại vùng',
-    btnFullScreen: 'Lấy toàn màn hình',
-    snipGuideTitle: 'Kéo chuột để chọn vùng cần cắt',
-    snipAutoCopyBadge: 'Nhả chuột = Tự động Copy Clipboard!',
-    bannerLiveSynced: '🎉 Đã tự động cập nhật vào Clipboard (Bao gồm đầy đủ nét vẽ vừa chỉnh sửa)!',
-    bannerAutoCopied: '🎉 Đã tự động copy vào Clipboard! Nhấn Ctrl+V để dán ngay hoặc vẽ thêm chú thích bên dưới.',
-    metricDimensions: 'KÍCH THƯỚC THÀNH PHẨM',
-    metricScale: 'Scale 2x Retina UHD',
-    metricSize: 'DUNG LƯỢNG ƯỚC TÍNH',
-    metricLossless: 'Nén lossless PNG',
-    metricLayers: 'LỚP CHÚ THÍCH (LAYERS)',
-    metricActive: 'Lớp Active',
-    btnDownloadEmerald: 'Tải Ảnh PNG Siêu Nét (Độ phân giải cao)',
-    btnCopy: 'Sao chép ảnh (Ctrl+C)',
-    btnCopied: 'Đã Sao Chép!',
-    assuranceTitle: 'Tiêu Chuẩn Đồ Họa & Bảo Mật Dữ Liệu',
-    card1Title: 'Chụp Chuẩn Screen Capture API',
-    card1Desc:
-      'Bảo đảm tỷ lệ điểm ảnh chuẩn Retina với DPR 2.0x hoặc 3.0x gốc từ hệ thống. Ảnh giữ nguyên độ sắc nét cao nhất, văn bản hiển thị trong suốt không bị mờ nhòe răng cưa ngay cả khi trình chiếu trên màn hình 4K.',
-    card2Title: 'Bảo Vệ Quyền Riêng Tư (Censorship)',
-    card2Desc:
-      'Thuật toán che mờ tác động trực tiếp lên mảng byte điểm ảnh (RGBA pixel data) trên Canvas trước khi render, bảo đảm dữ liệu số thẻ, mật khẩu hoặc danh tính cá nhân không thể bị dịch ngược hay khôi phục.',
-    card3Title: 'Khung Ảnh Chuẩn Khổ Truyền Thông',
-    card3Desc:
-      'Tự động thiết lập vùng viền đệm mềm mại (Padding 32px Canvas) cùng hiệu ứng đổ bóng đa lớp studio (Soft Shadow). Ảnh xuất bản sẵn sàng để nhúng ngay vào tài liệu kỹ thuật, Notion, Slack hoặc Jira.',
-    emptyStagePrompt: 'Chưa có ảnh nào được nạp',
-    emptyStageDesc: 'Bấm nút chụp màn hình, dán ảnh từ Clipboard (Ctrl+V) hoặc tải tệp lên để bắt đầu biên tập chú thích.',
-  },
-  en: {
-    breadcrumbCategory: 'Utilities & Studio',
-    toolTitle: 'Screen Capture',
-    pipelineId: 'PIPELINE ID: CAPTURE-ANNOTATE-V2.4.8-STU',
-    tagStudio: 'Studio',
-    tagOffline: 'Offline Client-Side',
-    tagVector: 'Vector Annotate',
-    btnDrafts: 'Draft History',
-    btnShortcuts: 'Shortcuts',
-    toolDesc:
-      'Capture directly from screen/window/tab or paste screenshots (Ctrl+V) from Clipboard. Add auto step numbers (1, 2, 3), blur/pixelate sensitive areas, arrows, focus boxes, smooth corners, and export ultra-sharp HD/Retina images.',
-    privacyTitle: '100% CLIENT-SIDE PRIVACY',
-    privacyBadge: 'ISO-27001 ISOLATED',
-    privacyDesc:
-      'All image processing and vector annotation take place directly in your browser memory via the Canvas API. No screenshots are ever sent to any server.',
-    step1Title: 'Acquire & Load Screenshot',
-    step1Ready: 'Ready',
-    btnCaptureApi: 'Capture Screen / Tab (Screen Capture API)',
-    btnPreparing: 'Initializing display capture...',
-    timerInstant: '0s (Instant)',
-    dropzoneTitle: 'Press Ctrl + V to paste directly from Clipboard',
-    dropzoneSubtitle: 'or drag and drop an image file (PNG, JPG, WebP up to 50MB)',
-    loadedBadge: 'READY LOADED',
-    btnReplace: 'Replace',
-    btnClear: 'Remove',
-    step2Title: 'Annotation & Customization Toolbox',
-    step2Badge: 'VECTOR GRAPHICS',
-    tools: {
-      step: 'Step counter',
-      stepSub: 'Auto (1, 2, 3)',
-      arrow: 'Guide arrow',
-      arrowSub: 'Arrow & Callout',
-      rect: 'Focus frame',
-      rectSub: 'Focus Rectangle',
-      circle: 'Circle',
-      circleSub: 'Oval & Circle',
-      blur: 'Blur & Mask',
-      blurSub: 'Blur / Pixelate',
-      pen: 'Brush',
-      penSub: 'Freehand Line',
-      highlight: 'Highlighter',
-      highlightSub: 'Glow Highlight',
-      text: 'Text note',
-      textSub: 'Rich Text Note',
-    },
-    labelAccentColor: 'Accent Color:',
-    labelStepStyle: 'Step Badge Style:',
-    stepStyleSolid: 'Solid',
-    stepStyleOutline: 'Outline',
-    stepStyleGlow: 'Glow',
-    labelBlurIntensity: 'Censorship Blur Intensity:',
-    labelCornerRadius: 'Export Corner Radius:',
-    labelEffects: 'Padding & Shadow:',
-    softShadow: 'Soft Shadow',
-    paddingCanvas: 'Padding 32px',
-    primaryCta: 'Export Ultra-Sharp Annotation Image (.PNG / Retina)',
-    previewTitle: 'Interactive Live Viewport',
-    previewBadge: 'LIVE WORKSPACE',
-    btnUndo: 'Undo (Ctrl+Z)',
-    btnRedo: 'Redo (Ctrl+Y)',
-    btnClearAll: 'Clear all layers',
-    btnResnip: 'Resnip / Crop area',
-    btnFullScreen: 'Use Full Screen',
-    snipGuideTitle: 'Drag over image to select region',
-    snipAutoCopyBadge: 'Release mouse = Auto-Copied to Clipboard!',
-    bannerLiveSynced: '🎉 Clipboard automatically updated with your latest annotations!',
-    bannerAutoCopied: '🎉 Auto-copied to Clipboard! Press Ctrl+V to paste into Slack/Zalo or annotate below.',
-    metricDimensions: 'FINAL DIMENSIONS',
-    metricScale: 'Scale 2x Retina UHD',
-    metricSize: 'ESTIMATED SIZE',
-    metricLossless: 'Lossless PNG',
-    metricLayers: 'ANNOTATION LAYERS',
-    metricActive: 'Active Layers',
-    btnDownloadEmerald: 'Download Ultra-HD PNG Image',
-    btnCopy: 'Copy Image (Ctrl+C)',
-    btnCopied: 'Copied!',
-    assuranceTitle: 'Graphic Standards & Data Security',
-    card1Title: 'Retina-Calibrated Screen Capture API',
-    card1Desc:
-      'Guarantees system-native DPR 2.0x/3.0x pixel ratios. Images preserve pristine clarity and crisp typography without blur on 4K monitors.',
-    card2Title: 'Privacy-First Pixel Censorship',
-    card2Desc:
-      'The blur algorithm operates directly on Canvas RGBA pixel byte arrays, preventing reversal or recovery of masked confidential information.',
-    card3Title: 'Publication-Ready Studio Framing',
-    card3Desc:
-      'Automatically applies 32px canvas padding with multi-layer ambient shadow, ready for direct embedding into Notion, Slack, Jira, or technical wikis.',
-    emptyStagePrompt: 'No screenshot loaded yet',
-    emptyStageDesc: 'Click the capture button, paste from clipboard (Ctrl+V), or upload an image file to start editing.',
-  },
-  ja: {
-    breadcrumbCategory: '便利ツール＆スタジオ',
-    toolTitle: '画面キャプチャ',
-    pipelineId: 'PIPELINE ID: CAPTURE-ANNOTATE-V2.4.8-STU',
-    tagStudio: 'スタジオ',
-    tagOffline: 'オフライン・ローカル',
-    tagVector: 'ベクター注釈',
-    btnDrafts: '履歴',
-    btnShortcuts: 'ショートカット',
-    toolDesc:
-      '画面・ウィンドウ・タブから直接キャプチャ、またはクリップボード（Ctrl+V）から貼り付け。自動ステップ番号、ぼかし、矢印、枠線を追加し、高解像度HD/Retinaで出力。',
-    privacyTitle: '100% ブラウザ内プライバシー処理',
-    privacyBadge: 'ISO-27001 ISOLATED',
-    privacyDesc:
-      'すべての画像処理とベクター描画はブラウザのメモリ内（Canvas API）で完結し、サーバーに画像を送信しません。',
-    step1Title: 'スクリーンショットの取得・読み込み',
-    step1Ready: '準備完了',
-    btnCaptureApi: '画面 / タブをキャプチャ (Screen Capture API)',
-    btnPreparing: 'キャプチャの初期化中...',
-    timerInstant: '0秒 (即時)',
-    dropzoneTitle: 'Ctrl + V でクリップボードから直接貼り付け',
-    dropzoneSubtitle: 'または画像ファイル（PNG、JPG、WebP 最大50MB）をドラッグ＆ドロップ',
-    loadedBadge: '読み込み完了',
-    btnReplace: '画像を変更',
-    btnClear: '削除',
-    step2Title: '注釈・カスタマイズツールボックス',
-    step2Badge: 'VECTOR GRAPHICS',
-    tools: {
-      step: 'ステップ番号',
-      stepSub: '自動 (1, 2, 3)',
-      arrow: 'ガイド矢印',
-      arrowSub: '矢印＆引き出し線',
-      rect: '枠線・ハイライト',
-      rectSub: 'ボックス',
-      blur: '機密部分のぼかし',
-      blurSub: 'Pixelate / Blur',
-      text: 'テキスト注釈',
-      textSub: '文字入力',
-      crop: '切り抜き',
-      cropSub: '領域トリミング',
-    },
-    canvasColorLabel: 'アクセントカラー',
-    canvasStrokeLabel: '線の太さ',
-    canvasShadowLabel: '外枠の影 (Soft Shadow)',
-    canvasPaddingLabel: '余白パディング',
-    canvasCornerLabel: '角丸',
-    btnExportPng: 'PNG画像を保存 (HD)',
-    btnExportJpg: 'JPG画像を保存',
-    btnCopyClipboard: 'クリップボードにコピー',
-    toastCopied: 'クリップボードに画像をコピーしました！',
-    toastDownloaded: '画像をダウンロードしました！',
-    assuranceTitle: 'グラフィック標準とデータセキュリティ',
-    card1Title: 'Retina対応キャプチャAPI',
-    card1Desc: 'システムネイティブのDPR 2.0x/3.0x解像度を保持し、4Kディスプレイでも鮮明さを維持します。',
-    card2Title: '機密保護ピクセルモザイク',
-    card2Desc: 'CanvasのRGBAバイト配列に直接ぼかしを適用し、不可逆なマスキングを保証します。',
-    card3Title: '文書・チャット向けスタジオ枠',
-    card3Desc: '32pxの余白と影効果を自動設定し、NotionやSlackに美しく貼り付けられます。',
-    emptyStagePrompt: '画像が読み込まれていません',
-    emptyStageDesc: 'キャプチャボタンを押すか、Ctrl+Vで貼り付けるか、ファイルをアップロードしてください。',
-  },
-};
+const i18n = SCREEN_CAPTURE_I18N;
 
 const COLOR_PALETTE = [
   { value: '#0ea5e9', label: 'Sky Blue (Primary)' },
@@ -304,52 +79,32 @@ const CORNER_OPTIONS = [
   { value: 24, label: '24px' },
 ];
 
-// Helper: Copy canvas to clipboard as image/png
-async function copyCanvasToClipboard(canvas) {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        reject(new Error('Không thể tạo image blob từ canvas.'));
-        return;
-      }
-      try {
-        if (!navigator.clipboard || !navigator.clipboard.write) {
-          throw new Error('Clipboard API không được hỗ trợ trên trình duyệt này.');
-        }
-        const clipboardItem = new ClipboardItem({ 'image/png': blob });
-        await navigator.clipboard.write([clipboardItem]);
-        resolve(true);
-      } catch (err) {
-        reject(err);
-      }
-    }, 'image/png');
-  });
-}
-
-// Helper: Capture display media
+// Helper: Capture display media.
+// getDisplayMedia phải được gọi ngay trong cú bấm (Safari/Chrome đòi "user activation"),
+// nên bộ đếm ngược chạy SAU khi người dùng đã chọn màn hình, trước khi chụp khung hình.
 async function captureDisplayMedia(countdownSeconds = 0) {
-  if (countdownSeconds > 0) {
-    await new Promise((resolve) => setTimeout(resolve, countdownSeconds * 1000));
-  }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-    throw new Error('Trình duyệt không hỗ trợ Web Screen Capture API.');
+    throw Object.assign(new Error('Screen Capture API unsupported'), { code: 'UNSUPPORTED' });
   }
 
   const stream = await navigator.mediaDevices.getDisplayMedia({
     video: { displaySurface: 'monitor', frameRate: { ideal: 30, max: 60 } },
     audio: false,
   });
+  const stopStream = () => stream.getTracks().forEach((track) => track.stop());
 
   const video = document.createElement('video');
   video.srcObject = stream;
   video.autoplay = true;
   video.muted = true;
+  video.playsInline = true;
 
   return new Promise((resolve, reject) => {
     video.onloadedmetadata = async () => {
       try {
         await video.play();
-        await new Promise((r) => setTimeout(r, 150));
+        const waitMs = countdownSeconds > 0 ? countdownSeconds * 1000 : 150;
+        await new Promise((r) => setTimeout(r, waitMs));
 
         const width = video.videoWidth;
         const height = video.videoHeight;
@@ -357,24 +112,26 @@ async function captureDisplayMedia(countdownSeconds = 0) {
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Không thể khởi tạo Canvas 2D.');
+        if (!ctx) throw new Error('Canvas 2D unavailable');
 
         ctx.drawImage(video, 0, 0, width, height);
-        stream.getTracks().forEach((track) => track.stop());
+        stopStream();
         video.srcObject = null;
 
         const dataUrl = canvas.toDataURL('image/png');
+        canvas.width = 0;
+        canvas.height = 0;
         const img = new Image();
         img.onload = () => resolve({ dataUrl, width, height, image: img });
         img.onerror = (err) => reject(err);
         img.src = dataUrl;
       } catch (err) {
-        stream.getTracks().forEach((track) => track.stop());
+        stopStream();
         reject(err);
       }
     };
     video.onerror = (err) => {
-      stream.getTracks().forEach((track) => track.stop());
+      stopStream();
       reject(err);
     };
   });
@@ -383,7 +140,7 @@ async function captureDisplayMedia(countdownSeconds = 0) {
 // Helper: Read clipboard image
 async function readImageFromClipboard() {
   if (!navigator.clipboard || !navigator.clipboard.read) {
-    throw new Error('Trình duyệt chưa cấp quyền đọc Clipboard.');
+    throw Object.assign(new Error('Clipboard read unsupported'), { code: 'READ_UNSUPPORTED' });
   }
   const items = await navigator.clipboard.read();
   for (const item of items) {
@@ -407,6 +164,14 @@ async function readImageFromClipboard() {
   return null;
 }
 
+// Giải phóng bộ nhớ canvas tạm (quan trọng trên iOS, nơi tổng bộ nhớ canvas bị giới hạn).
+function releaseCanvas(canvas, keep) {
+  if (canvas && canvas !== keep) {
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+}
+
 // Helper: Format bytes
 function formatBytes(bytes) {
   if (!bytes || bytes <= 0) return '0 KB';
@@ -422,6 +187,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
 
   // Workflow Stage: 'idle' | 'snipping' | 'editing'
   const [fileError, setFileError] = useState('');
+  const [infoBanner, setInfoBanner] = useState(null); // { kind: 'success' | 'warn', text }
   const [stage, setStage] = useState('idle');
 
   // Image states
@@ -429,6 +195,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   const [baseImage, setBaseImage] = useState(null);
   const [loadedFileName, setLoadedFileName] = useState('screenshot_capture.png');
   const [loadedFileSize, setLoadedFileSize] = useState(0);
+  const [outputPngSize, setOutputPngSize] = useState(0);
 
   // Annotations
   const [annotations, setAnnotations] = useState([]);
@@ -439,11 +206,10 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   const [activeTool, setActiveTool] = useState('step'); // default 'step' per mockup
   const [color, setColor] = useState('#0ea5e9'); // default primary sky blue
   const [stepBadgeStyle, setStepBadgeStyle] = useState('solid'); // 'solid' | 'outline' | 'glow'
-  const [blurIntensity, setBlurIntensity] = useState(12);
+  const [blurIntensity, setBlurIntensity] = useState(16);
   const [cornerRadius, setCornerRadius] = useState(16);
   const [enableSoftShadow, setEnableSoftShadow] = useState(true);
   const [enablePadding, setEnablePadding] = useState(true);
-  const [stepCounter, setStepCounter] = useState(1);
 
   // Drawing in-progress states
   const [isDrawing, setIsDrawing] = useState(false);
@@ -468,46 +234,44 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [zoomFit, setZoomFit] = useState(true);
 
-  const [history, setHistory] = useState(() => {
-    try {
-      const saved = localStorage.getItem('snapcraft_history');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Chỉ ảnh đã kết xuất (đã che) mới được lưu — xem utils/screenCapture/history.js.
+  const [history, setHistory] = useState(() =>
+    typeof localStorage === 'undefined' ? [] : readHistory(localStorage)
+  );
+  const sessionIdRef = useRef(null);
+  // Chỉ tự đồng bộ Clipboard khi lần copy tự động đầu tiên thành công (Chromium);
+  // Safari/Firefox từ chối ghi ngoài thao tác người dùng nên tắt hẳn để không lỗi âm thầm.
+  const autoSyncRef = useRef(false);
 
   const fileInputRef = useRef(null);
   const editorCanvasRef = useRef(null);
   const snipCanvasRef = useRef(null);
 
-  // Save history to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('snapcraft_history', JSON.stringify(history.slice(0, 16)));
-    } catch {}
-  }, [history]);
+  const clipboardErrorText = useCallback(
+    (err) => {
+      if (err?.code === 'UNSUPPORTED') return t.errClipUnsupported;
+      if (err?.code === 'DENIED') return t.errClipDenied;
+      return `${t.errClipFailed}${err?.message ? `: ${err.message}` : ''}`;
+    },
+    [t]
+  );
 
-  const handleSaveToHistory = useCallback((dataUrl, w, h) => {
-    const newItem = {
-      id: Date.now().toString(),
-      timestamp: Date.now(),
-      dataUrl,
-      width: w,
-      height: h,
-      title: `Snapshot ${new Date().toLocaleTimeString()}`,
-    };
-    setHistory((prev) => [newItem, ...prev.filter((h) => h.dataUrl !== dataUrl)].slice(0, 16));
+  const persistHistory = useCallback((updater) => {
+    setHistory((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      return typeof localStorage === 'undefined' ? next : writeHistory(localStorage, next);
+    });
   }, []);
 
   // Load new raw capture helper -> enter snipping phase immediately
   const handleNewRawCapture = useCallback((img, fileName = 'screenshot_capture.png', sizeBytes = 0) => {
     setRawCaptureImage(img);
     setLoadedFileName(fileName);
-    setLoadedFileSize(sizeBytes || Math.round(img.naturalWidth * img.naturalHeight * 0.8));
+    setLoadedFileSize(sizeBytes || 0);
     setAnnotations([]);
     setRedoStack([]);
     setSnipSelection(null);
+    setInfoBanner(null);
     setStage('snipping');
   }, []);
 
@@ -519,9 +283,11 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       const timeStr = new Date().toISOString().replace(/[:.]/g, '-').slice(11, 19);
       handleNewRawCapture(result.image, `screenshot_${timeStr}.png`);
     } catch (err) {
-      if (err.name !== 'NotAllowedError' && err.message !== 'Permission denied') {
+      if (err?.code === 'UNSUPPORTED') {
+        setFileError(t.errCaptureUnsupported);
+      } else if (err?.name !== 'NotAllowedError' && err?.name !== 'AbortError') {
         console.error('Capture error:', err);
-        setFileError(`Capture error: ${err.message}`);
+        setFileError(`${t.errCapture}${err?.message ? `: ${err.message}` : ''}`);
       }
     } finally {
       setIsCapturing(false);
@@ -536,17 +302,19 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         const timeStr = new Date().toISOString().replace(/[:.]/g, '-').slice(11, 19);
         handleNewRawCapture(result.image, `clipboard_${timeStr}.png`);
       } else {
-        setFileError(langKey === 'vi' ? 'Không tìm thấy ảnh trong Clipboard!' : 'No image in clipboard!');
+        setFileError(t.errNoClipboardImage);
       }
     } catch (err) {
       console.error('Paste error:', err);
-      setFileError(`Paste error: ${err.message}`);
+      setFileError(t.errClipboardRead);
     }
-  }, [handleNewRawCapture, langKey]);
+  }, [handleNewRawCapture, t]);
 
   // Global paste event listener
   useEffect(() => {
     const onWindowPaste = (e) => {
+      const target = e.target;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
       const items = e.clipboardData?.items;
       if (!items) return;
       for (const item of items) {
@@ -581,7 +349,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       return;
     }
     if (!(await verifyDocumentSignature(file))) {
-      setFileError(`${file.name}: nội dung không phải ảnh hợp lệ`);
+      setFileError(`${file.name}: ${t.errNotImage}`);
       return;
     }
     setFileError('');
@@ -596,56 +364,107 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     reader.readAsDataURL(file);
   };
 
-  // AUTO-COPY on Area Confirmation -> Enter Editing Phase
+  // AUTO-COPY on Area Confirmation -> Enter Editing Phase.
+  // Ảnh gốc chưa che KHÔNG được lưu vào lịch sử ở bước này.
   const handleConfirmArea = useCallback(
     async (croppedImg) => {
       setBaseImage(croppedImg);
       setAnnotations([]);
       setRedoStack([]);
       setStage('editing');
+      sessionIdRef.current = `${Date.now()}`;
 
+      const canvas = document.createElement('canvas');
+      canvas.width = croppedImg.naturalWidth;
+      canvas.height = croppedImg.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.drawImage(croppedImg, 0, 0);
       try {
-        const canvas = document.createElement('canvas');
-        canvas.width = croppedImg.naturalWidth;
-        canvas.height = croppedImg.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(croppedImg, 0, 0);
-          await copyCanvasToClipboard(canvas);
-
-          confetti({
-            particleCount: 25,
-            spread: 50,
-            origin: { y: 0.8 },
-            colors: ['#0ea5e9', '#4edea3', '#ffb86e'],
-          });
-
-          const dataUrl = canvas.toDataURL('image/png');
-          handleSaveToHistory(dataUrl, canvas.width, canvas.height);
-        }
+        await writeCanvasToClipboard(canvas);
+        autoSyncRef.current = true;
+        setInfoBanner({ kind: 'success', text: t.bannerAutoCopied });
+        confetti({
+          particleCount: 25,
+          spread: 50,
+          origin: { y: 0.8 },
+          colors: ['#0ea5e9', '#4edea3', '#ffb86e'],
+        });
       } catch (err) {
+        // Safari/Firefox thường chặn tự động copy: báo rõ thay vì im lặng.
         console.warn('Auto-clipboard notice:', err);
+        autoSyncRef.current = false;
+        setInfoBanner({ kind: 'warn', text: t.bannerAutoCopyFailed });
+      } finally {
+        canvas.width = 0;
+        canvas.height = 0;
       }
     },
-    [handleSaveToHistory]
+    [t]
   );
 
-  // LIVE AUTO-SYNC TO CLIPBOARD ON ANNOTATIONS CHANGE
+  // Đo dung lượng PNG thật của vùng ảnh sau mỗi thay đổi (thay cho con số ước đoán)
+  // và, nếu trình duyệt cho phép, cập nhật Clipboard với bản đã chú thích/che.
   useEffect(() => {
-    if (stage !== 'editing' || !currentCanvas || !baseImage) return;
-
+    if (stage !== 'editing' || !currentCanvas || !baseImage) return undefined;
+    let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        await copyCanvasToClipboard(currentCanvas);
-        const dataUrl = currentCanvas.toDataURL('image/png');
-        handleSaveToHistory(dataUrl, currentCanvas.width, currentCanvas.height);
-      } catch (err) {
-        console.warn('Live sync notice:', err);
-      }
-    }, 120);
+        const blob = await canvasToBlob(currentCanvas, 'image/png');
+        if (cancelled) return;
+        setOutputPngSize(blob.size);
+        if (autoSyncRef.current && annotations.length > 0 && typeof ClipboardItem !== 'undefined') {
+          try {
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+            if (!cancelled) setInfoBanner({ kind: 'success', text: t.bannerLiveSynced });
+          } catch {
+            autoSyncRef.current = false;
+            if (!cancelled) setInfoBanner({ kind: 'warn', text: t.bannerAutoCopyFailed });
+          }
+        }
+      } catch {}
+    }, 500);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [annotations, stage, currentCanvas, baseImage, blurIntensity, t]);
 
-    return () => clearTimeout(timer);
-  }, [annotations, stage, currentCanvas, baseImage, handleSaveToHistory]);
+  // Lịch sử nháp chỉ nhận ảnh người dùng đã chủ động kết xuất (tải về / sao chép),
+  // tức là bản đã áp dụng vùng che — không bao giờ là ảnh chụp gốc.
+  const saveExportToHistory = useCallback(
+    (exportCanvas) => {
+      if (!exportCanvas || !sessionIdRef.current) return;
+      try {
+        const { width, height } = scaleToFit(exportCanvas.width, exportCanvas.height, HISTORY_MAX_EDGE);
+        const thumb = document.createElement('canvas');
+        thumb.width = width;
+        thumb.height = height;
+        const tctx = thumb.getContext('2d');
+        if (!tctx) return;
+        tctx.fillStyle = '#ffffff';
+        tctx.fillRect(0, 0, width, height);
+        tctx.drawImage(exportCanvas, 0, 0, width, height);
+        let dataUrl = thumb.toDataURL('image/webp', 0.85);
+        if (!dataUrl.startsWith('data:image/webp')) dataUrl = thumb.toDataURL('image/jpeg', 0.85);
+        thumb.width = 0;
+        thumb.height = 0;
+        const id = sessionIdRef.current;
+        persistHistory((prev) =>
+          upsertHistoryItem(prev, {
+            id,
+            timestamp: Date.now(),
+            dataUrl,
+            width: exportCanvas.width,
+            height: exportCanvas.height,
+          })
+        );
+      } catch (err) {
+        console.warn('Draft history notice:', err);
+      }
+    },
+    [persistHistory]
+  );
 
   // Render Snipping Selector Canvas
   useEffect(() => {
@@ -712,6 +531,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
   };
 
   const handleSnipPointerDown = (e) => {
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     const pt = getSnipCoords(e);
     setIsSelecting(true);
     setSnipStart(pt);
@@ -728,30 +548,29 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     setSnipSelection({ x, y, w, h });
   };
 
-  const handleSnipPointerUp = () => {
+  const handleSnipPointerUp = (e) => {
+    if (e?.currentTarget?.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    if (!isSelecting) return;
     setIsSelecting(false);
+    if (e?.type === 'pointercancel') return;
     if (snipSelection && snipSelection.w >= 15 && snipSelection.h >= 15) {
+      const sx = Math.round(snipSelection.x);
+      const sy = Math.round(snipSelection.y);
+      const sw = Math.round(snipSelection.w);
+      const sh = Math.round(snipSelection.h);
       const cropCanvas = document.createElement('canvas');
-      cropCanvas.width = Math.round(snipSelection.w);
-      cropCanvas.height = Math.round(snipSelection.h);
+      cropCanvas.width = sw;
+      cropCanvas.height = sh;
       const cropCtx = cropCanvas.getContext('2d');
       if (!cropCtx) return;
 
-      cropCtx.drawImage(
-        rawCaptureImage,
-        snipSelection.x,
-        snipSelection.y,
-        snipSelection.w,
-        snipSelection.h,
-        0,
-        0,
-        snipSelection.w,
-        snipSelection.h
-      );
+      cropCtx.drawImage(rawCaptureImage, sx, sy, sw, sh, 0, 0, sw, sh);
 
       const croppedImg = new Image();
       croppedImg.onload = () => handleConfirmArea(croppedImg);
       croppedImg.src = cropCanvas.toDataURL('image/png');
+      cropCanvas.width = 0;
+      cropCanvas.height = 0;
     }
   };
 
@@ -777,53 +596,6 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     ctx.fill();
     ctx.restore();
   };
-
-  const drawBlurRect = useCallback((ctx, x, y, w, h) => {
-    if (w === 0 || h === 0) return;
-    const rx = Math.min(x, x + w);
-    const ry = Math.min(y, y + h);
-    const rw = Math.abs(w);
-    const rh = Math.abs(h);
-    const blockSize = Math.max(4, blurIntensity);
-    try {
-      const imgData = ctx.getImageData(rx, ry, rw, rh);
-      const data = imgData.data;
-      for (let py = 0; py < rh; py += blockSize) {
-        for (let px = 0; px < rw; px += blockSize) {
-          let red = 0,
-            green = 0,
-            blue = 0,
-            count = 0;
-          for (let dy = 0; dy < blockSize && py + dy < rh; dy++) {
-            for (let dx = 0; dx < blockSize && px + dx < rw; dx++) {
-              const idx = ((py + dy) * rw + (px + dx)) * 4;
-              red += data[idx];
-              green += data[idx + 1];
-              blue += data[idx + 2];
-              count++;
-            }
-          }
-          if (count > 0) {
-            red = Math.floor(red / count);
-            green = Math.floor(green / count);
-            blue = Math.floor(blue / count);
-            for (let dy = 0; dy < blockSize && py + dy < rh; dy++) {
-              for (let dx = 0; dx < blockSize && px + dx < rw; dx++) {
-                const idx = ((py + dy) * rw + (px + dx)) * 4;
-                data[idx] = red;
-                data[idx + 1] = green;
-                data[idx + 2] = blue;
-              }
-            }
-          }
-        }
-      }
-      ctx.putImageData(imgData, rx, ry);
-    } catch {
-      ctx.fillStyle = 'rgba(11, 19, 38, 0.85)';
-      ctx.fillRect(rx, ry, rw, rh);
-    }
-  }, [blurIntensity]);
 
   const renderEditorCanvas = useCallback(() => {
     if (stage !== 'editing' || !baseImage || !editorCanvasRef.current) return;
@@ -879,7 +651,11 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
         ctx.stroke();
       } else if (ann.type === 'blur') {
-        drawBlurRect(ctx, ann.startX, ann.startY, ann.endX - ann.startX, ann.endY - ann.startY);
+        applyRedaction(
+          ctx,
+          { x: ann.startX, y: ann.startY, w: ann.endX - ann.startX, h: ann.endY - ann.startY },
+          ann.intensity ?? blurIntensity
+        );
       } else if (ann.type === 'text' && ann.text) {
         const fontSize = Math.max((ann.lineWidth || 4) * 4, 18);
         ctx.font = `bold ${fontSize}px Inter, sans-serif`;
@@ -995,7 +771,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     currentPenPoints,
     activeTool,
     color,
-    drawBlurRect,
+    blurIntensity,
   ]);
 
   useEffect(() => {
@@ -1010,42 +786,69 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: Math.max(0, Math.min(canvas.width, (e.clientX - rect.left) * scaleX)),
+      y: Math.max(0, Math.min(canvas.height, (e.clientY - rect.top) * scaleY)),
     };
   };
+
+  // Thêm một lớp mới luôn xoá nhánh "làm lại" (hành vi undo/redo chuẩn).
+  const addAnnotation = useCallback((annotation) => {
+    setAnnotations((prev) => [...prev, annotation]);
+    setRedoStack([]);
+  }, []);
+
+  const nextStepNumber = annotations.reduce(
+    (max, ann) => (ann.type === 'step' && ann.stepNumber > max ? ann.stepNumber : max),
+    0
+  ) + 1;
+
+  // Không lồng setState trong updater (StrictMode gọi updater hai lần → nhân đôi lớp).
+  const handleUndo = useCallback(() => {
+    if (annotations.length === 0) return;
+    const last = annotations[annotations.length - 1];
+    setAnnotations(annotations.slice(0, -1));
+    setRedoStack((stack) => [...stack, last]);
+  }, [annotations]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    const last = redoStack[redoStack.length - 1];
+    setRedoStack(redoStack.slice(0, -1));
+    setAnnotations((prev) => [...prev, last]);
+  }, [redoStack]);
 
   const handleEditorPointerDown = (e) => {
     if (!baseImage) return;
     const pt = getEditorCoords(e);
+
+    if (activeTool === 'text') {
+      setTextInputPosition(pt);
+      setTextInputValue('');
+      return;
+    }
+    if (activeTool === 'step') {
+      addAnnotation({
+        id: `${Date.now()}`,
+        type: 'step',
+        startX: pt.x,
+        startY: pt.y,
+        endX: pt.x,
+        endY: pt.y,
+        color,
+        badgeStyle: stepBadgeStyle,
+        lineWidth: 4,
+        stepNumber: nextStepNumber,
+      });
+      return;
+    }
+
+    // Giữ con trỏ trên canvas khi kéo ra ngoài (chuột lẫn cảm ứng).
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     setIsDrawing(true);
     setStartPoint(pt);
     setCurrentPoint(pt);
-
     if (activeTool === 'pen' || activeTool === 'highlight') {
       setCurrentPenPoints([pt]);
-    } else if (activeTool === 'text') {
-      setTextInputPosition(pt);
-      setTextInputValue('');
-      setIsDrawing(false);
-    } else if (activeTool === 'step') {
-      setAnnotations((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          type: 'step',
-          startX: pt.x,
-          startY: pt.y,
-          endX: pt.x,
-          endY: pt.y,
-          color,
-          badgeStyle: stepBadgeStyle,
-          lineWidth: 4,
-          stepNumber: stepCounter,
-        },
-      ]);
-      setStepCounter((s) => s + 1);
-      setIsDrawing(false);
     }
   };
 
@@ -1058,27 +861,26 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     }
   };
 
-  const handleEditorPointerUp = () => {
-    if (!isDrawing || !startPoint || !currentPoint) {
+  const handleEditorPointerUp = (e) => {
+    if (e?.currentTarget?.hasPointerCapture?.(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    if (!isDrawing || !startPoint || !currentPoint || e?.type === 'pointercancel') {
       setIsDrawing(false);
+      setCurrentPenPoints([]);
       return;
     }
     if (activeTool === 'pen' || activeTool === 'highlight') {
       if (currentPenPoints.length > 0) {
-        setAnnotations((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            type: activeTool,
-            startX: startPoint.x,
-            startY: startPoint.y,
-            endX: currentPoint.x,
-            endY: currentPoint.y,
-            points: currentPenPoints,
-            color,
-            lineWidth: 4,
-          },
-        ]);
+        addAnnotation({
+          id: `${Date.now()}`,
+          type: activeTool,
+          startX: startPoint.x,
+          startY: startPoint.y,
+          endX: currentPoint.x,
+          endY: currentPoint.y,
+          points: currentPenPoints,
+          color,
+          lineWidth: 4,
+        });
       }
     } else if (
       activeTool === 'arrow' ||
@@ -1088,19 +890,17 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     ) {
       const dist = Math.hypot(currentPoint.x - startPoint.x, currentPoint.y - startPoint.y);
       if (dist > 4) {
-        setAnnotations((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            type: activeTool,
-            startX: startPoint.x,
-            startY: startPoint.y,
-            endX: currentPoint.x,
-            endY: currentPoint.y,
-            color,
-            lineWidth: 4,
-          },
-        ]);
+        addAnnotation({
+          id: `${Date.now()}`,
+          type: activeTool,
+          startX: startPoint.x,
+          startY: startPoint.y,
+          endX: currentPoint.x,
+          endY: currentPoint.y,
+          color,
+          lineWidth: 4,
+          ...(activeTool === 'blur' ? { intensity: blurIntensity } : {}),
+        });
       }
     }
     setIsDrawing(false);
@@ -1109,27 +909,24 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
 
   const handleTextSubmit = () => {
     if (textInputPosition && textInputValue.trim()) {
-      setAnnotations((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          type: 'text',
-          startX: textInputPosition.x,
-          startY: textInputPosition.y,
-          endX: textInputPosition.x,
-          endY: textInputPosition.y,
-          color,
-          lineWidth: 4,
-          text: textInputValue.trim(),
-        },
-      ]);
+      addAnnotation({
+        id: `${Date.now()}`,
+        type: 'text',
+        startX: textInputPosition.x,
+        startY: textInputPosition.y,
+        endX: textInputPosition.x,
+        endY: textInputPosition.y,
+        color,
+        lineWidth: 4,
+        text: textInputValue.trim(),
+      });
     }
     setTextInputPosition(null);
     setTextInputValue('');
   };
 
   // Helper to generate the export-ready canvas (incorporating padding & soft shadow if toggled)
-  const getExportCanvas = () => {
+  const getExportCanvas = useCallback(() => {
     if (!currentCanvas) return null;
     if (!enablePadding && cornerRadius === 0) {
       return currentCanvas;
@@ -1155,7 +952,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     }
 
     ctx.save();
-    if (enableSoftShadow) {
+    if (enableSoftShadow && enablePadding) {
       ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
       ctx.shadowBlur = 24;
       ctx.shadowOffsetY = 12;
@@ -1171,51 +968,112 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
     ctx.restore();
 
     return exportCanvas;
-  };
+  }, [currentCanvas, enablePadding, cornerRadius, enableSoftShadow]);
 
-  // Manual Copy Handler with visual feedback
-  const handleManualCopy = async () => {
+  // Manual Copy Handler with visual feedback.
+  // Phải chạy đồng bộ trong cú bấm/phím: writeCanvasToClipboard tạo ClipboardItem ngay lập tức.
+  const handleManualCopy = useCallback(() => {
     const canvasToCopy = getExportCanvas() || currentCanvas;
     if (!canvasToCopy) return;
-    try {
-      await copyCanvasToClipboard(canvasToCopy);
-      setIsCopied(true);
-      confetti({
-        particleCount: 30,
-        spread: 55,
-        origin: { y: 0.85 },
-        colors: ['#0ea5e9', '#4edea3', '#ffb86e'],
-      });
-      setTimeout(() => setIsCopied(false), 2500);
-    } catch (err) {
-      setFileError(`Copy error: ${err.message}`);
-    }
-  };
+    writeCanvasToClipboard(canvasToCopy)
+      .then(() => {
+        setIsCopied(true);
+        setFileError('');
+        saveExportToHistory(currentCanvas);
+        confetti({
+          particleCount: 30,
+          spread: 55,
+          origin: { y: 0.85 },
+          colors: ['#0ea5e9', '#4edea3', '#ffb86e'],
+        });
+        setTimeout(() => setIsCopied(false), 2500);
+      })
+      .catch((err) => setFileError(clipboardErrorText(err)))
+      .finally(() => releaseCanvas(canvasToCopy, currentCanvas));
+  }, [getExportCanvas, currentCanvas, saveExportToHistory, clipboardErrorText]);
 
-  // Export / Download Handler
-  const handleDownload = (format = selectedFormat) => {
+  // Export / Download Handler — kiểm tra MIME thật (Safari trả PNG khi xin WebP).
+  const handleDownload = async (format = selectedFormat) => {
     const canvasToExport = getExportCanvas() || currentCanvas;
     if (!canvasToExport) return;
 
     const mimeType = format === 'jpeg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
-    const extension = format === 'jpeg' ? 'jpg' : format;
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const filename = `snapcraft_${timestamp}.${extension}`;
-    const dataUrl = canvasToExport.toDataURL(mimeType, format === 'jpeg' ? 0.92 : 0.95);
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    confetti({
-      particleCount: 25,
-      spread: 50,
-      origin: { y: 0.85 },
-      colors: ['#059669', '#4edea3', '#38bdf8'],
-    });
+    try {
+      let source = canvasToExport;
+      if (mimeType === 'image/jpeg' && canvasToExport === currentCanvas) {
+        // JPEG không có alpha: phủ nền trắng thay vì để trình duyệt tô đen.
+        source = document.createElement('canvas');
+        source.width = canvasToExport.width;
+        source.height = canvasToExport.height;
+        const sctx = source.getContext('2d');
+        sctx.fillStyle = '#ffffff';
+        sctx.fillRect(0, 0, source.width, source.height);
+        sctx.drawImage(canvasToExport, 0, 0);
+      }
+      const blob = await canvasToBlob(source, mimeType, format === 'jpeg' ? 0.92 : 0.95);
+      if (source !== canvasToExport) releaseCanvas(source, currentCanvas);
+      const actualExt = extensionForMime(blob.type, 'png');
+      const requestedExt = format === 'jpeg' ? 'jpg' : format;
+      downloadBlob(blob, `snapcraft_${timestamp}.${actualExt}`);
+      if (actualExt !== requestedExt) {
+        setInfoBanner({
+          kind: 'warn',
+          text: formatMessage(t.noticeFormatFallback, {
+            requested: requestedExt.toUpperCase(),
+            actual: actualExt.toUpperCase(),
+          }),
+        });
+      }
+      saveExportToHistory(currentCanvas);
+      confetti({
+        particleCount: 25,
+        spread: 50,
+        origin: { y: 0.85 },
+        colors: ['#059669', '#4edea3', '#38bdf8'],
+      });
+    } catch (err) {
+      setFileError(`${t.errExport}${err?.message ? `: ${err.message}` : ''}`);
+    } finally {
+      releaseCanvas(canvasToExport, currentCanvas);
+    }
   };
+
+  // Phím tắt được quảng cáo trong hộp "Phím tắt" — nay có xử lý thật.
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      const target = e.target;
+      const isTyping =
+        target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+
+      if (e.key === 'Escape') {
+        if (textInputPosition) setTextInputPosition(null);
+        else if (showShortcutsModal) setShowShortcutsModal(false);
+        else if (showHistoryModal) setShowHistoryModal(false);
+        else if (stage === 'snipping') setStage(baseImage ? 'editing' : 'idle');
+        return;
+      }
+      if (isTyping || !(e.ctrlKey || e.metaKey) || e.altKey) return;
+      const key = e.key.toLowerCase();
+
+      if (stage !== 'editing') return;
+      if (key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
+        e.preventDefault();
+        handleRedo();
+      } else if (key === 'c' && !e.shiftKey) {
+        // Nhường Ctrl+C cho văn bản đang được bôi đen trên trang.
+        const selection = window.getSelection?.();
+        if (selection && selection.toString().length > 0) return;
+        e.preventDefault();
+        handleManualCopy();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [stage, baseImage, textInputPosition, showShortcutsModal, showHistoryModal, handleUndo, handleRedo, handleManualCopy]);
 
   // Compute metrics for the strip
   const previewWidth = baseImage ? baseImage.naturalWidth : rawCaptureImage ? rawCaptureImage.naturalWidth : 0;
@@ -1228,7 +1086,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       <input
         ref={fileInputRef}
         type="file"
-        aria-label="Tải lên tệp ảnh chụp màn hình"
+        aria-label={t.uploadAria}
         accept="image/*"
         className="hidden"
         onChange={(e) => {
@@ -1241,15 +1099,38 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
 
       {/* ERROR BANNER */}
       {fileError && (
-        <div className="mb-space-4 p-space-3 bg-error-container/20 border border-error/30 rounded-xl flex items-center justify-between gap-space-3 text-error">
+        <div role="alert" className="mb-space-4 p-space-3 bg-error-container/20 border border-error/30 rounded-xl flex items-center justify-between gap-space-3 text-error">
           <div className="flex items-center gap-space-2 text-sm">
-            <span className="font-semibold">Lỗi:</span>
+            <span className="font-semibold">{t.errorPrefix}</span>
             <span>{fileError}</span>
           </div>
           <button
             type="button"
             onClick={() => setFileError('')}
+            aria-label={t.close}
             className="p-1 hover:bg-error-container/40 rounded transition"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* INFO BANNER (auto-copy / định dạng dự phòng) */}
+      {infoBanner && (
+        <div
+          role="status"
+          className={`mb-space-4 p-space-3 rounded-xl flex items-center justify-between gap-space-3 text-sm border ${
+            infoBanner.kind === 'success'
+              ? 'bg-secondary-container/15 border-secondary/30 text-secondary'
+              : 'bg-tertiary-container/15 border-tertiary/30 text-tertiary'
+          }`}
+        >
+          <span>{infoBanner.text}</span>
+          <button
+            type="button"
+            onClick={() => setInfoBanner(null)}
+            aria-label={t.close}
+            className="p-1 rounded hover:bg-surface-subtle transition"
           >
             <X className="w-4 h-4" />
           </button>
@@ -1260,7 +1141,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
       <nav className="flex items-center gap-space-2 text-on-surface-variant font-body-sm text-body-sm mb-space-4">
         <a href="#" className="hover:text-primary transition-colors flex items-center gap-space-1">
           <span className="material-symbols-outlined text-[16px]">home</span>
-          <span>Trang chủ</span>
+          <span>{t.home}</span>
         </a>
         <span className="text-outline">/</span>
         <a href="#" className="hover:text-primary transition-colors">
@@ -1309,7 +1190,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
         <p className="font-body-md text-body-md text-on-surface-variant max-w-4xl">{t.toolDesc}</p>
         <div className="flex items-center gap-1.5 text-xs text-on-surface-variant pt-1">
           <ShieldCheck className="w-3.5 h-3.5 text-secondary shrink-0" />
-          <span>Xử lý trực tiếp trên trình duyệt — tệp không được tải lên máy chủ.</span>
+          <span>{t.privacyNote}</span>
         </div>
       </div>
 
@@ -1389,11 +1270,11 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                   <Clipboard className="w-5 h-5" />
                 </div>
                 <p className="font-body-md text-body-md text-on-surface font-medium">
-                  Bấm{' '}
+                  {t.dropzonePrefix ? `${t.dropzonePrefix} ` : ''}
                   <kbd className="px-space-1 py-[1px] bg-surface-container rounded font-label-sm text-label-sm text-primary">
                     Ctrl + V
                   </kbd>{' '}
-                  để dán trực tiếp từ Clipboard
+                  {t.dropzoneSuffix}
                 </p>
                 <p className="font-body-sm text-body-sm text-on-surface-variant mt-space-1">{t.dropzoneSubtitle}</p>
               </div>
@@ -1416,7 +1297,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       </span>
                     </div>
                     <span className="font-body-sm text-body-sm text-on-surface-variant">
-                      Dung lượng: {formatBytes(loadedFileSize)} • Độ phân giải: {previewWidth} × {previewHeight} Retina
+                      {t.sizeLabel}: {loadedFileSize > 0 ? formatBytes(loadedFileSize) : t.notAvailable} • {t.resolutionLabel}: {previewWidth} × {previewHeight}px
                     </span>
                   </div>
                 </div>
@@ -1436,9 +1317,12 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       setBaseImage(null);
                       setAnnotations([]);
                       setRedoStack([]);
+                      setCurrentCanvas(null);
+                      setOutputPngSize(0);
+                      setInfoBanner(null);
                       setStage('idle');
                     }}
-                    aria-label={t.btnClear || "Xóa ảnh hiện tại và chọn lại"}
+                    aria-label={t.btnClear}
                     className="p-space-2 text-on-surface-variant hover:text-error rounded hover:bg-surface-subtle transition-colors cursor-pointer"
                     title={t.btnClear}
                   >
@@ -1549,24 +1433,28 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                     {t.labelBlurIntensity}
                   </label>
                   <span className="font-label-sm text-label-sm text-brand-cyan-bright">
-                    Pixelate {blurIntensity}px
+                    {blurIntensity >= REDACT_FILL_THRESHOLD
+                      ? t.blurValueFill
+                      : formatMessage(t.blurValuePixelate, { n: effectiveBlockSize(blurIntensity) })}
                   </span>
                 </div>
                 <input
                   id="blur-intensity-slider"
                   type="range"
-                  aria-label={t.labelBlurIntensity || "Cường độ làm mờ Pixelate"}
-                  min="4"
-                  max="24"
+                  aria-label={t.labelBlurIntensity}
+                  min="10"
+                  max={REDACT_FILL_THRESHOLD}
+                  step="2"
                   value={blurIntensity}
                   onChange={(e) => setBlurIntensity(Number(e.target.value))}
                   className="w-full accent-primary-container bg-surface-subtle rounded-lg cursor-pointer h-1.5"
                 />
                 <div className="flex justify-between font-label-sm text-label-sm text-outline text-[10px]">
-                  <span>Nhẹ (4px)</span>
-                  <span>Tiêu chuẩn (12px)</span>
-                  <span>Che đặc (24px)</span>
+                  <span>{t.blurLevelMin}</span>
+                  <span>{t.blurLevelMid}</span>
+                  <span>{t.blurLevelMax}</span>
                 </div>
+                <p className="font-body-sm text-[11px] text-outline leading-snug">{t.blurHint}</p>
               </div>
 
               {/* Hiệu ứng viền nền & Canvas */}
@@ -1654,7 +1542,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       !zoomFit ? 'bg-surface-subtle text-on-surface font-semibold' : 'text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
-                    100%
+                    {t.zoomActual}
                   </button>
                   <button
                     type="button"
@@ -1663,7 +1551,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       zoomFit ? 'bg-surface-subtle text-on-surface font-semibold' : 'text-on-surface-variant hover:text-on-surface'
                     }`}
                   >
-                    Vừa khung
+                    {t.zoomFit}
                   </button>
                 </div>
 
@@ -1681,12 +1569,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    if (annotations.length > 0) {
-                      setRedoStack((prev) => [...prev, annotations[annotations.length - 1]]);
-                      setAnnotations((prev) => prev.slice(0, -1));
-                    }
-                  }}
+                  onClick={handleUndo}
                   disabled={annotations.length === 0}
                   className="p-space-1 text-on-surface-variant hover:text-on-surface rounded hover:bg-surface-subtle transition-colors flex items-center cursor-pointer disabled:opacity-30"
                   title={t.btnUndo}
@@ -1696,12 +1579,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    if (redoStack.length > 0) {
-                      setAnnotations((prev) => [...prev, redoStack[redoStack.length - 1]]);
-                      setRedoStack((prev) => prev.slice(0, -1));
-                    }
-                  }}
+                  onClick={handleRedo}
                   disabled={redoStack.length === 0}
                   className="p-space-1 text-on-surface-variant hover:text-on-surface rounded hover:bg-surface-subtle transition-colors flex items-center cursor-pointer disabled:opacity-30"
                   title={t.btnRedo}
@@ -1713,9 +1591,12 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
 
                 <button
                   type="button"
-                  onClick={() => setAnnotations([])}
+                  onClick={() => {
+                    setRedoStack([]);
+                    setAnnotations([]);
+                  }}
                   disabled={annotations.length === 0}
-                  aria-label={t.btnClearAll || "Xóa toàn bộ chú thích"}
+                  aria-label={t.btnClearAll}
                   className="p-space-1 text-on-surface-variant hover:text-error rounded hover:bg-surface-subtle transition-colors flex items-center cursor-pointer disabled:opacity-30"
                   title={t.btnClearAll}
                 >
@@ -1749,7 +1630,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       <button
                         type="button"
                         onClick={() => setStage(baseImage ? 'editing' : 'idle')}
-                        aria-label="Đóng công cụ cắt tỉa ảnh"
+                        aria-label={t.closeSnipAria}
                         className="p-1 rounded hover:bg-surface-subtle text-outline hover:text-error transition cursor-pointer"
                       >
                         <X className="w-4 h-4" />
@@ -1764,6 +1645,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       onPointerMove={handleSnipPointerMove}
                       onPointerUp={handleSnipPointerUp}
                       onPointerCancel={handleSnipPointerUp}
+                      style={{ touchAction: 'none' }}
                       className="max-w-full max-h-[58vh] object-contain"
                     />
                   </div>
@@ -1789,6 +1671,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       onPointerMove={handleEditorPointerMove}
                       onPointerUp={handleEditorPointerUp}
                       onPointerCancel={handleEditorPointerUp}
+                      style={{ touchAction: 'none' }}
                       className={`select-none cursor-crosshair block ${
                         zoomFit ? 'max-w-full max-h-[58vh] object-contain' : 'w-auto h-auto'
                       }`}
@@ -1807,9 +1690,9 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                         <input
                           type="text"
                           autoFocus
-                          aria-label="Nội dung ghi chú trên ảnh"
+                          aria-label={t.textInputAria}
                           value={textInputValue}
-                          placeholder="Nhập ghi chú..."
+                          placeholder={t.textPlaceholder}
                           onChange={(e) => setTextInputValue(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleTextSubmit();
@@ -1849,7 +1732,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       className="px-space-3 py-space-2 rounded-lg bg-primary-container hover:bg-brand-cyan-bright text-on-primary-container font-title-sm text-title-sm font-bold flex items-center gap-1.5 cursor-pointer shadow"
                     >
                       <Camera className="w-4 h-4" />
-                      <span>Chụp màn hình ngay</span>
+                      <span>{t.btnCaptureNow}</span>
                     </button>
                     <button
                       type="button"
@@ -1857,7 +1740,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       className="px-space-3 py-space-2 rounded-lg bg-surface-subtle hover:bg-surface-bright text-on-surface font-title-sm text-title-sm font-semibold flex items-center gap-1.5 cursor-pointer"
                     >
                       <Clipboard className="w-4 h-4 text-secondary" />
-                      <span>Dán Clipboard</span>
+                      <span>{t.btnPasteClipboard}</span>
                     </button>
                   </div>
                 </div>
@@ -1869,16 +1752,16 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
               <div className="flex flex-col">
                 <span className="font-label-sm text-label-sm text-outline">{t.metricDimensions}</span>
                 <span className="font-title-sm text-title-sm text-on-surface font-mono font-bold mt-0.5">
-                  {previewWidth > 0 ? `${previewWidth} × ${previewHeight}` : 'Chưa có'}
+                  {previewWidth > 0 ? `${previewWidth} × ${previewHeight}` : t.emptyNoImage}
                 </span>
                 <span className="font-label-sm text-label-sm text-primary">{t.metricScale}</span>
               </div>
               <div className="flex flex-col border-l border-border-subtle/40 pl-space-3">
                 <span className="font-label-sm text-label-sm text-outline">{t.metricSize}</span>
                 <span className="font-title-sm text-title-sm text-on-surface font-mono font-bold mt-0.5">
-                  {loadedFileSize > 0 ? formatBytes(loadedFileSize) : '~840 KB'}
+                  {stage === 'editing' && outputPngSize > 0 ? formatBytes(outputPngSize) : t.notAvailable}
                 </span>
-                <span className="font-label-sm text-label-sm text-secondary">{t.metricLossless}</span>
+                <span className="font-label-sm text-label-sm text-secondary">{t.metricSizeHint}</span>
               </div>
               <div className="flex flex-col border-l border-border-subtle/40 pl-space-3">
                 <span className="font-label-sm text-label-sm text-outline">{t.metricLayers}</span>
@@ -1886,7 +1769,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                   {layerCount} {t.metricActive}
                 </span>
                 <span className="font-label-sm text-label-sm text-tertiary">
-                  {layerCount > 0 ? `${layerCount} vector layers` : 'Trống'}
+                  {layerCount > 0 ? `${layerCount} ${t.metricActive}` : t.layersEmpty}
                 </span>
               </div>
             </div>
@@ -1901,7 +1784,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                 className="w-full sm:flex-1 py-space-3 px-space-4 bg-brand-emerald-deep hover:bg-secondary-container text-white font-title-sm text-title-sm font-bold rounded-lg shadow-md flex items-center justify-center gap-space-2 transition-all group cursor-pointer disabled:opacity-50"
               >
                 <Download className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                <span>{t.btnDownloadEmerald}</span>
+                <span>{t.btnDownloadEmerald} (.{selectedFormat === 'jpeg' ? 'jpg' : selectedFormat})</span>
               </button>
 
               {/* CÁC NÚT PHỤ */}
@@ -1915,7 +1798,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                       ? 'bg-secondary-container text-white'
                       : 'bg-surface-subtle hover:bg-surface-bright text-on-surface'
                   }`}
-                  title="Sao chép nhanh vào Clipboard"
+                  title={t.copyTooltip}
                 >
                   {isCopied ? (
                     <>
@@ -1988,19 +1871,17 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                 {history.length > 0 && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setHistory([]);
-                      localStorage.removeItem('snapcraft_history');
-                    }}
+                    onClick={() => persistHistory([])}
                     className="px-2.5 py-1 text-xs text-error hover:bg-error-container/20 rounded transition cursor-pointer flex items-center gap-1"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    <span>Xóa toàn bộ</span>
+                    <span>{t.historyClearAll}</span>
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => setShowHistoryModal(false)}
+                  aria-label={t.close}
                   className="p-1 rounded text-outline hover:text-on-surface transition cursor-pointer"
                 >
                   <X className="w-5 h-5" />
@@ -2008,10 +1889,12 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
               </div>
             </div>
 
+            <p className="font-body-sm text-body-sm text-on-surface-variant -mt-space-2">{t.historyNote}</p>
+
             <div className="overflow-y-auto flex-1 grid grid-cols-2 sm:grid-cols-3 gap-space-3 p-1">
               {history.length === 0 ? (
                 <div className="col-span-full py-12 text-center text-outline text-sm">
-                  Chưa có ảnh nháp nào được lưu trong lịch sử phiên làm việc.
+                  {t.historyEmpty}
                 </div>
               ) : (
                 history.map((item) => (
@@ -2024,6 +1907,8 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                         setBaseImage(img);
                         setAnnotations([]);
                         setRedoStack([]);
+                        setLoadedFileSize(0);
+                        sessionIdRef.current = item.id;
                         setStage('editing');
                         setShowHistoryModal(false);
                       };
@@ -2034,14 +1919,14 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
                     <div className="aspect-video w-full bg-surface-canvas overflow-hidden flex items-center justify-center">
                       <img
                         src={item.dataUrl}
-                        alt={item.title}
+                        alt={`${item.width}×${item.height}`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                     </div>
                     <div className="p-2 bg-surface-container/90 flex items-center justify-between text-[11px] text-on-surface-variant">
                       <span className="font-mono">{item.width}×{item.height}</span>
                       <span className="group-hover:text-primary-container font-semibold flex items-center gap-0.5">
-                        Mở <ChevronRight className="w-3 h-3" />
+                        {t.historyOpen} <ChevronRight className="w-3 h-3" />
                       </span>
                     </div>
                   </div>
@@ -2064,6 +1949,7 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
               <button
                 type="button"
                 onClick={() => setShowShortcutsModal(false)}
+                aria-label={t.close}
                 className="p-1 rounded text-outline hover:text-on-surface transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -2072,31 +1958,31 @@ export default function ScreenCaptureView({ displayLang = 'vi' }) {
 
             <div className="flex flex-col gap-space-3 font-body-sm text-body-sm">
               <div className="flex items-center justify-between py-1 border-b border-border-subtle/20">
-                <span className="text-on-surface-variant">Dán ảnh từ Clipboard</span>
+                <span className="text-on-surface-variant">{t.scPaste}</span>
                 <kbd className="px-2 py-0.5 rounded bg-surface-subtle font-mono text-primary font-bold">
                   Ctrl + V
                 </kbd>
               </div>
               <div className="flex items-center justify-between py-1 border-b border-border-subtle/20">
-                <span className="text-on-surface-variant">Sao chép ảnh đã chú thích</span>
+                <span className="text-on-surface-variant">{t.scCopy}</span>
                 <kbd className="px-2 py-0.5 rounded bg-surface-subtle font-mono text-primary font-bold">
                   Ctrl + C
                 </kbd>
               </div>
               <div className="flex items-center justify-between py-1 border-b border-border-subtle/20">
-                <span className="text-on-surface-variant">Hoàn tác nét vẽ (Undo)</span>
+                <span className="text-on-surface-variant">{t.scUndo}</span>
                 <kbd className="px-2 py-0.5 rounded bg-surface-subtle font-mono text-on-surface font-bold">
                   Ctrl + Z
                 </kbd>
               </div>
               <div className="flex items-center justify-between py-1 border-b border-border-subtle/20">
-                <span className="text-on-surface-variant">Làm lại nét vẽ (Redo)</span>
+                <span className="text-on-surface-variant">{t.scRedo}</span>
                 <kbd className="px-2 py-0.5 rounded bg-surface-subtle font-mono text-on-surface font-bold">
-                  Ctrl + Y
+                  Ctrl + Y / Ctrl + Shift + Z
                 </kbd>
               </div>
               <div className="flex items-center justify-between py-1">
-                <span className="text-on-surface-variant">Hủy nhập ghi chú văn bản</span>
+                <span className="text-on-surface-variant">{t.scEsc}</span>
                 <kbd className="px-2 py-0.5 rounded bg-surface-subtle font-mono text-on-surface font-bold">
                   Esc
                 </kbd>

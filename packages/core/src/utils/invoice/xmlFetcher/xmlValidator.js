@@ -124,43 +124,102 @@ export function validateInvoiceXml(xmlText, pdfMetadata = null) {
 }
 
 /**
- * Extracts metadata fields from XML string using fast regex patterns.
+ * Sau khi người dùng sửa thông tin một hóa đơn đã có XML: XML đó còn thuộc về
+ * hóa đơn này không? Dùng để giữ trạng thái READY (và giữ trong ZIP tải về)
+ * khi thông tin mới vẫn khớp XML, thay vì tính lại trạng thái từ đầu.
+ *
+ * @param {string} xmlContent
+ * @param {{ sellerTaxCode?: string, invoiceSymbol?: string, invoiceNumber?: string|number }} metadata
+ * @returns {{ stillMatches: boolean, mismatchDetails: string[] }}
+ */
+export function checkEditedMetadataAgainstXml(xmlContent, metadata = {}) {
+  const result = validateInvoiceXml(xmlContent, {
+    taxCode: metadata.sellerTaxCode,
+    symbol: metadata.invoiceSymbol,
+    invoiceNumber: metadata.invoiceNumber,
+  });
+  if (!result.isValid) {
+    return { stillMatches: false, mismatchDetails: [result.reason] };
+  }
+  return { stillMatches: !result.hasMismatch, mismatchDetails: result.mismatchDetails };
+}
+
+/** Tiền tố namespace tùy chọn, ví dụ "inv:" trong <inv:MST>. */
+const NS = '(?:[A-Za-z_][\\w.-]*:)?';
+
+/** Nội dung text của thẻ đầu tiên có localName thuộc danh sách, bỏ qua tiền tố namespace. */
+function firstTagText(xml, names) {
+  for (const name of names) {
+    const pattern = new RegExp(`<${NS}${name}(?:\\s[^>]*)?>([^<]*)</${NS}${name}\\s*>`, 'i');
+    const match = pattern.exec(xml);
+    if (match && match[1].trim()) return match[1].trim();
+  }
+  return '';
+}
+
+/** Nội dung của khối thẻ (ví dụ NBan), hoặc '' nếu không có. */
+function blockContent(xml, names) {
+  for (const name of names) {
+    const pattern = new RegExp(`<${NS}${name}(?:\\s[^>]*)?>([\\s\\S]*?)</${NS}${name}\\s*>`, 'i');
+    const match = pattern.exec(xml);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+const SELLER_BLOCKS = ['NBan', 'Seller', 'NguoiBan'];
+const BUYER_BLOCKS = ['NMua', 'Buyer', 'NguoiMua'];
+const TAX_TAGS = ['MST', 'TaxCode', 'MaSoThue'];
+
+/**
+ * Extracts metadata fields from an XML string. Tags are matched by local name so
+ * namespaced documents (<inv:MST>) are read the same as plain ones. The seller
+ * tax code is taken only from the seller block (or from explicit seller tags);
+ * it never falls back to the buyer's MST.
  * @param {string} xml
  * @returns {{ taxCode?: string, symbol?: string, invoiceNumber?: string }}
  */
-function extractMetadataFromXmlString(xml) {
+export function extractMetadataFromXmlString(xml) {
   const metadata = {};
 
   // Tax code
-  const mstMatch =
-    xml.match(/<(?:NBan|Seller)[\s\S]*?<MST>([^<]+)<\/MST>/i) ||
-    xml.match(/<MST>([^<]+)<\/MST>/i) ||
-    xml.match(/<(?:SellerTaxCode|TaxCode)>([^<]+)<\/(?:SellerTaxCode|TaxCode)>/i);
-  if (mstMatch) metadata.taxCode = mstMatch[1].trim();
+  const sellerBlock = blockContent(xml, SELLER_BLOCKS);
+  let taxCode = '';
+  if (sellerBlock !== null) {
+    taxCode = firstTagText(sellerBlock, TAX_TAGS);
+  }
+  if (!taxCode) taxCode = firstTagText(xml, ['SellerTaxCode', 'MSTNBan', 'MaSoThueNguoiBan']);
+  if (!taxCode && sellerBlock === null) {
+    // Không có khối người bán: chỉ dùng MST chung khi đã loại bỏ khối người mua.
+    let withoutBuyer = xml;
+    for (const name of BUYER_BLOCKS) {
+      withoutBuyer = withoutBuyer.replace(
+        new RegExp(`<${NS}${name}(?:\\s[^>]*)?>[\\s\\S]*?</${NS}${name}\\s*>`, 'gi'),
+        '',
+      );
+    }
+    taxCode = firstTagText(withoutBuyer, TAX_TAGS);
+  }
+  if (taxCode) metadata.taxCode = taxCode;
 
   // Invoice Symbol (Circular 78: <KHMSHDon>1</KHMSHDon> + <KHHDon>C26MBB</KHHDon> => 1C26MBB)
-  const khmsMatch = xml.match(/<KHMSHDon>([^<]+)<\/KHMSHDon>/i);
-  const khhMatch = xml.match(/<KHHDon>([^<]+)<\/KHHDon>/i);
-  const khieuMatch =
-    xml.match(/<KHieu>([^<]+)<\/KHieu>/i) ||
-    xml.match(/<(?:InvoiceSeries|Serial)>([^<]+)<\/(?:InvoiceSeries|Serial)>/i);
+  const khms = firstTagText(xml, ['KHMSHDon']);
+  const khh = firstTagText(xml, ['KHHDon']);
+  const khieu = firstTagText(xml, ['KHieu', 'InvoiceSeries', 'Serial']);
 
-  if (khmsMatch && khhMatch) {
-    metadata.symbol = `${khmsMatch[1].trim()}${khhMatch[1].trim()}`;
-  } else if (khieuMatch) {
-    metadata.symbol = khieuMatch[1].trim();
-  } else if (khhMatch) {
-    metadata.symbol = khhMatch[1].trim();
-  } else if (khmsMatch) {
-    metadata.symbol = khmsMatch[1].trim();
+  if (khms && khh) {
+    metadata.symbol = `${khms}${khh}`;
+  } else if (khieu) {
+    metadata.symbol = khieu;
+  } else if (khh) {
+    metadata.symbol = khh;
+  } else if (khms) {
+    metadata.symbol = khms;
   }
 
   // Invoice Number
-  const numMatch =
-    xml.match(/<SHDon>([^<]+)<\/SHDon>/i) ||
-    xml.match(/<(?:InvoiceNumber|Number)>([^<]+)<\/(?:InvoiceNumber|Number)>/i) ||
-    xml.match(/<SoHDon>([^<]+)<\/SoHDon>/i);
-  if (numMatch) metadata.invoiceNumber = numMatch[1].trim();
+  const number = firstTagText(xml, ['SHDon', 'InvoiceNumber', 'Number', 'SoHDon']);
+  if (number) metadata.invoiceNumber = number;
 
   return metadata;
 }

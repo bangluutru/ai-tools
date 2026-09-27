@@ -11,7 +11,10 @@ import {
   styleHeaderRow,
   styleTotalRow,
 } from '../excelReport.js';
-import { ACCOUNTING_RULE_VERSION } from './reconcile.js';
+import { ACCOUNTING_RULE_VERSION, invoiceLabel } from './reconcile.js';
+
+/** Định dạng số đếm (số hóa đơn), tách khỏi định dạng tiền dù hiện trông giống nhau. */
+const COUNT_FORMAT = '#,##0';
 
 export const STATUS_LABELS = Object.freeze({
   MATCH: 'Khớp',
@@ -66,7 +69,7 @@ function addSummarySheet(workbook, results, generatedAt) {
     row.height = 20;
   };
 
-  const entry = (label, value, { money = false, highlight = false } = {}) => {
+  const entry = (label, value, { money = false, count = false, highlight = false } = {}) => {
     const row = sheet.addRow([label, value]);
     row.eachCell((cell, columnNumber) => {
       cell.font = { name: 'Times New Roman', size: 10, bold: highlight };
@@ -75,6 +78,7 @@ function addSummarySheet(workbook, results, generatedAt) {
         ? { horizontal: 'left', vertical: 'middle', wrapText: true }
         : { horizontal: 'right', vertical: 'middle' };
       if (columnNumber === 2 && money) cell.numFmt = MONEY_FORMAT;
+      if (columnNumber === 2 && count) cell.numFmt = COUNT_FORMAT;
       if (highlight) {
         cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: REPORT_COLORS.warnFill } };
       }
@@ -85,36 +89,36 @@ function addSummarySheet(workbook, results, generatedAt) {
   entry('Ngày tạo báo cáo', formatTimestamp(generatedAt));
   entry('Phiên bản quy tắc', results.ruleVersion || ACCOUNTING_RULE_VERSION);
   entry('Sai số cho phép (đồng)', results.tolerance);
-  entry('Tổng số hóa đơn đối chiếu', results.summary.total, { money: true });
+  entry('Tổng số hóa đơn đối chiếu', results.summary.total, { count: true });
 
   sheet.addRow([]);
   section('ĐỐI CHIẾU DOANH THU (511 vs BR)');
-  entry('Số hóa đơn khớp', results.summary.matched511, { money: true });
+  entry('Số hóa đơn khớp', results.summary.matched511, { count: true });
   entry('Số hóa đơn lệch', results.summary.unmatched511, {
-    money: true,
+    count: true,
     highlight: results.summary.unmatched511 > 0,
   });
 
   sheet.addRow([]);
   section('ĐỐI CHIẾU THUẾ GTGT (33311 vs BR)');
-  entry('Số hóa đơn khớp', results.summary.matched33311, { money: true });
+  entry('Số hóa đơn khớp', results.summary.matched33311, { count: true });
   entry('Số hóa đơn lệch', results.summary.unmatched33311, {
-    money: true,
+    count: true,
     highlight: results.summary.unmatched33311 > 0,
   });
 
   sheet.addRow([]);
   section('CẢNH BÁO CẦN XỬ LÝ');
   entry('Có trên sổ, thiếu trên bảng kê BR', results.summary.missingInBR, {
-    money: true,
+    count: true,
     highlight: results.summary.missingInBR > 0,
   });
   entry('Có trên bảng kê BR, thiếu trên sổ', results.summary.missingInLedger, {
-    money: true,
+    count: true,
     highlight: results.summary.missingInLedger > 0,
   });
   entry('Hóa đơn trùng bản ghi BR, cần xác nhận thủ công', results.summary.needsReview, {
-    money: true,
+    count: true,
     highlight: results.summary.needsReview > 0,
   });
 
@@ -133,7 +137,7 @@ function addSummarySheet(workbook, results, generatedAt) {
  * Bảng chi tiết dùng chung cho mọi sheet đối chiếu: tiêu đề in lặp lại, khóa
  * dòng tiêu đề, bộ lọc, tô màu dòng lệch và dòng tổng cộng.
  */
-function addDetailSheet(workbook, { name, heading, columns, rows, generatedAt }) {
+function addDetailSheet(workbook, { name, heading, columns, rows, generatedAt, totalGroups = null }) {
   const sheet = workbook.addWorksheet(name, { views: [{ showGridLines: false }] });
   setColumnWidths(sheet, columns.map((column) => column.width));
 
@@ -178,12 +182,19 @@ function addDetailSheet(workbook, { name, heading, columns, rows, generatedAt })
       }
     }
 
-    const totals = columns.map((column, index) => {
-      if (index === 0) return 'TỔNG CỘNG';
-      if (!column.money) return '';
-      return rows.reduce((sum, item) => sum + (Number(column.value(item)) || 0), 0);
-    });
-    styleTotalRow(sheet.addRow(totals), { moneyColumns });
+    // Doanh thu (511) và thuế (33311) là hai đại lượng khác nhau: sheet trộn cả
+    // hai tài khoản phải cộng riêng từng tài khoản, không cộng dồn thành một số.
+    const groups = totalGroups
+      ? [...new Set(rows.map(totalGroups))].map((group) => [group, rows.filter((item) => totalGroups(item) === group)])
+      : [['', rows]];
+    for (const [group, groupRows] of groups) {
+      const totals = columns.map((column, index) => {
+        if (index === 0) return group ? `TỔNG CỘNG ${group}` : 'TỔNG CỘNG';
+        if (!column.money) return '';
+        return groupRows.reduce((sum, item) => sum + (Number(column.value(item)) || 0), 0);
+      });
+      styleTotalRow(sheet.addRow(totals), { moneyColumns });
+    }
   }
 
   sheet.autoFilter = {
@@ -211,8 +222,8 @@ const EVIDENCE_COLUMNS = [
 ];
 
 const columnsFor511 = () => [
-  { header: 'Số hóa đơn', width: 16, center: true, value: (row) => row.invoice },
-  { header: 'Sổ 511\n(Phát sinh Có)', width: 20, money: true, value: (row) => row.val511 },
+  { header: 'Số hóa đơn', width: 16, center: true, value: (row) => invoiceLabel(row) },
+  { header: 'Sổ 511\n(PS Có − PS Nợ)', width: 20, money: true, value: (row) => row.val511 },
   { header: 'Bảng kê BR\n(Chưa thuế)', width: 20, money: true, value: (row) => row.valBR },
   { header: 'Chênh lệch', width: 18, money: true, value: (row) => row.diff },
   { header: 'Trạng thái', width: 16, center: true, value: (row) => statusLabel(row.status) },
@@ -221,8 +232,8 @@ const columnsFor511 = () => [
 ];
 
 const columnsFor33311 = () => [
-  { header: 'Số hóa đơn', width: 16, center: true, value: (row) => row.invoice },
-  { header: 'Sổ 33311\n(Tổng VAT)', width: 20, money: true, value: (row) => row.val33311 },
+  { header: 'Số hóa đơn', width: 16, center: true, value: (row) => invoiceLabel(row) },
+  { header: 'Sổ 33311\n(PS Có − PS Nợ)', width: 20, money: true, value: (row) => row.val33311 },
   { header: 'Trong đó\nVAT hàng tặng', width: 18, money: true, value: (row) => row.vatTang },
   { header: 'Bảng kê BR\n(Thuế)', width: 20, money: true, value: (row) => row.valBR },
   { header: 'Chênh lệch', width: 18, money: true, value: (row) => row.diff },
@@ -233,7 +244,7 @@ const columnsFor33311 = () => [
 
 const workflowColumns = () => [
   { header: 'Tài khoản', width: 12, center: true, value: (row) => row.account },
-  { header: 'Số hóa đơn', width: 16, center: true, value: (row) => row.invoice },
+  { header: 'Số hóa đơn', width: 16, center: true, value: (row) => invoiceLabel(row) },
   { header: 'Giá trị trên sổ', width: 20, money: true, value: (row) => row.ledgerValue },
   { header: 'Giá trị trên BR', width: 20, money: true, value: (row) => row.brValue },
   { header: 'Chênh lệch', width: 18, money: true, value: (row) => row.diff },
@@ -300,7 +311,9 @@ export async function buildReconcileWorkbook(results, { diagnostics = [], genera
   ];
 
   for (const [name, heading, rows] of groups) {
-    addDetailSheet(workbook, { name, heading, columns: workflowColumns(), rows, generatedAt });
+    addDetailSheet(workbook, {
+      name, heading, columns: workflowColumns(), rows, generatedAt, totalGroups: (row) => row.account,
+    });
   }
 
   if (diagnostics.length > 0) addSourceSheet(workbook, diagnostics, generatedAt);
@@ -311,6 +324,8 @@ export async function buildReconcileWorkbook(results, { diagnostics = [], genera
 export async function exportReconcileWorkbook(results, options = {}) {
   const generatedAt = options.generatedAt ?? new Date();
   const workbook = await buildReconcileWorkbook(results, { ...options, generatedAt });
-  const stamp = generatedAt.toISOString().slice(0, 10);
+  // Ngày theo giờ máy người dùng; toISOString() là UTC nên sáng sớm ở Việt Nam sẽ lệch một ngày.
+  const pad = (value) => String(value).padStart(2, '0');
+  const stamp = `${generatedAt.getFullYear()}-${pad(generatedAt.getMonth() + 1)}-${pad(generatedAt.getDate())}`;
   await downloadWorkbook(workbook, `Ket_qua_doi_chieu_${stamp}.xlsx`);
 }

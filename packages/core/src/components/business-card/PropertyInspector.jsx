@@ -26,6 +26,7 @@ export const PropertyInspector = ({
   project
 }) => {
   const { t, language } = useLanguage();
+  const L = (vi, en, ja) => (language === "ja" ? ja : language === "en" ? en : vi);
 
   // Multi-Selection Panel
   if (selectedElements && selectedElements.length > 1) {
@@ -145,7 +146,7 @@ export const PropertyInspector = ({
         {selectedElements.length >= 3 && (
           <div>
             <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-              Dãn cách đều
+              {L("Dãn cách đều", "Distribute evenly", "等間隔に配置")}
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -154,7 +155,7 @@ export const PropertyInspector = ({
                 onClick={() => handleAlignGroup("distribute-h")}
                 className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
               >
-                Dãn đều ngang
+                {L("Dãn đều ngang", "Horizontally", "横方向")}
               </button>
               <button
                 type="button"
@@ -162,7 +163,7 @@ export const PropertyInspector = ({
                 onClick={() => handleAlignGroup("distribute-v")}
                 className="py-1.5 px-2 bg-surface-canvas hover:bg-primary/10 hover:text-primary rounded border border-border-subtle text-[11px] font-medium transition-colors cursor-pointer text-center"
               >
-                Dãn đều dọc
+                {L("Dãn đều dọc", "Vertically", "縦方向")}
               </button>
             </div>
           </div>
@@ -171,15 +172,15 @@ export const PropertyInspector = ({
         {/* Group Geometry Info */}
         <div className="pt-3 border-t border-border-subtle/50">
           <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-            Khung bao nhóm
+            {L("Khung bao nhóm", "Group bounds", "グループ範囲")}
           </label>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="p-2 rounded bg-surface-canvas border border-border-subtle">
-              <span className="text-outline text-[10px] block">Rộng × Cao</span>
+              <span className="text-outline text-[10px] block">{L("Rộng × Cao", "Width × Height", "幅 × 高さ")}</span>
               <span className="font-bold text-on-surface">{groupW} × {groupH} mm</span>
             </div>
             <div className="p-2 rounded bg-surface-canvas border border-border-subtle">
-              <span className="text-outline text-[10px] block">Vị trí (X, Y)</span>
+              <span className="text-outline text-[10px] block">{L("Vị trí (X, Y)", "Position (X, Y)", "位置 (X, Y)")}</span>
               <span className="font-bold text-on-surface">{minX}, {minY} mm</span>
             </div>
           </div>
@@ -188,7 +189,7 @@ export const PropertyInspector = ({
         {/* Selected Elements List */}
         <div className="pt-3 border-t border-border-subtle/50">
           <label className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-            Danh sách ({selectedElements.length})
+            {L("Danh sách", "Items", "一覧")} ({selectedElements.length})
           </label>
           <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
             {selectedElements.map((el, i) => (
@@ -202,14 +203,14 @@ export const PropertyInspector = ({
                   </span>
                   <span className="truncate text-on-surface font-medium">
                     {el.type === "text"
-                      ? el.content?.slice(0, 18) || "Văn bản"
+                      ? el.content?.slice(0, 18) || L("Văn bản", "Text", "テキスト")
                       : el.type === "shape"
-                      ? `Hình khối (${el.shapeType || "rect"})`
+                      ? `${L("Hình khối", "Shape", "図形")} (${el.shapeType || "rect"})`
                       : el.type === "qr"
-                      ? "Mã QR"
+                      ? L("Mã QR", "QR code", "QRコード")
                       : el.type === "image"
-                      ? "Hình ảnh / Logo"
-                      : "Đối tượng"}
+                      ? L("Hình ảnh / Logo", "Image / Logo", "画像・ロゴ")
+                      : L("Đối tượng", "Element", "要素")}
                   </span>
                 </div>
                 <span className="text-[10px] font-mono text-outline shrink-0">
