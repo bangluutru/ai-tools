@@ -3,7 +3,7 @@
  * @description Deterministic engine chẩn đoán điều kiện bắt buộc tham gia BHXH Nhật Bản (社会保険加入判定).
  * Tuân thủ quy chuẩn pháp lý chính thức từ MHLW và Japan Pension Service:
  * 1. Tiêu chuẩn 3/4 thời gian làm việc (4分の3基準)
- * 2. Tiêu chuẩn mở rộng cho lao động ngắn hạn (短時間労働者の適用拡大): 週20時間, 賃金8.8万円 (撤廃予定 2026-10),
+ * 2. Tiêu chuẩn mở rộng cho lao động ngắn hạn (短時間労働者の適用拡大): 週20時間, 賃金8.8万円 (2026-10-01 撤廃),
  *    2ヶ月超の雇用見込み, 学生除外, 企業規模 (51人 → 36人 2027-10 → 21人 2029-10 → 11人 2032-10 → 撤廃 2035-10)
  * 3. Ngưỡng tuổi (厚生年金 dưới 70, 健康保険 dưới 75)
  * 4. 雇用保険: 週20時間以上 + 31日以上の雇用見込み, không áp dụng cho 役員 và 昼間学生 (nguyên tắc chung)

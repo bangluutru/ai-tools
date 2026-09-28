@@ -14,10 +14,19 @@ import { tools, isInDevelopment } from './config/toolsRegistry';
 import { buildVersion } from './config/buildInfo';
 import {
   resolveHubRoute,
-  buildDomainHash,
   saveLastBrowseContext,
   getLastBrowseContext,
 } from './utils/hubRoute';
+import {
+  routeKey,
+  navigate,
+  toolPath,
+  buildDomainPath,
+  upgradeLegacyHashUrl,
+  interceptInternalLinks,
+  NAVIGATE_EVENT,
+} from './utils/navigation';
+import { applyRouteMeta } from './utils/routeMeta';
 import { HUB_DOMAINS, getDomainName } from './config/hubPresentation';
 import {
   Loader2,
@@ -158,7 +167,11 @@ const toolComponentMap = {
 export default function App() {
   useTheme();
   const [displayLang, setDisplayLang] = useState(() => localStorage.getItem('hub_lang') || 'vi');
-  const [route, setRoute] = useState(() => resolveHubRoute(window.location.hash, tools));
+  const [route, setRoute] = useState(() => {
+    // URL hash cũ (#/tools/…) → đường dẫn thật, trước lần render đầu.
+    upgradeLegacyHashUrl();
+    return resolveHubRoute(routeKey(), tools);
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
@@ -204,18 +217,29 @@ export default function App() {
     } catch {}
   }, [showToolioNinja]);
 
-  // Synchronize route from window location hash
+  // Đồng bộ route từ URL: pushState của navigate(), nút back/forward, và link hash cũ
+  // (href="#/tools/…" trong miniapp, bookmark) — hash được đổi ngay sang đường dẫn thật.
   useEffect(() => {
     const syncRouteFromUrl = () => {
-      setRoute(resolveHubRoute(window.location.hash, tools));
+      upgradeLegacyHashUrl();
+      setRoute(resolveHubRoute(routeKey(), tools));
     };
+    const removeLinkInterceptor = interceptInternalLinks();
     window.addEventListener('hashchange', syncRouteFromUrl);
     window.addEventListener('popstate', syncRouteFromUrl);
+    window.addEventListener(NAVIGATE_EVENT, syncRouteFromUrl);
     return () => {
+      removeLinkInterceptor();
       window.removeEventListener('hashchange', syncRouteFromUrl);
       window.removeEventListener('popstate', syncRouteFromUrl);
+      window.removeEventListener(NAVIGATE_EVENT, syncRouteFromUrl);
     };
   }, []);
+
+  // Title, mô tả và canonical theo route — khớp với HTML prerender của trang đó.
+  useEffect(() => {
+    applyRouteMeta(route, tools);
+  }, [route]);
 
   // Cmd + K Shortcut: on Hub, focus global search; in tool view, open CommandPalette
   useEffect(() => {
@@ -255,14 +279,14 @@ export default function App() {
   const handleSelectDomain = useCallback((domainId) => {
     setSearchQuery('');
     saveLastBrowseContext(domainId, 'all');
-    window.location.hash = buildDomainHash(domainId, 'all');
+    navigate(buildDomainPath(domainId, 'all'));
   }, []);
 
   const handleSelectFilter = useCallback(
     (filterId) => {
       if (route.type === 'domain') {
         saveLastBrowseContext(route.domain, filterId);
-        window.location.hash = buildDomainHash(route.domain, filterId);
+        navigate(buildDomainPath(route.domain, filterId));
       }
     },
     [route]
@@ -270,11 +294,11 @@ export default function App() {
 
   const handleBackToHome = useCallback(() => {
     setSearchQuery('');
-    if (window.location.hash === '#/' || window.location.hash === '' || window.location.hash === '#') {
+    if (routeKey() === '#/') {
       setRoute({ type: 'home' });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      window.location.hash = '#/';
+      navigate('/');
     }
   }, []);
 
@@ -291,7 +315,8 @@ export default function App() {
         saveLastBrowseContext('common', 'all');
       }
 
-      window.location.hash = `#/tools/${toolId}`;
+      navigate(toolPath(toolId));
+      window.scrollTo({ top: 0 });
     },
     [route]
   );
@@ -299,9 +324,9 @@ export default function App() {
   const backToHub = useCallback(() => {
     const lastContext = getLastBrowseContext();
     if (lastContext && lastContext.domain) {
-      window.location.hash = buildDomainHash(lastContext.domain, lastContext.filter);
+      navigate(buildDomainPath(lastContext.domain, lastContext.filter));
     } else {
-      window.location.hash = '#/';
+      navigate('/');
     }
   }, []);
 

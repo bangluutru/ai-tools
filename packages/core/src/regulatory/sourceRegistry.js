@@ -216,13 +216,13 @@ export const OFFICIAL_SOURCE_REGISTRY = Object.freeze({
     id: 'mhlw-shakai-hoken-tekio-2026',
     country: 'JP',
     authority: '厚生労働省 / 日本年金機構 (MHLW / JPS)',
-    title: '短時間労働者に対する社会保険適用拡大基準（週20時間・月額8.8万円〔令和8年10月撤廃予定〕・企業規模51人→36人(2027-10)→21人(2029-10)→11人(2032-10)→撤廃(2035-10)）',
+    title: '短時間労働者に対する社会保険適用拡大基準（週20時間・月額8.8万円〔令和8年10月1日撤廃〕・企業規模51人→36人(2027-10)→21人(2029-10)→11人(2032-10)→撤廃(2035-10)）',
     url: 'https://www.mhlw.go.jp/stf/seisakunitsuite/bunya/koyoukintou/shakaihoken_tekiyoukakudai/',
     sourceType: 'official-guidance',
     language: 'ja',
     lastVerifiedAt: '2026-09-28',
     status: 'official-primary',
-    notes: 'Quy chuẩn bắt buộc tham gia BHXH cho nhân viên part-time/short-time (20h/tuần; 88,000円/tháng đến khi bãi bỏ dự kiến 10/2026; ngưỡng quy mô 51 → 36 → 21 → 11 → bãi bỏ).'
+    notes: 'Quy chuẩn bắt buộc tham gia BHXH cho nhân viên part-time/short-time (20h/tuần; 88,000円/tháng, bãi bỏ từ 01/10/2026 (nenkin.go.jp/oshirase/topics/2021/0219.html); ngưỡng quy mô 51 → 36 → 21 → 11 → bãi bỏ).'
   },
   'jps-dependent-eligibility-2026': {
     id: 'jps-dependent-eligibility-2026',

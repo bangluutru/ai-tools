@@ -52,6 +52,7 @@ import {
   parsePageRanges,
   rangeLabel,
 } from './pdfToolkitCore.js';
+import { getRouteQueryParam, setRouteQueryParam } from '../../utils/navigation';
 
 const loadPdfLib = () => import('pdf-lib');
 
@@ -66,13 +67,8 @@ const VALID_MODES = new Set(MODES.map((m) => m.id));
 const SPLIT_OUTPUTS = ['ranges', 'single', 'every'];
 
 function detectInitialMode() {
-  const hash = window.location.hash || '';
-  const qIdx = hash.indexOf('?');
-  if (qIdx !== -1) {
-    const params = new URLSearchParams(hash.slice(qIdx + 1));
-    const tab = params.get('tab');
-    if (tab && VALID_MODES.has(tab)) return tab;
-  }
+  const tab = getRouteQueryParam('tab');
+  if (tab && VALID_MODES.has(tab)) return tab;
   return 'merge';
 }
 
@@ -184,9 +180,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
 
   // Sync mode to URL query
   useEffect(() => {
-    const base = window.location.hash.split('?')[0];
-    const newHash = `${base}?tab=${activeMode}`;
-    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${newHash}`);
+    setRouteQueryParam('tab', activeMode);
   }, [activeMode]);
 
   // Clean up created object URLs

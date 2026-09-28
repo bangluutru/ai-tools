@@ -4,13 +4,12 @@
  */
 
 import React from 'react';
+import { getRouteQueryParam } from '../../utils/navigation';
 import VietnamConsularWorkspace from '@ai-tools/core/components/consular/VietnamConsularWorkspace.jsx';
 
 function readInitialProcedureId() {
   try {
-    const hash = window.location.hash || '';
-    const query = hash.includes('?') ? hash.slice(hash.indexOf('?') + 1) : window.location.search.slice(1);
-    const id = new URLSearchParams(query).get('procedureId');
+    const id = getRouteQueryParam('procedureId');
     return id && /^vn_[a-z0-9_]+$/.test(id) ? id : undefined;
   } catch {
     return undefined;

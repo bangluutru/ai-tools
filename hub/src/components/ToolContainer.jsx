@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, ChevronDown, CheckCircle2, Globe } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import ToolioLogo from './ToolioLogo';
+import { navigate } from '../utils/navigation';
 
 export default function ToolContainer({
   currentTool,
@@ -64,7 +65,7 @@ export default function ToolContainer({
                 if (onGoHome) {
                   onGoHome();
                 } else {
-                  window.location.hash = '#/';
+                  navigate('/');
                 }
               }}
               className="flex items-center gap-2 cursor-pointer select-none shrink-0 group"
@@ -78,7 +79,7 @@ export default function ToolContainer({
                   if (onGoHome) {
                     onGoHome();
                   } else {
-                    window.location.hash = '#/';
+                    navigate('/');
                   }
                 }
               }}
