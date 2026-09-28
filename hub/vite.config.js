@@ -1,5 +1,40 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+
+/**
+ * onnxruntime-web có tham chiếu dự phòng `new URL('ort-wasm-*.wasm', import.meta.url)`,
+ * nên Vite copy file wasm ~24 MB vào dist — sát trần 25 MiB/tệp của Cloudflare Pages.
+ * @imgly/background-removal (đường dùng duy nhất của onnxruntime) luôn tự gán
+ * `ort.env.wasm.wasmPaths` về file tải từ CDN của nó, nên bản cục bộ không bao giờ
+ * được tải. Trỏ tham chiếu dự phòng sang jsDelivr cùng phiên bản thay vì copy file.
+ */
+function onnxWasmFromCdn() {
+  // package.json của onnxruntime-web không nằm trong "exports" nên không require.resolve được;
+  // tìm thư mục node_modules gần nhất như Node vẫn làm.
+  let dir = dirname(fileURLToPath(import.meta.url));
+  let pkgPath = null;
+  while (!pkgPath) {
+    const candidate = join(dir, 'node_modules', 'onnxruntime-web', 'package.json');
+    if (existsSync(candidate)) pkgPath = candidate;
+    else if (dirname(dir) === dir) throw new Error('onnxruntime-web not found in node_modules');
+    else dir = dirname(dir);
+  }
+  const { version } = JSON.parse(readFileSync(pkgPath, 'utf8'));
+  const cdnBase = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${version}/dist/`;
+  const pattern = /new URL\((["'])(ort-[\w.-]+\.wasm)\1,\s*import\.meta\.url\)/g;
+  return {
+    name: 'toolio:onnx-wasm-from-cdn',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!id.includes('onnxruntime-web') || !pattern.test(code)) return null;
+      pattern.lastIndex = 0;
+      return { code: code.replace(pattern, (_, _q, file) => `new URL(${JSON.stringify(cdnBase + file)})`), map: null };
+    },
+  };
+}
 
 const appVersion = (
   process.env.CF_PAGES_COMMIT_SHA ||
@@ -55,7 +90,7 @@ export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom'],
   },
-  plugins: [react()],
+  plugins: [react(), onnxWasmFromCdn()],
   server: {
     port: 3000,
     open: false,

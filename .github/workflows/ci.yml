@@ -17,6 +17,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build:all
+      - run: npm run check:dist-size
       - run: npm audit --omit=dev --audit-level=high
 
   backend:

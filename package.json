@@ -17,6 +17,7 @@
     "dev:invoice-legacy": "cd legacy/invoice-webapp && python3 -m uvicorn backend.main:app --reload --port 8001",
     "dev:excel": "npm run dev --workspace=excel-mapping",
     "dev:editor": "npm run dev --workspace=editor-studio",
+    "check:dist-size": "node scripts/check-dist-size.mjs hub/dist",
     "build:all": "npm run build --workspace=hub --workspace=image-convert --workspace=excel-mapping --workspace=editor-studio --workspace=accounting-reconcile --if-present",
     "fixtures:excel": "node packages/core/scripts/create-excel-mock-files.mjs",
     "golden:accounting": "node packages/core/scripts/accounting-golden.mjs",
