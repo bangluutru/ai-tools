@@ -1,0 +1,12 @@
+# Có 404.html thì Pages thôi trả index.html cho đường dẫn lạ, nên đường dẫn nào
+# SPA còn nhận mà không có file tĩnh phải khai ở đây. Thiếu một dòng là người
+# dùng gặp trang 404 thật.
+
+# Alias cũ của trang "Công cụ" (hubRoute.js vẫn nhận #/common).
+/common  /tools  301
+
+# ID miniapp cũ đã gộp (LEGACY_REDIRECTS trong toolRoute.js). Link hash cũ
+# /#/tools/pdf-split được app đổi thành /tools/pdf-split, tải lại trang là tới đây.
+/tools/pdf-split       /tools/pdf-toolkit      301
+/tools/pdf-merge       /tools/pdf-toolkit      301
+/tools/invoice-webapp  /tools/invoice-studio   301

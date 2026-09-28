@@ -1,0 +1,32 @@
+# Header phản hồi của Cloudflare Pages cho toolio.chottoday.com.
+#
+# Cùng chuẩn với chottoday.com (public/_headers bên đó). Không dòng nào ở đây
+# được đụng tới việc index: site sống nhờ tìm kiếm, nên cấm thêm "noindex" vào /*.
+#
+# Giới hạn thật: các header này là lời khai và chốt cho trình duyệt. Chúng
+# không chặn được ai cào trang — việc đó nằm ở rule cấp zone của Cloudflare.
+
+/*
+  # Khai không cho dùng làm dữ liệu huấn luyện. Không ép được ai, nhưng là dấu
+  # mà các crawler có tôn trọng opt-out sẽ tìm.
+  X-Robots-Tag: noai, noimageai
+  # Nhúng nguyên công cụ vào khung của site khác là cách rẻ nhất để lấy về làm
+  # của mình. Chỉ chặn khung; CSP đầy đủ (script-src…) chưa làm vì app tải từ
+  # Google Fonts, jsDelivr, CDN của imgly và gọi tracuuhoadon.minvoice.com.vn —
+  # làm thì chạy Report-Only trước.
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: frame-ancestors 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  # camera: ảnh thẻ (id-photo/CameraModal). microphone + display-capture: quay
+  # màn hình (screen-recorder). Để (self) chứ không tắt, tắt là hỏng ba công cụ đó.
+  Permissions-Policy: browsing-topics=(), interest-cohort=(), geolocation=(), camera=(self), microphone=(self), display-capture=(self)
+  # Không includeSubDomains, không preload: HSTS toàn zone là việc của dashboard,
+  # làm ở đây chỉ che mỗi toolio.
+  Strict-Transport-Security: max-age=15552000
+
+# ai-tools-dm6.pages.dev đã 308 về tên miền chính, nhưng bản preview theo nhánh
+# và theo mã deploy (<x>.ai-tools-dm6.pages.dev) thì không. Đừng để chúng lên Google
+# thành bản sao của site.
+https://:sub.ai-tools-dm6.pages.dev/*
+  X-Robots-Tag: noindex
