@@ -23,6 +23,7 @@ import {
   toolPath,
   buildDomainPath,
   upgradeLegacyHashUrl,
+  canonicalizeToolUrl,
   interceptInternalLinks,
   NAVIGATE_EVENT,
 } from './utils/navigation';
@@ -170,7 +171,9 @@ export default function App() {
   const [route, setRoute] = useState(() => {
     // URL hash cũ (#/tools/…) → đường dẫn thật, trước lần render đầu.
     upgradeLegacyHashUrl();
-    return resolveHubRoute(routeKey(), tools);
+    const initial = resolveHubRoute(routeKey(), tools);
+    canonicalizeToolUrl(initial);
+    return initial;
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -222,7 +225,9 @@ export default function App() {
   useEffect(() => {
     const syncRouteFromUrl = () => {
       upgradeLegacyHashUrl();
-      setRoute(resolveHubRoute(routeKey(), tools));
+      const next = resolveHubRoute(routeKey(), tools);
+      canonicalizeToolUrl(next);
+      setRoute(next);
     };
     const removeLinkInterceptor = interceptInternalLinks();
     window.addEventListener('hashchange', syncRouteFromUrl);

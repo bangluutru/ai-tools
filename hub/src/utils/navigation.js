@@ -82,6 +82,19 @@ export function upgradeLegacyHashUrl() {
 }
 
 /**
+ * Khi route là miniapp mà URL đang mang id cũ (VD /tools/pdf-merge → pdf-toolkit), thay URL
+ * bằng id chuẩn để thanh địa chỉ, link chia sẻ và canonical khớp nhau. Giữ nguyên query.
+ * @param {{ type: string, toolId?: string }} route
+ */
+export function canonicalizeToolUrl(route) {
+  if (route?.type !== 'tool' || !route.toolId) return;
+  const canonical = toolPath(route.toolId);
+  if (window.location.pathname.replace(/\/+$/, '') !== canonical) {
+    window.history.replaceState(null, '', `${canonical}${window.location.search}`);
+  }
+}
+
+/**
  * Chặn click vào <a href="/tools/…"> (và các đường dẫn SPA khác) để chuyển trang không
  * tải lại. Giữ nguyên hành vi mặc định khi mở tab mới, có modifier, target khác hoặc
  * link ngoài.
