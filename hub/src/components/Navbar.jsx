@@ -200,7 +200,7 @@ export default function Navbar({
 
           {/* Source Code Link */}
           <a
-            href="https://github.com"
+            href="https://github.com/bangluutru/ai-tools"
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center rounded"
