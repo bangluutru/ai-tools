@@ -48,3 +48,6 @@ hub/japan_tax_report_*.pdf
 brain/
 .brain/
 
+
+# Cloudflare wrangler local state
+.wrangler/
