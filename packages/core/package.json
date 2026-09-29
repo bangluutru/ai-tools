@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@browser-mc/webcodecs-avif": "^0.4.2",
-    "@chotto/search": "github:bangluutru/chotto-search#v1.1.1",
+    "@chotto/search": "github:bangluutru/chotto-search#v1.2.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
