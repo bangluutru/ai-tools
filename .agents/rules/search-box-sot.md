@@ -46,4 +46,10 @@ Gói thiếu một khả năng mà ô cần thì làm như sau:
 npm install github:bangluutru/chotto-search#vX.Y.Z -w packages/core -w hub
 ```
 
-Hai workspace phải cùng tag (test kiểm). Xem `git diff package-lock.json`: gói phải nằm ở `node_modules/@chotto/search` gốc, và lock không được đổi thêm gói nào khác. Đừng chạy `npm dedupe`, vì lệnh đó nâng lung tung các gói khác. Chạy dev lại với `--force` để Vite bỏ cache bản cũ.
+Hai workspace phải cùng tag (test kiểm tra). Sau khi nâng, xem `git diff package-lock.json`:
+- Gói phải nằm ở `node_modules/@chotto/search` gốc.
+- Lock không được đổi thêm gói nào khác.
+
+Khi đã có bản cũ ở gốc, npm hay cài bản mới lồng vào `hub/node_modules` và `packages/core/node_modules`. Khi đó bundle có hai bản của gói. Cách sửa gọn nhất là sửa tay entry `node_modules/@chotto/search` trong lock: đổi `version` và commit trong `resolved` sang commit của tag mới (`git ls-remote https://github.com/bangluutru/chotto-search refs/tags/vX.Y.Z`), rồi chạy `npm ci`. Đừng chạy `npm dedupe`, vì lệnh đó nâng lung tung các gói khác.
+
+Cỡ chữ trong ô: map `--cs-font-size` nếu cần, đừng đè `font-size` của `.cs-input`. Trên máy cảm ứng, gói tự giữ chữ ≥16px để iOS không zoom khi focus. Chạy dev lại với `--force` để Vite bỏ cache bản cũ.
