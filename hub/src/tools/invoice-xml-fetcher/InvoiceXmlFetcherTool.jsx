@@ -6,7 +6,6 @@ import {
   Trash2,
   ShieldCheck,
   RefreshCw,
-  Search,
   Filter,
   CheckCircle2,
   AlertCircle,
@@ -18,6 +17,9 @@ import {
   Archive
 } from 'lucide-react';
 import JSZip from 'jszip';
+import { matchesQuery, prepareQuery } from '@chotto/search';
+import { ToolioSearchBox } from '@ai-tools/core/search/ToolioSearchBox.jsx';
+import { useToolioSearch } from '@ai-tools/core/search/toolioSearch.js';
 import {
   STATUS_TYPES,
   STATUS_LABELS,
@@ -88,7 +90,9 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
   const [invoices, setInvoices] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState({ current: 0, total: 0 });
-  const [searchQuery, setSearchQuery] = useState('');
+  // Ô lọc hoá đơn: @chotto/search, mode 'plain' — lưới bên dưới đã là kết quả.
+  const invoiceSearch = useToolioSearch({ mode: 'plain' });
+  const searchQuery = invoiceSearch.query;
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -421,6 +425,7 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
   };
 
   // Filtered invoices
+  const preparedQuery = useMemo(() => prepareQuery(searchQuery), [searchQuery]);
   const filteredInvoices = useMemo(() => {
     return invoices.filter((item) => {
       // Filter by status tab
@@ -435,19 +440,19 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
         return false;
 
       // Filter by search query
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim();
-        const matchName = (item.sellerName || '').toLowerCase().includes(query);
-        const matchFile = (item.fileName || '').toLowerCase().includes(query);
-        const matchCode = (item.lookupCode || '').toLowerCase().includes(query);
-        const matchMst = (item.sellerTaxCode || '').toLowerCase().includes(query);
-        const matchNumber = (item.invoiceNumber || '').toLowerCase().includes(query);
-        return matchName || matchFile || matchCode || matchMst || matchNumber;
+      // Bỏ dấu và mọi từ không cần đúng thứ tự: "cong ty abc" khớp "Công ty TNHH ABC".
+      if (preparedQuery) {
+        return matchesQuery(
+          [item.sellerName, item.fileName, item.lookupCode, item.sellerTaxCode, item.invoiceNumber]
+            .filter(Boolean)
+            .join(' '),
+          preparedQuery
+        );
       }
 
       return true;
     });
-  }, [invoices, statusFilter, searchQuery]);
+  }, [invoices, statusFilter, preparedQuery]);
 
   // Status statistics
   const stats = useMemo(() => {
@@ -614,16 +619,14 @@ export default function InvoiceXmlFetcherTool({ displayLang = 'vi' }) {
           </div>
 
           {/* Search bar */}
-          <div className="relative">
-            <Search className="w-4 h-4 text-content-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo số hóa đơn, ký hiệu, mã số thuế hoặc tên người bán..."
-              className="w-full pl-10 pr-4 py-2 text-xs rounded-xl bg-surface-card border border-surface-subtle focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-content shadow-sm"
-            />
-          </div>
+          <ToolioSearchBox
+            state={invoiceSearch}
+            lang={displayLang}
+            size="sm"
+            placeholder="Tìm theo số hóa đơn, ký hiệu, mã số thuế hoặc tên người bán..."
+            ariaLabel="Tìm hóa đơn"
+            count={`${filteredInvoices.length} hóa đơn`}
+          />
 
           {/* Invoices Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useToolioSearch } from '../../search/toolioSearch.js';
 import ConsularHeader from './ConsularHeader.jsx';
 import ProcedureNavigatorPane from './ProcedureNavigatorPane.jsx';
 import ProcedureGuidePane from './ProcedureGuidePane.jsx';
@@ -32,7 +33,10 @@ export default function VietnamConsularWorkspace({
     const proc = getProcedureById(initialProcedureId);
     return proc?.formId || null;
   });
-  const [searchQuery, setSearchQuery] = useState('');
+  // Ô tìm thủ tục (@chotto/search, mode 'plain'): cây thủ tục bên dưới lọc theo nó qua
+  // searchConsularProcedures — engine riêng của lãnh sự, giữ nguyên.
+  const consularSearch = useToolioSearch({ mode: 'plain' });
+  const searchQuery = consularSearch.query;
   const [mobileTab, setMobileTab] = useState('guide'); // 'navigator' | 'guide' | 'form'
   const [isExpandedEditor, setIsExpandedEditor] = useState(false);
 
@@ -93,8 +97,7 @@ export default function VietnamConsularWorkspace({
       <ConsularHeader
         selectedPrefectureId={selectedPrefectureId}
         onSelectPrefecture={handleSelectPrefecture}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        search={consularSearch}
         onClearDrafts={handleClearDrafts}
         currentOffice={currentOffice}
         displayLang={displayLang}

@@ -15,7 +15,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Compass,
-  Search,
   CheckCircle2,
   Circle,
   Clock,
@@ -36,6 +35,8 @@ import {
   Filter,
 } from 'lucide-react';
 import StandardToolLayout, { StatusBadge } from '../shared/StandardToolLayout.jsx';
+import { ToolioSearchBox } from '../../search/ToolioSearchBox.jsx';
+import { useToolioSearch } from '../../search/toolioSearch.js';
 import {
   getAllLifeEvents,
   getLifeEventById,
@@ -60,7 +61,18 @@ const EVENT_ICONS = {
 
 export function JapanLifeNavigatorView({ lang = 'vi' }) {
   const [currentLang, setCurrentLang] = useState(lang);
-  const [searchQuery, setSearchQuery] = useState('');
+  // Ô hỏi bằng câu tự nhiên (@chotto/search, mode 'plain'): huy hiệu ý định / câu hỏi phân
+  // nhánh hiện ngay bên dưới qua resolveIntentFromText — bộ phân giải riêng, giữ nguyên.
+  // Enter khi đã khớp đúng một ý định thì bắt đầu hành trình luôn.
+  const intentSearch = useToolioSearch({
+    mode: 'plain',
+    onSubmit: (q) => {
+      const r = resolveIntentFromText(q);
+      if (r?.matchedIntent && !r.isAmbiguous) selectEvent(r.targetSituation);
+    },
+  });
+  const searchQuery = intentSearch.query;
+  const setSearchQuery = intentSearch.setQuery;
   const [activeEventId, setActiveEventId] = useState(null);
   const [activeStageId, setActiveStageId] = useState(null);
   const [completedTaskIds, setCompletedTaskIds] = useState([]);
@@ -277,22 +289,24 @@ export function JapanLifeNavigatorView({ lang = 'vi' }) {
             </h2>
           </div>
 
-          <div className="relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={
-                currentLang === 'vi'
-                  ? 'VD: Tôi vừa nghỉ việc, vợ sắp sang Nhật, chuyển sang Fukuoka, visa hết hạn...'
-                  : currentLang === 'ja'
-                  ? '例：転職したい、家族呼び寄せ、引っ越し、退職手続き、永住申請...'
-                  : 'E.g., changing jobs, bring family, move to fukuoka, renew visa...'
-              }
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-outline/30 bg-surface text-on-surface text-sm focus:outline-none focus:border-primary transition-colors"
-            />
-          </div>
+          <ToolioSearchBox
+            state={intentSearch}
+            lang={currentLang}
+            placeholder={
+              currentLang === 'vi'
+                ? 'VD: Tôi vừa nghỉ việc, vợ sắp sang Nhật, chuyển sang Fukuoka, visa hết hạn...'
+                : currentLang === 'ja'
+                ? '例：転職したい、家族呼び寄せ、引っ越し、退職手続き、永住申請...'
+                : 'E.g., changing jobs, bring family, move to fukuoka, renew visa...'
+            }
+            ariaLabel={
+              currentLang === 'vi'
+                ? 'Bạn đang cần giải quyết việc gì tại Nhật Bản?'
+                : currentLang === 'ja'
+                ? '今、何をしたいですか？'
+                : 'What do you need help with in Japan?'
+            }
+          />
 
           {/* Prompt result dropdown / match badge */}
           {searchResult && searchResult.matchedIntent && !searchResult.isAmbiguous && (

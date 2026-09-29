@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import Navbar from './components/Navbar';
 import ToolCard from './components/ToolCard';
 import ToolContainer from './components/ToolContainer';
@@ -40,6 +40,8 @@ import {
 } from './utils/toolVisibility';
 import { partitionTools } from './utils/toolFilter';
 import { useTheme } from '@ai-tools/core/theme/useTheme.js';
+import { rankItems } from '@chotto/search';
+import { useToolioSearch } from '@ai-tools/core/search/toolioSearch.js';
 import { lazyWithRetry as lazy } from './utils/lazyWithRetry';
 
 // =========================================================================
@@ -175,7 +177,12 @@ export default function App() {
     canonicalizeToolUrl(initial);
     return initial;
   });
-  const [searchQuery, setSearchQuery] = useState('');
+  // Ô tìm kiếm của navbar (@chotto/search, mode 'plain'): trang tự thay bằng lưới kết quả
+  // ngay khi gõ, nên không cần bảng gợi ý. State ở đây vì App lọc lưới theo nó.
+  const search = useToolioSearch({ mode: 'plain' });
+  const searchQuery = search.query;
+  const setSearchQuery = search.setQuery;
+  const searchInputRef = useRef(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isPolicyOpen, setIsPolicyOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -246,17 +253,25 @@ export default function App() {
     applyRouteMeta(route, tools);
   }, [route]);
 
-  // Cmd + K Shortcut: on Hub, focus global search; in tool view, open CommandPalette
+  // Handler phím tắt DUY NHẤT của hub (trước đây Navbar có thêm một bản trùng):
+  // - ⌘K / Ctrl+K: trong miniapp thì mở bảng lệnh; ở hub thì focus ô tìm kiếm.
+  // - "/": focus ô tìm kiếm khi không đang gõ ở ô nào khác.
   useEffect(() => {
+    const isTyping = () => {
+      const el = document.activeElement;
+      return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+    };
     const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         if (route.type === 'tool') {
           setIsSearchOpen((prev) => !prev);
         } else {
-          const input = document.querySelector('header input[type="text"]');
-          input?.focus();
+          searchInputRef.current?.focus();
         }
+      } else if (e.key === '/' && route.type !== 'tool' && !isTyping()) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -285,7 +300,7 @@ export default function App() {
     setSearchQuery('');
     saveLastBrowseContext(domainId, 'all');
     navigate(buildDomainPath(domainId, 'all'));
-  }, []);
+  }, [setSearchQuery]);
 
   const handleSelectFilter = useCallback(
     (filterId) => {
@@ -305,7 +320,7 @@ export default function App() {
     } else {
       navigate('/');
     }
-  }, []);
+  }, [setSearchQuery]);
 
   const selectTool = useCallback(
     (toolId) => {
@@ -335,35 +350,17 @@ export default function App() {
     }
   }, []);
 
-  // Global Cross-Domain Search
+  // Global Cross-Domain Search — so khớp bằng @chotto/search: bỏ dấu, NFKC, kana/romaji,
+  // mọi từ không cần đúng thứ tự. Khớp ở tên xếp trước khớp ở mô tả.
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase().trim();
-    return activeTools.filter((t) => {
-      const nameVn = (t.name_vn || '').toLowerCase();
-      const nameEn = (t.name_en || '').toLowerCase();
-      const nameJa = (t.name_ja || '').toLowerCase();
-      const descVn = (t.desc_vn || '').toLowerCase();
-      const descEn = (t.desc_en || '').toLowerCase();
-      const descJa = (t.desc_ja || '').toLowerCase();
-      const id = (t.id || '').toLowerCase();
-      const category = (t.category || '').toLowerCase();
-      const group = (t.group || '').toLowerCase();
-      const domain = (t.domain || '').toLowerCase();
-      const tags = Array.isArray(t.tags) ? t.tags.join(' ').toLowerCase() : '';
-      return (
-        nameVn.includes(q) ||
-        nameEn.includes(q) ||
-        nameJa.includes(q) ||
-        descVn.includes(q) ||
-        descEn.includes(q) ||
-        descJa.includes(q) ||
-        id.includes(q) ||
-        category.includes(q) ||
-        group.includes(q) ||
-        domain.includes(q) ||
-        tags.includes(q)
-      );
+    return rankItems(activeTools, searchQuery, {
+      fields: [
+        (t) => [t.name_vn, t.name_en, t.name_ja],
+        (t) => t.tags,
+        (t) => [t.desc_vn, t.desc_en, t.desc_ja],
+        (t) => [t.id, t.category, t.group, t.domain],
+      ],
     });
   }, [activeTools, searchQuery]);
 
@@ -418,8 +415,15 @@ export default function App() {
             displayLang={displayLang}
             onLangChange={setDisplayLang}
             onOpenSettings={() => setIsSettingsOpen(true)}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
+            search={search}
+            searchInputRef={searchInputRef}
+            searchCount={
+              displayLang === 'ja'
+                ? `${searchResults.length} 件`
+                : displayLang === 'en'
+                ? `${searchResults.length} tools`
+                : `${searchResults.length} công cụ`
+            }
             onGoHome={handleBackToHome}
             showFlappyBird={showFlappyBird}
             onOpenFlappyGame={() => setShowFlappyGame(true)}

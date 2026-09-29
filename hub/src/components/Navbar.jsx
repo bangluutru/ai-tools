@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 import { Search, Globe, SlidersHorizontal, Code2, X, Gamepad2, Swords, Menu } from 'lucide-react';
+import { ToolioSearchBox } from '@ai-tools/core/search/ToolioSearchBox.jsx';
 import ThemeToggle from './ThemeToggle';
 import ToolioLogo from './ToolioLogo';
 
@@ -7,17 +8,35 @@ import ToolioLogo from './ToolioLogo';
  * Navbar — Thanh điều hướng chuẩn duy nhất (Single Source of Truth)
  * Thiết kế tinh tế theo Mockup Hình 1 & Hình 2:
  * - Logo Toolio với badge HUB và slogan "Tiện ích nhỏ, hiệu quả lớn."
- * - Ô tìm kiếm trực quan trung tâm: "Tìm kiếm công cụ, thủ tục, hoặc tình huống..." với phím tắt /
+ * - Ô tìm kiếm trung tâm là SearchBoxView của @chotto/search. State của ô nằm ở App (App lọc
+ *   lưới kết quả theo nó); phím tắt / và ⌘K cũng chỉ có MỘT handler, ở App.
  * - Nút chuyển theme Sáng/Tối dạng pill, ngôn ngữ, cài đặt và mã nguồn
  * - Responsive Mobile: Nút tìm kiếm và nút menu hamburger tiện lợi
  */
+
+// Chỉ gắn MỘT ô tìm kiếm: ô desktop trên thanh, hoặc ô mobile mở bằng nút. Hai ô cùng
+// gắn thì dùng chung một state của gói nhưng tranh nhau một ref input.
+const DESKTOP_QUERY = '(min-width: 768px)';
+function subscribeDesktop(cb) {
+  const mql = window.matchMedia(DESKTOP_QUERY);
+  mql.addEventListener('change', cb);
+  return () => mql.removeEventListener('change', cb);
+}
+function useIsDesktop() {
+  return useSyncExternalStore(
+    subscribeDesktop,
+    () => window.matchMedia(DESKTOP_QUERY).matches,
+    () => true
+  );
+}
 
 export default function Navbar({
   displayLang = 'vi',
   onLangChange,
   onOpenSettings,
-  searchQuery = '',
-  onSearchChange,
+  search,
+  searchInputRef,
+  searchCount,
   onGoHome,
   showFlappyBird = true,
   onOpenFlappyGame,
@@ -27,30 +46,8 @@ export default function Navbar({
   const [langDropdown, setLangDropdown] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const searchInputRef = useRef(null);
-  const mobileInputRef = useRef(null);
-
-  // Phím tắt / hoặc Cmd+K để focus vào ô tìm kiếm
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      } else if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Tự động focus ô tìm kiếm mobile khi mở
-  useEffect(() => {
-    if (mobileSearchOpen) {
-      setTimeout(() => mobileInputRef.current?.focus(), 100);
-    }
-  }, [mobileSearchOpen]);
+  const isDesktop = useIsDesktop();
+  const searchQuery = search?.query ?? '';
 
   const searchPlaceholder =
     displayLang === 'vi'
@@ -58,6 +55,8 @@ export default function Navbar({
       : displayLang === 'en'
       ? 'Search tools, procedures, or situations...'
       : 'ツール、手続き、状況から検索...';
+  const searchAriaLabel =
+    displayLang === 'vi' ? 'Tìm công cụ Toolio' : displayLang === 'en' ? 'Search Toolio tools' : 'Toolio のツールを検索';
 
   return (
     <header className="no-print bg-surface-canvas/95 backdrop-blur-xl border-b border-border-subtle sticky top-0 z-50 shadow-xs">
@@ -65,7 +64,7 @@ export default function Navbar({
         {/* 1. BRAND LOGO */}
         <div
           onClick={() => {
-            if (onSearchChange) onSearchChange('');
+            search?.setQuery('');
             if (onGoHome) onGoHome();
           }}
           className="flex items-center gap-2.5 cursor-pointer select-none shrink-0 group"
@@ -87,36 +86,26 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* 2. GLOBAL LIVE SEARCH BAR (DESKTOP & TABLET - SOT) */}
+        {/* 2. GLOBAL LIVE SEARCH BAR (DESKTOP & TABLET) — lọc lưới công cụ ngay khi gõ */}
         <div className="hidden md:flex flex-1 min-w-0 max-w-lg mx-4">
-          <div className="relative flex items-center w-full">
-            <Search size={15} className="absolute left-3.5 text-outline pointer-events-none shrink-0" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-              placeholder={searchPlaceholder}
-              className="w-full min-w-0 pl-10 pr-12 py-2 bg-surface-subtle/80 hover:bg-surface-subtle focus:bg-surface-container border border-border-subtle focus:border-primary-container text-on-surface placeholder:text-outline text-xs rounded-xl transition-colors outline-none shadow-2xs"
-            />
-            {searchQuery ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (onSearchChange) onSearchChange('');
-                  searchInputRef.current?.focus();
-                }}
-                className="absolute right-3 p-1 text-outline hover:text-on-surface transition-colors cursor-pointer"
-                title="Xóa tìm kiếm"
-              >
-                <X size={14} />
-              </button>
-            ) : (
-              <kbd className="hidden lg:inline-block absolute right-3 px-1.5 py-[2px] bg-surface-container border border-border-subtle/80 text-outline font-mono text-[10px] rounded pointer-events-none">
-                /
-              </kbd>
-            )}
-          </div>
+          {isDesktop && search && (
+            <div className="relative w-full">
+              <ToolioSearchBox
+                state={search}
+                lang={displayLang}
+                size="sm"
+                inputRef={searchInputRef}
+                placeholder={searchPlaceholder}
+                ariaLabel={searchAriaLabel}
+                count={searchCount}
+              />
+              {!searchQuery && (
+                <kbd className="hidden lg:inline-block absolute right-4 top-1/2 -translate-y-1/2 px-1.5 py-[2px] bg-surface-subtle border border-border-subtle/80 text-outline font-mono text-[10px] rounded pointer-events-none">
+                  /
+                </kbd>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 3. RIGHT CONTROLS (DESKTOP) */}
@@ -242,28 +231,18 @@ export default function Navbar({
       </div>
 
       {/* 5. MOBILE EXPANDABLE SEARCH BAR */}
-      {mobileSearchOpen && (
+      {mobileSearchOpen && !isDesktop && search && (
         <div className="md:hidden px-4 pb-3 pt-1 border-t border-border-subtle/60 bg-surface-canvas/98 animate-in slide-in-from-top-2 duration-150">
-          <div className="relative flex items-center w-full">
-            <Search size={15} className="absolute left-3.5 text-outline pointer-events-none" />
-            <input
-              ref={mobileInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-              placeholder={searchPlaceholder}
-              className="w-full pl-10 pr-9 py-2 bg-surface-subtle border border-border-subtle focus:border-primary text-on-surface placeholder:text-outline text-xs rounded-xl outline-none shadow-2xs"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => onSearchChange && onSearchChange('')}
-                className="absolute right-3 p-1 text-outline hover:text-on-surface"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
+          <ToolioSearchBox
+            state={search}
+            lang={displayLang}
+            size="sm"
+            autoFocus
+            inputRef={searchInputRef}
+            placeholder={searchPlaceholder}
+            ariaLabel={searchAriaLabel}
+            count={searchCount}
+          />
         </div>
       )}
 

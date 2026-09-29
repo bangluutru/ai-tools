@@ -1,34 +1,92 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, ArrowRight } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo } from 'react';
+import { X, ArrowRight } from 'lucide-react';
+import { rankItems } from '@chotto/search';
+import { ToolioSearchBox } from '@ai-tools/core/search/ToolioSearchBox.jsx';
+import { pickLang, useToolioSearch } from '@ai-tools/core/search/toolioSearch.js';
 import { renderToolIcon } from '../config/toolIcons.js';
 
-export default function CommandPalette({ isOpen, onClose, onSelectTool, displayLang, tools }) {
-  const [query, setQuery] = useState('');
-  const inputRef = useRef(null);
+const PLACEHOLDER = {
+  vi: 'Tìm kiếm công cụ (PDF, WebP, Hóa đơn, Dịch thuật...)',
+  en: 'Search tools (PDF, WebP, Invoice, Translation...)',
+  ja: 'ツールを検索（PDF、WebP、請求書、翻訳…）',
+};
 
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      setTimeout(() => inputRef.current.focus(), 50);
-    }
-  }, [isOpen]);
+const TOOL_FIELDS = [
+  (t) => [t.name_vn, t.name_en, t.name_ja],
+  (t) => t.tags,
+  (t) => [t.desc_vn, t.desc_en, t.desc_ja],
+];
 
+function toolName(t, lang) {
+  if (lang === 'en') return t.name_en;
+  if (lang === 'ja') return t.name_ja;
+  return t.name_vn;
+}
+
+function ToolIcon({ tool }) {
+  return (
+    <div className={`w-8 h-8 shrink-0 rounded-lg bg-gradient-to-tr ${tool.gradient} flex items-center justify-center text-white text-xs`}>
+      {renderToolIcon(tool.icon, { size: 14 })}
+    </div>
+  );
+}
+
+/**
+ * Bảng lệnh ⌘K khi đang trong một miniapp. Ô tìm là @chotto/search, bảng gợi ý nằm
+ * liền trong modal (placement="inline") nên ↑/↓/Enter chạy như mọi ô Chotto khác.
+ * Esc đóng cả modal, đúng như dòng chữ ở chân modal hứa.
+ */
+export default function CommandPalette({ isOpen, ...props }) {
   if (!isOpen) return null;
+  // Gắn lại mỗi lần mở: ô trống, focus sẵn.
+  return <CommandPaletteBody {...props} />;
+}
 
-  const filteredTools = tools.filter((t) => {
-    const q = query.toLowerCase();
-    return (
-      t.name_vn.toLowerCase().includes(q) ||
-      t.name_en.toLowerCase().includes(q) ||
-      t.desc_vn.toLowerCase().includes(q) ||
-      t.tags.some((tag) => tag.toLowerCase().includes(q))
-    );
+function CommandPaletteBody({ onClose, onSelectTool, displayLang, tools }) {
+  const openTool = useCallback(
+    (toolId) => {
+      onSelectTool(toolId);
+      onClose();
+    },
+    [onSelectTool, onClose]
+  );
+
+  // Công cụ đang phát triển không mở được, nên không đưa vào gợi ý chọn bằng phím.
+  const ready = useMemo(() => tools.filter((t) => t.readiness !== 'in-development'), [tools]);
+  const find = useCallback(
+    (q) =>
+      rankItems(ready, q, { fields: TOOL_FIELDS, limit: 8 }).map((tool) => ({
+        key: tool.id,
+        title: toolName(tool, displayLang),
+        subtitle: tool.desc_vn,
+        data: tool,
+      })),
+    [ready, displayLang]
+  );
+
+  const s = useToolioSearch({
+    mode: 'filter',
+    search: find,
+    onChoose: (item) => openTool(item.key),
+    // Enter khi chưa chọn dòng nào: mở kết quả đầu tiên, như bảng lệnh quen thuộc.
+    onSubmit: (q) => {
+      const first = find(q)[0];
+      if (first) openTool(first.key);
+    },
   });
 
-  const getToolName = (t) => {
-    if (displayLang === 'en') return t.name_en;
-    if (displayLang === 'ja') return t.name_ja;
-    return t.name_vn;
-  };
+  // Gói chỉ đóng bảng gợi ý khi Esc; modal thì phải tự đóng. Nghe ở window (sau React),
+  // nên Esc lúc bảng gợi ý đang mở cũng đóng luôn modal.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape' && !e.isComposing) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  // Bảng gợi ý đóng (chưa gõ, hoặc bấm ra ngoài ô): hiện danh sách lọc để bấm chuột.
+  const browse = s.showPanel ? [] : rankItems(tools, s.query, { fields: TOOL_FIELDS, keepOrder: true });
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center pt-20 px-4 animate-in fade-in" onClick={onClose}>
@@ -37,61 +95,76 @@ export default function CommandPalette({ isOpen, onClose, onSelectTool, displayL
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input header */}
-        <div className="p-4 border-b border-border-subtle flex items-center gap-3">
-          <Search size={18} className="text-outline" />
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Tìm kiếm công cụ (PDF, WebP, Hóa đơn, Dịch thuật...)"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 bg-transparent border-none text-on-surface text-sm focus:outline-none placeholder:text-outline"
-          />
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-surface-subtle text-outline hover:text-on-surface">
+        <div className="p-4 border-b border-border-subtle flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <ToolioSearchBox
+              state={s}
+              lang={displayLang}
+              size="md"
+              placement="inline"
+              hideSeeAll
+              autoFocus
+              placeholder={pickLang(PLACEHOLDER, displayLang)}
+              ariaLabel={pickLang(PLACEHOLDER, displayLang)}
+              className="[&_.cs-suggest]:max-h-80"
+              renderItem={(item) => (
+                <span className="flex items-center gap-3 min-w-0">
+                  <ToolIcon tool={item.data} />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-bold text-on-surface truncate">{item.title}</span>
+                    <span className="block text-[11px] text-on-surface-variant truncate">{item.subtitle}</span>
+                  </span>
+                </span>
+              )}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Đóng"
+            className="mt-2.5 p-1 rounded-lg hover:bg-surface-subtle text-outline hover:text-on-surface"
+          >
             <X size={16} />
           </button>
         </div>
 
-        {/* Results list */}
-        <div className="max-h-80 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-          {filteredTools.length > 0 ? (
-            filteredTools.map((tool) => (
-              <button
-                key={tool.id}
-                disabled={tool.readiness === 'in-development'}
-                onClick={() => {
-                  onSelectTool(tool.id);
-                  onClose();
-                }}
-                className={`w-full p-3 rounded-xl text-left flex items-center justify-between group transition-colors ${
-                  tool.readiness === 'in-development'
-                    ? 'cursor-not-allowed opacity-50'
-                    : 'hover:bg-surface-subtle'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-tr ${tool.gradient} flex items-center justify-center text-white text-xs`}>
-                    {renderToolIcon(tool.icon, { size: 14 })}
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors">
-                      {getToolName(tool)}
-                    </div>
-                    <div className="text-[11px] text-on-surface-variant line-clamp-1">{tool.desc_vn}</div>
-                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-outline">
-                      {tool.readiness === 'in-development' ? 'Đang phát triển' : tool.readiness}
+        {/* Results list (khi bảng gợi ý đang đóng) */}
+        {!s.showPanel && (
+          <div className="max-h-80 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+            {browse.length > 0 ? (
+              browse.map((tool) => (
+                <button
+                  key={tool.id}
+                  disabled={tool.readiness === 'in-development'}
+                  onClick={() => openTool(tool.id)}
+                  className={`w-full p-3 rounded-xl text-left flex items-center justify-between group transition-colors ${
+                    tool.readiness === 'in-development'
+                      ? 'cursor-not-allowed opacity-50'
+                      : 'hover:bg-surface-subtle'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <ToolIcon tool={tool} />
+                    <div>
+                      <div className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors">
+                        {toolName(tool, displayLang)}
+                      </div>
+                      <div className="text-[11px] text-on-surface-variant line-clamp-1">{tool.desc_vn}</div>
+                      <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-outline">
+                        {tool.readiness === 'in-development' ? 'Đang phát triển' : tool.readiness}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <ArrowRight size={14} className="text-outline group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-              </button>
-            ))
-          ) : (
-            <div className="p-6 text-center text-xs text-outline">
-              Không tìm thấy công cụ nào phù hợp với "{query}"
-            </div>
-          )}
-        </div>
+                  <ArrowRight size={14} className="text-outline group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                </button>
+              ))
+            ) : (
+              <div className="p-6 text-center text-xs text-outline">
+                Không tìm thấy công cụ nào phù hợp với "{s.query}"
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer info */}
         <div className="px-4 py-2 bg-surface-subtle/50 border-t border-border-subtle flex items-center justify-between text-[11px] text-outline font-mono">
