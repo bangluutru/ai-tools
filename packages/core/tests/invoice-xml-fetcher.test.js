@@ -441,30 +441,148 @@ test('Test Case 25: parses real invoice PDF from Downloads folder successfully',
   assert.ok(doc.buyerName.includes('CÔNG TY CỔ PHẦN GENKI FAMI VIỆT NAM'));
 });
 
-// 26. Tải và giải nén trực tiếp file XML từ API Minvoice không cần captcha
-test('Test Case 26: directly downloads and unzips authentic XML from Minvoice API', async () => {
-  const provider = getProviderById('minvoice');
-  assert.equal(provider.id, 'minvoice');
+// 26. Tải và giải nén trực tiếp file XML từ API Minvoice không cần captcha.
+//
+// Chạy KHÔNG cần mạng: `fetch` được thay bằng bản giả trả về một ZIP dựng ngay
+// trong test. Bản cũ gọi thật tới tracuuhoadon.minvoice.com.vn nên CI đỏ mỗi
+// khi cổng Minvoice chậm hay chặn máy chủ CI, dù code không đổi gì.
+//
+// XML trong ZIP là hoá đơn tự dựng, không phải phản hồi thật: repo này công
+// khai, còn hoá đơn thật có tên và địa chỉ người mua. Chỉ giữ các thẻ mà bộ
+// kiểm (xmlValidator) đọc: MST người bán, ký hiệu, số hoá đơn.
+//
+// Muốn thử lại với cổng thật (ví dụ khi Minvoice đổi API): chạy với
+// TOOLIO_LIVE_NETWORK=1 — Test Case 26 (live) bên dưới mới chạy.
+const MINVOICE_SAMPLE = {
+  code: 'JYRE67VG12ETM80PDBRY',
+  sellerTaxCode: '0106852727',
+  invoiceSymbol: '1C26MBB',
+  invoiceNumber: '00016752',
+};
 
-  const downloadResult = await attemptDirectXmlDownload({
-    provider,
+const FAKE_MINVOICE_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<HDon>
+  <DLHDon>
+    <TTChung>
+      <KHMSHDon>1</KHMSHDon>
+      <KHHDon>C26MBB</KHHDon>
+      <SHDon>16752</SHDon>
+    </TTChung>
+    <NDHDon>
+      <NBan><Ten>CONG TY MAU</Ten><MST>0106852727</MST></NBan>
+      <NMua><Ten>NGUOI MUA MAU</Ten></NMua>
+    </NDHDon>
+  </DLHDon>
+</HDon>`;
+
+async function withFakeFetch(respond, run) {
+  const calls = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), init });
+    return respond(String(url));
+  };
+  try {
+    return await run(calls);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+}
+
+async function fakeMinvoiceZip(xml = FAKE_MINVOICE_XML) {
+  const { default: JSZip } = await import('jszip');
+  const zip = new JSZip();
+  zip.file('hoadon.xml', xml);
+  return zip.generateAsync({ type: 'uint8array' });
+}
+
+function minvoiceItem() {
+  return {
+    provider: getProviderById('minvoice'),
     url: 'https://tracuuhoadon.minvoice.com.vn/',
     lookupUrl: 'https://tracuuhoadon.minvoice.com.vn/',
-    code: 'JYRE67VG12ETM80PDBRY',
-    lookupCode: 'JYRE67VG12ETM80PDBRY',
-    sellerTaxCode: '0106852727',
-    taxCode: '0106852727',
-    invoiceSymbol: '1C26MBB',
-    invoiceNumber: '00016752',
-  });
+    lookupCode: MINVOICE_SAMPLE.code,
+    code: MINVOICE_SAMPLE.code,
+    sellerTaxCode: MINVOICE_SAMPLE.sellerTaxCode,
+    taxCode: MINVOICE_SAMPLE.sellerTaxCode,
+    invoiceSymbol: MINVOICE_SAMPLE.invoiceSymbol,
+    invoiceNumber: MINVOICE_SAMPLE.invoiceNumber,
+  };
+}
 
-  assert.equal(downloadResult.success, true);
-  assert.ok(downloadResult.xmlContent.includes('<HDon>'));
-  assert.ok(downloadResult.xmlContent.includes('0106852727'));
-  assert.ok(downloadResult.xmlContent.includes('16752'));
-  assert.equal(downloadResult.hasMismatch, false);
+test('Test Case 26: directly downloads and unzips XML from the Minvoice API (offline)', async () => {
+  const zipBytes = await fakeMinvoiceZip();
+
+  await withFakeFetch(
+    () => new Response(zipBytes, { status: 200, headers: { 'content-type': 'application/zip' } }),
+    async (calls) => {
+      const provider = getProviderById('minvoice');
+      assert.equal(provider.id, 'minvoice');
+
+      const downloadResult = await attemptDirectXmlDownload(minvoiceItem());
+
+      // Gọi đúng một lần, đúng endpoint tải XML, đúng MST và mã tra cứu.
+      assert.equal(calls.length, 1);
+      const called = new URL(calls[0].url);
+      assert.equal(called.origin + called.pathname, 'https://tracuuhoadon.minvoice.com.vn/api/Search/DownloadXml');
+      assert.equal(called.searchParams.get('masothue'), MINVOICE_SAMPLE.sellerTaxCode);
+      assert.equal(called.searchParams.get('sobaomat'), MINVOICE_SAMPLE.code);
+
+      assert.equal(downloadResult.success, true);
+      assert.ok(downloadResult.xmlContent.includes('<HDon>'));
+      assert.ok(downloadResult.xmlContent.includes('0106852727'));
+      assert.ok(downloadResult.xmlContent.includes('16752'));
+      assert.equal(downloadResult.hasMismatch, false);
+    }
+  );
 });
 
+test('Test Case 26b: Minvoice returning plain XML (not zipped) is accepted too (offline)', async () => {
+  await withFakeFetch(
+    () => new Response(FAKE_MINVOICE_XML, { status: 200, headers: { 'content-type': 'application/xml' } }),
+    async () => {
+      const downloadResult = await attemptDirectXmlDownload(minvoiceItem());
+      assert.equal(downloadResult.success, true);
+      assert.equal(downloadResult.hasMismatch, false);
+    }
+  );
+});
 
+test('Test Case 26c: XML for another invoice is flagged as a mismatch (offline)', async () => {
+  const zipBytes = await fakeMinvoiceZip(FAKE_MINVOICE_XML.replace('<SHDon>16752</SHDon>', '<SHDon>99999</SHDon>'));
+  await withFakeFetch(
+    () => new Response(zipBytes, { status: 200, headers: { 'content-type': 'application/zip' } }),
+    async () => {
+      const downloadResult = await attemptDirectXmlDownload(minvoiceItem());
+      assert.equal(downloadResult.success, true);
+      assert.equal(downloadResult.hasMismatch, true);
+    }
+  );
+});
 
+test('Test Case 26d: Minvoice API down falls back without throwing (offline)', async () => {
+  await withFakeFetch(
+    (url) =>
+      url.includes('/api/Search/DownloadXml')
+        ? new Response('', { status: 503 })
+        : new Response('<!DOCTYPE html><html><body>captcha</body></html>', { status: 200 }),
+    async () => {
+      const downloadResult = await attemptDirectXmlDownload(minvoiceItem());
+      assert.equal(downloadResult.success, false);
+      assert.equal(downloadResult.fallbackStatus, STATUS_TYPES.CAPTCHA_REQUIRED);
+    }
+  );
+});
 
+test(
+  'Test Case 26 (live): real Minvoice API — only with TOOLIO_LIVE_NETWORK=1',
+  { skip: process.env.TOOLIO_LIVE_NETWORK !== '1' && 'cần mạng; bật bằng TOOLIO_LIVE_NETWORK=1' },
+  async () => {
+    const downloadResult = await attemptDirectXmlDownload(minvoiceItem());
+    assert.equal(downloadResult.success, true);
+    assert.ok(downloadResult.xmlContent.includes('<HDon>'));
+    assert.ok(downloadResult.xmlContent.includes('0106852727'));
+    assert.ok(downloadResult.xmlContent.includes('16752'));
+    assert.equal(downloadResult.hasMismatch, false);
+  }
+);
