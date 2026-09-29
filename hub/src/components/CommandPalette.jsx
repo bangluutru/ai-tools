@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
-import { X, ArrowRight } from 'lucide-react';
+import { X } from 'lucide-react';
 import { rankItems } from '@chotto/search';
 import { ToolioSearchBox } from '@ai-tools/core/search/ToolioSearchBox.jsx';
 import { pickLang, useToolioSearch } from '@ai-tools/core/search/toolioSearch.js';
@@ -33,7 +33,8 @@ function ToolIcon({ tool }) {
 
 /**
  * Bảng lệnh ⌘K khi đang trong một miniapp. Ô tìm là @chotto/search, bảng gợi ý nằm
- * liền trong modal (placement="inline") nên ↑/↓/Enter chạy như mọi ô Chotto khác.
+ * liền trong modal (placement="inline") và hiện ngay cả khi chưa gõ (showOnEmpty),
+ * nên mở ra là thấy danh sách, ↑/↓/Enter chạy như mọi ô Chotto khác.
  * Esc đóng cả modal, đúng như dòng chữ ở chân modal hứa.
  */
 export default function CommandPalette({ isOpen, ...props }) {
@@ -53,9 +54,10 @@ function CommandPaletteBody({ onClose, onSelectTool, displayLang, tools }) {
 
   // Công cụ đang phát triển không mở được, nên không đưa vào gợi ý chọn bằng phím.
   const ready = useMemo(() => tools.filter((t) => t.readiness !== 'in-development'), [tools]);
+  // Chưa gõ thì trả cả danh sách theo thứ tự gốc; gõ rồi thì xếp theo độ khớp.
   const find = useCallback(
     (q) =>
-      rankItems(ready, q, { fields: TOOL_FIELDS, limit: 8 }).map((tool) => ({
+      rankItems(ready, q, { fields: TOOL_FIELDS }).map((tool) => ({
         key: tool.id,
         title: toolName(tool, displayLang),
         subtitle: tool.desc_vn,
@@ -67,6 +69,8 @@ function CommandPaletteBody({ onClose, onSelectTool, displayLang, tools }) {
   const s = useToolioSearch({
     mode: 'filter',
     search: find,
+    showOnEmpty: true,
+    seeAll: false,
     onChoose: (item) => openTool(item.key),
     // Enter khi chưa chọn dòng nào: mở kết quả đầu tiên, như bảng lệnh quen thuộc.
     onSubmit: (q) => {
@@ -84,9 +88,6 @@ function CommandPaletteBody({ onClose, onSelectTool, displayLang, tools }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
-
-  // Bảng gợi ý đóng (chưa gõ, hoặc bấm ra ngoài ô): hiện danh sách lọc để bấm chuột.
-  const browse = s.showPanel ? [] : rankItems(tools, s.query, { fields: TOOL_FIELDS, keepOrder: true });
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center pt-20 px-4 animate-in fade-in" onClick={onClose}>
@@ -106,7 +107,7 @@ function CommandPaletteBody({ onClose, onSelectTool, displayLang, tools }) {
               autoFocus
               placeholder={pickLang(PLACEHOLDER, displayLang)}
               ariaLabel={pickLang(PLACEHOLDER, displayLang)}
-              className="[&_.cs-suggest]:max-h-80"
+              className="[&_.cs-suggest]:max-h-80 [&_.cs-suggest]:overflow-y-auto"
               renderItem={(item) => (
                 <span className="flex items-center gap-3 min-w-0">
                   <ToolIcon tool={item.data} />
@@ -127,44 +128,6 @@ function CommandPaletteBody({ onClose, onSelectTool, displayLang, tools }) {
             <X size={16} />
           </button>
         </div>
-
-        {/* Results list (khi bảng gợi ý đang đóng) */}
-        {!s.showPanel && (
-          <div className="max-h-80 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-            {browse.length > 0 ? (
-              browse.map((tool) => (
-                <button
-                  key={tool.id}
-                  disabled={tool.readiness === 'in-development'}
-                  onClick={() => openTool(tool.id)}
-                  className={`w-full p-3 rounded-xl text-left flex items-center justify-between group transition-colors ${
-                    tool.readiness === 'in-development'
-                      ? 'cursor-not-allowed opacity-50'
-                      : 'hover:bg-surface-subtle'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <ToolIcon tool={tool} />
-                    <div>
-                      <div className="text-xs font-bold text-on-surface group-hover:text-primary transition-colors">
-                        {toolName(tool, displayLang)}
-                      </div>
-                      <div className="text-[11px] text-on-surface-variant line-clamp-1">{tool.desc_vn}</div>
-                      <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-outline">
-                        {tool.readiness === 'in-development' ? 'Đang phát triển' : tool.readiness}
-                      </div>
-                    </div>
-                  </div>
-                  <ArrowRight size={14} className="text-outline group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
-                </button>
-              ))
-            ) : (
-              <div className="p-6 text-center text-xs text-outline">
-                Không tìm thấy công cụ nào phù hợp với "{s.query}"
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Footer info */}
         <div className="px-4 py-2 bg-surface-subtle/50 border-t border-border-subtle flex items-center justify-between text-[11px] text-outline font-mono">
