@@ -28,6 +28,9 @@ import {
   findRequiredDocuments,
 } from '../../documents/finders/documentFinderEngine.js';
 import { getAllProcedures } from '../../documents/resolvers/procedureRequirementResolver.js';
+import { rankItems } from '@chotto/search';
+import { ToolioSearchBox } from '../../search/ToolioSearchBox.jsx';
+import { useToolioSearch } from '../../search/toolioSearch.js';
 
 export function DocumentFinderView({ lang = 'vi' }) {
   const availableIntents = useMemo(() => getAvailableIntents(), []);
@@ -35,7 +38,9 @@ export function DocumentFinderView({ lang = 'vi' }) {
 
   const [selectedIntentId, setSelectedIntentId] = useState('intent.visa-renewal');
   const [selectedProcedureId, setSelectedProcedureId] = useState('procedure.residence-status-renewal');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Ô lọc tên giấy tờ (@chotto/search, mode 'plain'): hai danh sách bên dưới là kết quả.
+  const docSearch = useToolioSearch({ mode: 'plain' });
+  const searchQuery = docSearch.query;
   const [checkedDocs, setCheckedDocs] = useState({});
 
   // Handle intent click
@@ -76,16 +81,13 @@ export function DocumentFinderView({ lang = 'vi' }) {
   };
 
   // Filter items by search query if present
-  const filterList = (list) => {
-    if (!searchQuery.trim()) return list;
-    const q = searchQuery.toLowerCase();
-    return list.filter((item) => {
-      const nameJa = item.documentNameJa.toLowerCase();
-      const nameVi = (item.documentNameI18n.vi || '').toLowerCase();
-      const nameEn = (item.documentNameI18n.en || '').toLowerCase();
-      return nameJa.includes(q) || nameVi.includes(q) || nameEn.includes(q);
+  // So khớp của gói: bỏ dấu ("ho chieu" khớp "hộ chiếu"), NFKC, katakana = hiragana.
+  // keepOrder: giữ thứ tự bắt buộc/điều kiện mà engine đã xếp.
+  const filterList = (list) =>
+    rankItems(list, searchQuery, {
+      fields: [(item) => [item.documentNameJa, item.documentNameI18n.vi, item.documentNameI18n.en]],
+      keepOrder: true,
     });
-  };
 
   const mandatoryList = filterList(finderResult?.mandatory || []);
   const conditionalList = filterList(finderResult?.conditional || []);
@@ -317,16 +319,14 @@ export function DocumentFinderView({ lang = 'vi' }) {
         )}
 
         {/* 3. Filter input */}
-        <div className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t.searchPlaceholder[lang] || t.searchPlaceholder.vi}
-            className="w-full bg-surface border border-outline-variant rounded-xl px-4 py-3 pl-11 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
-          />
-          <FileSearch className="w-5 h-5 text-on-surface-variant absolute left-3.5 top-3.5" />
-        </div>
+        <ToolioSearchBox
+          state={docSearch}
+          lang={lang}
+          icon={<FileSearch className="w-[18px] h-[18px]" />}
+          placeholder={t.searchPlaceholder[lang] || t.searchPlaceholder.vi}
+          ariaLabel={t.searchPlaceholder[lang] || t.searchPlaceholder.vi}
+          count={mandatoryList.length + conditionalList.length}
+        />
 
         {/* 4. Mandatory Documents Section */}
         <section className="space-y-4">

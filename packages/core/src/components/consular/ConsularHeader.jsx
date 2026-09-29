@@ -1,13 +1,13 @@
 import React from 'react';
-import { Search, MapPin, ShieldCheck, Trash2, Globe } from 'lucide-react';
+import { MapPin, ShieldCheck, Trash2, Globe } from 'lucide-react';
+import { ToolioSearchBox } from '../../search/ToolioSearchBox.jsx';
 import { JAPAN_PREFECTURES, getOfficeForPrefecture } from '../../consular/jurisdictions/japanPrefectures.js';
 import { getConsularI18n } from '../../consular/i18n/consularI18n.js';
 
 export default function ConsularHeader({
   selectedPrefectureId,
   onSelectPrefecture,
-  searchQuery,
-  onSearchChange,
+  search,
   onClearDrafts,
   currentOffice,
   displayLang = 'vi',
@@ -96,23 +96,14 @@ export default function ConsularHeader({
         </div>
 
         {/* Ô Tìm kiếm nhanh theo từ khóa & alias */}
-        <div className="md:col-span-7 flex items-center gap-2 bg-surface-container px-3 py-2 rounded-xl border border-border-subtle focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-          <Search size={16} className="text-outline shrink-0" />
-          <input
-            type="text"
-            value={searchQuery || ''}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            placeholder={t.header.searchPlaceholder}
-            className="w-full bg-transparent text-xs text-on-surface placeholder:text-outline/60 outline-none"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => onSearchChange?.('')}
-              className="text-xs text-outline hover:text-on-surface px-1 cursor-pointer"
-            >
-              ✕
-            </button>
+        <div className="md:col-span-7 flex items-center min-w-0">
+          {search && (
+            <ToolioSearchBox
+              state={search}
+              lang={displayLang}
+              placeholder={t.header.searchPlaceholder}
+              ariaLabel={t.header.searchPlaceholder}
+            />
           )}
         </div>
       </div>

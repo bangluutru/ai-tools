@@ -4,10 +4,9 @@
  * Built with StandardToolLayout, high-contrast dark/light mode tokens, WCAG 2.1 AA.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   Compass,
-  Search,
   FileSearch,
   Store,
   IdCard,
@@ -22,9 +21,15 @@ import {
 } from 'lucide-react';
 import StandardToolLayout from '../shared/StandardToolLayout.jsx';
 import { searchAdministrativeDomain } from '../../documents/search/adminSearchEngine.js';
+import { ToolioSearchBox } from '../../search/ToolioSearchBox.jsx';
+import { useToolioSearch } from '../../search/toolioSearch.js';
 
 export function AdministrativeNavigatorView({ lang = 'vi' }) {
-  const [query, setQuery] = useState('');
+  // Ô tìm (@chotto/search, mode 'plain'): kết quả hiện ngay bên dưới qua
+  // searchAdministrativeDomain — engine riêng của mảng giấy tờ, giữ nguyên.
+  const adminSearch = useToolioSearch({ mode: 'plain' });
+  const query = adminSearch.query;
+  const setQuery = adminSearch.setQuery;
 
   const searchResult = useMemo(() => {
     return searchAdministrativeDomain(query);
@@ -161,17 +166,13 @@ export function AdministrativeNavigatorView({ lang = 'vi' }) {
       <div className="space-y-8 max-w-5xl mx-auto">
         {/* 1. Large Multilingual Search Bar */}
         <section className="bg-surface-container-low border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
-          <div className="relative">
-            <input
-              type="text"
-              aria-label={t.searchPlaceholder[lang] || t.searchPlaceholder.vi}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t.searchPlaceholder[lang] || t.searchPlaceholder.vi}
-              className="w-full bg-surface border border-outline-variant rounded-2xl px-5 py-4 pl-12 text-base text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
-            />
-            <Search className="w-5 h-5 text-on-surface-variant absolute left-4 top-4.5" />
-          </div>
+          <ToolioSearchBox
+            state={adminSearch}
+            lang={lang}
+            size="lg"
+            ariaLabel={t.searchPlaceholder[lang] || t.searchPlaceholder.vi}
+            placeholder={t.searchPlaceholder[lang] || t.searchPlaceholder.vi}
+          />
 
           {/* Suggestion Pills */}
           <div className="flex flex-wrap items-center gap-2 pt-1">

@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Type, Search, X, ChevronDown } from 'lucide-react';
+import { Type, ChevronDown } from 'lucide-react';
+import { rankItems } from '@chotto/search';
+import { ToolioSearchBox } from '../search/ToolioSearchBox.jsx';
+import { useToolioSearch } from '../search/toolioSearch.js';
 
 // =====================================================================
 // Popular Google Fonts — curated list with CJK support
@@ -58,9 +61,9 @@ const loadGoogleFont = (fontName) => {
 // =====================================================================
 const GoogleFontPicker = ({ currentFont, onFontChange, accentColor = 'indigo' }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [search, setSearch] = useState('');
     const dropdownRef = useRef(null);
-    const searchRef = useRef(null);
+    // Ô tìm font: @chotto/search, mode 'plain' — danh sách font ngay bên dưới đã là kết quả.
+    const fontSearch = useToolioSearch({ mode: 'plain' });
 
     // Close on outside click
     useEffect(() => {
@@ -73,16 +76,7 @@ const GoogleFontPicker = ({ currentFont, onFontChange, accentColor = 'indigo' })
         return () => document.removeEventListener('mousedown', handler);
     }, [isOpen]);
 
-    // Focus search on open
-    useEffect(() => {
-        if (isOpen && searchRef.current) {
-            searchRef.current.focus();
-        }
-    }, [isOpen]);
-
-    const filtered = POPULAR_FONTS.filter(f =>
-        f.name.toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = rankItems(POPULAR_FONTS, fontSearch.query, { fields: [(f) => f.name] });
 
     // Find current display name
     const currentDisplay = POPULAR_FONTS.find(f => f.family === currentFont)?.name
@@ -93,7 +87,7 @@ const GoogleFontPicker = ({ currentFont, onFontChange, accentColor = 'indigo' })
         loadGoogleFont(font.name);
         onFontChange(font.family);
         setIsOpen(false);
-        setSearch('');
+        fontSearch.setQuery('');
     };
 
     const accentMap = {
@@ -125,22 +119,13 @@ const GoogleFontPicker = ({ currentFont, onFontChange, accentColor = 'indigo' })
                 <div className="absolute top-full left-0 mt-1.5 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 z-[100] overflow-hidden animate-in fade-in slide-in-from-top-1">
                     {/* Search */}
                     <div className="p-2.5 border-b border-slate-100">
-                        <div className="flex items-center gap-2 px-2.5 py-1.5 bg-slate-50 rounded-lg border border-slate-200 focus-within:ring-2 focus-within:ring-indigo-300 focus-within:border-indigo-400 transition-all">
-                            <Search size={13} className="text-slate-400 shrink-0" />
-                            <input
-                                ref={searchRef}
-                                type="text"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Tìm font..."
-                                className="flex-1 bg-transparent text-xs outline-none text-slate-700 placeholder:text-slate-300"
-                            />
-                            {search && (
-                                <button onClick={() => setSearch('')} className="text-slate-300 hover:text-slate-500">
-                                    <X size={12} />
-                                </button>
-                            )}
-                        </div>
+                        <ToolioSearchBox
+                            state={fontSearch}
+                            size="sm"
+                            autoFocus
+                            placeholder="Tìm font..."
+                            ariaLabel="Tìm font"
+                        />
                     </div>
 
                     {/* Font List */}

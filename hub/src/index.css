@@ -846,3 +846,30 @@ body {
     transform: scale(1);
   }
 }
+
+/* ==========================================================================
+   Ô tìm kiếm dùng chung @chotto/search
+   --------------------------------------------------------------------------
+   Map biến --cs-* sang token Toolio, MỘT lần ở đây. Token đổi theo
+   data-theme/data-skin nên ô tự ăn theo cả bốn theme. Đừng tô màu ô tìm kiếm
+   ở từng miniapp — chỉ đặt vị trí và độ rộng. Hook nối và nhãn theo ngôn ngữ:
+   packages/core/src/search/toolioSearch.jsx.
+   ========================================================================== */
+:root {
+  --cs-surface: var(--surface-container);
+  --cs-hover: var(--surface-subtle);
+  --cs-border: var(--border-subtle);
+  --cs-text: var(--on-surface);
+  --cs-muted: var(--on-surface-variant);
+  --cs-placeholder: var(--outline);
+  --cs-accent: var(--primary-container);
+  --cs-focus-ring: 0 0 0 3px rgb(var(--primary-container-rgb) / 0.28);
+  --cs-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  --cs-panel-shadow: 0 14px 32px rgb(0 0 0 / 0.22);
+  --cs-radius-panel: var(--radius-lg);
+  --cs-radius-item: var(--radius-sm);
+  --cs-button-bg: var(--primary-container);
+  --cs-button-bg-hover: var(--primary);
+  --cs-button-text: var(--on-primary-container);
+  --cs-font: inherit;
+}

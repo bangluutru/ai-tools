@@ -4,7 +4,7 @@
  * Built with StandardToolLayout, high-contrast dark/light mode tokens, WCAG 2.1 AA.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Store,
   Building2,
@@ -18,7 +18,6 @@ import {
   MapPin,
   Shield,
   HelpCircle,
-  Search,
   ExternalLink,
 } from 'lucide-react';
 import StandardToolLayout from '../shared/StandardToolLayout.jsx';
@@ -28,6 +27,8 @@ import {
 } from '../../documents/acquisition/certificateGuideEngine.js';
 import { getVerifiedMunicipalitiesList } from '../../documents/acquisition/localityRegistry.js';
 import { findDocumentsByQuery, getAllDocuments } from '../../documents/resolvers/documentResolver.js';
+import { ToolioSearchBox } from '../../search/ToolioSearchBox.jsx';
+import { useToolioSearch } from '../../search/toolioSearch.js';
 
 export function CertificateAcquisitionGuideView({ lang = 'vi' }) {
   const commonDocs = useMemo(() => getCommonCertificates(), []);
@@ -35,7 +36,6 @@ export function CertificateAcquisitionGuideView({ lang = 'vi' }) {
   const allDocs = useMemo(() => getAllDocuments(), []);
 
   const [selectedDocId, setSelectedDocId] = useState('document.resident-record-copy');
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedMuniCode, setSelectedMuniCode] = useState('131041'); // Default: Shinjuku City
   const [customMuniName, setCustomMuniName] = useState('');
   const [hasMyNumberCard, setHasMyNumberCard] = useState(true);
@@ -45,11 +45,27 @@ export function CertificateAcquisitionGuideView({ lang = 'vi' }) {
   const [domicileCity, setDomicileCity] = useState('');
   const [activeChannelTab, setActiveChannelTab] = useState('convenience_store');
 
-  // Search filtered documents
-  const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    return findDocumentsByQuery(searchQuery);
-  }, [searchQuery]);
+  // Ô tìm giấy tờ (@chotto/search, mode 'suggest'): gợi ý lấy từ findDocumentsByQuery —
+  // resolver riêng của mảng giấy tờ, giữ nguyên. Chọn một gợi ý là chọn giấy đó, ô tự xoá.
+  const findDocs = useCallback(
+    (q) =>
+      findDocumentsByQuery(q).map((d) => ({
+        key: d.id,
+        title: d.canonicalNameJa,
+        subtitle: d.nameI18n[lang] || d.nameI18n.vi,
+      })),
+    [lang]
+  );
+  const docSearch = useToolioSearch({
+    mode: 'suggest',
+    search: findDocs,
+    onChoose: (item) => setSelectedDocId(item.key),
+    // Enter khi chưa chọn dòng nào: lấy gợi ý đầu tiên (không có trang kết quả riêng).
+    onSubmit: (q) => {
+      const first = findDocs(q)[0];
+      if (first) setSelectedDocId(first.key);
+    },
+  });
 
   const activeDoc = useMemo(() => {
     return allDocs.find((d) => d.id === selectedDocId);
@@ -192,7 +208,7 @@ export function CertificateAcquisitionGuideView({ lang = 'vi' }) {
                   type="button"
                   onClick={() => {
                     setSelectedDocId(doc.id);
-                    setSearchQuery('');
+                    docSearch.setQuery('');
                   }}
                   className={`px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
                     isSelected
@@ -207,36 +223,14 @@ export function CertificateAcquisitionGuideView({ lang = 'vi' }) {
           </div>
 
           {/* Search input with live suggestions */}
-          <div className="mt-4 relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+          <div className="mt-4">
+            <ToolioSearchBox
+              state={docSearch}
+              lang={lang}
+              hideSeeAll
               placeholder={t.searchPlaceholder[lang] || t.searchPlaceholder.vi}
-              className="w-full bg-surface border border-outline-variant rounded-xl px-4 py-2.5 pl-10 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary shadow-sm"
+              ariaLabel={t.searchPlaceholder[lang] || t.searchPlaceholder.vi}
             />
-            <Search className="w-4 h-4 text-on-surface-variant absolute left-3.5 top-3.5" />
-
-            {searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-outline-variant rounded-xl shadow-lg z-20 max-h-56 overflow-y-auto p-1">
-                {searchResults.map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDocId(d.id);
-                      setSearchQuery('');
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-lg text-xs hover:bg-surface-container-high text-on-surface flex items-center justify-between"
-                  >
-                    <span className="font-semibold">{d.canonicalNameJa}</span>
-                    <span className="text-on-surface-variant">
-                      {d.nameI18n[lang] || d.nameI18n.vi}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </section>
 

@@ -2,9 +2,9 @@
  * @file consular/search/consularSearch.js
  * Tìm kiếm thủ tục lãnh sự: không phân biệt dấu (an toàn NFC/NFD), theo từ khóa (token),
  * hỗ trợ câu tự nhiên ("tôi muốn làm lại hộ chiếu bị mất"), không dấu ("ho chieu", "ket hon") và tiếng Nhật ("パスポート").
- * Dùng lại normalizeSearchQuery của navigator để thống nhất cách bỏ dấu.
+ * Bỏ dấu bằng foldText của gói dùng chung @chotto/search, như mọi ô tìm kiếm khác của Toolio.
  */
-import { normalizeSearchQuery } from '../../navigator/search/searchEngine.js';
+import { foldText } from '@chotto/search';
 import { CONSULAR_PROCEDURES } from '../procedures/index.js';
 
 const CJK_RE = /[぀-ヿ㐀-䶿一-鿿]/;
@@ -19,7 +19,7 @@ const STOPWORDS = new Set([
 
 export function foldConsularText(text) {
   if (!text) return '';
-  return normalizeSearchQuery(String(text).normalize('NFKC'))
+  return foldText(text)
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();

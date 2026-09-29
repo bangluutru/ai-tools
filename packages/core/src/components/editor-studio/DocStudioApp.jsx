@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { LayoutTemplate, Layers, ShieldCheck, PlusCircle, Search, FileText, Download, Printer, Upload, Sparkles, ArrowLeft, FileUp } from 'lucide-react';
+import { LayoutTemplate, Layers, ShieldCheck, PlusCircle, FileText, Download, Printer, Upload, Sparkles, ArrowLeft, FileUp } from 'lucide-react';
 import { parseMarkdownToSchema, applyFormatSuggestions } from '../../lib/editor-studio/parsers';
 import { validateSchema } from '../../lib/editor-studio/validationEngine';
 import { exportDocx } from '../../lib/editor-studio/export';
@@ -10,6 +10,9 @@ import DocStudioPreview from './DocStudioPreview';
 import FormatSuggestionPanel from './FormatSuggestionPanel';
 import LayoutSettingsBar from './LayoutSettingsBar';
 import { DEFAULT_LAYOUT_CONFIG, resolveLayout, normalizeDocStudioLang } from '../../lib/editor-studio/layoutPresets';
+import { rankItems } from '@chotto/search';
+import { ToolioSearchBox } from '../../search/ToolioSearchBox.jsx';
+import { useToolioSearch } from '../../search/toolioSearch.js';
 
 // =====================================================================
 // i18n translations for DocStudio Tab 9
@@ -164,7 +167,8 @@ const TEMPLATE_BOILERPLATES = {
 
 export default function DocStudioApp({ displayLang }) {
     const [activeSubTab, setActiveSubTab] = useState('dashboard');
-    const [searchQuery, setSearchQuery] = useState('');
+    // Ô lọc tài liệu mẫu: @chotto/search, mode 'plain' — danh sách ngay bên dưới là kết quả.
+    const docSearch = useToolioSearch({ mode: 'plain' });
     const [rawInput, setRawInput] = useState('');
     const [generatedSchema, setGeneratedSchema] = useState(null);
     const [validationIssues, setValidationIssues] = useState([]);
@@ -427,20 +431,18 @@ export default function DocStudioApp({ displayLang }) {
                             </header>
                             <div className="bg-surface-container border border-border-subtle rounded-2xl shadow-sm overflow-hidden">
                                 <div className="p-4 border-b border-border-subtle flex gap-4">
-                                    <div className="relative flex-1">
-                                        <Search size={16} className="absolute left-3 top-2.5 text-on-surface-variant" />
-                                        <input
-                                            type="text"
+                                    <div className="relative flex-1 min-w-0">
+                                        <ToolioSearchBox
+                                            state={docSearch}
+                                            lang={displayLang}
+                                            size="sm"
                                             placeholder={t.searchPlaceholder}
-                                            aria-label={t.searchPlaceholder || "Tìm kiếm tài liệu"}
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            className="w-full pl-9 pr-4 py-2 bg-surface-subtle border border-border-subtle rounded-lg text-sm text-on-surface focus:ring-2 focus:ring-primary-container outline-none"
+                                            ariaLabel={t.searchPlaceholder || 'Tìm kiếm tài liệu'}
                                         />
                                     </div>
                                 </div>
                                 <div className="divide-y divide-border-subtle/30">
-                                    {SAMPLE_DOCS.filter(d => getDocTitle(d).toLowerCase().includes(searchQuery.toLowerCase())).map(doc => (
+                                    {rankItems(SAMPLE_DOCS, docSearch.query, { fields: [getDocTitle], keepOrder: true }).map(doc => (
                                         <div key={doc.id} onClick={() => handleLoadDocument(doc)} className="p-4 hover:bg-surface-subtle/60 flex items-center justify-between group transition-colors cursor-pointer">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 bg-primary-container/15 text-brand-cyan-bright rounded-lg flex items-center justify-center">
