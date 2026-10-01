@@ -204,3 +204,9 @@ export function rangeLabel(pages) {
   if (!pages.length) return '';
   return pages.length === 1 ? String(pages[0]) : `${pages[0]}-${pages[pages.length - 1]}`;
 }
+
+/** Phần trăm giảm dung lượng, làm tròn, không âm. */
+export function savedPercent(originalSize, newSize) {
+  if (!(originalSize > 0)) return 0;
+  return Math.max(0, Math.round((1 - newSize / originalSize) * 100));
+}

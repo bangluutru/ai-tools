@@ -723,16 +723,16 @@ const toolDefinitions = [
     name_vn: 'Công Cụ PDF Đa Năng',
     name_en: 'PDF Multi-Tool',
     name_ja: '万能PDFツール',
-    desc_vn: 'Tách, gộp, xoay, sắp xếp trang PDF, chuẩn hóa khổ A4 và đánh số trang ngay trên trình duyệt.',
-    desc_en: 'Split, merge, rotate and reorder PDF pages, normalize to A4 and add page numbers entirely in your browser.',
-    desc_ja: 'ブラウザ上でPDFページの分割・結合・回転・並べ替え、A4統一、ページ番号付与を行います。',
+    desc_vn: 'Tách, gộp, nén giảm dung lượng, xoay, sắp xếp trang PDF, chuẩn hóa khổ A4 và đánh số trang ngay trên trình duyệt.',
+    desc_en: 'Split, merge, compress, rotate and reorder PDF pages, normalize to A4 and add page numbers entirely in your browser.',
+    desc_ja: 'ブラウザ上でPDFの分割・結合・圧縮、ページの回転・並べ替え、A4統一、ページ番号付与を行います。',
     category: 'pdf',
     icon: 'FileText',
     gradient: 'from-rose-500 via-violet-500 to-teal-500',
     color: '#8b5cf6',
     badge: 'PDF TOOLS',
     popular: true,
-    tags: ['pdf', 'split', 'tách', 'trích xuất', 'extract', 'merge', 'gộp', 'ghép', 'combine', 'organize', 'sắp xếp']
+    tags: ['pdf', 'split', 'tách', 'trích xuất', 'extract', 'merge', 'gộp', 'ghép', 'combine', 'compress', 'nén', 'giảm dung lượng', 'thu nhỏ', 'size', 'organize', 'sắp xếp']
   },
   {
     id: 'omniconvert',

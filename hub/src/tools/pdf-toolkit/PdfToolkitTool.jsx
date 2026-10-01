@@ -28,10 +28,12 @@ import {
   GripVertical,
   ArrowLeft,
   ArrowRight,
-  Undo2
+  Undo2,
+  Minimize2
 } from 'lucide-react';
 import {
   PDF_MERGE_LIMITS,
+  PDF_COMPRESS_LIMITS,
   validateDocumentFiles,
   verifyDocumentSignature,
   formatMiB
@@ -51,20 +53,25 @@ import {
   normalizeRotation,
   parsePageRanges,
   rangeLabel,
+  savedPercent,
 } from './pdfToolkitCore.js';
 import { getRouteQueryParam, setRouteQueryParam } from '../../utils/navigation';
 
 const loadPdfLib = () => import('pdf-lib');
+const loadCompressor = () => import('./pdfCompress.js');
 
 const MODES = [
   { id: 'merge', label: 'Gộp PDF', sub: 'Merge', icon: Combine },
   { id: 'split', label: 'Tách trang', sub: 'Split', icon: Scissors },
+  { id: 'compress', label: 'Nén PDF', sub: 'Compress', icon: Minimize2 },
   { id: 'organize', label: 'Sắp xếp', sub: 'Organize', icon: Layers },
 ];
 
 const VALID_MODES = new Set(MODES.map((m) => m.id));
 
 const SPLIT_OUTPUTS = ['ranges', 'single', 'every'];
+
+const COMPRESS_LEVELS = ['light', 'balanced', 'strong'];
 
 function detectInitialMode() {
   const tab = getRouteQueryParam('tab');
@@ -73,6 +80,10 @@ function detectInitialMode() {
 }
 
 const THUMB_SCALE = 0.3;
+
+/** Mọi URL tạm đều được thu hồi bởi effect theo dõi `outputResult`. */
+const blobUrl = (blob) => URL.createObjectURL(blob);
+
 
 /** Thumbnail chỉ render khi thẻ trang cuộn vào khung nhìn. */
 function LazyThumbnail({ fileId, pageIndex, pageNumber, rotation, thumbnail, requestThumbnail }) {
@@ -135,6 +146,8 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
   const [splitRange, setSplitRangeState] = useState('1-5');
   const [splitOutput, setSplitOutputState] = useState('ranges');
   const [splitFileId, setSplitFileIdState] = useState(null);
+  const [compressLevel, setCompressLevelState] = useState('balanced');
+  const [compressProgress, setCompressProgress] = useState(null); // { fileName, index, total, done, images }
 
   const fileInputRef = useRef(null);
   const docsRef = useRef(new Map()); // fileId → Promise<PDFDocumentProxy>
@@ -154,6 +167,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
   const setSplitRange = withReset(setSplitRangeState);
   const setSplitOutput = withReset(setSplitOutputState);
   const setSplitFileId = withReset(setSplitFileIdState);
+  const setCompressLevel = withReset(setCompressLevelState);
 
   const getWorker = useCallback(() => {
     if (!workerRef.current) workerRef.current = createPdfWorker();
@@ -245,7 +259,8 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
 
   const handleAddFiles = async (selectedFiles) => {
     if (isProcessing || isExecuting) return;
-    const validation = validateDocumentFiles(selectedFiles, files, PDF_MERGE_LIMITS);
+    const isCompress = activeMode === 'compress';
+    const validation = validateDocumentFiles(selectedFiles, files, isCompress ? PDF_COMPRESS_LIMITS : PDF_MERGE_LIMITS);
     const problems = validation.rejected.map(({ file, reason }) => `${file.name}: ${reason}`);
 
     const accepted = [];
@@ -271,7 +286,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
         const docPromise = openPdfDocument(arrayBuffer, { worker });
         const pdf = await docPromise;
         const pageCount = pdf.numPages;
-        if (runningPages + pageCount > PDF_MERGE_LIMITS.maxPages) {
+        if (!isCompress && runningPages + pageCount > PDF_MERGE_LIMITS.maxPages) {
           await destroyPdfDocument(pdf);
           problems.push(`${file.name}: ${tr(
             `vượt giới hạn ${PDF_MERGE_LIMITS.maxPages} trang/lần xử lý`,
@@ -487,6 +502,78 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
     return { outputs, warnings };
   };
 
+  /** Nén từng tệp tuần tự (tiết kiệm RAM); tệp lỗi không làm hỏng cả lô. */
+  const runCompress = async () => {
+    const { compressPdf, compressedName, createBrowserCodec } = await loadCompressor();
+    const PDFLib = await loadPdfLib();
+    const codec = createBrowserCodec();
+    const items = [];
+    for (let i = 0; i < files.length; i += 1) {
+      const f = files[i];
+      setCompressProgress({ fileName: f.name, index: i + 1, total: files.length, done: 0, images: 0 });
+      try {
+        const res = await compressPdf(PDFLib, f.arrayBuffer, {
+          preset: compressLevel,
+          codec,
+          onProgress: ({ done, total }) => setCompressProgress({ fileName: f.name, index: i + 1, total: files.length, done, images: total }),
+        });
+        items.push({ id: f.id, name: f.name, outName: compressedName(f.name), ...res });
+      } catch (err) {
+        items.push({
+          id: f.id,
+          name: f.name,
+          error: isEncryptedPdfError(err) ? encryptedPdfMessage(displayLang) : (err?.message || String(err)),
+        });
+      }
+    }
+    const ok = items.filter((it) => !it.error);
+    if (ok.length === 0) throw new Error(items[0]?.error || 'COMPRESS_FAILED');
+
+    let blob;
+    let name;
+    if (ok.length === 1) {
+      blob = new Blob([ok[0].bytes], { type: 'application/pdf' });
+      name = ok[0].outName;
+    } else {
+      const { default: JSZip } = await import('jszip');
+      const zip = new JSZip();
+      const used = new Set();
+      for (const it of ok) {
+        let entry = it.outName;
+        let n = 2;
+        while (used.has(entry.toLowerCase())) entry = it.outName.replace(/\.pdf$/i, ` (${n++}).pdf`);
+        used.add(entry.toLowerCase());
+        zip.file(entry, it.bytes);
+      }
+      blob = await zip.generateAsync({ type: 'blob' });
+      name = 'PDF_compressed.zip';
+    }
+
+    // Không giữ bản sao byte của kết quả trong state: chỉ giữ số liệu hiển thị.
+    const summary = items.map(({ bytes, ...rest }) => rest);
+    setOutputResult({
+      url: blobUrl(blob),
+      name,
+      size: blob.size,
+      pageCount: ok.reduce((sum, it) => sum + it.pageCount, 0),
+      fileCount: ok.length,
+      isZip: ok.length > 1,
+      originalSize: ok.reduce((sum, it) => sum + it.originalSize, 0),
+      compressItems: summary,
+    });
+
+    const notes = [];
+    const failed = items.length - ok.length;
+    if (failed > 0) {
+      notes.push(tr(`${failed} tệp không nén được (xem chi tiết bên dưới).`, `${failed} file(s) could not be compressed (see details below).`, `${failed}件のファイルは圧縮できませんでした（詳細は下記）。`));
+    }
+    if (ok.some((it) => it.signed)) {
+      notes.push(tr('Có tệp chứa chữ ký số: chữ ký sẽ không còn hiệu lực sau khi nén.', 'Some files contain digital signatures: they are no longer valid after compression.', '電子署名を含むファイルがあります。圧縮後は署名が無効になります。'));
+    }
+    setNotice(notes.join(' • '));
+    if (ok.some((it) => !it.unchanged)) confetti({ particleCount: 60, spread: 70, origin: { y: 0.8 } });
+  };
+
   // Execute processing according to activeMode
   const handleExecute = async () => {
     if (files.length === 0 || isExecuting || isProcessing) return;
@@ -495,6 +582,21 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
     setOutputResult(null);
 
     try {
+      if (activeMode === 'compress') {
+        await runCompress();
+        return;
+      }
+      if (
+        totalSize > PDF_MERGE_LIMITS.maxTotalBytes
+        || files.some((f) => f.size > PDF_MERGE_LIMITS.maxFileBytes)
+        || totalSourcePages > PDF_MERGE_LIMITS.maxPages
+      ) {
+        throw new Error(tr(
+          `Vượt giới hạn gộp/tách: tối đa ${formatMiB(PDF_MERGE_LIMITS.maxFileBytes)} MiB mỗi tệp, ${formatMiB(PDF_MERGE_LIMITS.maxTotalBytes)} MiB và ${PDF_MERGE_LIMITS.maxPages} trang tổng cộng. Hãy bỏ bớt tệp (chế độ Nén PDF cho phép tệp lớn hơn).`,
+          `Over the merge/split limits: max ${formatMiB(PDF_MERGE_LIMITS.maxFileBytes)} MiB per file, ${formatMiB(PDF_MERGE_LIMITS.maxTotalBytes)} MiB and ${PDF_MERGE_LIMITS.maxPages} pages in total. Remove some files (Compress mode allows larger files).`,
+          `結合・分割の上限を超えています: 1ファイル${formatMiB(PDF_MERGE_LIMITS.maxFileBytes)} MiB、合計${formatMiB(PDF_MERGE_LIMITS.maxTotalBytes)} MiB・${PDF_MERGE_LIMITS.maxPages}ページまで。ファイルを減らしてください（圧縮モードはより大きなファイルに対応）。`,
+        ));
+      }
       const { outputs, warnings } = planOutputs();
       const nonEmpty = outputs.filter((o) => o.pages.length > 0);
       if (nonEmpty.length === 0) {
@@ -534,7 +636,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
       }
 
       setOutputResult({
-        url: URL.createObjectURL(blob),
+        url: blobUrl(blob),
         name,
         size: blob.size,
         pageCount: built.reduce((sum, b) => sum + b.pageCount, 0),
@@ -551,6 +653,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
         : `${tr('Lỗi xử lý PDF', 'PDF processing error', 'PDF処理エラー')}: ${err.message}`);
     } finally {
       setIsExecuting(false);
+      setCompressProgress(null);
     }
   };
 
@@ -584,9 +687,9 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
               </h1>
               <p className="font-body-sm text-xs sm:text-sm text-on-surface-variant leading-relaxed">
                 {tr(
-                  'Gộp nhiều tệp PDF, tách trang theo dải tùy chọn, xoay/xóa và sắp xếp thứ tự trang, chuẩn hóa khổ A4 và đánh số trang — trực tiếp trong trình duyệt.',
-                  'Merge PDFs, split pages by custom ranges, rotate/remove and reorder pages, normalize to A4 and add page numbers — right in your browser.',
-                  '複数のPDFの結合、ページ範囲での分割、ページの回転・削除・並べ替え、A4への統一、ページ番号の付与をブラウザ内で行います。',
+                  'Gộp nhiều tệp PDF, tách trang theo dải tùy chọn, giảm dung lượng, xoay/xóa và sắp xếp thứ tự trang, chuẩn hóa khổ A4 và đánh số trang — trực tiếp trong trình duyệt.',
+                  'Merge PDFs, split pages by custom ranges, shrink file size, rotate/remove and reorder pages, normalize to A4 and add page numbers — right in your browser.',
+                  '複数のPDFの結合、ページ範囲での分割、ファイルサイズの削減、ページの回転・削除・並べ替え、A4への統一、ページ番号の付与をブラウザ内で行います。',
                 )}
               </p>
             </div>
@@ -621,7 +724,13 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 <h2 className="font-title-sm text-title-sm text-on-surface">Tải Tệp Tin PDF</h2>
               </div>
               <span className="font-label-sm text-label-sm text-outline">
-                Tối đa {PDF_MERGE_LIMITS.maxFiles} tệp / {formatMiB(PDF_MERGE_LIMITS.maxTotalBytes)} MiB / {PDF_MERGE_LIMITS.maxPages} trang
+                {activeMode === 'compress'
+                  ? tr(
+                    `Tối đa ${PDF_COMPRESS_LIMITS.maxFiles} tệp / ${formatMiB(PDF_COMPRESS_LIMITS.maxFileBytes)} MiB mỗi tệp`,
+                    `Up to ${PDF_COMPRESS_LIMITS.maxFiles} files / ${formatMiB(PDF_COMPRESS_LIMITS.maxFileBytes)} MiB each`,
+                    `最大${PDF_COMPRESS_LIMITS.maxFiles}ファイル／1ファイル${formatMiB(PDF_COMPRESS_LIMITS.maxFileBytes)} MiB`,
+                  )
+                  : `Tối đa ${PDF_MERGE_LIMITS.maxFiles} tệp / ${formatMiB(PDF_MERGE_LIMITS.maxTotalBytes)} MiB / ${PDF_MERGE_LIMITS.maxPages} trang`}
               </span>
             </div>
 
@@ -860,6 +969,55 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 </div>
               )}
 
+              {activeMode === 'compress' && (
+                <div className="space-y-space-3">
+                  <span className="font-label-sm text-label-sm text-outline uppercase tracking-wider block">
+                    {tr('Mức nén', 'Compression level', '圧縮レベル')}
+                  </span>
+                  <div className="grid grid-cols-1 gap-space-2" role="radiogroup" aria-label={tr('Mức nén PDF', 'PDF compression level', 'PDF圧縮レベル')}>
+                    {COMPRESS_LEVELS.map((level) => {
+                      const selected = compressLevel === level;
+                      return (
+                        <label
+                          key={level}
+                          className={`flex items-start gap-space-3 p-space-3 rounded-lg cursor-pointer border transition-colors min-h-11 ${
+                            selected ? 'bg-surface-container-high border-primary-container' : 'bg-surface-subtle border-border-subtle hover:bg-surface-container-high'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="compress-level"
+                            value={level}
+                            checked={selected}
+                            onChange={() => setCompressLevel(level)}
+                            className="mt-1 accent-primary-container"
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-body-sm font-semibold text-on-surface">
+                              {level === 'light' && tr('Nén nhẹ — giữ nét in ấn', 'Light — print quality', '軽め — 印刷品質を維持')}
+                              {level === 'balanced' && tr('Cân bằng — khuyên dùng', 'Balanced — recommended', 'バランス — おすすめ')}
+                              {level === 'strong' && tr('Nén mạnh — dung lượng nhỏ nhất', 'Strong — smallest size', '強め — 最小サイズ')}
+                            </span>
+                            <span className="block text-[12px] text-on-surface-variant text-pretty">
+                              {level === 'light' && tr('Ảnh giảm còn tối đa 200 dpi, chất lượng cao. Phù hợp tài liệu cần in.', 'Images capped at 200 dpi, high quality. Good for documents you will print.', '画像は最大200dpi・高画質。印刷する書類向け。')}
+                              {level === 'balanced' && tr('Ảnh giảm còn 150 dpi, đủ nét để đọc và gửi email.', 'Images reduced to 150 dpi, sharp enough to read and email.', '画像を150dpiに縮小。閲覧やメール添付に十分な鮮明さ。')}
+                              {level === 'strong' && tr('Ảnh giảm còn 96 dpi, chất lượng thấp hơn. Phù hợp xem trên màn hình.', 'Images reduced to 96 dpi at lower quality. Good for on-screen viewing.', '画像を96dpiに縮小し画質は低め。画面での閲覧向け。')}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="font-body-sm text-[11px] text-outline text-pretty">
+                    {tr(
+                      'Chữ, vector, liên kết và mục lục được giữ nguyên; chỉ ảnh nhúng bị giảm độ phân giải. Tệp toàn chữ có thể giảm ít. Tệp không nhỏ đi sẽ được giữ nguyên như bản gốc.',
+                      'Text, vectors, links and bookmarks are preserved; only embedded images are downsampled. Text-only files may shrink less. If a file cannot get smaller, the original is kept.',
+                      '文字・ベクター・リンク・しおりはそのまま。埋め込み画像のみ解像度を下げます。文字だけのPDFは縮小幅が小さい場合があります。小さくならない場合は元のファイルを保持します。',
+                    )}
+                  </p>
+                </div>
+              )}
+
               {activeMode === 'organize' && (
                 <div className="space-y-space-3">
                   <div className="p-space-3 bg-surface-subtle border border-border-subtle rounded-lg space-y-space-2">
@@ -878,7 +1036,9 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 </div>
               )}
 
-              {/* COMMON OUTPUT OPTIONS (áp dụng cho mọi chế độ) */}
+              {/* COMMON OUTPUT OPTIONS (không áp dụng cho nén) */}
+              {activeMode !== 'compress' && (
+              <>
               <div className="space-y-space-2">
                 <label className="flex items-start gap-space-3 cursor-pointer group">
                   <input
@@ -925,6 +1085,8 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                   />
                 </div>
               </div>
+              </>
+              )}
             </div>
 
             {/* PRIMARY RUN ACTION BUTTON */}
@@ -937,9 +1099,17 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
               <Zap size={20} />
               <span>
                 {isExecuting
-                  ? 'Đang xử lý tài liệu PDF...'
+                  ? (activeMode === 'compress' && compressProgress
+                    ? tr(
+                      `Đang nén ${compressProgress.index}/${compressProgress.total}${compressProgress.images ? ` — ảnh ${compressProgress.done}/${compressProgress.images}` : ''}...`,
+                      `Compressing ${compressProgress.index}/${compressProgress.total}${compressProgress.images ? ` — image ${compressProgress.done}/${compressProgress.images}` : ''}...`,
+                      `圧縮中 ${compressProgress.index}/${compressProgress.total}${compressProgress.images ? ` — 画像 ${compressProgress.done}/${compressProgress.images}` : ''}...`,
+                    )
+                    : 'Đang xử lý tài liệu PDF...')
                   : files.length > 0
-                  ? activeMode === 'organize'
+                  ? activeMode === 'compress'
+                    ? tr(`Bắt Đầu Nén (${files.length} Tệp)`, `Compress (${files.length} file${files.length > 1 ? 's' : ''})`, `圧縮を開始（${files.length}ファイル）`)
+                  : activeMode === 'organize'
                     ? `Bắt Đầu Sắp Xếp (${totalPages} Trang)`
                     : activeMode === 'merge'
                     ? (files.length === 1 ? `Lưu & Xuất File (${totalPages} Trang)` : `Bắt Đầu Gộp (${totalPages} Trang)`)
@@ -952,7 +1122,76 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
 
         {/* RIGHT COLUMN: LIVE PREVIEW & OUTPUT RESULTS (7 cols / ~58%) */}
         <div className="lg:col-span-7 space-y-space-6">
-          {/* CARD 1: VISUAL GRID THUMBNAILS & PAGE REORDERING */}
+          {activeMode === 'compress' ? (
+          /* CARD 1 (nén): danh sách tệp và kết quả trước/sau */
+          <div className="bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md">
+            <div className="mb-space-4">
+              <h2 className="font-title-sm text-title-sm text-on-surface">{tr('Dung Lượng Trước & Sau Khi Nén', 'File Size Before & After', '圧縮前後のファイルサイズ')}</h2>
+              <p className="font-body-sm text-body-sm text-on-surface-variant text-pretty">
+                {tr('Kết quả tính trên tệp thật sau khi nén, không phải ước lượng.', 'Figures are measured on the real compressed files, not estimates.', '推定ではなく、実際に圧縮したファイルのサイズです。')}
+              </p>
+            </div>
+            {files.length > 0 ? (
+              <ul className="space-y-space-3">
+                {files.map((file) => {
+                  const item = outputResult?.compressItems?.find((it) => it.id === file.id);
+                  const pct = item && !item.error ? savedPercent(item.originalSize, item.newSize) : 0;
+                  return (
+                    <li key={file.id} className="bg-surface-subtle border border-border-subtle rounded-lg p-space-3 space-y-space-2">
+                      <div className="flex items-center justify-between gap-space-3">
+                        <div className="flex items-center gap-space-2 min-w-0">
+                          <FileText size={16} className="text-primary shrink-0" />
+                          <span className="truncate font-semibold text-on-surface text-body-sm">{file.name}</span>
+                        </div>
+                        <span className="text-xs text-outline shrink-0">{file.pageCount} {tr('trang', 'pages', 'ページ')}</span>
+                      </div>
+                      {item?.error ? (
+                        <p className="text-xs text-error flex items-start gap-1">
+                          <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                          <span className="min-w-0 break-words">{item.error}</span>
+                        </p>
+                      ) : item ? (
+                        <>
+                          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-body-sm">
+                            <span className="text-on-surface-variant">
+                              {formatSize(item.originalSize)} <span aria-hidden="true">→</span> <strong className="text-on-surface">{formatSize(item.newSize)}</strong>
+                            </span>
+                            <span className={`font-semibold ${item.unchanged ? 'text-on-surface-variant' : 'text-secondary'}`}>
+                              {item.unchanged
+                                ? tr('Đã tối ưu sẵn — giữ nguyên', 'Already optimized — kept as is', '最適化済み — そのまま')
+                                : tr(`Giảm ${pct}%`, `Saved ${pct}%`, `${pct}%削減`)}
+                            </span>
+                          </div>
+                          <div className="h-2 rounded-full bg-surface-container-high overflow-hidden" role="img" aria-label={tr(`Giảm ${pct}% dung lượng`, `${pct}% smaller`, `${pct}%削減`)}>
+                            <div className="h-full bg-secondary" style={{ width: `${Math.max(2, 100 - pct)}%` }} />
+                          </div>
+                          <p className="text-[11px] text-outline">
+                            {tr(
+                              `Ảnh: nén lại ${item.images.optimized}/${item.images.total}`,
+                              `Images: ${item.images.optimized}/${item.images.total} recompressed`,
+                              `画像: ${item.images.optimized}/${item.images.total}件を再圧縮`,
+                            )}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-outline">{formatSize(file.size)} — {tr('chờ nén', 'waiting', '待機中')}</p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <div className="h-48 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-border-subtle rounded-xl text-on-surface-variant">
+                <Minimize2 size={40} className="text-outline mb-2 opacity-50" />
+                <p className="font-title-sm text-body-md text-on-surface">{tr('Chưa có tệp nào để nén', 'No files to compress yet', '圧縮するファイルがありません')}</p>
+                <p className="font-body-sm text-body-sm text-outline mt-1 text-pretty">
+                  {tr('Tải tệp PDF lên, chọn mức nén rồi bấm Bắt Đầu Nén.', 'Upload PDFs, pick a level, then press Compress.', 'PDFをアップロードし、レベルを選んで圧縮を開始してください。')}
+                </p>
+              </div>
+            )}
+          </div>
+          ) : (
+          /* CARD 1: VISUAL GRID THUMBNAILS & PAGE REORDERING */
           <div className="bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-3 mb-space-4">
               <div>
@@ -1191,6 +1430,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
               </div>
             )}
           </div>
+          )}
 
           {/* CARD 2: OUTPUT RESULTS & DOWNLOAD SUITE */}
           <div className="bg-surface-container rounded-xl p-space-6 border border-border-subtle shadow-md flex flex-col gap-space-5">
@@ -1223,7 +1463,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 <span className="font-title-sm text-title-sm text-brand-cyan-bright">
                   {outputResult ? `${outputResult.pageCount} trang hoàn chỉnh` : `${totalPages} trang`}
                 </span>
-                <span className="font-body-sm text-body-sm text-on-surface-variant">{normalizeA4 ? 'Khổ A4' : 'Giữ khổ trang gốc'}</span>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">{normalizeA4 && activeMode !== 'compress' ? 'Khổ A4' : 'Giữ khổ trang gốc'}</span>
               </div>
               <div className="bg-surface-subtle border border-border-subtle p-space-3 rounded-lg flex flex-col gap-1">
                 <span className="font-label-sm text-label-sm text-outline uppercase tracking-wider">
@@ -1234,7 +1474,7 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                 </span>
                 <span className="font-body-sm text-body-sm text-outline">
                   {outputResult ? (
-                    `Gốc: ${formatSize(outputResult.originalSize)}`
+                    `Gốc: ${formatSize(outputResult.originalSize)}${activeMode === 'compress' ? ` • ${tr(`giảm ${savedPercent(outputResult.originalSize, outputResult.size)}%`, `${savedPercent(outputResult.originalSize, outputResult.size)}% smaller`, `${savedPercent(outputResult.originalSize, outputResult.size)}%削減`)}` : ''}`
                   ) : (
                     'Chưa xuất tệp'
                   )}
@@ -1268,6 +1508,8 @@ export default function PdfToolkitTool({ displayLang = 'vi' } = {}) {
                       ? `Lưu & Tải File Đã Sắp Xếp (${totalPages} Trang)`
                       : activeMode === 'merge'
                       ? (files.length === 1 ? `Lưu & Tải File (${totalPages} Trang)` : `Bắt Đầu Gộp File (${totalPages} Trang)`)
+                      : activeMode === 'compress'
+                      ? tr('Bắt Đầu Nén & Chuẩn Bị Tải Về', 'Compress & Prepare Download', '圧縮してダウンロードを準備')
                       : 'Bắt Đầu Tách & Chuẩn Bị Tải Về'}
                   </span>
                 </button>
