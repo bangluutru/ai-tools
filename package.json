@@ -1,5 +1,5 @@
 {
-  "name": "ai-tools-monorepo",
+  "name": "toolio-monorepo",
   "private": true,
   "type": "module",
   "workspaces": [

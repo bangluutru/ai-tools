@@ -84,7 +84,7 @@ npm run create:miniapp -- --id=audio-cutter --name="Cắt Ghép Âm Thanh" --cat
 
 ### Bước 2: Hiện thực Core View Logic
 Mở file `packages/core/src/components/<ToolName>View.jsx` để lập trình chức năng:
-- Tham chiếu các mẫu component JSX có sẵn trong [docs/DESIGN_SYSTEM_REFERENCE.md](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/ai-tools/docs/DESIGN_SYSTEM_REFERENCE.md).
+- Tham chiếu các mẫu component JSX có sẵn trong [docs/DESIGN_SYSTEM_REFERENCE.md](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/toolio/docs/DESIGN_SYSTEM_REFERENCE.md).
 - **Quy chuẩn tên gọi 3 ngôn ngữ**: Đặt tên theo công thức `[Hành động / Thể loại] + [Đối tượng / Định dạng]` súc tích (ví dụ: *Nén Ảnh Đa Năng / Multi-Purpose Image Compressor / 画像圧縮・変換*). Cấm các từ cấm tiếp thị (`PRO`, `Master`, `Craft`, `Studio PRO`).
 - **Nhận prop `displayLang`**: Tự động hiển thị nhãn tiếng Việt (`vi`), tiếng Anh (`en`), tiếng Nhật (`ja`) cho cả Breadcrumb, tiêu đề Context Header H1 và các nút bấm hành động.
 - Tích hợp xử lý tệp tin với cơ chế dọn dẹp bộ nhớ: luôn gọi `URL.revokeObjectURL` khi xong việc.
@@ -163,7 +163,7 @@ Chạy `npm run audit:miniapps <id>` và `npm run test:browser:tool -- <id>` đ�
 | **Đa Ngôn Ngữ (i18n)** | Hardcode tiếng Anh hoặc tiếng Việt trong JSX | Nhận prop `displayLang`, dùng từ điển i18n (`vi`, `en`, `ja`) | Phục vụ người dùng quốc tế, đảm bảo metadata khai báo đầy đủ 3 ngôn ngữ |
 | **Độ Tương Phản & Trợ Năng (A11y)** | Dùng chữ mờ `text-gray-400`, `text-slate-400`, hoặc chữ xanh lá nhạt `#059669` trên nền trắng/pastel | Sử dụng semantic tokens an toàn: `text-on-surface-variant` (`#475569`, 5.45:1), `text-secondary` (`#065F46`, 7.70:1 / 6.24:1 trên pastel) | Đạt chuẩn WCAG 2.1 Level AA ($\ge 4.5:1$ cho chữ nhỏ), 0 lỗi axe-core |
 | **Trạng Thái Tương Tác & Vùng Cuộn Phím** | Nút icon không có chữ, thanh cuộn chỉ scroll bằng chuột | Bổ sung `aria-label` cho 100% nút icon; bọc container cuộn bằng `tabIndex={0} role="region" aria-label="..."` | Cho phép người dùng khiếm thị đọc được nhãn và người dùng bàn phím duyệt được danh sách cuộn |
-| **Quản Trị Sự Cố** | Khi gặp lỗi code không bắt được, trắng cả trang web | Bọc trong [ToolErrorBoundary](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/ai-tools/hub/src/components/ToolErrorBoundary.jsx) | Đảm bảo nút "Về Trung Tâm" luôn hoạt động an toàn, không sập toàn bộ Hub |
+| **Quản Trị Sự Cố** | Khi gặp lỗi code không bắt được, trắng cả trang web | Bọc trong [ToolErrorBoundary](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/toolio/hub/src/components/ToolErrorBoundary.jsx) | Đảm bảo nút "Về Trung Tâm" luôn hoạt động an toàn, không sập toàn bộ Hub |
 
 ---
 

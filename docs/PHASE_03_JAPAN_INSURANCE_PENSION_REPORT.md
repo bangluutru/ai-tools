@@ -132,7 +132,7 @@ Kiểm tra nghiêm ngặt sự cô lập giữa `tax` và `insurance`:
 
 ## 7. Kết Quả Nghiên Cứu Bảo Hiểm Y Tế Quốc Dân (NHI Research Outcome)
 
-Tài liệu [JAPAN_NHI_ARCHITECTURE_RESEARCH.md](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/ai-tools/docs/phase3/JAPAN_NHI_ARCHITECTURE_RESEARCH.md) đã phân tích:
+Tài liệu [JAPAN_NHI_ARCHITECTURE_RESEARCH.md](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/toolio/docs/phase3/JAPAN_NHI_ARCHITECTURE_RESEARCH.md) đã phân tích:
 1. Tính chất phân mảnh cao của phí NHI qua 1,718 xã/phường/thị trấn (市区町村).
 2. Công thức kết hợp 3 phân hệ (Y tế, Hỗ trợ tuổi già, Chăm sóc) và 4 phương thức thu (所得割, 均等割, 平等割, 資産割).
 3. Cơ chế trách nhiệm nộp của Chủ hộ (世帯主納付義務) và các mức trần luật định (Tổng trần 1,060,000円/năm).

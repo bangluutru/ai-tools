@@ -6,7 +6,7 @@
 
 ## 📌 1. TỔNG QUAN HỆ THỐNG DESIGN TOKENS
 
-Mọi miniapp trong Hub đều hoạt động trên nền tảng **Cascading CSS Variables** định nghĩa tại [design.md](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/ai-tools/design.md).  
+Mọi miniapp trong Hub đều hoạt động trên nền tảng **Cascading CSS Variables** định nghĩa tại [design.md](file:///Users/tranhaibang/.gemini/antigravity-ide/scratch/toolio/design.md).  
 **Quy tắc bất biến**: Tuyệt đối không hardcode mã hex (`#ffffff`, `#000000`) hay class màu tĩnh của Tailwind (`bg-white`, `text-black`, `bg-slate-50`, `border-slate-200`). Mọi thuộc tính màu sắc, bề mặt, viền phải sử dụng CSS Tokens:
 
 ### 1.1. Bảng Tra Cứu Màu Sắc & Bề Mặt (Surface & Color Tokens)
