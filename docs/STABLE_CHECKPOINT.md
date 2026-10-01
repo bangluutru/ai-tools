@@ -116,7 +116,7 @@ npx wrangler pages deploy hub/dist --project-name=ai-tools --branch=main
 
 ## 🔒 4. Cam Kết Toàn Vẹn Dữ Liệu
 Tag `v1.2.0-stable` đã được đẩy lên GitHub remote repository tại:
-👉 `https://github.com/bangluutru/ai-tools/releases/tag/v1.2.0-stable`
+👉 `https://github.com/bangluutru/toolio/releases/tag/v1.2.0-stable`
 Người dùng hoặc các trợ lý AI về sau có thể kiểm tra trực tiếp bằng lệnh:
 ```bash
 git describe --tags --always
